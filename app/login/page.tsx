@@ -1,71 +1,74 @@
-"use client";
+import { signInWithEmail, signInWithGoogle, signUpWithEmail } from "./actions";
 
-import { useState } from "react";
+type LoginPageProps = {
+  searchParams: Promise<{ message?: string }>;
+};
 
-export default function Login() {
-  const [email, setEmail] = useState("");
-
-  const handleLogin = () => {
-    alert("Revisá tu email para iniciar sesión: " + email);
-  };
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { message } = await searchParams;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
-      {/* Título */}
-      <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">
-        Iniciar sesión
-      </h1>
-      
-      <p className="text-center mb-6 text-lg text-gray-600">Volvé a la cancha</p>
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white px-4 py-10">
+      <div className="mx-auto w-full max-w-md rounded-3xl border border-sky-100 bg-white p-8 shadow-xl shadow-sky-100/70">
+        <h1 className="text-center text-3xl font-bold text-sky-600">
+          Iniciar sesión
+        </h1>
+        <p className="mt-2 text-center text-sm text-sky-700/80">
+          Volvé a la cancha
+        </p>
 
-      {/* Botón de Google */}
-      <button className="w-full bg-blue-500 text-white py-2 rounded mb-4 hover:bg-blue-600">
-        <span className="mr-2">🔵</span>
-        Continuar con Google
-      </button>
+        {message ? (
+          <p className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            {message}
+          </p>
+        ) : null}
 
-      {/* Separador */}
-      <div className="my-4 flex justify-center items-center text-sm text-gray-500">
-        <span className="border-t w-24"></span>
-        <span className="mx-2">o con email</span>
-        <span className="border-t w-24"></span>
+        <form action={signInWithGoogle} className="mt-6">
+          <button
+            type="submit"
+            className="w-full rounded-2xl bg-sky-500 px-4 py-3 font-semibold text-white transition hover:bg-sky-600"
+          >
+            Continuar con Google
+          </button>
+        </form>
+
+        <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-sky-400">
+          <span className="h-px flex-1 bg-sky-100" />
+          <span>o con email</span>
+          <span className="h-px flex-1 bg-sky-100" />
+        </div>
+
+        <form className="space-y-3">
+          <input
+            type="email"
+            name="email"
+            placeholder="Correo electrónico"
+            required
+            className="w-full rounded-2xl border border-sky-200 px-4 py-3 outline-none ring-sky-300 transition focus:ring-2"
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Contraseña"
+            required
+            className="w-full rounded-2xl border border-sky-200 px-4 py-3 outline-none ring-sky-300 transition focus:ring-2"
+          />
+          <button
+            type="submit"
+            formAction={signInWithEmail}
+            className="w-full rounded-2xl bg-sky-500 px-4 py-3 font-semibold text-white transition hover:bg-sky-600"
+          >
+            Entrar
+          </button>
+          <button
+            type="submit"
+            formAction={signUpWithEmail}
+            className="w-full rounded-2xl border border-sky-300 px-4 py-3 font-semibold text-sky-700 transition hover:bg-sky-50"
+          >
+            Registrate
+          </button>
+        </form>
       </div>
-
-      {/* Input de correo */}
-      <input
-        type="email"
-        placeholder="Correo electrónico"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 rounded mb-4 w-full"
-      />
-
-      {/* Input de contraseña */}
-      <input
-        type="password"
-        placeholder="Contraseña"
-        className="border p-2 rounded mb-4 w-full"
-      />
-
-      {/* Botón de login */}
-      <button
-        onClick={handleLogin}
-        className="w-full bg-blue-500 text-white py-2 rounded mb-4 hover:bg-blue-600"
-      >
-        Entrar
-      </button>
-
-      {/* Link de registro */}
-      <p className="text-center text-sm text-gray-600">
-        ¿No tenés cuenta? <a href="#" className="text-blue-600">Registrate</a>
-      </p>
-
-      {/* Footer */}
-      <p className="text-center text-xs text-gray-400 mt-4">
-        Al continuar, aceptas nuestras{" "}
-        <a href="#" className="text-blue-600">Condiciones del Servicio</a> y{" "}
-        <a href="#" className="text-blue-600">Política de Privacidad</a>.
-      </p>
     </main>
   );
 }

@@ -50,10 +50,12 @@ export async function signInWithGoogle() {
     },
   });
 
-  if (error || !data.url) {
+  const oauthUrl = data?.url;
+
+  if (error || !oauthUrl) {
     const message = error?.message ?? "No se pudo iniciar sesión con Google.";
     redirect(`/login?message=${encodeURIComponent(message)}`);
   }
 
-  redirect(data.url);
+  redirect(oauthUrl);
 }
