@@ -1,3 +1,4 @@
+import Link from "next/link";
 import BottomNav from "@/components/bottom-nav";
 
 export default function Home() {
@@ -13,21 +14,39 @@ export default function Home() {
 
       <section className="grid grid-cols-2 gap-3">
         {[
-          ["Reservar pista", "Encontra y reserva tu cancha ideal"],
-          ["Aprender", "Clases y entrenamientos para mejorar"],
-          ["Competir", "Torneos y competencias activas"],
-          ["Buscar partido", "Unite a partidos abiertos"],
-        ].map(([title, subtitle]) => (
-          <article key={title} className="ui-card ui-interactive p-5">
+          {
+            title: "Reservar pista",
+            subtitle: "Encontra y reserva tu cancha ideal",
+            href: "/admin/gestion",
+          },
+          { title: "Aprender", subtitle: "Clases y entrenamientos para mejorar" },
+          { title: "Competir", subtitle: "Torneos y competencias activas" },
+          { title: "Buscar partido", subtitle: "Unite a partidos abiertos" },
+        ].map((item) => {
+          const content = (
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-2xl bg-sky-100" />
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-                <p className="text-sm text-slate-500">{subtitle}</p>
+                <h2 className="text-xl font-semibold text-slate-900">{item.title}</h2>
+                <p className="text-sm text-slate-500">{item.subtitle}</p>
               </div>
             </div>
-          </article>
-        ))}
+          );
+
+          if (item.href) {
+            return (
+              <Link key={item.title} href={item.href} className="ui-card ui-interactive block p-5">
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <article key={item.title} className="ui-card ui-interactive p-5">
+              {content}
+            </article>
+          );
+        })}
       </section>
 
       <section className="space-y-3">
@@ -35,12 +54,12 @@ export default function Home() {
         <article className="rounded-[24px] bg-blue-700 p-5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <p className="text-xl font-bold">Dobles intermedio</p>
           <p className="text-sm text-blue-100">Padel Club Centro</p>
-          <button
-            type="button"
+          <Link
+            href="/test"
             className="mt-3 w-full rounded-3xl bg-blue-500/60 px-4 py-2 text-center font-semibold transition-all hover:opacity-95 active:scale-95"
           >
             Ver detalles
-          </button>
+          </Link>
         </article>
       </section>
 
