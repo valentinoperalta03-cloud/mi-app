@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-slate-100 px-5 py-10">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-2xl font-bold text-white shadow-sm">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-2xl font-bold text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
         P
       </div>
 
@@ -53,7 +53,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             name="email"
             placeholder="tu@email.com"
             required
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition focus:ring-2"
+            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
           />
         </div>
 
@@ -66,14 +66,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             name="password"
             placeholder="Minimo 6 caracteres"
             required
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition focus:ring-2"
+            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
           />
         </div>
 
         <button type="submit" formAction={signUpWithEmail} className="ui-btn-primary w-full">
           Crear mi cuenta
         </button>
-        <button type="submit" formAction={signInWithEmail} className="w-full text-center text-sm font-semibold text-blue-600">
+        <button
+          type="submit"
+          formAction={signInWithEmail}
+          className="w-full text-center text-sm font-semibold text-blue-600 transition-all hover:opacity-95 active:scale-95"
+        >
           Ya tenes cuenta? Inicia sesion
         </button>
       </form>

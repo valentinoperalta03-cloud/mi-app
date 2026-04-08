@@ -1,3 +1,5 @@
+import BottomNav from "@/components/bottom-nav";
+
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-100">
@@ -16,7 +18,7 @@ export default function Home() {
           ["Competir", "Torneos y competencias activas"],
           ["Buscar partido", "Unite a partidos abiertos"],
         ].map(([title, subtitle]) => (
-          <article key={title} className="ui-card p-4">
+          <article key={title} className="ui-card ui-interactive p-5">
             <div className="mb-3 h-10 w-10 rounded-2xl bg-sky-100" />
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
             <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
@@ -26,12 +28,15 @@ export default function Home() {
 
       <section className="mt-6 px-4">
         <h3 className="text-2xl font-bold text-slate-900">Proximo partido</h3>
-        <article className="mt-3 rounded-3xl bg-blue-700 p-4 text-white shadow-sm">
+        <article className="mt-3 rounded-3xl bg-blue-700 p-5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
           <p className="text-2xl font-bold">Dobles intermedio</p>
           <p className="text-sm text-blue-100">Padel Club Centro</p>
-          <div className="mt-3 rounded-2xl bg-blue-500/60 px-4 py-2 text-center font-semibold">
+          <button
+            type="button"
+            className="mt-3 w-full rounded-3xl bg-blue-500/60 px-4 py-2 text-center font-semibold transition-all hover:opacity-95 active:scale-95"
+          >
             Ver detalles
-          </div>
+          </button>
         </article>
       </section>
 
@@ -43,24 +48,14 @@ export default function Home() {
             ["18", "Reservas"],
             ["6ta", "Nivel"],
           ].map(([value, label]) => (
-            <article key={label} className="ui-card p-4 text-center">
+            <article key={label} className="ui-card p-5 text-center">
               <p className="text-3xl font-extrabold text-slate-900">{value}</p>
               <p className="mt-1 text-sm text-slate-500">{label}</p>
             </article>
           ))}
         </div>
       </section>
-
-      <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 justify-between border-t border-slate-200 bg-white px-6 py-3 shadow-sm">
-        {["Inicio", "Partidos", "Reservas", "Perfil"].map((item, index) => (
-          <button
-            key={item}
-            className={`text-sm font-medium ${index === 0 ? "text-blue-600" : "text-slate-500"}`}
-          >
-            {item}
-          </button>
-        ))}
-      </nav>
+      <BottomNav />
     </main>
   );
 }
