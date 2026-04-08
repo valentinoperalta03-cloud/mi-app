@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DB_TABLES } from "@/lib/db-tables";
 import { supabase } from "@/lib/supabase";
 
 type ClubRow = {
@@ -18,7 +19,7 @@ export default function ClubesPage() {
   async function loadClubs(showLoading = false) {
     if (showLoading) setLoading(true);
     setErrorMessage(null);
-    const { data, error } = await supabase.from("clubs").select("*");
+    const { data, error } = await supabase.from(DB_TABLES.clubs).select("*");
 
     if (error) {
       setClubs([]);

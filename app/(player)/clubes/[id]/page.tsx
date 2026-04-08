@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DB_TABLES } from "@/lib/db-tables";
 import { supabase } from "@/lib/supabase";
 
 type ClubDetailProps = {
@@ -22,7 +23,7 @@ export default async function ClubDetailPage({ params }: ClubDetailProps) {
   const { id } = await params;
 
   const { data: clubData, error: clubError } = await supabase
-    .from("clubs")
+    .from(DB_TABLES.clubs)
     .select("*")
     .eq("id", id)
     .single();
@@ -34,7 +35,7 @@ export default async function ClubDetailPage({ params }: ClubDetailProps) {
   const club = clubData as ClubRow;
 
   const { data: courtsData, error: courtsError } = await supabase
-    .from("courts")
+    .from(DB_TABLES.courts)
     .select("*")
     .eq("club_id", id)
     .order("name");

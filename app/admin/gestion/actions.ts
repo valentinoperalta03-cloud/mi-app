@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { DB_TABLES } from "@/lib/db-tables";
 import { supabase } from "@/lib/supabase";
 
 export type ActionState = {
@@ -42,7 +43,7 @@ export async function createCourtAction(
     return { success: false, message: "El precio debe ser un numero positivo." };
   }
 
-  const { error } = await supabase.from("courts").insert({
+  const { error } = await supabase.from(DB_TABLES.courts).insert({
     club_id: clubId,
     name,
     price,
@@ -84,7 +85,7 @@ export async function upsertCourtScheduleAction(
     };
   }
 
-  const { error } = await supabase.from("court_schedules").upsert(
+  const { error } = await supabase.from(DB_TABLES.courtSchedules).upsert(
     {
       court_id: courtId,
       day_of_week: dayOfWeek,

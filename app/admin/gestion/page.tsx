@@ -1,3 +1,4 @@
+import { DB_TABLES } from "@/lib/db-tables";
 import { supabase } from "@/lib/supabase";
 import { CreateCourtForm, ScheduleForm } from "./feedback";
 
@@ -33,7 +34,7 @@ const dayLabels = [
 
 export default async function AdminGestionPage() {
   const { data: clubsData, error: clubsError } = await supabase
-    .from("clubs")
+    .from(DB_TABLES.clubs)
     .select("id,name,location")
     .order("name");
 
@@ -42,7 +43,7 @@ export default async function AdminGestionPage() {
 
   const { data: courtsData, error: courtsError } = clubIds.length
     ? await supabase
-        .from("courts")
+        .from(DB_TABLES.courts)
         .select("id,club_id,name,price")
         .in("club_id", clubIds)
         .order("name")
@@ -53,7 +54,7 @@ export default async function AdminGestionPage() {
 
   const { data: schedulesData, error: schedulesError } = courtIds.length
     ? await supabase
-        .from("court_schedules")
+        .from(DB_TABLES.courtSchedules)
         .select("court_id,day_of_week,open_time,close_time")
         .in("court_id", courtIds)
     : { data: [], error: null };
