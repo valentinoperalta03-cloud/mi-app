@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { createCourt } from "./actions";
 
 type ClubDetailProps = {
   params: Promise<{ id: string }>;
@@ -10,8 +9,7 @@ type ClubDetailProps = {
 type ClubRow = {
   id: string | number;
   name: string | null;
-  address?: string | null;
-  city?: string | null;
+  location?: string | null;
 };
 
 type CourtRow = {
@@ -54,7 +52,7 @@ export default async function ClubDetailPage({ params }: ClubDetailProps) {
           {club.name ?? "Club sin nombre"}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          {club.address || club.city || "Sin direccion"}
+          {club.location || "Sin ubicacion"}
         </p>
       </section>
 
@@ -81,31 +79,6 @@ export default async function ClubDetailPage({ params }: ClubDetailProps) {
             ) : null}
           </div>
         )}
-      </section>
-
-      <section className="ui-card mt-5 p-5">
-        <h3 className="text-lg font-semibold text-slate-900">Nueva cancha</h3>
-        <form action={createCourt} className="mt-3 space-y-3">
-          <input type="hidden" name="clubId" value={id} />
-          <input
-            name="name"
-            placeholder="Nombre de cancha"
-            required
-            className="w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-blue-300 focus:ring-2"
-          />
-          <input
-            name="price"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Precio"
-            required
-            className="w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-blue-300 focus:ring-2"
-          />
-          <button type="submit" className="ui-btn-primary w-full">
-            Crear cancha
-          </button>
-        </form>
       </section>
     </main>
   );
