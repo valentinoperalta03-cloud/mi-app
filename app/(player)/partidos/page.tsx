@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MotionPage from "@/components/motion-page";
 
 const tournaments = [
   {
@@ -32,14 +33,17 @@ const tournaments = [
 
 export default function PartidosPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <p className="text-sm font-medium text-sky-500">Inicio</p>
       <h1 className="text-2xl font-bold text-slate-900">Competir</h1>
       <p className="text-sm text-slate-500">Torneos y competencias de padel</p>
 
       <section className="space-y-3">
         {tournaments.map((item) => (
-          <article key={item.title} className="rounded-2xl border border-slate-100 bg-white p-5">
+          <article
+            key={item.title}
+            className="rounded-2xl border border-slate-100 bg-white/95 p-5 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg"
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{item.title}</h2>
@@ -56,7 +60,7 @@ export default function PartidosPage() {
               <p className="text-3xl font-bold text-sky-500">{item.price}</p>
               <Link
                 href="/reservas"
-                className="rounded-2xl px-3 py-2 text-sm font-semibold text-sky-500 transition hover:opacity-95"
+                className="rounded-2xl px-3 py-2 text-sm font-semibold text-sky-500 transition-all duration-300 hover:opacity-95 active:scale-95"
               >
                 Ver
               </Link>
@@ -65,6 +69,6 @@ export default function PartidosPage() {
           </article>
         ))}
       </section>
-    </main>
+    </MotionPage>
   );
 }

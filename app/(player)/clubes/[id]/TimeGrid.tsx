@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { motion } from "framer-motion";
 
 export type Court = {
   id: string;
@@ -67,22 +68,23 @@ export default function TimeGrid({
                 selectedBooking.time === slot.time &&
                 selectedBooking.duration === slot.duration;
 
-              return (
-                <button
+                          return (
+                            <motion.button
                   key={bookingKey}
                   type="button"
                   disabled={occupied}
                   onClick={() => onSelect(court.id, slot)}
-                  className={`border-t border-slate-100 p-3 text-left text-xs transition-all ${
+                              whileTap={occupied ? undefined : { scale: 0.97 }}
+                              className={`border-t border-slate-100 p-3 text-left text-xs transition-all duration-300 ${
                     occupied
                       ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-60"
                       : isSelected
-                        ? "bg-sky-600 text-white shadow-sm"
-                        : "bg-white text-slate-700 hover:bg-sky-50"
+                                    ? "bg-sky-600 text-white shadow-sm"
+                                    : "bg-white text-slate-700 hover:bg-sky-50 hover:border-sky-100"
                   }`}
                 >
                   {occupied ? "Ocupada" : isSelected ? "Seleccionada" : "Disponible"}
-                </button>
+                            </motion.button>
               );
             })}
           </Fragment>

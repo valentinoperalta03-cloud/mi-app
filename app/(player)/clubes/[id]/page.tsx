@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { useParams, useRouter } from "next/navigation";
 import { addDays, format, isSameDay, startOfDay } from "date-fns";
 import TimeGrid, { type Court, type TimeSlot } from "./TimeGrid";
+import MotionPage from "@/components/motion-page";
 
 type SelectedBooking = {
   courtId: string;
@@ -36,6 +38,7 @@ const occupiedKeys = new Set(["court-1-09:30-90", "court-2-17:00-60", "court-3-2
 
 export default function ClubDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const clubId = params.id;
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [selectedBooking, setSelectedBooking] = useState<SelectedBooking>({
@@ -78,11 +81,25 @@ export default function ClubDetailPage() {
     });
   }
 
+  function handleConfirmBooking() {
+    if (!isBookingComplete() || !selectedCourt) return;
+
+    const query = new URLSearchParams({
+      clubId,
+      court: selectedCourt.name,
+      time: selectedBooking.time,
+      duration: String(selectedBooking.duration),
+      date: format(selectedDate, "yyyy-MM-dd"),
+    });
+
+    router.push(`/reservas/confirmacion?${query.toString()}`);
+  }
+
   const selectedCourt = mockCourts.find((court) => court.id === selectedBooking.courtId);
   const showBookingBar = Boolean(selectedBooking.courtId || selectedBooking.time);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-slate-50 px-4 pb-40 pt-6 font-sans tracking-tight">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-40 pt-6 font-sans tracking-tight">
       <Link href="/clubes" className="text-sm font-medium text-sky-500">
         Volver a clubes
       </Link>
@@ -100,11 +117,12 @@ export default function ClubDetailPage() {
           {next7Days.map((dateItem) => {
             const active = isSameDay(selectedDate, dateItem);
             return (
-              <button
+              <motion.button
                 key={dateItem.toISOString()}
                 type="button"
                 onClick={() => setSelectedDate(dateItem)}
-                className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs transition ${
+                whileTap={{ scale: 0.96 }}
+                className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs transition-all duration-300 ${
                   active
                     ? "border-sky-600 bg-sky-600 text-white"
                     : "border-slate-200 bg-white text-slate-700 hover:border-sky-300"
@@ -112,7 +130,7 @@ export default function ClubDetailPage() {
               >
                 <p className="font-semibold">{format(dateItem, "EEE")}</p>
                 <p>{format(dateItem, "dd MMM")}</p>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -133,7 +151,7 @@ export default function ClubDetailPage() {
       </section>
 
       <aside
-        className={`fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white p-4 transition-transform duration-300 ${
+        className={`fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/80 p-4 backdrop-blur-md transition-transform duration-300 ${
           showBookingBar ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -144,15 +162,17 @@ export default function ClubDetailPage() {
               ? `${selectedCourt.name} • ${selectedBooking.time} • ${selectedBooking.duration} min`
               : "Selecciona cancha y horario para continuar."}
           </p>
-          <button
+          <motion.button
             type="button"
             disabled={!isBookingComplete()}
-            className="w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleConfirmBooking}
+            whileTap={{ scale: 0.97 }}
+            className="w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Confirmar Reserva
-          </button>
+          </motion.button>
         </div>
       </aside>
-    </main>
+    </MotionPage>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MotionPage from "@/components/motion-page";
 
 const clubs = [
   { id: "1", name: "Top Padel Sports", address: "Av. Libertador 890", price: "$7.500/h", courts: "8 canchas", rating: "4.9" },
@@ -8,7 +9,7 @@ const clubs = [
 
 export default function ReservasPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <p className="text-sm font-medium text-sky-500">Inicio</p>
       <h1 className="text-2xl font-bold text-slate-900">Reservar pista</h1>
       <p className="text-sm text-slate-500">Encontra la cancha ideal cerca tuyo</p>
@@ -17,7 +18,10 @@ export default function ReservasPage() {
 
       <section className="space-y-3">
         {clubs.map((club) => (
-          <article key={club.name} className="rounded-2xl border border-slate-100 bg-white p-5">
+          <article
+            key={club.name}
+            className="rounded-2xl border border-slate-100 bg-white/95 p-5 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg"
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{club.name}</h2>
@@ -33,7 +37,7 @@ export default function ReservasPage() {
               </div>
               <Link
                 href={`/clubes/${club.id}`}
-                className="rounded-2xl px-3 py-2 text-sm font-semibold text-sky-500 transition hover:opacity-95"
+                className="rounded-2xl px-3 py-2 text-sm font-semibold text-sky-500 transition-all duration-300 hover:opacity-95 active:scale-95"
               >
                 Reservar
               </Link>
@@ -41,6 +45,6 @@ export default function ReservasPage() {
           </article>
         ))}
       </section>
-    </main>
+    </MotionPage>
   );
 }
