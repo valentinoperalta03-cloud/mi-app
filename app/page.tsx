@@ -1,62 +1,66 @@
-import { redirect } from "next/navigation";
-import Image from "next/image";
-import { createClient } from "@/utils/supabase/server";
-
-async function signOutAction() {
-  "use server";
-
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
-}
-
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  const user = data.user;
-
-  if (error || !user) {
-    redirect("/login");
-  }
-
-  const name =
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    user.email ??
-    "Jugador";
-  const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
-
+export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white px-4 py-10">
-      <div className="mx-auto flex w-full max-w-lg items-center justify-between rounded-3xl border border-sky-100 bg-white p-6 shadow-xl shadow-sky-100/70">
-        <div className="flex items-center gap-4">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt="Foto de perfil"
-              width={48}
-              height={48}
-              className="h-12 w-12 rounded-full border border-sky-200 object-cover"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-200 bg-sky-100 text-sky-700">
-              {name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <p className="text-lg font-semibold text-sky-700">
-            Bienvenido, {name}! Listo para jugar?
-          </p>
-        </div>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-100">
+      <section className="rounded-b-3xl bg-blue-700 px-5 pb-6 pt-8 text-white shadow-sm">
+        <p className="text-sm text-blue-100">Vamos!</p>
+        <h1 className="mt-1 text-4xl font-extrabold leading-tight">
+          Todo listo para tu partido.
+        </h1>
+        <p className="mt-2 text-sm text-blue-100">Jugador</p>
+      </section>
 
-        <form action={signOutAction}>
+      <section className="-mt-4 grid grid-cols-2 gap-3 px-4">
+        {[
+          ["Reservar pista", "Encontra y reserva tu cancha ideal"],
+          ["Aprender", "Clases y entrenamientos para mejorar"],
+          ["Competir", "Torneos y competencias activas"],
+          ["Buscar partido", "Unite a partidos abiertos"],
+        ].map(([title, subtitle]) => (
+          <article key={title} className="ui-card p-4">
+            <div className="mb-3 h-10 w-10 rounded-2xl bg-sky-100" />
+            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="mt-6 px-4">
+        <h3 className="text-2xl font-bold text-slate-900">Proximo partido</h3>
+        <article className="mt-3 rounded-3xl bg-blue-700 p-4 text-white shadow-sm">
+          <p className="text-2xl font-bold">Dobles intermedio</p>
+          <p className="text-sm text-blue-100">Padel Club Centro</p>
+          <div className="mt-3 rounded-2xl bg-blue-500/60 px-4 py-2 text-center font-semibold">
+            Ver detalles
+          </div>
+        </article>
+      </section>
+
+      <section className="mt-6 px-4 pb-24">
+        <h3 className="text-2xl font-bold text-slate-900">Tu resumen</h3>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          {[
+            ["12", "Partidos"],
+            ["18", "Reservas"],
+            ["6ta", "Nivel"],
+          ].map(([value, label]) => (
+            <article key={label} className="ui-card p-4 text-center">
+              <p className="text-3xl font-extrabold text-slate-900">{value}</p>
+              <p className="mt-1 text-sm text-slate-500">{label}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <nav className="fixed bottom-0 left-1/2 flex w-full max-w-md -translate-x-1/2 justify-between border-t border-slate-200 bg-white px-6 py-3 shadow-sm">
+        {["Inicio", "Partidos", "Reservas", "Perfil"].map((item, index) => (
           <button
-            type="submit"
-            className="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600"
+            key={item}
+            className={`text-sm font-medium ${index === 0 ? "text-blue-600" : "text-slate-500"}`}
           >
-            Cerrar Sesion
+            {item}
           </button>
-        </form>
-      </div>
+        ))}
+      </nav>
     </main>
   );
 }

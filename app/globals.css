@@ -5,32 +5,16 @@
 
 /* VARIABLES Y COLORES */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --primary: 199 89% 58%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 150 60% 45%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 215 20% 90%;
-  --input: 215 20% 90%;
-  --ring: 217 91% 55%;
-  --radius: 0.75rem;
-  --court-indoor: 217 91% 55%;
-  --court-outdoor: 150 60% 45%;
-  --status-open: 150 60% 45%;
-  --status-full: 35 95% 55%;
-  --status-finished: 215 15% 50%;
-  --sidebar-background: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --background: 216 60% 97%;
+  --foreground: 223 38% 17%;
+  --color-primary: 220 74% 52%;
+  --color-sky-accent: 204 100% 92%;
+  --color-surface: 0 0% 100%;
+  --color-muted: 216 15% 50%;
+  --color-border: 216 30% 90%;
+  --ring: 220 74% 52%;
+  --radius: 1.5rem;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 .dark {
@@ -71,6 +55,49 @@ body {
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .ui-card {
+    background: hsl(var(--color-surface));
+    border: 1px solid hsl(var(--color-border));
+    border-radius: 1.5rem;
+    box-shadow: 0 1px 2px hsl(220 20% 20% / 0.06);
+  }
+
+  .ui-chip {
+    border-radius: 999px;
+    background: hsl(204 100% 92%);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: hsl(215 70% 35%);
+  }
+
+  .ui-btn-primary {
+    border-radius: 1rem;
+    background: hsl(var(--color-primary));
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: white;
+    transition: background-color 0.2s ease;
+  }
+  .ui-btn-primary:hover {
+    background: hsl(220 74% 45%);
+  }
+
+  .ui-btn-ghost {
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--color-border));
+    background: hsl(var(--color-surface));
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    transition: background-color 0.2s ease;
+  }
+  .ui-btn-ghost:hover {
+    background: hsl(216 60% 99%);
+  }
 }
 
 
