@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, House, Trophy, UserRound } from "lucide-react";
 
 const items = [
-  { href: "/", label: "Inicio", icon: House },
+  { href: "/inicio", label: "Inicio", icon: House },
   { href: "/partidos", label: "Partidos", icon: Trophy },
   { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/perfil", label: "Perfil", icon: UserRound },
@@ -21,8 +21,7 @@ export default function BottomNav() {
     >
       {items.map((item) => {
         const Icon = item.icon;
-        const isActive =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const isActive = pathname.startsWith(item.href);
 
         return (
           <Link
