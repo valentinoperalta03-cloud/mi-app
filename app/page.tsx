@@ -2,16 +2,16 @@ import BottomNav from "@/components/bottom-nav";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-100">
-      <section className="rounded-b-3xl bg-blue-700 px-5 pb-6 pt-8 text-white shadow-sm">
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col space-y-6 bg-[hsl(var(--background))] px-4 pb-24 pt-6">
+      <section className="rounded-[24px] bg-blue-700 px-5 pb-6 pt-6 text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
         <p className="text-sm text-blue-100">Vamos!</p>
-        <h1 className="mt-1 text-4xl font-extrabold leading-tight">
+        <h1 className="mt-1 text-2xl font-bold leading-tight">
           Todo listo para tu partido.
         </h1>
         <p className="mt-2 text-sm text-blue-100">Jugador</p>
       </section>
 
-      <section className="-mt-4 grid grid-cols-2 gap-3 px-4">
+      <section className="grid grid-cols-2 gap-3">
         {[
           ["Reservar pista", "Encontra y reserva tu cancha ideal"],
           ["Aprender", "Clases y entrenamientos para mejorar"],
@@ -19,17 +19,21 @@ export default function Home() {
           ["Buscar partido", "Unite a partidos abiertos"],
         ].map(([title, subtitle]) => (
           <article key={title} className="ui-card ui-interactive p-5">
-            <div className="mb-3 h-10 w-10 rounded-2xl bg-sky-100" />
-            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-sky-100" />
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+                <p className="text-sm text-slate-500">{subtitle}</p>
+              </div>
+            </div>
           </article>
         ))}
       </section>
 
-      <section className="mt-6 px-4">
+      <section className="space-y-3">
         <h3 className="text-2xl font-bold text-slate-900">Proximo partido</h3>
-        <article className="mt-3 rounded-3xl bg-blue-700 p-5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
-          <p className="text-2xl font-bold">Dobles intermedio</p>
+        <article className="rounded-[24px] bg-blue-700 p-5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
+          <p className="text-xl font-bold">Dobles intermedio</p>
           <p className="text-sm text-blue-100">Padel Club Centro</p>
           <button
             type="button"
@@ -40,7 +44,7 @@ export default function Home() {
         </article>
       </section>
 
-      <section className="mt-6 px-4 pb-24">
+      <section className="space-y-3">
         <h3 className="text-2xl font-bold text-slate-900">Tu resumen</h3>
         <div className="mt-3 grid grid-cols-3 gap-3">
           {[

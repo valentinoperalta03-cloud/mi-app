@@ -15,7 +15,10 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-md -translate-x-1/2 justify-between border-t border-slate-200 bg-white px-4 py-3 shadow-[0_2px_10px_rgba(0,0,0,0.05)]">
+    <nav
+      className="fixed bottom-0 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 justify-between border-t border-gray-100 bg-white px-4 pt-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)]"
+      style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+    >
       {items.map((item) => {
         const Icon = item.icon;
         const isActive =
@@ -25,7 +28,7 @@ export default function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
-            className="ui-interactive flex min-w-16 flex-col items-center gap-1 rounded-2xl px-2 py-1 text-xs font-medium"
+            className="ui-interactive flex min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-xs font-medium"
             style={{
               color: isActive ? "hsl(var(--color-primary))" : "hsl(var(--color-muted))",
             }}

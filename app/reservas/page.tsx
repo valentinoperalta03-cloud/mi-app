@@ -29,23 +29,23 @@ const clubs = [
 
 export default function ReservasPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-slate-100 px-4 pb-24 pt-6">
+    <main className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[hsl(var(--background))] px-4 pb-24 pt-6">
       <p className="text-sm font-medium text-blue-600">Inicio</p>
-      <h1 className="mt-2 text-4xl font-extrabold text-slate-900">Reservar pista</h1>
-      <p className="mt-1 text-sm text-slate-500">Encontra la cancha ideal cerca tuyo</p>
+      <h1 className="text-2xl font-bold text-slate-900">Reservar pista</h1>
+      <p className="text-sm text-slate-500">Encontra la cancha ideal cerca tuyo</p>
 
-      <button type="button" className="ui-btn-ghost ui-interactive mt-5 w-full text-left">
+      <button type="button" className="ui-btn-ghost ui-interactive w-full text-left">
         Filtros
       </button>
 
-      <p className="mt-4 text-sm text-slate-500">{clubs.length} clubes encontrados</p>
+      <p className="text-sm text-slate-500">{clubs.length} clubes encontrados</p>
 
-      <section className="mt-3 space-y-3">
+      <section className="space-y-3">
         {clubs.map((club) => (
           <article key={club.name} className="ui-card p-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">{club.name}</h2>
+                <h2 className="text-xl font-semibold text-slate-900">{club.name}</h2>
                 <p className="text-sm text-slate-500">{club.address}</p>
               </div>
               <p className="text-sm font-semibold text-amber-500">{club.rating}</p>
