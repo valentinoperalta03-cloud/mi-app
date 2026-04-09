@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 const adminLinks = [
+  { href: "/admin/dashboard", label: "Inicio" },
   { href: "/admin/gestion", label: "Gestion" },
   { href: "/admin/canchas", label: "Canchas" },
   { href: "/admin/ingresos", label: "Ingresos" },

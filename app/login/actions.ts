@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveHomePath } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/server";
 
 function getStringField(formData: FormData, key: string) {
@@ -19,7 +20,14 @@ export async function signInWithEmail(formData: FormData) {
     redirect(`/login?message=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/login?message=${encodeURIComponent("No se pudo obtener la sesión.")}`);
+  }
+
+  redirect(await resolveHomePath(supabase, user.id));
 }
 
 export async function signUpWithEmail(formData: FormData) {

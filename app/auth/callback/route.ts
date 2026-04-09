@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { resolveHomePath } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/";
   const loginUrl = new URL("/login", requestUrl.origin);
 
   if (code) {
@@ -15,10 +15,19 @@ export async function GET(request: NextRequest) {
       loginUrl.searchParams.set("message", "No se pudo completar el login con Google.");
       return NextResponse.redirect(loginUrl);
     }
-  } else {
-    loginUrl.searchParams.set("message", "Código OAuth inválido o faltante.");
-    return NextResponse.redirect(loginUrl);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      loginUrl.searchParams.set("message", "No se pudo obtener la sesión.");
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const target = await resolveHomePath(supabase, user.id);
+    return NextResponse.redirect(new URL(target, requestUrl.origin));
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  loginUrl.searchParams.set("message", "Código OAuth inválido o faltante.");
+  return NextResponse.redirect(loginUrl);
 }

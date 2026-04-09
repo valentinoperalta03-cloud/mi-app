@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, House, Trophy, UserRound } from "lucide-react";
 
 const items = [
-  { href: "/inicio", label: "Inicio", icon: House },
+  { href: "/app/feed", label: "Inicio", icon: House },
   { href: "/partidos", label: "Partidos", icon: Trophy },
   { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/perfil", label: "Perfil", icon: UserRound },
@@ -32,10 +32,9 @@ export default function BottomNav() {
           >
             <Link
               href={item.href}
-              className="ui-interactive flex min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-xs font-medium"
-              style={{
-                color: isActive ? "hsl(var(--color-primary))" : "hsl(var(--color-muted))",
-              }}
+              className={`ui-interactive flex min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-xs font-medium transition-colors duration-200 ${
+                isActive ? "text-sky-600" : "text-slate-500"
+              }`}
             >
               <Icon size={18} strokeWidth={2} />
               <span>{item.label}</span>
