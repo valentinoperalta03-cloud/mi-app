@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
@@ -104,15 +105,29 @@ export default function ClubDetailPage() {
         Volver a clubes
       </Link>
 
-      <section className="rounded-2xl border border-slate-100 bg-white p-5">
-        <h1 className="text-2xl font-bold text-slate-900">Club {clubId}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Elegi fecha, cancha y horario para avanzar con la reserva.
-        </p>
-      </section>
+      <motion.section
+        layoutId={`club-card-${clubId}`}
+        className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+      >
+        <div className="flex items-center gap-4">
+          <Image
+            src="/club-thumb.svg"
+            alt="Vista del club"
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-2xl object-cover"
+          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950">Club {clubId}</h1>
+            <p className="mt-1 text-sm font-light text-slate-500">
+              Elegi fecha, cancha y horario para avanzar con la reserva.
+            </p>
+          </div>
+        </div>
+      </motion.section>
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900">Fecha</h2>
+        <h2 className="text-base font-bold tracking-tight text-slate-950">Fecha</h2>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {next7Days.map((dateItem) => {
             const active = isSameDay(selectedDate, dateItem);
@@ -138,8 +153,8 @@ export default function ClubDetailPage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Disponibilidad</h2>
-          <p className="text-xs text-slate-500">Intervalos 60m y 90m</p>
+          <h2 className="text-base font-bold tracking-tight text-slate-950">Disponibilidad</h2>
+          <p className="text-xs font-light text-slate-500">Intervalos 60m y 90m</p>
         </div>
         <TimeGrid
           courts={mockCourts}
@@ -155,9 +170,9 @@ export default function ClubDetailPage() {
           showBookingBar ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-900">Resumen de reserva</p>
-          <p className="text-xs text-slate-600">
+        <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <p className="text-sm font-bold tracking-tight text-slate-950">Resumen de reserva</p>
+          <p className="text-xs font-light text-slate-600">
             {selectedCourt
               ? `${selectedCourt.name} • ${selectedBooking.time} • ${selectedBooking.duration} min`
               : "Selecciona cancha y horario para continuar."}
@@ -167,7 +182,7 @@ export default function ClubDetailPage() {
             disabled={!isBookingComplete()}
             onClick={handleConfirmBooking}
             whileTap={{ scale: 0.97 }}
-            className="w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
           >
             Confirmar Reserva
           </motion.button>

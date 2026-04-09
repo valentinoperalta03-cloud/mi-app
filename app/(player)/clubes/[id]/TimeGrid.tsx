@@ -37,7 +37,7 @@ export default function TimeGrid({
   onSelect,
 }: TimeGridProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
       <div className="grid min-w-[760px] grid-cols-[88px_repeat(3,minmax(210px,1fr))]">
         <div className="sticky left-0 z-10 border-b border-r border-slate-100 bg-slate-50 p-3 text-xs font-semibold tracking-tight text-slate-600">
           Hora
@@ -68,23 +68,23 @@ export default function TimeGrid({
                 selectedBooking.time === slot.time &&
                 selectedBooking.duration === slot.duration;
 
-                          return (
-                            <motion.button
+              return (
+                <motion.button
                   key={bookingKey}
                   type="button"
                   disabled={occupied}
                   onClick={() => onSelect(court.id, slot)}
-                              whileTap={occupied ? undefined : { scale: 0.97 }}
-                              className={`border-t border-slate-100 p-3 text-left text-xs transition-all duration-300 ${
+                  whileTap={occupied ? undefined : { scale: 0.97 }}
+                  className={`border-t border-slate-100 p-3 text-left text-xs transition-all duration-300 ${
                     occupied
                       ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-60"
                       : isSelected
-                                    ? "bg-sky-600 text-white shadow-sm"
-                                    : "bg-white text-slate-700 hover:bg-sky-50 hover:border-sky-100"
+                        ? "bg-sky-600 text-white shadow-sm"
+                        : "bg-white text-slate-700 hover:bg-sky-50 hover:border-sky-100"
                   }`}
                 >
                   {occupied ? "Ocupada" : isSelected ? "Seleccionada" : "Disponible"}
-                            </motion.button>
+                </motion.button>
               );
             })}
           </Fragment>

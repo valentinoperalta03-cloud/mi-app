@@ -21,19 +21,19 @@ export default async function ConfirmacionPage({ searchParams }: ConfirmacionPag
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <h1 className="text-2xl font-bold text-slate-900">Confirmacion de reserva</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-950">Confirmacion de reserva</h1>
 
-      <section className="space-y-2 rounded-2xl border border-slate-100 bg-white/95 p-5 shadow-sm">
-        <p className="text-sm text-slate-500">Club ID: {clubId}</p>
-        <p className="text-sm text-slate-500">Cancha: {court}</p>
-        <p className="text-sm text-slate-500">Fecha: {date}</p>
-        <p className="text-sm text-slate-500">Horario: {time}</p>
-        <p className="text-sm text-slate-500">Duracion: {duration} min</p>
+      <section className="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <p className="text-sm font-light text-slate-500">Club ID: {clubId}</p>
+        <p className="text-sm font-light text-slate-500">Cancha: {court}</p>
+        <p className="text-sm font-light text-slate-500">Fecha: {date}</p>
+        <p className="text-sm font-light text-slate-500">Horario: {time}</p>
+        <p className="text-sm font-light text-slate-500">Duracion: {duration} min</p>
       </section>
 
       <Link
         href="/reservas"
-        className="inline-block rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:opacity-95 active:scale-95"
+        className="inline-block rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-sky-500 active:scale-95"
       >
         Volver a reservas
       </Link>
