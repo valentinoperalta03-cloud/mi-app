@@ -1,11 +1,22 @@
-import { signInWithEmail, signInWithGoogle, signUpWithEmail } from "./actions";
+import { EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
 type LoginPageProps = {
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; kind?: string }>;
 };
 
+function displayMessage(raw: string | undefined) {
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { message } = await searchParams;
+  const { message, kind } = await searchParams;
+  const text = displayMessage(message);
+  const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[hsl(var(--background))] px-4 py-8 pb-24">
@@ -20,19 +31,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         Unite a la comunidad de padel
       </p>
 
-      {message ? (
-        <p className="mx-auto w-full rounded-[24px] border border-sky-200 bg-sky-50 px-5 py-3 text-sm text-sky-700">
-          {message}
+      {text ? (
+        <p
+          role="alert"
+          className={
+            isError
+              ? "mx-auto w-full rounded-[24px] border border-red-200 bg-red-50 px-5 py-3 text-sm text-red-800"
+              : "mx-auto w-full rounded-[24px] border border-sky-200 bg-sky-50 px-5 py-3 text-sm text-sky-800"
+          }
+        >
+          {text}
         </p>
       ) : null}
 
       <div className="space-y-3">
-        <form action={signInWithGoogle}>
-          <button type="submit" className="ui-btn-ghost w-full bg-white">
-            Continuar con Google
-          </button>
-        </form>
-        <button type="button" className="ui-btn-ghost w-full bg-white">
+        <GoogleAuthForm />
+        <button type="button" className="ui-btn-ghost w-full bg-white" disabled>
           Continuar con Apple
         </button>
       </div>
@@ -43,44 +57,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <span className="h-px flex-1 bg-slate-300" />
       </div>
 
-      <form className="space-y-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-600">
-            Correo electronico
-          </label>
-          <input
-            type="email"
-            name="email"
-            placeholder="tu@email.com"
-            required
-            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-600">
-            Contrasena
-          </label>
-          <input
-            type="password"
-            name="password"
-            placeholder="Minimo 6 caracteres"
-            required
-            className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
-          />
-        </div>
-
-        <button type="submit" formAction={signUpWithEmail} className="ui-btn-primary w-full">
-          Crear mi cuenta
-        </button>
-        <button
-          type="submit"
-          formAction={signInWithEmail}
-          className="w-full text-center text-sm font-semibold text-blue-600 transition-all hover:opacity-95 active:scale-95"
-        >
-          Ya tenes cuenta? Inicia sesion
-        </button>
-      </form>
+      <EmailAuthForm />
     </main>
   );
 }

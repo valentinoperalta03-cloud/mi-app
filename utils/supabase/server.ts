@@ -1,7 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function createClient() {
+export type CreateSupabaseServerClientOptions = {
+  /**
+   * true: Server Actions, Route Handlers — las cookies de sesion deben persistirse.
+   * false (default): Server Components — si set falla (solo lectura), se ignora.
+   */
+  allowCookieWrites?: boolean;
+};
+
+export async function createClient(options?: CreateSupabaseServerClientOptions) {
+  const allowCookieWrites = options?.allowCookieWrites ?? false;
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -13,12 +22,18 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
+          if (allowCookieWrites) {
+            cookiesToSet.forEach(({ name, value, options: opts }) =>
+              cookieStore.set(name, value, opts)
+            );
+            return;
+          }
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+            cookiesToSet.forEach(({ name, value, options: opts }) =>
+              cookieStore.set(name, value, opts)
             );
           } catch {
-            // setAll can run inside Server Components, where setting cookies is not allowed.
+            // Server Components u otros contextos donde no se pueden fijar cookies.
           }
         },
       },

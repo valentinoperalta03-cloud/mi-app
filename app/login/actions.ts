@@ -2,68 +2,112 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveHomePath } from "@/lib/auth-redirect";
+import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/utils/supabase/server";
 
 function getStringField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+async function getAppOrigin(): Promise<string> {
+  const h = await headers();
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+    h.get("origin") ??
+    "http://localhost:3000"
+  );
+}
+
+function loginRedirect(message: string, isError = true) {
+  const params = new URLSearchParams();
+  params.set("message", message);
+  if (isError) params.set("kind", "error");
+  redirect(`/login?${params.toString()}`);
+}
+
 export async function signInWithEmail(formData: FormData) {
   const email = getStringField(formData, "email");
   const password = getStringField(formData, "password");
 
-  const supabase = await createClient();
+  if (!email || !password) {
+    loginRedirect("Completa email y contrasena.");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?message=${encodeURIComponent(error.message)}`);
+    loginRedirect(formatAuthErrorMessage(error.message));
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?message=${encodeURIComponent("No se pudo obtener la sesión.")}`);
+    loginRedirect("No se pudo obtener la sesion. Volve a intentar.");
   }
 
-  redirect(await resolveHomePath(supabase, user.id));
+  redirect("/feed");
 }
 
 export async function signUpWithEmail(formData: FormData) {
   const email = getStringField(formData, "email");
   const password = getStringField(formData, "password");
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ email, password });
-
-  if (error) {
-    redirect(`/login?message=${encodeURIComponent(error.message)}`);
+  if (!email || !password) {
+    loginRedirect("Completa email y contrasena.");
   }
 
-  redirect("/login?message=Revisa tu email para confirmar la cuenta.");
+  const origin = await getAppOrigin();
+  const supabase = await createClient({ allowCookieWrites: true });
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    loginRedirect(formatAuthErrorMessage(error.message));
+  }
+
+  if (data.session) {
+    redirect("/feed");
+  }
+
+  const params = new URLSearchParams();
+  params.set("kind", "info");
+  params.set(
+    "message",
+    "Revisa tu email para confirmar la cuenta. Luego podes iniciar sesion."
+  );
+  redirect(`/login?${params.toString()}`);
 }
 
 export async function signInWithGoogle() {
-  const supabase = await createClient();
-  const origin =
-    (await headers()).get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000";
+  const supabase = await createClient({ allowCookieWrites: true });
+  const origin = await getAppOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: `${origin}/auth/callback`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   });
 
   const oauthUrl = data?.url;
 
-  if (error || !oauthUrl) {
-    const message = error?.message ?? "No se pudo iniciar sesión con Google.";
-    redirect(`/login?message=${encodeURIComponent(message)}`);
+  if (!error && oauthUrl) {
+    redirect(oauthUrl);
   }
 
-  redirect(oauthUrl);
+  loginRedirect(
+    error ? formatAuthErrorMessage(error.message) : "No se pudo iniciar sesion con Google."
+  );
 }
