@@ -1,40 +1,42 @@
-"use client";
-
-import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import Link from "next/link";
 import MotionPage from "@/components/motion-page";
+import { DB_TABLES } from "@/lib/db-tables";
+import { createClient } from "@/utils/supabase/server";
 
-const clubs = [
-  { id: "1", name: "Top Padel Sports", address: "Av. Libertador 890", price: "$7.500/h", courts: "8 canchas", rating: "4.9" },
-  { id: "2", name: "Padel Club Centro", address: "Av. Corrientes 1234", price: "$5.000/h", courts: "6 canchas", rating: "4.8" },
-  { id: "3", name: "Arena Padel", address: "Calle Mitre 567", price: "$4.500/h", courts: "4 canchas", rating: "4.5" },
-];
-
-export default function ReservasPage() {
-  const listVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.05 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.24 } },
-  };
+export default async function ReservasPage() {
+  const supabase = await createClient();
+  const { data: clubs, error } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("id,name,location")
+    .order("name");
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <p className="text-sm font-medium text-sky-500">Inicio</p>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-950">Reservar pista</h1>
-      <p className="text-sm font-light text-slate-500">Encontra la cancha ideal cerca tuyo</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+        Reservar cancha
+      </h1>
+      <p className="text-sm font-light text-slate-500">
+        Elegi un club en{" "}
+        <code className="rounded bg-slate-100 px-1 text-xs">clubs</code> y horarios en{" "}
+        <code className="rounded bg-slate-100 px-1 text-xs">court_schedules</code>.
+      </p>
 
-      <p className="text-sm font-light text-slate-500">{clubs.length} clubes encontrados</p>
+      {error ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          {error.message}
+        </div>
+      ) : null}
 
-      <motion.section variants={listVariants} initial="hidden" animate="show" className="space-y-3">
-        {clubs.map((club) => (
-          <motion.article
-            key={club.name}
-            variants={itemVariants}
+      <p className="text-sm font-light text-slate-500">
+        {(clubs?.length ?? 0)} clubes
+      </p>
+
+      <section className="space-y-3">
+        {(clubs ?? []).map((club) => (
+          <article
+            key={club.id}
             className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg"
           >
             <div className="flex items-center justify-between gap-3">
@@ -47,28 +49,27 @@ export default function ReservasPage() {
                   className="h-16 w-16 rounded-2xl object-cover"
                 />
                 <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950">{club.name}</h2>
-                  <p className="text-sm font-light text-slate-500">{club.address}</p>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                    {club.name ?? "Club sin nombre"}
+                  </h2>
+                  <p className="text-sm font-light text-slate-500">
+                    {club.location ?? "Sin ubicacion"}
+                  </p>
                 </div>
               </div>
-              <p className="text-sm font-semibold text-amber-500">{club.rating}</p>
             </div>
 
-            <div className="mt-3 flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold tracking-tight text-slate-950">{club.price}</p>
-                <p className="text-sm font-light text-slate-500">{club.courts}</p>
-              </div>
+            <div className="mt-3 flex justify-end">
               <Link
                 href={`/clubes/${club.id}`}
                 className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-sky-500 active:scale-95"
               >
-                Reservar
+                Ver canchas
               </Link>
             </div>
-          </motion.article>
+          </article>
         ))}
-      </motion.section>
+      </section>
     </MotionPage>
   );
 }

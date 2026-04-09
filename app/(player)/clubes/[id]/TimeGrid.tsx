@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export type Court = {
   id: string;
   name: string;
-  surface: "Cesped Azul" | "Panoramica" | "Techada";
+  surface: string;
   pricePerHour: number;
 };
 

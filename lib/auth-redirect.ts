@@ -1,16 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DB_TABLES } from "@/lib/db-tables";
 
 export async function resolveHomePath(
   supabase: SupabaseClient,
   userId: string
 ): Promise<string> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tipo_usuario")
-    .eq("id", userId)
+  const { data: ownedClub } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("id")
+    .eq("owner_id", userId)
+    .limit(1)
     .maybeSingle();
 
-  if (profile?.tipo_usuario === "admin") {
+  if (ownedClub) {
     return "/admin/dashboard";
   }
   return "/feed";

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
+import { upsertProfileForAuthUser } from "@/lib/profiles";
 import { createClient } from "@/utils/supabase/server";
 
 function getStringField(formData: FormData, key: string) {
@@ -18,7 +19,7 @@ async function getAppOrigin(): Promise<string> {
   );
 }
 
-function loginRedirect(message: string, isError = true) {
+function loginRedirect(message: string, isError = true): never {
   const params = new URLSearchParams();
   params.set("message", message);
   if (isError) params.set("kind", "error");
@@ -47,6 +48,14 @@ export async function signInWithEmail(formData: FormData) {
     loginRedirect("No se pudo obtener la sesion. Volve a intentar.");
   }
 
+  const { error: profileError } = await upsertProfileForAuthUser(supabase, user);
+  if (profileError) {
+    loginRedirect(
+      `No se pudo sincronizar tu perfil: ${profileError}. Revisa politicas RLS en profiles.`,
+      true
+    );
+  }
+
   redirect("/feed");
 }
 
@@ -71,6 +80,10 @@ export async function signUpWithEmail(formData: FormData) {
 
   if (error) {
     loginRedirect(formatAuthErrorMessage(error.message));
+  }
+
+  if (data.user) {
+    await upsertProfileForAuthUser(supabase, data.user);
   }
 
   if (data.session) {
