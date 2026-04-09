@@ -9,22 +9,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
  * Cron (SQL en el SQL Editor; habilitá extensiones pg_cron y pg_net).
  * Guardá la URL del proyecto y una key en Vault (ver docs de Supabase Scheduling).
  *
- * @example
- * select cron.schedule(
- *   'expire-pending-reservas',
- *   '*/15 * * * *',
- *   $$
- *   select net.http_post(
- *     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
- *            || '/functions/v1/expire-pending-reservas',
- *     headers := jsonb_build_object(
- *       'Content-Type', 'application/json',
- *       'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'anon_key')
- *     ),
- *     body := '{}'::jsonb
- *   );
- *   $$
- * );
+ * Ejemplo SQL: cron.schedule con net.http_post hacia
+ * /functions/v1/expire-pending-reservas (cada 15 min; ver docs Supabase Scheduling).
  *
  * Si tu columna de creación no se llama created_at, cambiá CREATED_AT_COLUMN abajo.
  */

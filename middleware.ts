@@ -44,11 +44,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAdminPanelPath(pathname)) {
-    return NextResponse.redirect(new URL("/app/feed", request.url));
+    return NextResponse.redirect(new URL("/feed", request.url));
   }
 
   if (pathname === "/inicio") {
-    return NextResponse.redirect(new URL("/app/feed", request.url));
+    return NextResponse.redirect(new URL("/feed", request.url));
   }
 
   return response;

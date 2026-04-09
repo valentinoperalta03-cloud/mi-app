@@ -27,7 +27,7 @@ export default async function PerfilPage() {
         <p className="mt-1 text-sm font-light text-slate-500">Acceso rapido para testear ambos portales.</p>
         <div className="mt-3 flex gap-2">
           <Link
-            href="/app/feed"
+            href="/feed"
             className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-sky-500 active:scale-95"
           >
             Ir a vista Jugador

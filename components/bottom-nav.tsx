@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, House, Trophy, UserRound } from "lucide-react";
 
 const items = [
-  { href: "/app/feed", label: "Inicio", icon: House },
+  { href: "/feed", label: "Inicio", icon: House },
   { href: "/partidos", label: "Partidos", icon: Trophy },
   { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/perfil", label: "Perfil", icon: UserRound },

@@ -13,7 +13,7 @@ export async function resolveHomePath(
   if (profile?.tipo_usuario === "admin") {
     return "/admin/dashboard";
   }
-  return "/app/feed";
+  return "/feed";
 }
 
 export function isAdminPanelPath(pathname: string): boolean {
@@ -21,8 +21,15 @@ export function isAdminPanelPath(pathname: string): boolean {
 }
 
 export function isJugadorAppPath(pathname: string): boolean {
-  if (pathname.startsWith("/app/")) return true;
-  const roots = ["/inicio", "/clubes", "/partidos", "/reservas", "/perfil"];
+  const roots = [
+    "/feed",
+    "/inicio",
+    "/clubes",
+    "/partidos",
+    "/reservas",
+    "/perfil",
+    "/test",
+  ];
   return roots.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
