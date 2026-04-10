@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -17,20 +18,22 @@ export default async function PerfilPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const email = user?.email ?? "Invitado sin sesion";
+  if (!user) {
+    redirect("/login");
+  }
+
+  const email = user.email ?? "Invitado sin sesion";
   const adminEmail =
     process.env.ADMIN_EMAIL?.trim().toLowerCase() ??
     process.env.NEXT_PUBLIC_ADMIN_EMAIL?.trim().toLowerCase() ??
     "";
   const isAdmin = Boolean(adminEmail) && email.toLowerCase() === adminEmail;
 
-  const { data: profile } = user
-    ? await supabase
-        .from(DB_TABLES.profiles)
-        .select("name, level")
-        .eq("user_id", user.id)
-        .maybeSingle()
-    : { data: null };
+  const { data: profile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name, level")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const displayName = profile?.name ?? email;
   const initial = (displayName[0] ?? "U").toUpperCase();

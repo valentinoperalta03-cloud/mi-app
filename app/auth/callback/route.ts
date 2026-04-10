@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
-import { upsertProfileForAuthUser } from "@/lib/profiles";
 import { createClient } from "@/utils/supabase/server";
 
 type EmailOtpType =
@@ -60,8 +59,6 @@ export async function GET(request: NextRequest) {
       return redirectToLogin(origin, "No se pudo obtener la sesion.");
     }
 
-    await upsertProfileForAuthUser(supabase, user);
-
     return NextResponse.redirect(new URL("/feed", origin));
   }
 
@@ -86,8 +83,6 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return redirectToLogin(origin, "No se pudo obtener la sesion.");
     }
-
-    await upsertProfileForAuthUser(supabase, user);
 
     return NextResponse.redirect(new URL("/feed", origin));
   }
