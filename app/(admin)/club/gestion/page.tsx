@@ -75,6 +75,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   if (!clubsError && clubs.length === 0) {
     console.log("[club/gestion] No clubs for user_id:", user.id);
   }
+  const defaultClubId = clubs[0]?.id ?? "";
   const clubIds = clubs.map((club) => club.id);
 
   const { data: courtsData, error: courtsError } = clubIds.length
@@ -86,10 +87,12 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
     : { data: [], error: null };
 
   const courts = (courtsData ?? []) as CourtRow[];
+  const fallbackCourtIdForDefaultClub =
+    courts.find((court) => court.club_id === defaultClubId)?.id ?? courts[0]?.id ?? "";
   const selectedCourtId =
     params?.court && courts.some((court) => court.id === params.court)
       ? params.court
-      : courts[0]?.id ?? "";
+      : fallbackCourtIdForDefaultClub;
 
   const dayStartIso = `${selectedDate}T00:00:00`;
   const nextDayIso = format(addDays(new Date(dayStartIso), 1), "yyyy-MM-dd'T'00:00:00");
@@ -215,6 +218,9 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
               >
                 <p className="text-lg font-semibold tracking-tight text-slate-900">{slot}</p>
                 <p className="mt-1 text-xs text-slate-500">Turno de 90 minutos</p>
+                {status === "free" ? (
+                  <p className="mt-1 text-xs font-semibold text-emerald-700">LIBRE</p>
+                ) : null}
 
                 <div className="mt-4">
                   {status === "blocked" ? (

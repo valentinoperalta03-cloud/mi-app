@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const links = [
-  { href: "/admin/gestion", label: "Gestión del club", description: "Canchas, horarios y datos" },
-  { href: "/admin/canchas", label: "Canchas", description: "Estado y configuración" },
+  { href: "/club/gestion", label: "Gestión del club", description: "Canchas, horarios y datos" },
+  { href: "/club/horarios", label: "Canchas", description: "Estado y configuración" },
   { href: "/admin/ingresos", label: "Ingresos", description: "Resumen financiero" },
 ];
 

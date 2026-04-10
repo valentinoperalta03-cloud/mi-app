@@ -3,8 +3,8 @@ import Link from "next/link";
 
 const adminLinks = [
   { href: "/admin/dashboard", label: "Inicio" },
-  { href: "/admin/gestion", label: "Gestion" },
-  { href: "/admin/canchas", label: "Canchas" },
+  { href: "/club/gestion", label: "Gestion" },
+  { href: "/club/horarios", label: "Canchas" },
   { href: "/admin/ingresos", label: "Ingresos" },
 ];
 
