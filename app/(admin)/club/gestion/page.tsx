@@ -40,6 +40,7 @@ type CourtRow = {
 type MatchRow = {
   date: string;
   court_id: string;
+  created_by: string | null;
 };
 
 type BlockRow = {
@@ -100,7 +101,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   const { data: matchesData, error: matchesError } = selectedCourtId
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("date,court_id")
+        .select("date,court_id,created_by")
         .eq("court_id", selectedCourtId)
         .gte("date", dayStartIso)
         .lt("date", nextDayIso)
@@ -117,7 +118,23 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   const matches = (matchesData ?? []) as MatchRow[];
   const blocks = (blocksData ?? []) as BlockRow[];
 
-  const matchTimes = new Set(matches.map((m) => format(parseISO(m.date), "HH:mm")));
+  const creatorIds = Array.from(
+    new Set(matches.map((match) => match.created_by).filter(Boolean))
+  ) as string[];
+  const { data: profilesData } = creatorIds.length
+    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
+    : { data: [] };
+  const creatorNameById = new Map(
+    (profilesData ?? []).map((profile) => [
+      String((profile as { user_id: string }).user_id),
+      (profile as { name: string | null }).name ?? "Jugador",
+    ])
+  );
+
+  const matchByTime = new Map<string, MatchRow>();
+  for (const match of matches) {
+    matchByTime.set(format(parseISO(match.date), "HH:mm"), match);
+  }
   const blockTimes = new Set(
     blocks.map((b) => (b.start_time.length >= 5 ? b.start_time.slice(0, 5) : b.start_time))
   );
@@ -199,13 +216,21 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
       {selectedCourtId ? (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {SLOT_TIMES.map((slot) => {
-            const hasMatch = matchTimes.has(slot);
-            const isBlocked = !hasMatch && blockTimes.has(slot);
-            const status: "free" | "blocked" | "match" = hasMatch
-              ? "match"
-              : isBlocked
-                ? "blocked"
+            const isBlocked = blockTimes.has(slot);
+            const matchAtTime = matchByTime.get(slot);
+            const hasMatch = Boolean(matchAtTime);
+            const status: "free" | "blocked" | "reserved" = isBlocked
+              ? "blocked"
+              : hasMatch
+                ? "reserved"
                 : "free";
+            const occupiedBy = isBlocked
+              ? "Bloqueo manual"
+              : matchAtTime?.created_by
+                ? creatorNameById.get(matchAtTime.created_by) ?? "Jugador"
+                : matchAtTime
+                  ? "Jugador"
+                  : "";
 
             return (
               <article
@@ -213,6 +238,8 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                 className={`rounded-2xl border p-4 shadow-sm ${
                   status === "blocked"
                     ? "border-rose-200 bg-rose-50"
+                    : status === "reserved"
+                      ? "border-slate-300 bg-slate-100"
                     : "border-slate-200 bg-white"
                 }`}
               >
@@ -221,12 +248,16 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                 {status === "free" ? (
                   <p className="mt-1 text-xs font-semibold text-emerald-700">LIBRE</p>
                 ) : null}
+                {status !== "free" ? (
+                  <p className="mt-1 text-xs font-semibold text-slate-700">OCUPADO</p>
+                ) : null}
+                {status !== "free" ? (
+                  <p className="mt-1 text-xs text-slate-600">
+                    {isBlocked ? `Motivo: ${occupiedBy}` : `Jugador: ${occupiedBy}`}
+                  </p>
+                ) : null}
 
                 <div className="mt-4">
-                  {status === "blocked" ? (
-                    <p className="mb-2 text-xs font-semibold text-rose-700">OCUPADO</p>
-                  ) : null}
-
                   <SlotToggleForm
                     courtId={selectedCourtId}
                     date={selectedDate}

@@ -5,6 +5,8 @@ const adminLinks = [
   { href: "/admin/dashboard", label: "Inicio" },
   { href: "/club/gestion", label: "Gestion" },
   { href: "/club/horarios", label: "Canchas" },
+  { href: "/club/partidos", label: "Partidos" },
+  { href: "/admin/control", label: "Panel de Control" },
   { href: "/admin/ingresos", label: "Ingresos" },
 ];
 

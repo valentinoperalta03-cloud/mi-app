@@ -83,6 +83,7 @@ export default function CreateMatchForm({
         <select
           id="court_id"
           name="court_id"
+          key={selectedClubId}
           required
           disabled={availableCourts.length === 0}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
@@ -142,18 +143,6 @@ export default function CreateMatchForm({
           />
         </label>
 
-        <label className="flex items-center justify-between gap-4">
-          <span>
-            <span className="block text-sm font-semibold text-slate-800">Visibilidad</span>
-            <span className="text-xs text-slate-500">Publico o privado</span>
-          </span>
-          <input
-            name="is_public"
-            type="checkbox"
-            defaultChecked
-            className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:inline-block before:h-5 before:w-5 before:translate-x-0.5 before:rounded-full before:bg-white before:shadow before:transition checked:bg-sky-500 checked:before:translate-x-5"
-          />
-        </label>
       </div>
 
       {state.message ? (

@@ -25,39 +25,28 @@ type MatchFeedRow = {
         player_id: string;
         profiles:
           | {
-              level: string | null;
+              level: number | null;
             }
           | null;
       }[]
     | null;
 };
 
-const LEVEL_PRIORITY: Record<string, number> = {
-  beginner: 1,
-  intermedio: 2,
-  intermediate: 2,
-  advanced: 3,
-  avanzado: 3,
-  pro: 4,
-};
-
 function getAverageLevelLabel(players: MatchFeedRow["match_players"]): string {
   const levels = (players ?? [])
-    .map((player) => player.profiles?.level?.toLowerCase().trim() ?? "")
-    .filter(Boolean);
+    .map((player) => player.profiles?.level)
+    .filter((level): level is number => typeof level === "number");
 
   if (levels.length === 0) {
     return "Sin nivel definido";
   }
 
-  const avg =
-    levels.reduce((sum, level) => sum + (LEVEL_PRIORITY[level] ?? 1), 0) /
-    levels.length;
+  const avg = levels.reduce((sum, level) => sum + level, 0) / levels.length;
 
-  if (avg >= 3.5) return "Pro";
-  if (avg >= 2.5) return "Avanzado";
-  if (avg >= 1.5) return "Intermedio";
-  return "Principiante";
+  if (avg >= 4.5) return "Pro";
+  if (avg >= 3.5) return "Avanzado";
+  if (avg >= 2.5) return "Intermedio";
+  return "Inicial";
 }
 
 type FeedPageProps = {

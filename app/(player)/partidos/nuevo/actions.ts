@@ -30,7 +30,6 @@ export async function createMatchAction(
   const matchDate = getField(formData, "match_date");
   const matchTime = getField(formData, "match_time");
   const isCompetitive = formData.get("is_competitive") === "on";
-  const isPublic = formData.get("is_public") === "on";
 
   if (!clubId || !courtId || !matchDate || !matchTime) {
     return { success: false, message: "Completa club, cancha, fecha y hora." };
@@ -83,9 +82,9 @@ export async function createMatchAction(
     .from(DB_TABLES.matches)
     .insert({
       court_id: courtId,
+      created_by: user.id,
       date: dateIso,
       is_competitive: isCompetitive,
-      is_public: isPublic,
     })
     .select("id")
     .single();
