@@ -51,11 +51,12 @@ export async function signInWithEmail(formData: FormData) {
 }
 
 export async function signUpWithEmail(formData: FormData) {
+  const fullName = getStringField(formData, "full_name");
   const email = getStringField(formData, "email");
   const password = getStringField(formData, "password");
 
-  if (!email || !password) {
-    loginRedirect("Completa email y contrasena.");
+  if (!fullName || !email || !password) {
+    loginRedirect("Completa nombre, email y contrasena.");
   }
 
   const origin = await getAppOrigin();
@@ -66,6 +67,9 @@ export async function signUpWithEmail(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
+      data: {
+        full_name: fullName,
+      },
     },
   });
 

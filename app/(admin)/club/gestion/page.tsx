@@ -72,6 +72,9 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
     .order("name");
 
   const clubs = (clubsData ?? []) as ClubRow[];
+  if (!clubsError && clubs.length === 0) {
+    console.log("[club/gestion] No clubs for user_id:", user.id);
+  }
   const clubIds = clubs.map((club) => club.id);
 
   const { data: courtsData, error: courtsError } = clubIds.length

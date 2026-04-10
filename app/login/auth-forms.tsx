@@ -56,6 +56,18 @@ export function EmailAuthForm() {
   return (
     <form className="space-y-4">
       <div>
+        <label className="mb-2 block text-sm font-medium text-slate-600">Nombre</label>
+        <input
+          type="text"
+          name="full_name"
+          placeholder="Tu nombre"
+          required
+          autoComplete="name"
+          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
+        />
+      </div>
+
+      <div>
         <label className="mb-2 block text-sm font-medium text-slate-600">
           Correo electronico
         </label>
