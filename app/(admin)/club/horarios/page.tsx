@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import AdminBackLink from "@/components/admin/admin-back-link";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import ScheduleGrid from "./schedule-grid";
@@ -97,11 +98,12 @@ export default async function ClubHorariosPage({ searchParams }: HorariosPagePro
   });
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl space-y-6 bg-transparent px-4 pb-24 pt-6">
+    <main className="space-y-6">
+      <AdminBackLink />
       <header className="space-y-2">
-        <p className="text-sm font-medium text-sky-600">Admin Club</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          Gestion de horarios
+        <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Canchas</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+          Horarios de canchas
         </h1>
         <p className="text-sm text-slate-500">
           Configura apertura y cierre por dia para cada cancha del club.
@@ -126,7 +128,7 @@ export default async function ClubHorariosPage({ searchParams }: HorariosPagePro
       ) : null}
 
       {clubs.length > 0 ? (
-        <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+        <section className="space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-end gap-2">
             {courts.map((court) => {
               const isActive = court.id === selectedCourtId;

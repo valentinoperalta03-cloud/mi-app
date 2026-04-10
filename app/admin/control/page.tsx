@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import AdminBackLink from "@/components/admin/admin-back-link";
 import GateForm from "./gate-form";
 import { createClient } from "@/utils/supabase/server";
 
@@ -15,6 +16,7 @@ export default async function AdminControlPage() {
   if (!hasAccess) {
     return (
       <main className="space-y-6">
+        <AdminBackLink />
         <GateForm />
       </main>
     );

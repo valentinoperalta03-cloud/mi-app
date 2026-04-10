@@ -25,23 +25,45 @@ type MatchFeedRow = {
         player_id: string;
         profiles:
           | {
-              level: number | null;
+              level: number | string | null;
             }
           | null;
       }[]
     | null;
 };
 
+const LEVEL_PRIORITY: Record<string, number> = {
+  beginner: 1,
+  intermedio: 2,
+  intermediate: 2,
+  advanced: 3,
+  avanzado: 3,
+  pro: 4,
+};
+
+function levelToNumeric(levelLabel: string): number {
+  const trimmed = levelLabel.trim();
+  if (!trimmed) return 0;
+  const asNum = Number(trimmed);
+  if (!Number.isNaN(asNum)) return asNum;
+  return LEVEL_PRIORITY[trimmed] ?? 1;
+}
+
 function getAverageLevelLabel(players: MatchFeedRow["match_players"]): string {
   const levels = (players ?? [])
-    .map((player) => player.profiles?.level)
-    .filter((level): level is number => typeof level === "number");
+    .map((player) => {
+      const raw = player.profiles?.level;
+      if (raw === null || raw === undefined) return "";
+      return String(raw).toLowerCase().trim();
+    })
+    .filter(Boolean);
 
   if (levels.length === 0) {
     return "Sin nivel definido";
   }
 
-  const avg = levels.reduce((sum, level) => sum + level, 0) / levels.length;
+  const avg =
+    levels.reduce((sum, level) => sum + levelToNumeric(level), 0) / levels.length;
 
   if (avg >= 4.5) return "Pro";
   if (avg >= 3.5) return "Avanzado";

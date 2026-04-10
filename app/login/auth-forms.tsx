@@ -1,22 +1,62 @@
 "use client";
 
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import {
-  signInWithEmail,
-  signInWithGoogle,
-  signUpWithEmail,
-} from "./actions";
+import { formatAuthErrorMessage } from "@/lib/auth-errors";
+import { createClient } from "@/utils/supabase/client";
+import { signInWithEmail, signUpWithEmail } from "./actions";
 
-function GoogleSubmitButton() {
-  const { pending } = useFormStatus();
+export function GoogleAuthForm() {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setPending(true);
+    const supabase = createClient();
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
+      },
+    });
+
+    if (oauthError) {
+      setError(formatAuthErrorMessage(oauthError.message));
+      setPending(false);
+      return;
+    }
+
+    if (data.url) {
+      window.location.assign(data.url);
+      return;
+    }
+
+    setError("No se pudo iniciar sesion con Google.");
+    setPending(false);
+  }
+
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="ui-btn-ghost w-full bg-white disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "Abriendo Google..." : "Continuar con Google"}
-    </button>
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => void handleGoogleSignIn()}
+        disabled={pending}
+        className="ui-btn-ghost w-full bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {pending ? "Abriendo Google..." : "Continuar con Google"}
+      </button>
+      {error ? (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -41,14 +81,6 @@ function EmailSubmitButton({
     >
       {pending ? busyLabel : idleLabel}
     </button>
-  );
-}
-
-export function GoogleAuthForm() {
-  return (
-    <form action={signInWithGoogle}>
-      <GoogleSubmitButton />
-    </form>
   );
 }
 

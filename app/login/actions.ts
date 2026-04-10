@@ -90,28 +90,3 @@ export async function signUpWithEmail(formData: FormData) {
   redirect(`/login?${params.toString()}`);
 }
 
-export async function signInWithGoogle() {
-  const supabase = await createClient({ allowCookieWrites: true });
-  const origin = await getAppOrigin();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${origin}/auth/callback`,
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent",
-      },
-    },
-  });
-
-  const oauthUrl = data?.url;
-
-  if (!error && oauthUrl) {
-    redirect(oauthUrl);
-  }
-
-  loginRedirect(
-    error ? formatAuthErrorMessage(error.message) : "No se pudo iniciar sesion con Google."
-  );
-}

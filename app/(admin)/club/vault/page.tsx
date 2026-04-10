@@ -2,6 +2,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import AdminBackLink from "@/components/admin/admin-back-link";
 import { DollarSign, Users } from "lucide-react";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -102,6 +103,7 @@ export default async function OwnerVaultPage() {
 
   return (
     <main className="space-y-6">
+      <AdminBackLink href="/admin/dashboard" label="Volver al panel" />
       <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-sky-600">Boveda del Dueno</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">Ingresos y jugadores clave</h1>
