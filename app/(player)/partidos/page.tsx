@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import {
   fetchUpcomingMatches,
   matchClubName,
@@ -46,7 +48,7 @@ export default async function PartidosPage() {
           return (
             <article
               key={item.id}
-              className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg"
+              className={`${PLAYER_CARD_INTERACTIVE} p-5`}
             >
               <div className="flex items-center gap-4">
                 <Image
@@ -84,11 +86,10 @@ export default async function PartidosPage() {
       </section>
 
       {!error && matches.length === 0 ? (
-        <p className="text-center text-sm text-slate-500">
-          No hay matches futuros en la base. Crea filas en{" "}
-          <code className="text-xs">matches</code> vinculadas a{" "}
-          <code className="text-xs">courts</code>.
-        </p>
+        <EmptyStateCard
+          title="Nadie armo partido para hoy todavia"
+          subtitle="Convoca jugadores cerca tuyo y crea el primer encuentro del dia en segundos."
+        />
       ) : null}
     </MotionPage>
   );

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DB_TABLES } from "@/lib/db-tables";
+import { PLAYER_CARD, PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { supabase } from "@/lib/supabase";
 import MotionPage from "@/components/motion-page";
 
@@ -58,7 +59,7 @@ export default function ClubesPage() {
       <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
         <div className="shimmer h-8 w-44 rounded-xl" />
         {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={idx} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div key={idx} className={`${PLAYER_CARD} p-4`}>
             <div className="flex items-center gap-4">
               <div className="shimmer h-16 w-16 rounded-2xl" />
               <div className="flex-1">
@@ -96,7 +97,7 @@ export default function ClubesPage() {
           <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
             <Link
               href={`/clubes/${club.id}`}
-              className="block rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg active:scale-95"
+              className={`block p-5 ${PLAYER_CARD_INTERACTIVE}`}
             >
               <div className="flex items-center gap-4">
                 <Image

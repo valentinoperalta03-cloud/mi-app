@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { motion } from "framer-motion";
+import { PLAYER_CARD } from "@/lib/player-ui";
 
 export type Court = {
   id: string;
@@ -37,7 +38,7 @@ export default function TimeGrid({
   onSelect,
 }: TimeGridProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
+    <div className={`overflow-x-auto ${PLAYER_CARD}`}>
       <div className="grid min-w-[760px] grid-cols-[88px_repeat(3,minmax(210px,1fr))]">
         <div className="sticky left-0 z-10 border-b border-r border-slate-100 bg-slate-50 p-3 text-xs font-semibold tracking-tight text-slate-600">
           Hora
@@ -79,7 +80,7 @@ export default function TimeGrid({
                     occupied
                       ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-60"
                       : isSelected
-                        ? "bg-sky-600 text-white shadow-sm"
+                        ? "border-sky-200 bg-sky-500 text-white shadow-sm"
                         : "bg-white text-slate-700 hover:bg-sky-50 hover:border-sky-100"
                   }`}
                 >

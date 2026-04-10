@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MotionPage from "@/components/motion-page";
+import { PLAYER_CARD, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 
 type ConfirmacionPageProps = {
   searchParams: Promise<{
@@ -23,7 +24,7 @@ export default async function ConfirmacionPage({ searchParams }: ConfirmacionPag
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <h1 className="text-2xl font-bold tracking-tight text-slate-950">Confirmacion de reserva</h1>
 
-      <section className="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <section className={`${PLAYER_CARD} space-y-2 p-5`}>
         <p className="text-sm font-light text-slate-500">Club ID: {clubId}</p>
         <p className="text-sm font-light text-slate-500">Cancha: {court}</p>
         <p className="text-sm font-light text-slate-500">Fecha: {date}</p>
@@ -33,7 +34,7 @@ export default async function ConfirmacionPage({ searchParams }: ConfirmacionPag
 
       <Link
         href="/reservas"
-        className="inline-block rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-sky-500 active:scale-95"
+        className={`inline-block ${PLAYER_PRIMARY_BUTTON}`}
       >
         Volver a reservas
       </Link>

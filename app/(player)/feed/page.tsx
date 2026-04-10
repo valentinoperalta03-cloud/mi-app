@@ -1,8 +1,10 @@
-import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
+import JoinMatchButton from "./join-match-button";
 
 type MatchFeedRow = {
   id: string;
@@ -58,9 +60,22 @@ function getAverageLevelLabel(players: MatchFeedRow["match_players"]): string {
   return "Principiante";
 }
 
-export default async function FeedPage() {
+type FeedPageProps = {
+  searchParams?: Promise<{
+    message?: string;
+    kind?: string;
+  }>;
+};
+
+export default async function FeedPage({ searchParams }: FeedPageProps) {
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
+  const params = searchParams ? await searchParams : undefined;
+  const flashMessage = params?.message ?? "";
+  const flashKind = params?.kind === "success" ? "success" : "info";
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from("matches")
@@ -100,6 +115,18 @@ export default async function FeedPage() {
         </p>
       </header>
 
+      {flashMessage ? (
+        <section
+          className={`rounded-3xl border p-4 text-sm shadow-sm ${
+            flashKind === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-sky-200 bg-sky-50 text-sky-800"
+          }`}
+        >
+          {flashMessage}
+        </section>
+      ) : null}
+
       {error ? (
         <section className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 shadow-sm">
           No pudimos cargar el feed en este momento: {error.message}
@@ -107,14 +134,10 @@ export default async function FeedPage() {
       ) : null}
 
       {!error && matches.length === 0 ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-base font-medium text-slate-800">
-            No hay partidos disponibles por ahora.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Volve en unos minutos para ver nuevos encuentros abiertos.
-          </p>
-        </section>
+        <EmptyStateCard
+          title="Nadie armo partido para hoy todavia"
+          subtitle="Dale movimiento a la comunidad y crea un partido para que otros jugadores se sumen."
+        />
       ) : null}
 
       <section className="space-y-4">
@@ -132,7 +155,7 @@ export default async function FeedPage() {
           return (
             <article
               key={match.id}
-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:border-sky-200 hover:shadow-[0_16px_38px_rgba(14,116,144,0.12)]"
+              className={`${PLAYER_CARD_INTERACTIVE} p-5`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -168,13 +191,12 @@ export default async function FeedPage() {
                   {playersCount} jugador(es) anotado(s)
                 </p>
 
-                {freeSlots > 0 ? (
-                  <Link
-                    href={`/partidos?join=${match.id}`}
-                    className="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-95"
-                  >
-                    Unirse
-                  </Link>
+                {freeSlots > 0 && user?.id ? (
+                  <JoinMatchButton matchId={match.id} userId={user.id} />
+                ) : freeSlots > 0 ? (
+                  <span className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                    Inicia sesion
+                  </span>
                 ) : (
                   <span className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
                     Completo

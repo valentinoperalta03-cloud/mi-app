@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
+import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function ReservasPage() {
@@ -29,15 +31,20 @@ export default async function ReservasPage() {
         </div>
       ) : null}
 
-      <p className="text-sm font-light text-slate-500">
-        {(clubs?.length ?? 0)} clubes
-      </p>
+      <p className="text-sm font-light text-slate-500">{(clubs?.length ?? 0)} clubes</p>
+
+      {!error && (clubs?.length ?? 0) === 0 ? (
+        <EmptyStateCard
+          title="No hay clubes disponibles para reservar"
+          subtitle="Activa la agenda de juego creando un partido y sumando canchas para la comunidad."
+        />
+      ) : null}
 
       <section className="space-y-3">
         {(clubs ?? []).map((club) => (
           <article
             key={club.id}
-            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:border-sky-200 hover:shadow-lg"
+            className={`${PLAYER_CARD_INTERACTIVE} p-5`}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-4">
@@ -62,7 +69,7 @@ export default async function ReservasPage() {
             <div className="mt-3 flex justify-end">
               <Link
                 href={`/clubes/${club.id}`}
-                className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:bg-sky-500 active:scale-95"
+                className={PLAYER_PRIMARY_BUTTON}
               >
                 Ver canchas
               </Link>

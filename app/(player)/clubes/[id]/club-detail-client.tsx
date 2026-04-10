@@ -17,6 +17,7 @@ import TimeGrid, { type Court, type TimeSlot } from "./TimeGrid";
 import MotionPage from "@/components/motion-page";
 import { buildSlotsForDay } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
+import { PLAYER_CARD, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { supabase } from "@/lib/supabase";
 import type { ClubRow, CourtRow, CourtScheduleRow } from "@/lib/database.types";
 
@@ -155,7 +156,7 @@ export default function ClubDetailClient({
 
       <motion.section
         layoutId={`club-card-${clubId}`}
-        className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+        className={`${PLAYER_CARD} p-5`}
       >
         <div className="flex items-center gap-4">
           <Image
@@ -189,7 +190,7 @@ export default function ClubDetailClient({
                 whileTap={{ scale: 0.96 }}
                 className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs transition-all duration-300 ${
                   active
-                    ? "border-sky-600 bg-sky-600 text-white"
+                    ? "border-sky-500 bg-sky-500 text-white"
                     : "border-slate-200 bg-white text-slate-700 hover:border-sky-300"
                 }`}
               >
@@ -231,7 +232,7 @@ export default function ClubDetailClient({
           showBookingBar ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className={`${PLAYER_CARD} space-y-3 p-4`}>
           <p className="text-sm font-bold tracking-tight text-slate-950">
             Resumen de reserva
           </p>
@@ -245,7 +246,7 @@ export default function ClubDetailClient({
             disabled={!isBookingComplete()}
             onClick={handleConfirmBooking}
             whileTap={{ scale: 0.97 }}
-            className="w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
+            className={`w-full disabled:cursor-not-allowed disabled:opacity-50 ${PLAYER_PRIMARY_BUTTON}`}
           >
             Confirmar (preview)
           </motion.button>
