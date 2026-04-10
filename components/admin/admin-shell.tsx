@@ -1,14 +1,16 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CalendarClock, House, Settings2, Trophy, UserRound } from "lucide-react";
+import { Activity, DollarSign, House, Settings, Target, Users } from "lucide-react";
 import AdminBottomNav from "./admin-bottom-nav";
+import AdminMobileHomeLink from "./admin-mobile-home-link";
 
 const desktopLinks = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
-  { href: "/club/gestion", label: "Turnos", icon: CalendarClock },
-  { href: "/club/partidos", label: "Partidos", icon: Trophy },
-  { href: "/club/horarios", label: "Canchas", icon: Settings2 },
-  { href: "/perfil", label: "Perfil", icon: UserRound },
+  { href: "/admin/reservas", label: "Reservas", icon: Target },
+  { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
+  { href: "/admin/analytics", label: "Ocupacion", icon: Activity },
+  { href: "/admin/jugadores", label: "Jugadores", icon: Users },
+  { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;
 
 export default function AdminShell({ children }: { children: ReactNode }) {
@@ -17,7 +19,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <p className="text-sm font-semibold tracking-tight text-slate-900">Panel del club</p>
-          <nav className="flex flex-wrap items-center gap-1" aria-label="Secciones">
+          <nav className="flex flex-wrap items-center gap-1" aria-label="Modulos">
             {desktopLinks.map((item) => {
               const Icon = item.icon;
               return (
@@ -35,7 +37,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:pb-10 md:pt-8">{children}</div>
+      <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:pb-10 md:pt-8">
+        <AdminMobileHomeLink />
+        {children}
+      </div>
 
       <AdminBottomNav />
     </div>

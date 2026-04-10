@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { addDays, format, parseISO } from "date-fns";
+import { LayoutGrid } from "lucide-react";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -53,6 +54,13 @@ type BlockRow = {
 function formatToday() {
   return format(new Date(), "yyyy-MM-dd");
 }
+
+const courtPillBase =
+  "rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200";
+const courtPillActive =
+  "border-sky-200/90 bg-sky-50 text-sky-900 shadow-sm ring-1 ring-sky-200/50";
+const courtPillIdle =
+  "border-slate-200/80 bg-white text-slate-600 hover:border-sky-200/80 hover:bg-slate-50/90 hover:text-sky-900";
 
 export default async function ClubGestionPage({ searchParams }: GestionPageProps) {
   const supabase = await createClient();
@@ -138,39 +146,41 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   );
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-600">Turnos</p>
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">
+          <LayoutGrid size={14} className="text-sky-600" strokeWidth={2} />
+          Turnos
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
           Gestion de disponibilidad
         </h1>
-        <p className="text-sm text-slate-500">
-          Turnos fijos de 90 minutos entre 07:30 y 22:30.
+        <p className="max-w-lg text-sm font-medium text-slate-500">
+          Turnos fijos de 90 minutos entre 07:30 y 22:30. Bloquea o libera franjas segun tu operacion
+          del dia.
         </p>
       </header>
 
       {clubsError || courtsError || matchesError || blocksError ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-4 text-sm font-medium text-rose-800 shadow-sm">
           {clubsError?.message ||
             courtsError?.message ||
             matchesError?.message ||
             blocksError?.message}
-        </section>
+        </div>
       ) : null}
 
       {!clubsError && clubs.length === 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-base font-medium text-slate-800">
-            No administras ningun club todavia.
-          </p>
-        </section>
+        <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+          <p className="text-base font-semibold text-slate-900">No administras ningun club todavia.</p>
+        </div>
       ) : null}
 
       {clubs.length > 0 ? (
-        <section className="space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section className="space-y-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <div className="space-y-2">
-            <label htmlFor="manage-date" className="text-sm font-medium text-slate-700">
+            <label htmlFor="manage-date" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Fecha a gestionar
             </label>
             <form className="flex flex-wrap items-center gap-2">
@@ -180,34 +190,33 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                 name="date"
                 type="date"
                 defaultValue={selectedDate}
-                className="rounded-2xl border border-slate-200 px-4 py-2 text-sm text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors focus:border-sky-300 focus:ring-2 focus:ring-sky-200/60"
               />
               <button
                 type="submit"
-                className="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:opacity-95"
+                className="rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-[0.98]"
               >
                 Ver dia
               </button>
             </form>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {courts.map((court) => {
-              const active = court.id === selectedCourtId;
-              return (
-                <Link
-                  key={court.id}
-                  href={`/club/gestion?court=${court.id}&date=${selectedDate}`}
-                  className={`rounded-2xl border px-4 py-2 text-sm font-medium transition-all duration-300 ${
-                    active
-                      ? "border-sky-500 bg-sky-500 text-white"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700"
-                  }`}
-                >
-                  {court.name ?? "Cancha"}
-                </Link>
-              );
-            })}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cancha</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {courts.map((court) => {
+                const active = court.id === selectedCourtId;
+                return (
+                  <Link
+                    key={court.id}
+                    href={`/club/gestion?court=${court.id}&date=${selectedDate}`}
+                    className={`${courtPillBase} ${active ? courtPillActive : courtPillIdle}`}
+                  >
+                    {court.name ?? "Cancha"}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
       ) : null}
@@ -231,27 +240,28 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                   ? "Jugador"
                   : "";
 
+            const cardClass =
+              status === "blocked"
+                ? "border-rose-100/90 bg-rose-50/40 shadow-sm"
+                : status === "reserved"
+                  ? "border-slate-200/80 bg-slate-50/50 shadow-sm"
+                  : "border-slate-100 bg-white shadow-sm";
+
             return (
               <article
                 key={`${selectedCourtId}-${selectedDate}-${slot}`}
-                className={`rounded-2xl border p-4 shadow-sm ${
-                  status === "blocked"
-                    ? "border-rose-200 bg-rose-50"
-                    : status === "reserved"
-                      ? "border-slate-300 bg-slate-100"
-                    : "border-slate-200 bg-white"
-                }`}
+                className={`rounded-2xl border p-4 transition-shadow hover:shadow-md ${cardClass}`}
               >
                 <p className="text-lg font-semibold tracking-tight text-slate-900">{slot}</p>
-                <p className="mt-1 text-xs text-slate-500">Turno de 90 minutos</p>
+                <p className="mt-1 text-xs font-medium text-slate-500">Turno de 90 minutos</p>
                 {status === "free" ? (
-                  <p className="mt-1 text-xs font-semibold text-emerald-700">LIBRE</p>
+                  <p className="mt-2 text-xs font-semibold text-emerald-700/90">Libre</p>
                 ) : null}
                 {status !== "free" ? (
-                  <p className="mt-1 text-xs font-semibold text-slate-700">OCUPADO</p>
+                  <p className="mt-2 text-xs font-semibold text-slate-700">Ocupado</p>
                 ) : null}
                 {status !== "free" ? (
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs font-medium text-slate-600">
                     {isBlocked ? `Motivo: ${occupiedBy}` : `Jugador: ${occupiedBy}`}
                   </p>
                 ) : null}
@@ -269,6 +279,6 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
           })}
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }
