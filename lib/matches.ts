@@ -2,10 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import type { MatchWithRelations } from "@/lib/database.types";
 
-const matchListSelect = `
+export const matchListSelect = `
   id,
   date,
   court_id,
+  created_by,
+  is_competitive,
   courts (
     id,
     name,
@@ -33,7 +35,10 @@ export async function fetchUpcomingMatches(
     .limit(limit);
 }
 
-export type UpcomingMatchRow = MatchWithRelations;
+export type UpcomingMatchRow = MatchWithRelations & {
+  created_by?: string | null;
+  is_competitive?: boolean | null;
+};
 
 function firstCourtEmbed(m: UpcomingMatchRow): Record<string, unknown> | null {
   const c = m.courts as unknown;
@@ -67,6 +72,51 @@ export function matchCourtPrice(m: UpcomingMatchRow): number | null {
   const court = firstCourtEmbed(m);
   const p = court?.price;
   return typeof p === "number" ? p : null;
+}
+
+/** Próximo partido futuro donde el usuario creó el match o está anotado en match_players. */
+export async function fetchNextMatchForPlayer(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<UpcomingMatchRow | null> {
+  const now = new Date().toISOString();
+
+  const [{ data: created }, { data: playerRows }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.matches)
+      .select(matchListSelect)
+      .eq("created_by", userId)
+      .gte("date", now)
+      .order("date", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from(DB_TABLES.matchPlayers).select("match_id").eq("player_id", userId),
+  ]);
+
+  const createdMatch = created as UpcomingMatchRow | null;
+  const ids = [...new Set((playerRows ?? []).map((r: { match_id: string }) => r.match_id))];
+
+  let joinedMatch: UpcomingMatchRow | null = null;
+  if (ids.length > 0) {
+    const { data } = await supabase
+      .from(DB_TABLES.matches)
+      .select(matchListSelect)
+      .in("id", ids)
+      .gte("date", now)
+      .order("date", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    joinedMatch = data as UpcomingMatchRow | null;
+  }
+
+  if (!createdMatch && !joinedMatch) return null;
+  if (!createdMatch) return joinedMatch;
+  if (!joinedMatch) return createdMatch;
+  return new Date(createdMatch.date) <= new Date(joinedMatch.date) ? createdMatch : joinedMatch;
+}
+
+export async function fetchMatchById(supabase: SupabaseClient, matchId: string) {
+  return supabase.from(DB_TABLES.matches).select(matchListSelect).eq("id", matchId).maybeSingle();
 }
 
 export async function fetchMatchesForCourtsOnDay(

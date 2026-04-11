@@ -6,6 +6,11 @@ import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/utils/supabase/client";
 import { signInWithEmail, signUpWithEmail } from "./actions";
 
+const inputClass =
+  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-sky-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
+
+const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400";
+
 export function GoogleAuthForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +52,12 @@ export function GoogleAuthForm() {
         type="button"
         onClick={() => void handleGoogleSignIn()}
         disabled={pending}
-        className="ui-btn-ghost w-full bg-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-2xl border border-slate-200/90 bg-white/80 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
       >
         {pending ? "Abriendo Google..." : "Continuar con Google"}
       </button>
       {error ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800">
           {error}
         </p>
       ) : null}
@@ -64,20 +69,27 @@ function EmailSubmitButton({
   formAction,
   idleLabel,
   busyLabel,
-  className,
+  variant,
 }: {
   formAction: (formData: FormData) => void;
   idleLabel: string;
   busyLabel: string;
-  className: string;
+  variant: "primary" | "ghost";
 }) {
   const { pending } = useFormStatus();
+  const base =
+    "w-full rounded-2xl py-4 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55";
+  const primary =
+    "bg-gradient-to-b from-sky-500 to-sky-600 text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-sky-400 hover:to-sky-500 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
+  const ghost =
+    "mt-1 text-sky-600 hover:bg-sky-50/90 active:scale-[0.99]";
+
   return (
     <button
       type="submit"
       formAction={formAction}
       disabled={pending}
-      className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`${base} ${variant === "primary" ? primary : ghost}`}
     >
       {pending ? busyLabel : idleLabel}
     </button>
@@ -88,58 +100,65 @@ export function EmailAuthForm() {
   return (
     <form className="space-y-4">
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-600">Nombre</label>
+        <label htmlFor="login-full-name" className={labelClass}>
+          Nombre
+        </label>
         <input
+          id="login-full-name"
           type="text"
           name="full_name"
           placeholder="Tu nombre"
           required
           autoComplete="name"
-          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-600">
-          Correo electronico
+        <label htmlFor="login-email" className={labelClass}>
+          Correo electrónico
         </label>
         <input
+          id="login-email"
           type="email"
           name="email"
           placeholder="tu@email.com"
           required
           autoComplete="email"
-          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-600">
-          Contrasena
+        <label htmlFor="login-password" className={labelClass}>
+          Contraseña
         </label>
         <input
+          id="login-password"
           type="password"
           name="password"
-          placeholder="Minimo 6 caracteres"
+          placeholder="Mínimo 6 caracteres"
           required
           minLength={6}
           autoComplete="current-password"
-          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 outline-none ring-blue-300 transition-all focus:ring-2"
+          className={inputClass}
         />
       </div>
 
-      <EmailSubmitButton
-        formAction={signUpWithEmail}
-        idleLabel="Crear mi cuenta"
-        busyLabel="Creando cuenta..."
-        className="ui-btn-primary w-full"
-      />
-      <EmailSubmitButton
-        formAction={signInWithEmail}
-        idleLabel="Ya tenes cuenta? Inicia sesion"
-        busyLabel="Iniciando sesion..."
-        className="w-full text-center text-sm font-semibold text-blue-600 transition-all hover:opacity-95 active:scale-95"
-      />
+      <div className="pt-2">
+        <EmailSubmitButton
+          formAction={signUpWithEmail}
+          idleLabel="Crear mi cuenta"
+          busyLabel="Creando cuenta..."
+          variant="primary"
+        />
+        <EmailSubmitButton
+          formAction={signInWithEmail}
+          idleLabel="¿Ya tenés cuenta? Iniciá sesión"
+          busyLabel="Iniciando sesión..."
+          variant="ghost"
+        />
+      </div>
     </form>
   );
 }

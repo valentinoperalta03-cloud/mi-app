@@ -35,6 +35,8 @@ export type MatchRow = {
   id: Uuid;
   date: TimestampIso;
   court_id: Uuid;
+  created_by?: Uuid | null;
+  is_competitive?: boolean | null;
 };
 
 export type MatchPlayerRow = {

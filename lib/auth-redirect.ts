@@ -15,7 +15,7 @@ export async function resolveHomePath(
   if (ownedClub) {
     return "/admin/dashboard";
   }
-  return "/feed";
+  return "/inicio";
 }
 
 export function isAdminPanelPath(pathname: string): boolean {
@@ -30,6 +30,7 @@ export function isJugadorAppPath(pathname: string): boolean {
     "/partidos",
     "/reservas",
     "/perfil",
+    "/matches",
     "/test",
   ];
   return roots.some((p) => pathname === p || pathname.startsWith(`${p}/`));

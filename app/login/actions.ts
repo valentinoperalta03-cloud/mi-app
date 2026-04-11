@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/utils/supabase/server";
 
@@ -47,7 +48,7 @@ export async function signInWithEmail(formData: FormData) {
     loginRedirect("No se pudo obtener la sesion. Volve a intentar.");
   }
 
-  redirect("/feed");
+  redirect(await resolveHomePath(supabase, user.id));
 }
 
 export async function signUpWithEmail(formData: FormData) {
@@ -78,7 +79,12 @@ export async function signUpWithEmail(formData: FormData) {
   }
 
   if (data.session) {
-    redirect("/feed");
+    const {
+      data: { user: u },
+    } = await supabase.auth.getUser();
+    if (u) {
+      redirect(await resolveHomePath(supabase, u.id));
+    }
   }
 
   const params = new URLSearchParams();

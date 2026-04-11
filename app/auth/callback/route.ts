@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/utils/supabase/server";
 
@@ -59,7 +60,8 @@ export async function GET(request: NextRequest) {
       return redirectToLogin(origin, "No se pudo obtener la sesion.");
     }
 
-    return NextResponse.redirect(new URL("/feed", origin));
+    const home = await resolveHomePath(supabase, user.id);
+    return NextResponse.redirect(new URL(home, origin));
   }
 
   if (token_hash && type) {
@@ -84,7 +86,8 @@ export async function GET(request: NextRequest) {
       return redirectToLogin(origin, "No se pudo obtener la sesion.");
     }
 
-    return NextResponse.redirect(new URL("/feed", origin));
+    const home = await resolveHomePath(supabase, user.id);
+    return NextResponse.redirect(new URL(home, origin));
   }
 
   return redirectToLogin(

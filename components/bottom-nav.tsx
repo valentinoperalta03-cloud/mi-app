@@ -6,42 +6,56 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, House, Trophy, UserRound } from "lucide-react";
 
 const items = [
-  { href: "/feed", label: "Inicio", icon: House },
+  { href: "/inicio", label: "Inicio", icon: House },
   { href: "/partidos", label: "Partidos", icon: Trophy },
   { href: "/reservas", label: "Reservas", icon: CalendarDays },
   { href: "/perfil", label: "Perfil", icon: UserRound },
-];
+] as const;
 
 export default function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 justify-between border-t border-gray-100 bg-white/80 px-4 pt-2 shadow-[0_2px_10px_rgba(0,0,0,0.05)] backdrop-blur-md"
-      style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+      className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-3"
+      style={{ paddingBottom: "max(0.65rem, env(safe-area-inset-bottom))" }}
+      aria-label="Navegación principal"
     >
-      {items.map((item) => {
-        const Icon = item.icon;
-        const isActive = pathname.startsWith(item.href);
+      <div className="pointer-events-auto flex w-full max-w-md items-stretch justify-between gap-0.5 rounded-[2rem] border border-white/40 bg-white/70 px-2 py-2 shadow-[0_8px_32px_-8px_rgba(15,23,42,0.15),0_2px_8px_-4px_rgba(15,23,42,0.08)] backdrop-blur-xl backdrop-saturate-150">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active =
+            pathname === item.href ||
+            (item.href === "/inicio" && pathname === "/feed") ||
+            pathname.startsWith(`${item.href}/`);
 
-        return (
-          <motion.div
-            key={item.href}
-            animate={isActive ? { y: -3, scale: 1.05 } : { y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 420, damping: 18 }}
-          >
+          return (
             <Link
+              key={item.href}
               href={item.href}
-              className={`ui-interactive flex min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 text-xs font-medium transition-colors duration-200 ${
-                isActive ? "text-sky-600" : "text-slate-500"
+              className={`relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[1.25rem] py-2 text-[10px] font-semibold transition-colors ${
+                active ? "text-sky-600" : "text-slate-500 active:text-slate-800"
               }`}
             >
-              <Icon size={18} strokeWidth={2} />
-              <span>{item.label}</span>
+              {active ? (
+                <motion.span
+                  layoutId="player-bottom-nav-pill"
+                  className="absolute inset-x-0.5 inset-y-0.5 -z-10 rounded-[1.15rem] bg-sky-100/90 ring-1 ring-sky-200/50"
+                  transition={{ type: "spring", stiffness: 440, damping: 32 }}
+                />
+              ) : null}
+              <motion.span
+                className="flex flex-col items-center gap-0.5"
+                whileTap={{ scale: 0.92 }}
+                transition={{ type: "spring", stiffness: 520, damping: 28 }}
+              >
+                <Icon size={20} strokeWidth={active ? 2.35 : 2} aria-hidden />
+                <span>{item.label}</span>
+              </motion.span>
             </Link>
-          </motion.div>
-        );
-      })}
+          );
+        })}
+      </div>
     </nav>
   );
 }
