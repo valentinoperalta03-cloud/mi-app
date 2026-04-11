@@ -4,6 +4,13 @@ import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import {
+  adminCard,
+  adminKicker,
+  adminPressable,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -37,70 +44,71 @@ export default async function AdminConfigPage() {
   const maxG = growth.reduce((m, x) => Math.max(m, x.count), 0);
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Configuracion</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-          <Settings2 className="text-slate-400" size={28} strokeWidth={2} />
+      <header className="space-y-2">
+        <p className={adminKicker}>Configuración</p>
+        <h1 className={`${adminTitle} flex flex-wrap items-center gap-3`}>
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200/60">
+            <Settings2 size={24} strokeWidth={2} aria-hidden />
+          </span>
           Club y canchas
         </h1>
-        <p className="mt-2 text-sm font-medium text-slate-500">
-          Accesos directos a horarios operativos y gestion de turnos.
+        <p className={adminSubtitle}>
+          Accesos directos a horarios operativos y gestión de turnos.
         </p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="flex flex-col gap-4 md:grid md:grid-cols-2">
         <Link
           href="/club/horarios"
-          className="group flex h-full flex-col rounded-2xl border border-sky-200/60 bg-gradient-to-br from-sky-500/12 to-cyan-500/8 p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-300/80 hover:shadow-md"
+          className={`group flex h-full flex-col rounded-2xl border border-sky-200/55 bg-gradient-to-br from-sky-500/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-sky-300/80 hover:shadow-lg`}
         >
           <p className="text-sm font-semibold text-sky-700">Horarios</p>
-          <p className="mt-1 text-base font-semibold text-slate-900">Configuracion de canchas</p>
+          <p className="mt-2 text-base font-bold text-slate-900">Configuración de canchas</p>
           <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Apertura y cierre por dia (<code className="text-xs text-slate-500">court_schedules</code>
-            ).
+            Apertura y cierre por día (
+            <code className="text-xs text-slate-500">court_schedules</code>).
           </p>
-          <span className="mt-4 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
+          <span className="mt-5 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
             Abrir
           </span>
         </Link>
         <Link
           href="/club/gestion"
-          className="group flex h-full flex-col rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-500/8 to-slate-400/6 p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-md"
+          className={`group flex h-full flex-col rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-500/8 to-slate-400/6 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.08)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-lg`}
         >
           <p className="text-sm font-semibold text-slate-600">Turnos</p>
-          <p className="mt-1 text-base font-semibold text-slate-900">Gestion de disponibilidad</p>
+          <p className="mt-2 text-base font-bold text-slate-900">Gestión de disponibilidad</p>
           <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Grilla del dia, bloqueos manuales y estado frente a partidos reservados.
+            Grilla del día, bloqueos manuales y estado frente a partidos reservados.
           </p>
-          <span className="mt-4 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
+          <span className="mt-5 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
             Abrir
           </span>
         </Link>
       </section>
 
-      <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">
-          Volumen de Actividad Mensual
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900">
+          Volumen de actividad mensual
         </h2>
-        <p className="mt-1.5 text-sm font-medium leading-relaxed text-slate-500">
-          Partidos jugados en tus canchas por mes: es la metrica que mejor refleja uso y rentabilidad
-          operativa del club.
+        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+          Partidos en tus canchas por mes: métrica de uso y rentabilidad operativa.
         </p>
-        <div className="mt-5 space-y-3.5">
+        <div className="mt-6 flex flex-col gap-4">
           {growth.length === 0 ? (
-            <p className="text-sm font-medium text-slate-500">Sin datos aun.</p>
+            <p className="text-sm font-medium text-slate-500">Sin datos aún.</p>
           ) : (
             growth.map((g) => (
-              <div key={g.key} className="space-y-1.5">
+              <div key={g.key} className="space-y-2">
                 <div className="flex justify-between text-sm font-semibold text-slate-700">
                   <span className="text-slate-600">{g.label}</span>
                   <span className="tabular-nums text-slate-800">{g.count} partidos</span>
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/60">
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/60 ring-1 ring-slate-200/40">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-300/90 via-sky-400/85 to-sky-500/75"
+                    className="h-full rounded-full bg-gradient-to-r from-sky-300/90 via-sky-400/85 to-sky-500/75 shadow-sm"
                     style={{
                       width: `${maxG > 0 ? Math.max(8, (g.count / maxG) * 100) : 0}%`,
                     }}
