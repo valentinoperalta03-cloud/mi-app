@@ -7,7 +7,34 @@ export type TimestampIso = string;
 export type ProfileRow = {
   user_id: Uuid;
   name: string | null;
-  level: string | null;
+  /** Nivel numérico (1–7 u otra escala) o legado texto. */
+  level: string | number | null;
+  /** Categoría de torneo (ej. 6ta). */
+  category: string | null;
+  matches_played: number | null;
+  wins: number | null;
+  avatar_url: string | null;
+};
+
+export type MatchResultRow = {
+  id: Uuid;
+  match_id: Uuid;
+  created_at?: TimestampIso | null;
+  team_a_score?: number | null;
+  team_b_score?: number | null;
+};
+
+export type PlayerRatingRow = {
+  id: Uuid;
+  match_id: Uuid;
+  rater_id: Uuid;
+  rated_id: Uuid;
+  rating: number;
+};
+
+export type UserFavoriteRow = {
+  user_id: Uuid;
+  favorite_user_id: Uuid;
 };
 
 export type ClubRow = {
@@ -44,6 +71,13 @@ export type MatchPlayerRow = {
   player_id: Uuid;
 };
 
+export type MatchPlayerWithProfile = Pick<MatchPlayerRow, "player_id"> & {
+  profiles:
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category" | "level">
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category" | "level">[]
+    | null;
+};
+
 /** Fila de `matches` con relaciones tipicas de PostgREST. */
 export type MatchWithRelations = MatchRow & {
   courts:
@@ -51,5 +85,5 @@ export type MatchWithRelations = MatchRow & {
         clubs: Pick<ClubRow, "id" | "name" | "location"> | null;
       })
     | null;
-  match_players: Pick<MatchPlayerRow, "player_id">[] | null;
+  match_players: MatchPlayerWithProfile[] | null;
 };

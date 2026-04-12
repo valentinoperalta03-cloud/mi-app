@@ -66,7 +66,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAdminPanelPath(pathname)) {
-    return redirectPreservingSupabaseCookies(request, "/inicio", response);
+    return redirectPreservingSupabaseCookies(request, "/home", response);
   }
 
   return response;

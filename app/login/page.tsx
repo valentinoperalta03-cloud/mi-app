@@ -1,3 +1,4 @@
+import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
 type LoginPageProps = {
@@ -79,6 +80,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <EmailAuthForm />
+
+          <LegalFooterLinks variant="login" className="mt-6" />
         </div>
       </div>
     </main>

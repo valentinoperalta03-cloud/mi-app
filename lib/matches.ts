@@ -19,7 +19,16 @@ export const matchListSelect = `
       location
     )
   ),
-  match_players ( player_id )
+  match_players (
+    player_id,
+    profiles (
+      user_id,
+      name,
+      avatar_url,
+      category,
+      level
+    )
+  )
 `;
 
 export async function fetchUpcomingMatches(
