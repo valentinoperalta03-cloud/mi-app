@@ -88,6 +88,9 @@ export async function joinMatchAction(
     };
   }
 
+  revalidatePath("/partidos-abiertos");
+  revalidatePath("/comunidad/feed");
   revalidatePath("/feed");
+  revalidatePath("/home");
   return { success: true, message: "Te uniste al partido con exito." };
 }

@@ -112,5 +112,5 @@ export async function createMatchAction(
     kind: "success",
     message: "Partido creado con exito. Ya estas anotado.",
   });
-  redirect(`/feed?${params.toString()}`);
+  redirect(`/partidos-abiertos?${params.toString()}`);
 }
