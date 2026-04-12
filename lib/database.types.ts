@@ -14,6 +14,11 @@ export type ProfileRow = {
   matches_played: number | null;
   wins: number | null;
   avatar_url: string | null;
+  is_leveled?: boolean | null;
+  base_level?: string | null;
+  dominant_hand?: string | null;
+  play_position?: string | null;
+  play_schedule?: string | null;
 };
 
 export type MatchResultRow = {

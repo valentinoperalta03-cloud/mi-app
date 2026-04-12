@@ -19,4 +19,5 @@ export const DB_TABLES = {
   userFavorites: "user_favorites",
   posts: "posts",
   messages: "messages",
+  levelEvolution: "level_evolution",
 } as const;
