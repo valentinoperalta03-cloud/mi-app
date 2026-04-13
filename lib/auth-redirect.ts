@@ -30,7 +30,7 @@ export function isJugadorAppPath(pathname: string): boolean {
     "/comunidad",
     "/clubes",
     "/partidos",
-    "/partidos-abiertos",
+    "/buscar-partido",
     "/reservas",
     "/perfil",
     "/jugador",

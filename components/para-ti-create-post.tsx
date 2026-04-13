@@ -118,14 +118,20 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        aria-label="Nueva publicación"
-        className="fixed bottom-28 right-5 z-[48] flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-[0_12px_40px_-8px_rgba(2,132,199,0.55)] ring-4 ring-white/90 transition hover:bg-sky-500 hover:shadow-lg active:scale-95"
-      >
-        <Plus size={28} strokeWidth={2.25} aria-hidden />
-      </button>
+      <div className="pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2">
+        <div className="pointer-events-auto relative h-full w-full">
+          <div className="absolute bottom-28 right-4">
+            <button
+              type="button"
+              onClick={handleOpen}
+              aria-label="Nueva publicación"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-[0_12px_40px_-8px_rgba(2,132,199,0.55)] ring-4 ring-white/90 transition hover:bg-sky-500 hover:shadow-lg active:scale-95"
+            >
+              <Plus size={28} strokeWidth={2.25} aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {open ? (
         <div

@@ -88,7 +88,7 @@ export async function joinMatchAction(
     };
   }
 
-  revalidatePath("/partidos-abiertos");
+  revalidatePath("/buscar-partido");
   revalidatePath("/comunidad/feed");
   revalidatePath("/feed");
   revalidatePath("/home");

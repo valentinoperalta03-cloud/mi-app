@@ -13,5 +13,5 @@ export default async function FeedRedirectPage({ searchParams }: PageProps) {
     else q.set(k, v);
   }
   const tail = q.toString();
-  redirect(tail ? `/partidos-abiertos?${tail}` : "/partidos-abiertos");
+  redirect(tail ? `/buscar-partido?${tail}` : "/buscar-partido");
 }

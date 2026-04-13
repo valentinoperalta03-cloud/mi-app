@@ -4,6 +4,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { Home, UserCircle, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { DB_TABLES } from "@/lib/db-tables";
+import { createClient } from "@/utils/supabase/client";
 
 const items = [
   { href: "/home", label: "Inicio", icon: Home },
@@ -13,6 +16,26 @@ const items = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    void supabase.auth.getUser().then(async ({ data }) => {
+      const userId = data.user?.id;
+      if (!userId) return;
+      const { data: profile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("avatar_url")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!active) return;
+      setMyAvatarUrl((profile as { avatar_url?: string | null } | null)?.avatar_url ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <nav
@@ -49,7 +72,18 @@ export default function BottomNav() {
                 transition={{ type: "spring", stiffness: 520, damping: 28 }}
               >
                 <span className="relative">
-                  <Icon size={22} strokeWidth={active ? 2.35 : 2} aria-hidden />
+                  {item.href === "/perfil" && myAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- avatar de storage
+                    <img
+                      src={myAvatarUrl}
+                      alt="Mi avatar"
+                      className={`h-6 w-6 rounded-full object-cover ring-1 ${
+                        active ? "ring-sky-400" : "ring-slate-300"
+                      }`}
+                    />
+                  ) : (
+                    <Icon size={22} strokeWidth={active ? 2.35 : 2} aria-hidden />
+                  )}
                   {active ? (
                     <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-sky-600" />
                   ) : null}

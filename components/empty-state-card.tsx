@@ -4,12 +4,14 @@ type EmptyStateCardProps = {
   title: string;
   subtitle: string;
   ctaHref?: string;
+  ctaLabel?: string;
 };
 
 export default function EmptyStateCard({
   title,
   subtitle,
   ctaHref = "/partidos/nuevo",
+  ctaLabel = "Armar el primer partido",
 }: EmptyStateCardProps) {
   return (
     <section className="flex min-h-[62vh] items-center justify-center">
@@ -41,7 +43,7 @@ export default function EmptyStateCard({
           href={ctaHref}
           className="mt-8 inline-flex w-full items-center justify-center rounded-3xl bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-[0.99]"
         >
-          Armar el primer partido
+          {ctaLabel}
         </Link>
       </article>
     </section>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Calendar, GraduationCap, Search, Trophy, Zap } from "lucide-react";
+import { CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
@@ -14,10 +14,10 @@ import { createClient } from "@/utils/supabase/server";
 
 const quickActions = [
   {
-    title: "Reservar",
-    desc: "Reservá tu cancha ideal",
-    href: "/reservas",
-    Icon: Calendar,
+    title: "Crear Partido",
+    desc: "Organizá un partido y encontrá rivales",
+    href: "/crear-partido",
+    Icon: CirclePlus,
     iconWrap: "bg-sky-100 text-sky-600 ring-sky-200/60",
   },
   {
@@ -36,8 +36,8 @@ const quickActions = [
   },
   {
     title: "Buscar partido",
-    desc: "Partidos abiertos cerca tuyo",
-    href: "/partidos-abiertos",
+    desc: "Unite a partidos abiertos",
+    href: "/buscar-partido",
     Icon: Search,
     iconWrap: "bg-violet-100 text-violet-700 ring-violet-200/55",
   },

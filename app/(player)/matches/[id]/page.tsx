@@ -91,7 +91,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       ) : null}
 
       <Link
-        href="/partidos-abiertos"
+        href="/buscar-partido"
         className="flex w-full items-center justify-center rounded-2xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-500"
       >
         Ver en feed y unirme

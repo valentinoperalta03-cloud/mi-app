@@ -27,7 +27,7 @@ type MatchFeedRow = {
         profiles:
           | {
               name: string | null;
-              level: number | string | null;
+              level_of_play: string | null;
             }
           | null;
       }[]
@@ -54,7 +54,7 @@ function levelToNumeric(levelLabel: string): number {
 function getAverageLevelLabel(players: MatchFeedRow["match_players"]): string {
   const levels = (players ?? [])
     .map((player) => {
-      const raw = player.profiles?.level;
+      const raw = player.profiles?.level_of_play;
       if (raw === null || raw === undefined) return "";
       return String(raw).toLowerCase().trim();
     })
@@ -81,6 +81,11 @@ type OpenMatchesBoardProps = {
   kicker?: string;
   title: string;
   description: string;
+  emptyTitle?: string;
+  emptySubtitle?: string;
+  emptyCtaLabel?: string;
+  emptyCtaHref?: string;
+  mobileFirst?: boolean;
 };
 
 export default async function OpenMatchesBoard({
@@ -88,6 +93,11 @@ export default async function OpenMatchesBoard({
   kicker = "Partidos",
   title,
   description,
+  emptyTitle = "Nadie armó partido para hoy todavía",
+  emptySubtitle = "Dale movimiento a la comunidad y crea un partido para que otros jugadores se sumen.",
+  emptyCtaLabel = "Armar el primer partido",
+  emptyCtaHref = "/partidos/nuevo",
+  mobileFirst = false,
 }: OpenMatchesBoardProps) {
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
@@ -115,7 +125,7 @@ export default async function OpenMatchesBoard({
         player_id,
         profiles (
           name,
-          level
+          level_of_play
         )
       )
     `
@@ -126,7 +136,11 @@ export default async function OpenMatchesBoard({
   const matches = (data ?? []) as unknown as MatchFeedRow[];
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-2xl space-y-6 bg-slate-50 px-4 pb-32 pt-6">
+    <MotionPage
+      className={`mx-auto min-h-screen w-full space-y-6 bg-slate-50 px-4 pb-32 pt-6 ${
+        mobileFirst ? "max-w-md" : "max-w-2xl"
+      }`}
+    >
       <header className="space-y-2">
         <p className="text-sm font-medium text-sky-600">{kicker}</p>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
@@ -153,8 +167,10 @@ export default async function OpenMatchesBoard({
 
       {!error && matches.length === 0 ? (
         <EmptyStateCard
-          title="Nadie armó partido para hoy todavía"
-          subtitle="Dale movimiento a la comunidad y crea un partido para que otros jugadores se sumen."
+          title={emptyTitle}
+          subtitle={emptySubtitle}
+          ctaLabel={emptyCtaLabel}
+          ctaHref={emptyCtaHref}
         />
       ) : null}
 
