@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Clock, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
+import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { MatchResultForm } from "@/components/match-result-form";
 import {
   fetchMatchById,
@@ -54,17 +55,41 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
   const { data: resultRow } = await supabase
     .from(DB_TABLES.matchResults)
-    .select("team_a_score, team_b_score")
+    .select("team_a_score, team_b_score, status, proposed_by")
     .eq("match_id", id)
     .maybeSingle();
 
-  const rr = resultRow as { team_a_score: number | null; team_b_score: number | null } | null;
-  const hasResult =
+  const rr = resultRow as {
+    team_a_score: number | null;
+    team_b_score: number | null;
+    status?: string | null;
+    proposed_by?: string | null;
+  } | null;
+  const hasFinalResult =
     rr != null &&
     rr.team_a_score != null &&
     rr.team_b_score != null &&
     Number.isFinite(Number(rr.team_a_score)) &&
-    Number.isFinite(Number(rr.team_b_score));
+    Number.isFinite(Number(rr.team_b_score)) &&
+    rr.status === "confirmed";
+  const hasPendingProposal =
+    rr != null &&
+    rr.team_a_score != null &&
+    rr.team_b_score != null &&
+    rr.status === "pending_confirmation";
+  const isDisputed = rr?.status === "disputed";
+
+  const { data: matchState } = await supabase
+    .from(DB_TABLES.matches)
+    .select("result_locked_by, result_locked_team, result_lock_expires_at, result_status")
+    .eq("id", id)
+    .maybeSingle();
+  const ms = (matchState ?? null) as {
+    result_locked_by?: string | null;
+    result_locked_team?: string | null;
+    result_lock_expires_at?: string | null;
+    result_status?: string | null;
+  } | null;
 
   const names = players.map(profileName);
   const teamALabel =
@@ -72,7 +97,20 @@ export default async function MatchDetailPage({ params }: PageProps) {
   const teamBLabel =
     n >= 4 ? `Equipo B (${names[2] ?? "—"} / ${names[3] ?? "—"})` : "Equipo B";
 
-  const canRecord = allowed && n === 4 && !hasResult;
+  const teamAIds = players.slice(0, 2).map((p) => p.player_id);
+  const teamBIds = players.slice(2, 4).map((p) => p.player_id);
+  const myTeam = teamAIds.includes(user.id) ? "A" : teamBIds.includes(user.id) ? "B" : null;
+  const lockAlive =
+    ms?.result_lock_expires_at != null &&
+    new Date(ms.result_lock_expires_at).getTime() > Date.now();
+  const lockedByTeammate =
+    lockAlive &&
+    ms?.result_locked_by != null &&
+    ms.result_locked_by !== user.id &&
+    ms.result_locked_team != null &&
+    ms.result_locked_team === myTeam;
+  const canRecord = allowed && n === 4 && !hasFinalResult && !hasPendingProposal && !isDisputed;
+  const canConfirm = allowed && n === 4 && hasPendingProposal && rr?.proposed_by !== user.id;
   const resultAffectsLevel = matchTypeAffectsTechnicalRating(
     (m as { match_type?: string | null }).match_type
   );
@@ -139,7 +177,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      {hasResult && rr ? (
+      {hasFinalResult && rr ? (
         <section className="rounded-3xl border border-emerald-200/80 bg-emerald-50/40 p-5">
           <h2 className="text-sm font-bold text-emerald-900">Resultado cargado</h2>
           <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
@@ -167,11 +205,38 @@ export default async function MatchDetailPage({ params }: PageProps) {
           matchId={id}
           teamALabel={teamALabel}
           teamBLabel={teamBLabel}
-          resultAffectsTechnicalLevel={resultAffectsLevel}
+          lockedByTeammate={Boolean(lockedByTeammate)}
+          alreadyStarted={Boolean(ms?.result_locked_by === user.id && lockAlive)}
         />
       ) : null}
 
-      {!canRecord && allowed && n !== 4 && !hasResult ? (
+      {hasPendingProposal && rr ? (
+        <section className="rounded-3xl border border-sky-200 bg-sky-50/60 p-4">
+          <p className="text-sm font-semibold text-sky-900">Resultado pendiente de confirmación</p>
+          <p className="mt-1 text-xs text-sky-800">
+            Score propuesto: {rr.team_a_score} - {rr.team_b_score}. Deben confirmar los 4.
+          </p>
+        </section>
+      ) : null}
+
+      {canConfirm && rr ? (
+        <CompetitiveResultConfirmationCard
+          matchId={id}
+          label={teamALabel.includes(" / ") ? "la dupla rival" : "el rival"}
+          scoreLabel={`${rr.team_a_score}-${rr.team_b_score}`}
+        />
+      ) : null}
+
+      {isDisputed ? (
+        <section className="rounded-3xl border border-rose-200 bg-rose-50/70 p-4">
+          <p className="text-sm font-semibold text-rose-900">Partido impugnado</p>
+          <p className="mt-1 text-xs text-rose-700">
+            El resultado quedó en conflicto y no impactará niveles hasta resolución.
+          </p>
+        </section>
+      ) : null}
+
+      {!canRecord && allowed && n !== 4 && !hasFinalResult ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Para cargar el resultado hace falta exactamente 4 jugadores anotados.
           {resultAffectsLevel

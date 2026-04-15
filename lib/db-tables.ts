@@ -16,6 +16,7 @@ export const DB_TABLES = {
   matchPlayers: "match_players",
   matchParticipants: "match_participants",
   matchResults: "match_results",
+  matchResultConfirmations: "match_result_confirmations",
   playerRatings: "player_ratings",
   userFavorites: "user_favorites",
   posts: "posts",
