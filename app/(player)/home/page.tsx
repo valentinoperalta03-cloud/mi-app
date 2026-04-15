@@ -14,6 +14,10 @@ import {
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
+type HomePageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
 const quickActions = [
   {
     title: "Crear Partido",
@@ -45,7 +49,12 @@ const quickActions = [
   },
 ] as const;
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = searchParams ? await searchParams : {};
+  const levelingDone =
+    params.nivelacion === "ok" ||
+    (Array.isArray(params.nivelacion) && params.nivelacion.includes("ok"));
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,6 +72,15 @@ export default async function HomePage() {
 
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-32 pt-6">
+      {levelingDone ? (
+        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm">
+          <p className="text-sm font-semibold">Perfil guardado con exito.</p>
+          <p className="mt-1 text-xs text-emerald-700">
+            Tu nivel y preferencias ya se actualizaron correctamente.
+          </p>
+        </section>
+      ) : null}
+
       <section className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-sky-600 via-sky-600 to-indigo-600 p-6 text-white shadow-[0_12px_40px_-12px_rgba(2,132,199,0.55)]">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">

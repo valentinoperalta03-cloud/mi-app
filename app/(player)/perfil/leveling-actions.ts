@@ -50,10 +50,6 @@ export async function completeLevelingProfile(payload: {
   court_position: string;
   preferred_schedule: string;
 }): Promise<CompleteLevelingResult> {
-  void payload.preferred_hand;
-  void payload.court_position;
-  void payload.preferred_schedule;
-
   const supabase = await createClient({ allowCookieWrites: true });
   const {
     data: { user },
@@ -110,7 +106,6 @@ export async function completeLevelingProfile(payload: {
     previous_score: DEFAULT_TECH_SEED,
     new_score: technicalScore,
     base_level: baseLevelText,
-    penalty_applied: comp.penaltyApplied,
   });
 
   if (insErr) {
@@ -119,11 +114,14 @@ export async function completeLevelingProfile(payload: {
 
   const { error: upErr } = await supabase
     .from(DB_TABLES.profiles)
-    .update({
+    .upsert({
+      user_id: user.id,
       technical_score: technicalScore,
       level_of_play: levelLine,
-    })
-    .eq("user_id", user.id);
+      preferred_hand: payload.preferred_hand,
+      court_position: payload.court_position,
+      preferred_schedule: payload.preferred_schedule,
+    });
 
   if (upErr) {
     return { ok: false, message: upErr.message };

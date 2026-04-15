@@ -20,6 +20,41 @@ export function scaleLabel(n: number): string {
   return SCALE_LABELS[Math.max(0, Math.min(4, n - 1))] ?? "";
 }
 
+export type QuizAnswerOption = {
+  score: 1 | 2 | 3 | 4 | 5;
+  label: string;
+  description: string;
+};
+
+/** Opciones descriptivas (1 = principiante, 5 = experto). */
+export const QUIZ_ANSWER_OPTIONS: QuizAnswerOption[] = [
+  {
+    score: 1,
+    label: "Principiante total",
+    description: "Estoy empezando y todavia necesito mucha guia en cancha.",
+  },
+  {
+    score: 2,
+    label: "Basico en progreso",
+    description: "Tengo bases, pero me cuesta sostener regularidad bajo presion.",
+  },
+  {
+    score: 3,
+    label: "Intermedio solido",
+    description: "Compito con buenas rachas, aunque aun con errores puntuales.",
+  },
+  {
+    score: 4,
+    label: "Avanzado competitivo",
+    description: "Resuelvo bien tactica y tecnica en partidos exigentes.",
+  },
+  {
+    score: 5,
+    label: "Experto",
+    description: "Rindo de forma consistente a ritmo alto y casi sin fisuras.",
+  },
+];
+
 export type LevelComputation = {
   weightedAvg: number;
   afterPenalty: number;

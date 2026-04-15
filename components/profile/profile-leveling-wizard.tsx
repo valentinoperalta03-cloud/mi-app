@@ -6,13 +6,11 @@ import { useRouter } from "next/navigation";
 import { completeLevelingProfile } from "@/app/(player)/perfil/leveling-actions";
 import {
   BASE_LEVEL_OPTIONS,
+  QUIZ_ANSWER_OPTIONS,
   QUIZ_QUESTIONS,
   computeLevelFromAnswers,
-  scaleLabel,
   type BaseLevelChoice,
 } from "@/lib/level-quiz-logic";
-
-const SCORES = [1, 2, 3, 4, 5] as const;
 
 const HAND_OPTS = [
   { value: "derecha", label: "Derecha" },
@@ -33,18 +31,23 @@ const SCH_OPTS = [
 
 export function ProfileLevelingWizard() {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [baseLevel, setBaseLevel] = useState<BaseLevelChoice | null>(null);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(() =>
-    Array.from({ length: 10 }, () => null)
+    Array.from({ length: QUIZ_QUESTIONS.length }, () => null)
   );
   const [hand, setHand] = useState<string | null>(null);
   const [position, setPosition] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [phase, setPhase] = useState<"base" | "quiz" | "details">("base");
   const quizComplete = answers.every((a) => a !== null);
+  const currentQuestion = QUIZ_QUESTIONS[questionIndex];
+  const selectedAnswer = answers[questionIndex];
+  const progressPct = ((questionIndex + 1) / QUIZ_QUESTIONS.length) * 100;
 
   const computation = useMemo(() => {
     if (!quizComplete) return null;
@@ -61,6 +64,23 @@ export function ProfileLevelingWizard() {
       next[index] = value;
       return next;
     });
+  }
+
+  function goToNextQuestion() {
+    if (questionIndex >= QUIZ_QUESTIONS.length - 1) {
+      setPhase("details");
+      return;
+    }
+    setQuestionIndex((prev) => prev + 1);
+  }
+
+  function handleSelectAnswer(score: number) {
+    setAnswer(questionIndex, score);
+    setAutoAdvancing(true);
+    window.setTimeout(() => {
+      goToNextQuestion();
+      setAutoAdvancing(false);
+    }, 180);
   }
 
   async function onSubmit() {
@@ -82,7 +102,8 @@ export function ProfileLevelingWizard() {
         setError(res.message);
         return;
       }
-      await router.refresh();
+      router.push("/home?nivelacion=ok");
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -90,40 +111,48 @@ export function ProfileLevelingWizard() {
 
   return (
     <div className="flex flex-col gap-5 pb-8" suppressHydrationWarning>
-      <header className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          Nivelación
+      <header className="rounded-[2.2rem] border border-white/10 bg-[#020b1c] p-6 text-white shadow-[0_18px_50px_-24px_rgba(8,47,73,0.9)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200/80">
+          Nivelacion inteligente
         </p>
-        <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
-          Configurá tu perfil de juego
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          Configura tu perfil paso a paso
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">
-          Tres pasos rápidos. Solo lo vas a ver una vez.
+        <p className="mt-2 text-sm leading-relaxed text-slate-200/80">
+          Una pregunta por pantalla para que sea rapido y claro desde el celular.
         </p>
-        <div className="mt-5 flex gap-1.5">
-          {([1, 2, 3] as const).map((s) => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full transition-colors ${
-                step >= s ? "bg-sky-600" : "bg-slate-200"
-              }`}
-            />
-          ))}
-        </div>
+        {phase === "quiz" ? (
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between text-xs text-sky-100/90">
+              <span>Progreso</span>
+              <span>
+                {questionIndex + 1}/{QUIZ_QUESTIONS.length}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800/80">
+              <motion.div
+                className="h-full rounded-full bg-cyan-300"
+                initial={false}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <AnimatePresence mode="wait">
-        {step === 1 ? (
+        {phase === "base" ? (
           <motion.div
-            key="s1"
+            key="base"
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.3 }}
-            className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)]"
+            className="rounded-[2.2rem] border border-white/10 bg-[#020b1c] p-6 text-white"
           >
-            <h2 className="text-base font-semibold text-slate-900">Nivel base</h2>
-            <p className="mt-1 text-sm text-slate-500">¿Cómo te describirías hoy?</p>
+            <h2 className="text-lg font-semibold">Nivel base</h2>
+            <p className="mt-1 text-base text-slate-200/85">Como te describirias hoy?</p>
             <div className="mt-5 flex flex-col gap-3">
               {BASE_LEVEL_OPTIONS.map((opt) => {
                 const selected = baseLevel === opt.value;
@@ -132,16 +161,16 @@ export function ProfileLevelingWizard() {
                     key={opt.value}
                     type="button"
                     onClick={() => setBaseLevel(opt.value)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-3xl border px-5 py-4 text-left transition ${
                       selected
-                        ? "border-sky-300 bg-sky-50/80 ring-2 ring-sky-500/20"
-                        : "border-slate-100 bg-slate-50/40 hover:border-slate-200"
+                        ? "border-cyan-300/80 bg-cyan-300/10 ring-2 ring-cyan-300/30"
+                        : "border-white/15 bg-white/5 hover:border-white/30"
                     }`}
                   >
                     <span className="text-xl" aria-hidden>
                       {opt.emoji}
                     </span>
-                    <span className="text-sm font-medium text-slate-900">{opt.label}</span>
+                    <span className="text-base font-semibold">{opt.label}</span>
                   </button>
                 );
               })}
@@ -149,113 +178,112 @@ export function ProfileLevelingWizard() {
             <button
               type="button"
               disabled={!baseLevel}
-              onClick={() => setStep(2)}
-              className="mt-6 w-full rounded-2xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => setPhase("quiz")}
+              className="mt-6 w-full rounded-3xl bg-cyan-300 py-4 text-base font-bold text-slate-950 shadow-sm transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Continuar
+              Empezar cuestionario
             </button>
           </motion.div>
         ) : null}
 
-        {step === 2 ? (
+        {phase === "quiz" ? (
           <motion.div
-            key="s2"
+            key={`quiz-${questionIndex}`}
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.3 }}
-            className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)]"
+            className="rounded-[2.2rem] border border-white/10 bg-[#020b1c] p-6 text-white"
           >
-            <h2 className="text-base font-semibold text-slate-900">Cuestionario</h2>
-            <p className="mt-1 text-sm text-slate-500">10 preguntas · escala 1 a 5</p>
-            <div className="mt-6 flex max-h-[min(52vh,420px)] flex-col gap-6 overflow-y-auto pr-1">
-              {QUIZ_QUESTIONS.map((q, qi) => (
-                <div key={q.id} className="border-b border-slate-100 pb-6 last:border-0 last:pb-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-600/90">
-                    {q.title}
-                  </p>
-                  <p className="mt-1.5 text-sm leading-snug text-slate-800">{q.text}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {SCORES.map((n) => {
-                      const on = answers[qi] === n;
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          onClick={() => setAnswer(qi, n)}
-                          className={`min-w-[3rem] rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                            on
-                              ? "bg-sky-600 text-white shadow-sm"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }`}
-                          title={scaleLabel(n)}
-                        >
-                          {n}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-200/90">
+              {currentQuestion.title}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold leading-tight">{currentQuestion.text}</h2>
+            <div className="mt-6 flex flex-col gap-3">
+              {QUIZ_ANSWER_OPTIONS.map((opt) => {
+                const on = selectedAnswer === opt.score;
+                return (
+                  <button
+                    key={opt.score}
+                    type="button"
+                    disabled={autoAdvancing}
+                    onClick={() => handleSelectAnswer(opt.score)}
+                    className={`w-full rounded-3xl border px-5 py-4 text-left transition ${
+                      on
+                        ? "border-cyan-300/90 bg-cyan-300/15 ring-2 ring-cyan-200/40"
+                        : "border-white/15 bg-white/5 hover:border-white/30"
+                    }`}
+                  >
+                    <p className="text-base font-semibold">{opt.label}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-200/85">
+                      {opt.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
-                onClick={() => setStep(1)}
-                className="flex-1 rounded-2xl border border-slate-200 py-3.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => {
+                  if (questionIndex === 0) {
+                    setPhase("base");
+                    return;
+                  }
+                  setQuestionIndex((prev) => prev - 1);
+                }}
+                className="flex-1 rounded-3xl border border-white/25 py-4 text-sm font-semibold text-white/90 transition hover:bg-white/10"
               >
                 Atrás
               </button>
               <button
                 type="button"
-                disabled={!quizComplete}
-                onClick={() => setStep(3)}
-                className="flex-1 rounded-2xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!selectedAnswer || autoAdvancing}
+                onClick={() => goToNextQuestion()}
+                className="flex-1 rounded-3xl bg-cyan-300 py-4 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Continuar
+                {questionIndex === QUIZ_QUESTIONS.length - 1 ? "Ir a ficha tecnica" : "Siguiente"}
               </button>
             </div>
           </motion.div>
         ) : null}
 
-        {step === 3 ? (
+        {phase === "details" ? (
           <motion.div
-            key="s3"
+            key="details"
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.3 }}
-            className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)]"
+            className="rounded-[2.2rem] border border-white/10 bg-[#020b1c] p-6 text-white"
           >
-            <h2 className="text-base font-semibold text-slate-900">Ficha técnica</h2>
-            <p className="mt-1 text-sm text-slate-500">Últimos datos antes de guardar</p>
+            <h2 className="text-xl font-semibold">Ficha tecnica</h2>
+            <p className="mt-1 text-sm text-slate-200/80">Ultimos datos antes de guardar</p>
 
             {computation ? (
-              <div className="mt-5 space-y-3 rounded-2xl bg-slate-50 px-4 py-3.5">
-                <p className="text-xs text-slate-500">
-                  Categoría estimada según tus respuestas
-                </p>
-                <p className="text-lg font-semibold tracking-tight text-slate-900">
+              <div className="mt-5 space-y-3 rounded-3xl border border-white/10 bg-white/5 px-4 py-4">
+                <p className="text-xs text-slate-300">Categoria estimada segun tus respuestas</p>
+                <p className="text-lg font-semibold tracking-tight">
                   {computation.category}{" "}
-                  <span className="text-sm font-medium text-slate-500">
+                  <span className="text-sm font-medium text-slate-300/90">
                     · {computation.afterPenalty.toFixed(2)}
                   </span>
                 </p>
                 {computation.category.includes("Elite") ? (
-                  <p className="text-xs leading-relaxed text-slate-500">
-                    Elite: puntuación final entre 4,80 y 5,00 (tope del cuestionario).
+                  <p className="text-xs leading-relaxed text-slate-300/95">
+                    Elite: puntuacion final entre 4,80 y 5,00 (tope del cuestionario).
                   </p>
                 ) : null}
                 {computation.penaltyApplied ? (
-                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-100">
-                    Aplicamos un ajuste del 20%: la experiencia declarada (tiempo y frecuencia) no
-                    encaja con un nivel técnico muy alto.
+                  <p className="rounded-2xl bg-amber-200/10 px-3 py-2 text-xs leading-relaxed text-amber-100 ring-1 ring-amber-300/30">
+                    Aplicamos un ajuste del 20%: la experiencia declarada no encaja con un nivel
+                    tecnico muy alto.
                   </p>
                 ) : null}
                 {computation.selfAssessmentWarning ? (
-                  <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950 ring-1 ring-sky-100">
-                    Tu autoevaluación se aleja bastante del resto del cuestionario. Revisala si
-                    querés; igual podés confirmar y guardar.
+                  <p className="rounded-2xl bg-sky-200/10 px-3 py-2 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-300/30">
+                    Tu autoevaluacion se aleja bastante del resto del cuestionario, pero igual
+                    podes confirmar y guardar.
                   </p>
                 ) : null}
               </div>
@@ -272,10 +300,10 @@ export function ProfileLevelingWizard() {
                       key={o.value}
                       type="button"
                       onClick={() => setHand(o.value)}
-                      className={`flex-1 rounded-2xl border py-3 text-sm font-medium transition ${
+                      className={`flex-1 rounded-3xl border py-3 text-sm font-medium transition ${
                         hand === o.value
-                          ? "border-sky-400 bg-sky-50 text-sky-900"
-                          : "border-slate-100 bg-slate-50/50 text-slate-700 hover:border-slate-200"
+                          ? "border-cyan-300 bg-cyan-300/15 text-cyan-100"
+                          : "border-white/15 bg-white/5 text-slate-100 hover:border-white/30"
                       }`}
                     >
                       {o.label}
@@ -293,10 +321,10 @@ export function ProfileLevelingWizard() {
                       key={o.value}
                       type="button"
                       onClick={() => setPosition(o.value)}
-                      className={`flex-1 rounded-2xl border py-3 text-sm font-medium transition ${
+                      className={`flex-1 rounded-3xl border py-3 text-sm font-medium transition ${
                         position === o.value
-                          ? "border-sky-400 bg-sky-50 text-sky-900"
-                          : "border-slate-100 bg-slate-50/50 text-slate-700 hover:border-slate-200"
+                          ? "border-cyan-300 bg-cyan-300/15 text-cyan-100"
+                          : "border-white/15 bg-white/5 text-slate-100 hover:border-white/30"
                       }`}
                     >
                       {o.label}
@@ -314,10 +342,10 @@ export function ProfileLevelingWizard() {
                       key={o.value}
                       type="button"
                       onClick={() => setSchedule(o.value)}
-                      className={`rounded-2xl border py-3 text-sm font-medium transition ${
+                      className={`rounded-3xl border py-3 text-sm font-medium transition ${
                         schedule === o.value
-                          ? "border-sky-400 bg-sky-50 text-sky-900"
-                          : "border-slate-100 bg-slate-50/50 text-slate-700 hover:border-slate-200"
+                          ? "border-cyan-300 bg-cyan-300/15 text-cyan-100"
+                          : "border-white/15 bg-white/5 text-slate-100 hover:border-white/30"
                       }`}
                     >
                       {o.label}
@@ -328,7 +356,7 @@ export function ProfileLevelingWizard() {
             </div>
 
             {error ? (
-              <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">
+              <p className="mt-4 rounded-2xl bg-red-200/10 px-3 py-2 text-sm text-red-100 ring-1 ring-red-300/30">
                 {error}
               </p>
             ) : null}
@@ -336,8 +364,8 @@ export function ProfileLevelingWizard() {
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                className="flex-1 rounded-2xl border border-slate-200 py-3.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => setPhase("quiz")}
+                className="flex-1 rounded-3xl border border-white/25 py-3.5 text-sm font-semibold text-white/90 transition hover:bg-white/10"
               >
                 Atrás
               </button>
@@ -345,9 +373,9 @@ export function ProfileLevelingWizard() {
                 type="button"
                 disabled={busy || !hand || !position || !schedule}
                 onClick={() => void onSubmit()}
-                className="flex-1 rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex-1 rounded-3xl bg-cyan-300 py-3.5 text-sm font-bold text-slate-950 shadow-sm transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {busy ? "Guardando…" : "Guardar perfil"}
+                {busy ? "Guardando..." : "Guardar perfil"}
               </button>
             </div>
           </motion.div>
