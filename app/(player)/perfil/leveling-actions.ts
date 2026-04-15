@@ -78,6 +78,27 @@ export async function completeLevelingProfile(payload: {
   const finalLevel = Number(comp.average.toFixed(2));
   const category = classifyCategory(finalLevel);
 
+  const { error: evoErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
+    user_id: user.id,
+    score: finalLevel,
+    category,
+    old_level: null,
+    new_level: finalLevel,
+    source: "quiz",
+    previous_score: null,
+    new_score: finalLevel,
+    delta: finalLevel,
+  });
+
+  if (evoErr) {
+    return {
+      ok: false,
+      message:
+        evoErr.message +
+        " | Asegurate de ejecutar migraciones de level_evolution (old_level/new_level/source).",
+    };
+  }
+
   const { error: upErr } = await supabase
     .from(DB_TABLES.profiles)
     .upsert({

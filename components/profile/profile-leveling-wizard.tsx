@@ -200,14 +200,14 @@ export function ProfileLevelingWizard() {
             className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.22)]"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-              Nivel guardado
+              Nivelacion completada
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-              Tu nivel inicial es {result.average.toFixed(2)}
+              Perfil guardado con exito
             </h2>
             <div className="mt-4 rounded-3xl border border-slate-200 bg-[#F5F5F7] p-4">
               <p className="text-sm text-slate-600">Categoria estimada</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{result.category}</p>
+              <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{result.category}</p>
               <p className="mt-2 text-sm text-slate-600">
                 Este valor sale del promedio de tus 10 respuestas ({result.average.toFixed(2)} / 5).
               </p>
@@ -221,7 +221,7 @@ export function ProfileLevelingWizard() {
               }}
               className={`mt-6 w-full rounded-3xl py-4 text-base font-semibold text-white transition hover:bg-sky-500 ${ACCENT_BLUE}`}
             >
-              Comenzar a jugar
+              Guardar y Empezar
             </button>
           </motion.div>
         ) : null}
