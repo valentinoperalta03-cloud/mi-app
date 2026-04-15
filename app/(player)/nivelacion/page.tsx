@@ -36,7 +36,7 @@ export default async function NivelacionPage() {
   }
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 bg-slate-50 px-4 pb-28 pt-6">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 bg-[#F5F5F7] px-4 pb-28 pt-6">
       <ProfileLevelingWizard />
       <ProfileSessionFooter />
     </MotionPage>

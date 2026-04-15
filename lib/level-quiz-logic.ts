@@ -1,6 +1,3 @@
-/** Pesos por pregunta (1–10). */
-export const QUIZ_WEIGHTS = [1, 0.8, 1.5, 1.5, 1.3, 1.2, 1.3, 1.2, 1, 0.5] as const;
-
 export const QUIZ_QUESTIONS = [
   { id: 1, title: "Tiempo jugando", text: "¿Hace cuánto jugás pádel de forma regular?" },
   { id: 2, title: "Frecuencia", text: "¿Con qué frecuencia salís a la cancha?" },
@@ -14,108 +11,109 @@ export const QUIZ_QUESTIONS = [
   { id: 10, title: "Autoevaluación", text: "¿Dónde te ubicarías en una escala general de nivel?" },
 ] as const;
 
-const SCALE_LABELS = ["Muy bajo", "Bajo", "Medio", "Alto", "Muy alto"] as const;
-
-export function scaleLabel(n: number): string {
-  return SCALE_LABELS[Math.max(0, Math.min(4, n - 1))] ?? "";
-}
-
 export type QuizAnswerOption = {
   score: 1 | 2 | 3 | 4 | 5;
-  label: string;
-  description: string;
+  text: string;
 };
 
-/** Opciones descriptivas (1 = principiante, 5 = experto). */
-export const QUIZ_ANSWER_OPTIONS: QuizAnswerOption[] = [
-  {
-    score: 1,
-    label: "Principiante total",
-    description: "Estoy empezando y todavia necesito mucha guia en cancha.",
-  },
-  {
-    score: 2,
-    label: "Basico en progreso",
-    description: "Tengo bases, pero me cuesta sostener regularidad bajo presion.",
-  },
-  {
-    score: 3,
-    label: "Intermedio solido",
-    description: "Compito con buenas rachas, aunque aun con errores puntuales.",
-  },
-  {
-    score: 4,
-    label: "Avanzado competitivo",
-    description: "Resuelvo bien tactica y tecnica en partidos exigentes.",
-  },
-  {
-    score: 5,
-    label: "Experto",
-    description: "Rindo de forma consistente a ritmo alto y casi sin fisuras.",
-  },
+/** 5 opciones por cada pregunta (1 = principiante, 5 = experto). */
+export const QUIZ_QUESTION_OPTIONS: QuizAnswerOption[][] = [
+  [
+    { score: 1, text: "<3 meses" },
+    { score: 2, text: "6m-1 ano" },
+    { score: 3, text: "1-2 anos" },
+    { score: 4, text: "3-5 anos" },
+    { score: 5, text: "+5 anos compitiendo" },
+  ],
+  [
+    { score: 1, text: "Eventual" },
+    { score: 2, text: "1 vez/semana" },
+    { score: 3, text: "2 veces/semana" },
+    { score: 4, text: "3-4 veces/semana" },
+    { score: 5, text: "Casi a diario" },
+  ],
+  [
+    { score: 1, text: "Muchos errores" },
+    { score: 2, text: "Paso la red sin direccion" },
+    { score: 3, text: "Peloteos largos con control" },
+    { score: 4, text: "Manejo profundidades" },
+    { score: 5, text: "Control total y efectos" },
+  ],
+  [
+    { score: 1, text: "Las evito" },
+    { score: 2, text: "Solo defensa basica" },
+    { score: 3, text: "Uso pared para armar globos" },
+    { score: 4, text: "Bajadas agresivas" },
+    { score: 5, text: "Domino giros y contraparedes" },
+  ],
+  [
+    { score: 1, text: "Me quedo en el fondo" },
+    { score: 2, text: "Me pasan facil" },
+    { score: 3, text: "Voleo con control" },
+    { score: 4, text: "Aprieto volea a la reja" },
+    { score: 5, text: "Domino y defino con autoridad" },
+  ],
+  [
+    { score: 1, text: "No remato" },
+    { score: 2, text: "Remato despacio" },
+    { score: 3, text: "Potencia sin control" },
+    { score: 4, text: "Saco la bola x3/x4 seguido" },
+    { score: 5, text: "Defino desde cualquier lado" },
+  ],
+  [
+    { score: 1, text: "No se donde pararme" },
+    { score: 2, text: "Subo/bajo basico" },
+    { score: 3, text: "Cubro espacios y globos tacticos" },
+    { score: 4, text: "Manejo ritmos de partido" },
+    { score: 5, text: "Leo al rival y me anticipo" },
+  ],
+  [
+    { score: 1, text: "Nunca" },
+    { score: 2, text: "Americanos/Internos" },
+    { score: 3, text: "7ma o 6ta cat" },
+    { score: 4, text: "5ta o 4ta cat" },
+    { score: 5, text: "3ra o categorias Elite" },
+  ],
+  [
+    { score: 1, text: "Pierdo por mucho" },
+    { score: 2, text: "Muchos errores no forzados" },
+    { score: 3, text: "Resultados parejos" },
+    { score: 4, text: "Impongo mi ritmo" },
+    { score: 5, text: "Domino mi categoria" },
+  ],
+  [
+    { score: 1, text: "Principiante" },
+    { score: 2, text: "Iniciacion avanzada" },
+    { score: 3, text: "Intermedio" },
+    { score: 4, text: "Avanzado" },
+    { score: 5, text: "Experto / Primera" },
+  ],
 ];
 
 export type LevelComputation = {
-  weightedAvg: number;
-  afterPenalty: number;
-  penaltyApplied: boolean;
-  selfAssessmentWarning: boolean;
-  category: string;
+  average: number;
+  total: number;
 };
 
-/** Promedio ponderado de las preguntas 1–9 (sin autoevaluación). */
-function weightedAvgFirstNine(answers: number[]): number {
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < 9; i++) {
-    num += answers[i] * QUIZ_WEIGHTS[i];
-    den += QUIZ_WEIGHTS[i];
-  }
-  return num / den;
-}
-
 export function computeLevelFromAnswers(answers: number[]): LevelComputation {
-  if (answers.length !== 10 || answers.some((a) => a < 1 || a > 5 || !Number.isFinite(a))) {
+  if (
+    answers.length !== QUIZ_QUESTIONS.length ||
+    answers.some((a) => a < 1 || a > 5 || !Number.isFinite(a))
+  ) {
     throw new Error("Respuestas inválidas");
   }
 
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < 10; i++) {
-    num += answers[i] * QUIZ_WEIGHTS[i];
-    den += QUIZ_WEIGHTS[i];
-  }
-  const weightedAvg = num / den;
-
-  const experienceAvg = (answers[0] + answers[1]) / 2;
-  const techniqueAvg = (answers[2] + answers[3] + answers[4] + answers[5]) / 4;
-  const penaltyApplied = experienceAvg < 2.5 && techniqueAvg > 4;
-  const afterPenalty = penaltyApplied ? weightedAvg * 0.8 : weightedAvg;
-
-  const refNine = weightedAvgFirstNine(answers);
-  const selfAssessmentWarning = Math.abs(answers[9] - refNine) > 1.5;
-
-  const category = classifyCategory(afterPenalty);
-
-  return {
-    weightedAvg,
-    afterPenalty,
-    penaltyApplied,
-    selfAssessmentWarning,
-    category,
-  };
+  const total = answers.reduce((acc, curr) => acc + curr, 0);
+  const average = total / QUIZ_QUESTIONS.length;
+  return { average, total };
 }
 
-/**
- * Rangos más exigentes para 1ra–4ta. Elite (1ra–2da): 4.80–5.00 (tope teórico del cuestionario).
- */
 export function classifyCategory(score: number): string {
-  if (score >= 4.8) return "1ra–2da (Elite)";
-  if (score >= 4.52) return "1ra–2da";
-  if (score >= 3.95) return "3ra–4ta";
-  if (score >= 3.22) return "5ta–6ta";
-  if (score >= 2.5) return "7ma";
-  return "8va";
+  if (score >= 4.6) return "Experto / Primera";
+  if (score >= 3.8) return "Avanzado";
+  if (score >= 2.8) return "Intermedio";
+  if (score >= 1.8) return "Iniciacion avanzada";
+  return "Principiante";
 }
 
 export type BaseLevelChoice = "principiante" | "intermedio" | "avanzado";

@@ -3,52 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
+  QUIZ_QUESTIONS,
+  classifyCategory,
   computeLevelFromAnswers,
-  type BaseLevelChoice,
 } from "@/lib/level-quiz-logic";
 import { ensureProfileRowExists } from "@/lib/profiles";
-import {
-  bandFromTechnicalScore,
-  formatTechnicalLevelDisplay,
-  quizScoreToTechnicalScore,
-} from "@/lib/technical-score";
 import { createClient } from "@/utils/supabase/server";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const DEFAULT_TECH_SEED = 2.5;
-
 export type CompleteLevelingResult = {
   ok: boolean;
   message: string;
-  warnings?: { penalty: boolean; selfAssessment: boolean };
+  level?: number;
+  category?: string;
 };
-
-function isBaseLevel(v: string): v is BaseLevelChoice {
-  return v === "principiante" || v === "intermedio" || v === "avanzado";
-}
-
-/** Valores TEXT en BD para `base_level` en historial: beginner | intermediate | advanced */
-function baseLevelToEnglishText(choice: BaseLevelChoice): string {
-  switch (choice) {
-    case "principiante":
-      return "beginner";
-    case "intermedio":
-      return "intermediate";
-    case "avanzado":
-      return "advanced";
-    default:
-      return choice;
-  }
-}
 
 export async function completeLevelingProfile(payload: {
   answers: number[];
-  baseLevel: string;
-  preferred_hand: string;
-  court_position: string;
-  preferred_schedule: string;
 }): Promise<CompleteLevelingResult> {
   const supabase = await createClient({ allowCookieWrites: true });
   const {
@@ -70,21 +43,29 @@ export async function completeLevelingProfile(payload: {
     return { ok: false, message: profileEnsure.error };
   }
 
-  const { data: prof } = await supabase
+  const { data: prof, error: profileReadError } = await supabase
     .from(DB_TABLES.profiles)
-    .select("level_of_play, technical_score")
+    .select("level")
     .eq("user_id", userId)
     .maybeSingle();
 
-  const row = prof as { level_of_play?: string | null; technical_score?: number | null } | null;
-  const hasTech = row?.technical_score != null && Number.isFinite(Number(row.technical_score));
-  const hasLegacyLevel = Boolean(row?.level_of_play?.trim());
-  if (hasTech || hasLegacyLevel) {
+  if (profileReadError) {
+    return {
+      ok: false,
+      message:
+        profileReadError.message +
+        " | Si falta la columna level, ejecuta: alter table public.profiles add column if not exists level double precision;",
+    };
+  }
+
+  const row = prof as { level?: number | null } | null;
+  const hasLevel = row?.level != null && Number.isFinite(Number(row.level));
+  if (hasLevel) {
     return { ok: false, message: "Ya completaste la nivelación." };
   }
 
-  if (!isBaseLevel(payload.baseLevel)) {
-    return { ok: false, message: "Nivel inicial no válido." };
+  if (payload.answers.length !== QUIZ_QUESTIONS.length) {
+    return { ok: false, message: "El cuestionario está incompleto o es inválido." };
   }
 
   let comp;
@@ -94,37 +75,24 @@ export async function completeLevelingProfile(payload: {
     return { ok: false, message: "El cuestionario está incompleto o es inválido." };
   }
 
-  const technicalScore = quizScoreToTechnicalScore(comp.afterPenalty);
-  const categoryBand = bandFromTechnicalScore(technicalScore);
-  const levelLine = formatTechnicalLevelDisplay(technicalScore);
-  const baseLevelText = baseLevelToEnglishText(payload.baseLevel);
-
-  const { error: insErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
-    user_id: user.id,
-    score: technicalScore,
-    category: categoryBand,
-    previous_score: DEFAULT_TECH_SEED,
-    new_score: technicalScore,
-    base_level: baseLevelText,
-  });
-
-  if (insErr) {
-    return { ok: false, message: insErr.message };
-  }
+  const finalLevel = Number(comp.average.toFixed(2));
+  const category = classifyCategory(finalLevel);
 
   const { error: upErr } = await supabase
     .from(DB_TABLES.profiles)
     .upsert({
       user_id: user.id,
-      technical_score: technicalScore,
-      level_of_play: levelLine,
-      preferred_hand: payload.preferred_hand,
-      court_position: payload.court_position,
-      preferred_schedule: payload.preferred_schedule,
+      level: finalLevel,
+      level_of_play: category,
     });
 
   if (upErr) {
-    return { ok: false, message: upErr.message };
+    return {
+      ok: false,
+      message:
+        upErr.message +
+        " | Si falta la columna level, ejecuta: alter table public.profiles add column if not exists level double precision;",
+    };
   }
 
   revalidatePath("/perfil");
@@ -135,9 +103,7 @@ export async function completeLevelingProfile(payload: {
   return {
     ok: true,
     message: "Perfil nivelado correctamente.",
-    warnings: {
-      penalty: comp.penaltyApplied,
-      selfAssessment: comp.selfAssessmentWarning,
-    },
+    level: finalLevel,
+    category,
   };
 }
