@@ -43,7 +43,7 @@ export async function joinMatchAction(
   }
 
   const { data: joinedRow, error: joinedError } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("match_id", matchId)
     .eq("player_id", userId)
@@ -61,7 +61,7 @@ export async function joinMatchAction(
   }
 
   const { data: players, error: playersError } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("player_id")
     .eq("match_id", matchId);
 
@@ -76,7 +76,7 @@ export async function joinMatchAction(
     return { success: false, message: "Este partido ya no tiene cupos libres." };
   }
 
-  const { error: insertError } = await supabase.from(DB_TABLES.matchPlayers).insert({
+  const { error: insertError } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: matchId,
     player_id: userId,
   });

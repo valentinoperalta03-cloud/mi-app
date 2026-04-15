@@ -21,6 +21,7 @@ export function ProfileMotionSection({
 }: ProfileMotionSectionProps) {
   return (
     <motion.section
+      suppressHydrationWarning
       initial={{ opacity: 0, y: 18 }}
       {...(animateOnMount
         ? { animate: { opacity: 1, y: 0 } }
@@ -54,6 +55,7 @@ export function ProfileMotionSurface({
 }: ProfileMotionSurfaceProps) {
   return (
     <motion.div
+      suppressHydrationWarning
       initial={{ opacity: 0, y: 18 }}
       {...(animateOnMount
         ? { animate: { opacity: 1, y: 0 } }

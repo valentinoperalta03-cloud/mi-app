@@ -6,7 +6,18 @@ import {
   computeLevelFromAnswers,
   type BaseLevelChoice,
 } from "@/lib/level-quiz-logic";
+import { ensureProfileRowExists } from "@/lib/profiles";
+import {
+  bandFromTechnicalScore,
+  formatTechnicalLevelDisplay,
+  quizScoreToTechnicalScore,
+} from "@/lib/technical-score";
 import { createClient } from "@/utils/supabase/server";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const DEFAULT_TECH_SEED = 2.5;
 
 export type CompleteLevelingResult = {
   ok: boolean;
@@ -14,50 +25,70 @@ export type CompleteLevelingResult = {
   warnings?: { penalty: boolean; selfAssessment: boolean };
 };
 
-const HANDS = ["derecha", "izquierda"] as const;
-const POSITIONS = ["drive", "reves"] as const;
-const SCHEDULES = ["manana", "mediodia", "tarde", "noche"] as const;
-
 function isBaseLevel(v: string): v is BaseLevelChoice {
   return v === "principiante" || v === "intermedio" || v === "avanzado";
+}
+
+/** Valores TEXT en BD para `base_level` en historial: beginner | intermediate | advanced */
+function baseLevelToEnglishText(choice: BaseLevelChoice): string {
+  switch (choice) {
+    case "principiante":
+      return "beginner";
+    case "intermedio":
+      return "intermediate";
+    case "avanzado":
+      return "advanced";
+    default:
+      return choice;
+  }
 }
 
 export async function completeLevelingProfile(payload: {
   answers: number[];
   baseLevel: string;
-  dominant_hand: string;
-  play_position: string;
-  play_schedule: string;
+  preferred_hand: string;
+  court_position: string;
+  preferred_schedule: string;
 }): Promise<CompleteLevelingResult> {
+  void payload.preferred_hand;
+  void payload.court_position;
+  void payload.preferred_schedule;
+
   const supabase = await createClient({ allowCookieWrites: true });
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) {
+
+  if (authError || !user) {
     return { ok: false, message: "Iniciá sesión." };
+  }
+
+  const userId = user.id;
+  if (typeof userId !== "string" || !UUID_RE.test(userId)) {
+    return { ok: false, message: "Sesión inválida: no se pudo obtener tu id de usuario." };
+  }
+
+  const profileEnsure = await ensureProfileRowExists(supabase, user);
+  if (profileEnsure.error) {
+    return { ok: false, message: profileEnsure.error };
   }
 
   const { data: prof } = await supabase
     .from(DB_TABLES.profiles)
-    .select("is_leveled")
-    .eq("user_id", user.id)
+    .select("level_of_play, technical_score")
+    .eq("user_id", userId)
     .maybeSingle();
 
-  if ((prof as { is_leveled?: boolean } | null)?.is_leveled) {
+  const row = prof as { level_of_play?: string | null; technical_score?: number | null } | null;
+  const hasTech = row?.technical_score != null && Number.isFinite(Number(row.technical_score));
+  const hasLegacyLevel = Boolean(row?.level_of_play?.trim());
+  if (hasTech || hasLegacyLevel) {
     return { ok: false, message: "Ya completaste la nivelación." };
   }
 
   if (!isBaseLevel(payload.baseLevel)) {
     return { ok: false, message: "Nivel inicial no válido." };
-  }
-  if (!HANDS.includes(payload.dominant_hand as (typeof HANDS)[number])) {
-    return { ok: false, message: "Mano no válida." };
-  }
-  if (!POSITIONS.includes(payload.play_position as (typeof POSITIONS)[number])) {
-    return { ok: false, message: "Posición no válida." };
-  }
-  if (!SCHEDULES.includes(payload.play_schedule as (typeof SCHEDULES)[number])) {
-    return { ok: false, message: "Horario no válido." };
   }
 
   let comp;
@@ -67,13 +98,18 @@ export async function completeLevelingProfile(payload: {
     return { ok: false, message: "El cuestionario está incompleto o es inválido." };
   }
 
-  const scoreRounded = Math.round(comp.afterPenalty * 100) / 100;
+  const technicalScore = quizScoreToTechnicalScore(comp.afterPenalty);
+  const categoryBand = bandFromTechnicalScore(technicalScore);
+  const levelLine = formatTechnicalLevelDisplay(technicalScore);
+  const baseLevelText = baseLevelToEnglishText(payload.baseLevel);
 
   const { error: insErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
     user_id: user.id,
-    score: scoreRounded,
-    category: comp.category,
-    base_level: payload.baseLevel,
+    score: technicalScore,
+    category: categoryBand,
+    previous_score: DEFAULT_TECH_SEED,
+    new_score: technicalScore,
+    base_level: baseLevelText,
     penalty_applied: comp.penaltyApplied,
   });
 
@@ -84,13 +120,8 @@ export async function completeLevelingProfile(payload: {
   const { error: upErr } = await supabase
     .from(DB_TABLES.profiles)
     .update({
-      is_leveled: true,
-      category: comp.category,
-      level: scoreRounded,
-      base_level: payload.baseLevel,
-      dominant_hand: payload.dominant_hand,
-      play_position: payload.play_position,
-      play_schedule: payload.play_schedule,
+      technical_score: technicalScore,
+      level_of_play: levelLine,
     })
     .eq("user_id", user.id);
 
@@ -99,8 +130,9 @@ export async function completeLevelingProfile(payload: {
   }
 
   revalidatePath("/perfil");
+  revalidatePath("/nivelacion");
   revalidatePath("/home");
-  revalidatePath(`/jugador/${user.id}`);
+  revalidatePath(`/jugador/${userId}`);
 
   return {
     ok: true,

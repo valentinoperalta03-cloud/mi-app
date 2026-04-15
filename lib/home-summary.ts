@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivel } from "@/lib/profile-display";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 
 export type HomeSummary = {
   matchesPlayed: number;
@@ -9,7 +9,7 @@ export type HomeSummary = {
 };
 
 /**
- * Resumen para Home: partidos jugados (perfil), reservas activas (partidos futuros creados por el usuario), nivel.
+ * Resumen para Home: reservas activas (partidos futuros con `owner_id` = usuario) y nivel (`level_of_play`).
  */
 export async function fetchHomeSummary(
   supabase: SupabaseClient,
@@ -20,25 +20,24 @@ export async function fetchHomeSummary(
   const [{ data: profile }, { count }] = await Promise.all([
     supabase
       .from(DB_TABLES.profiles)
-      .select("matches_played, category, level")
+      .select("level_of_play, technical_score")
       .eq("user_id", userId)
       .maybeSingle(),
     supabase
       .from(DB_TABLES.matches)
       .select("id", { count: "exact", head: true })
-      .eq("created_by", userId)
+      .eq("owner_id", userId)
       .gte("date", nowIso),
   ]);
 
   const row = profile as {
-    matches_played?: number | null;
-    category?: string | null;
-    level?: string | number | null;
+    level_of_play?: string | null;
+    technical_score?: number | null;
   } | null;
 
   return {
-    matchesPlayed: row?.matches_played ?? 0,
+    matchesPlayed: 0,
     activeReservasCount: count ?? 0,
-    nivelLine: formatProfileNivel(row?.category, row?.level),
+    nivelLine: formatProfileNivelFromRow(row),
   };
 }

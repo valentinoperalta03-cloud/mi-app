@@ -3,9 +3,11 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
 import MotionPage from "@/components/motion-page";
+import { HomeReservationsSection } from "@/components/home-reservations-section";
 import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
 import {
+  HomeReservationsSkeleton,
   HomeSuggestionsSkeleton,
   HomeSummarySkeleton,
 } from "@/components/home-loading-skeletons";
@@ -103,6 +105,13 @@ export default async function HomePage() {
         <h2 className="text-lg font-bold tracking-tight text-slate-900">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
+        </Suspense>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Mis Reservas</h2>
+        <Suspense fallback={<HomeReservationsSkeleton />}>
+          <HomeReservationsSection userId={user.id} />
         </Suspense>
       </section>
     </MotionPage>

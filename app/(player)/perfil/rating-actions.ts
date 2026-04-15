@@ -33,7 +33,7 @@ export async function submitPlayerRating(
   }
 
   const { data: inMatch } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("match_id", matchId)
     .eq("player_id", user.id)
@@ -44,7 +44,7 @@ export async function submitPlayerRating(
   }
 
   const { data: peerIn } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("match_id", matchId)
     .eq("player_id", ratedId)

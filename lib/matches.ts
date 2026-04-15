@@ -6,8 +6,9 @@ export const matchListSelect = `
   id,
   date,
   court_id,
-  created_by,
+  owner_id,
   is_competitive,
+  match_type,
   courts (
     id,
     name,
@@ -19,14 +20,14 @@ export const matchListSelect = `
       location
     )
   ),
-  match_players (
+  match_participants (
     player_id,
     profiles (
       user_id,
       name,
       avatar_url,
-      category,
-      level
+      level_of_play,
+      technical_score
     )
   )
 `;
@@ -45,8 +46,9 @@ export async function fetchUpcomingMatches(
 }
 
 export type UpcomingMatchRow = MatchWithRelations & {
-  created_by?: string | null;
+  owner_id?: string | null;
   is_competitive?: boolean | null;
+  match_type?: string | null;
 };
 
 function firstCourtEmbed(m: UpcomingMatchRow): Record<string, unknown> | null {
@@ -83,7 +85,7 @@ export function matchCourtPrice(m: UpcomingMatchRow): number | null {
   return typeof p === "number" ? p : null;
 }
 
-/** Próximo partido futuro donde el usuario creó el match o está anotado en match_players. */
+/** Próximo partido futuro donde el usuario creó el match o está anotado en match_participants. */
 export async function fetchNextMatchForPlayer(
   supabase: SupabaseClient,
   userId: string
@@ -94,12 +96,12 @@ export async function fetchNextMatchForPlayer(
     supabase
       .from(DB_TABLES.matches)
       .select(matchListSelect)
-      .eq("created_by", userId)
+      .eq("owner_id", userId)
       .gte("date", now)
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle(),
-    supabase.from(DB_TABLES.matchPlayers).select("match_id").eq("player_id", userId),
+    supabase.from(DB_TABLES.matchParticipants).select("match_id").eq("player_id", userId),
   ]);
 
   const createdMatch = created as UpcomingMatchRow | null;

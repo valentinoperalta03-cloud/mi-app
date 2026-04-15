@@ -1,0 +1,10 @@
+{
+  "name": "FaltaUno",
+  "short_name": "FaltaUno",
+  "description": "Reserva canchas y gestiona tus partidos de padel",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "es"
+}

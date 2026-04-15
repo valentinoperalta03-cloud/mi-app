@@ -1,6 +1,7 @@
 "use client";
 
 import type { EvolutionPoint } from "@/lib/profile-insights";
+import { formatTechnicalLevelDisplay } from "@/lib/technical-score";
 
 type LevelEvolutionChartProps = {
   points: EvolutionPoint[];
@@ -24,9 +25,9 @@ export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
   const padY = 10;
 
   const scores = points.map((p) => p.score);
-  const minY = Math.min(...scores, 0);
-  const maxY = Math.max(...scores, 5);
-  const yRange = Math.max(maxY - minY, 0.25);
+  const minY = Math.min(0, ...scores) - 0.05;
+  const maxY = Math.max(7, ...scores) + 0.05;
+  const yRange = Math.max(maxY - minY, 0.15);
 
   const n = points.length;
   const pts = points.map((p, i) => {
@@ -63,9 +64,7 @@ export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
       <div className="mt-3 flex items-baseline justify-between px-1 text-xs text-slate-500">
         <span>
           Último:{" "}
-          <span className="font-medium text-slate-800">
-            {last.score.toFixed(2)} · {last.category}
-          </span>
+          <span className="font-medium text-slate-800">{formatTechnicalLevelDisplay(last.score)}</span>
         </span>
         <span>{n} registro{n === 1 ? "" : "s"}</span>
       </div>

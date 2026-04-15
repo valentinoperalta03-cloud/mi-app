@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -10,6 +10,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Padel App",
   description: "Reserva canchas y gestiona tus partidos de padel",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "FaltaUno",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

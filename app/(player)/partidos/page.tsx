@@ -43,7 +43,7 @@ export default async function PartidosPage() {
           const when = format(parseISO(item.date), "EEE d MMM yyyy · HH:mm", {
             locale: es,
           });
-          const n = item.match_players?.length ?? 0;
+          const n = item.match_participants?.length ?? 0;
 
           return (
             <article

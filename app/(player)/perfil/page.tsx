@@ -1,4 +1,4 @@
-import { Building2, Clock, Columns2, Hand } from "lucide-react";
+import { Building2, User } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
@@ -14,7 +14,7 @@ import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivel } from "@/lib/profile-display";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { fetchFinishedMatchActivity } from "@/lib/player-match-history";
 import {
   fetchLevelEvolutionSeries,
@@ -22,29 +22,15 @@ import {
   fetchTopClubsByReservations,
   fetchTopCoplayers,
 } from "@/lib/profile-insights";
+import { ensureProfileRowExists } from "@/lib/profiles";
 import { createClient } from "@/utils/supabase/server";
 
-function labelHand(v: string | null | undefined): string {
-  if (v === "derecha") return "Derecha";
-  if (v === "izquierda") return "Izquierda";
-  return "—";
-}
+export const dynamic = "force-dynamic";
 
-function labelPosition(v: string | null | undefined): string {
-  if (v === "drive") return "Drive";
-  if (v === "reves") return "Revés";
-  return "—";
-}
+const PROFILE_SELECT = "name, bio, level_of_play, technical_score, age, avatar_url" as const;
 
-function labelSchedule(v: string | null | undefined): string {
-  const m: Record<string, string> = {
-    manana: "Mañana",
-    mediodia: "Mediodía",
-    tarde: "Tarde",
-    noche: "Noche",
-  };
-  return v && m[v] ? m[v] : "—";
-}
+const USER_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default async function PerfilPage() {
   const supabase = await createClient();
@@ -56,6 +42,12 @@ export default async function PerfilPage() {
     redirect("/login");
   }
 
+  if (typeof user.id !== "string" || !USER_ID_RE.test(user.id)) {
+    redirect("/login");
+  }
+
+  const userId = user.id;
+
   const email = user.email ?? "Invitado sin sesion";
   const adminEmail =
     process.env.ADMIN_EMAIL?.trim().toLowerCase() ??
@@ -63,18 +55,73 @@ export default async function PerfilPage() {
     "";
   const isAdmin = Boolean(adminEmail) && email.toLowerCase() === adminEmail;
 
-  const { data: profile } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from(DB_TABLES.profiles)
-    .select(
-      "name, category, level, avatar_url, is_leveled, dominant_hand, play_position, play_schedule, base_level"
-    )
-    .eq("user_id", user.id)
+    .select(PROFILE_SELECT)
+    .eq("user_id", userId)
     .maybeSingle();
 
-  const row = profile as ProfileRow | null;
-  const isLeveled = row?.is_leveled === true;
+  if (profileError) {
+    return (
+      <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+        <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
+          <p className="font-medium">No pudimos cargar tu perfil.</p>
+          <p className="mt-2 text-xs text-rose-800/90">
+            {profileError.code ? `${profileError.code}: ` : ""}
+            {profileError.message}
+          </p>
+          <p className="mt-3 text-xs text-rose-700/80">
+            Si ves PGRST116, hay más de una fila para tu usuario. Con 0 filas y sin error, debería crearse
+            el perfil automáticamente.
+          </p>
+        </div>
+      </MotionPage>
+    );
+  }
+
+  // maybeSingle(): 0 filas → data null y error null (no es “array vacío”). Falta de fila: creamos perfil mínimo y reintentamos.
+  if (profile === null) {
+    const ensured = await ensureProfileRowExists(supabase, user);
+    if (ensured.error) {
+      return (
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+          <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
+            <p className="font-medium">No hay fila en perfiles para tu cuenta.</p>
+            <p className="mt-2 text-xs text-rose-800/90">{ensured.error}</p>
+          </div>
+        </MotionPage>
+      );
+    }
+    const retry = await supabase
+      .from(DB_TABLES.profiles)
+      .select(PROFILE_SELECT)
+      .eq("user_id", userId)
+      .maybeSingle();
+    profile = retry.data;
+    profileError = retry.error;
+    if (profileError || profile === null) {
+      return (
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+          <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
+            <p className="font-medium">No se pudo leer el perfil después de crearlo.</p>
+            {profileError ? (
+              <p className="mt-2 text-xs text-rose-800/90">
+                {profileError.code ? `${profileError.code}: ` : ""}
+                {profileError.message}
+              </p>
+            ) : null}
+          </div>
+        </MotionPage>
+      );
+    }
+  }
+
+  const row = profile as ProfileRow;
+  const hasTechnical =
+    row.technical_score != null && Number.isFinite(Number(row.technical_score));
+  const isLeveled = hasTechnical || Boolean((row.level_of_play ?? "").trim());
   const displayName = row?.name?.trim() || email.split("@")[0] || "Tu perfil";
-  const nivelLine = formatProfileNivel(row?.category, row?.level);
+  const nivelLine = formatProfileNivelFromRow(row);
 
   if (!isLeveled) {
     return (
@@ -108,6 +155,9 @@ export default async function PerfilPage() {
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">{displayName}</h1>
           <p className="mt-1 text-sm text-slate-500">{email}</p>
           <p className="mt-3 text-sm font-medium text-slate-700">{nivelLine}</p>
+          {row?.bio?.trim() ? (
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
+          ) : null}
           <Link
             href="/perfil/editar"
             className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99]"
@@ -143,7 +193,7 @@ export default async function PerfilPage() {
 
       <ProfileMotionSection
         title="Evolución de nivel"
-        description="Progreso según tus evaluaciones registradas."
+        description="Progreso según nivelación inicial y partidos jugados."
       >
         <LevelEvolutionChart points={evolution} />
       </ProfileMotionSection>
@@ -152,34 +202,14 @@ export default async function PerfilPage() {
         <ProfileMatchCardsPremium cards={matchCards} showViewAll />
       </ProfileMotionSection>
 
-      <ProfileMotionSection title="Ficha técnica" description="Preferencias de juego.">
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="flex flex-col items-center rounded-2xl bg-slate-50/90 px-2 py-4 text-center sm:px-3">
-            <Hand className="h-5 w-5 text-sky-600" strokeWidth={1.6} aria-hidden />
-            <span className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Mano
-            </span>
-            <span className="mt-1 text-sm font-medium text-slate-900">
-              {labelHand(row?.dominant_hand)}
-            </span>
-          </div>
-          <div className="flex flex-col items-center rounded-2xl bg-slate-50/90 px-2 py-4 text-center sm:px-3">
-            <Columns2 className="h-5 w-5 text-sky-600" strokeWidth={1.6} aria-hidden />
-            <span className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Posición
-            </span>
-            <span className="mt-1 text-sm font-medium text-slate-900">
-              {labelPosition(row?.play_position)}
-            </span>
-          </div>
-          <div className="flex flex-col items-center rounded-2xl bg-slate-50/90 px-2 py-4 text-center sm:px-3">
-            <Clock className="h-5 w-5 text-sky-600" strokeWidth={1.6} aria-hidden />
-            <span className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Horario
-            </span>
-            <span className="mt-1 text-sm font-medium text-slate-900">
-              {labelSchedule(row?.play_schedule)}
-            </span>
+      <ProfileMotionSection title="Datos" description="Información de tu perfil.">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4">
+          <User className="h-5 w-5 shrink-0 text-sky-600" strokeWidth={1.6} aria-hidden />
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Edad</p>
+            <p className="text-sm font-medium text-slate-900">
+              {row.age != null && row.age > 0 ? `${row.age} años` : "—"}
+            </p>
           </div>
         </div>
       </ProfileMotionSection>

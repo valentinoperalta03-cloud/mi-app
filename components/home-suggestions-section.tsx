@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { HomeSuggestionPlus } from "@/components/home-suggestion-plus";
-import { formatProfileNivel } from "@/lib/profile-display";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { fetchSuggestedPlayers } from "@/lib/suggested-players";
 import { createClient } from "@/utils/supabase/server";
 
@@ -12,11 +12,7 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
   if (list.length === 0) {
     return (
       <p className="rounded-[2rem] border border-dashed border-slate-200/90 bg-white/80 px-4 py-5 text-center text-sm text-slate-500">
-        Definí tu categoría en{" "}
-        <Link href="/perfil/editar" className="font-semibold text-sky-700 underline">
-          Editar perfil
-        </Link>{" "}
-        para ver jugadores de tu misma categoría.
+        Completá tu nivel de juego en el perfil para ver jugadores parecidos a vos.
       </p>
     );
   }
@@ -41,7 +37,7 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
               </div>
               <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900">{label}</p>
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                {formatProfileNivel(p.category, p.level)}
+                {formatProfileNivelFromRow(p)}
               </p>
             </Link>
             <div className="mt-3 flex justify-center">

@@ -89,7 +89,7 @@ export async function fetchLatestMatchResultForUser(
   userId: string
 ): Promise<LatestMatchLink> {
   const { data: participation } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("player_id", userId);
 

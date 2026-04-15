@@ -9,7 +9,7 @@ import { createClient } from "@/utils/supabase/server";
 
 type ClubRow = { id: string };
 type CourtRow = { id: string; price: number | null };
-type MatchRow = { court_id: string; date: string; created_by: string | null };
+type MatchRow = { court_id: string; date: string; owner_id: string | null };
 type ProfileRow = { user_id: string; name: string | null };
 
 async function closeAdminSessionAction() {
@@ -49,7 +49,7 @@ export default async function OwnerVaultPage() {
   const { data: matchesData } = courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("court_id,date,created_by")
+        .select("court_id,date,owner_id")
         .in("court_id", courtIds)
         .order("date", { ascending: false })
     : { data: [] };
@@ -73,7 +73,7 @@ export default async function OwnerVaultPage() {
   const maxBar = bars.reduce((max, [, value]) => Math.max(max, value), 0);
 
   const creatorIds = Array.from(
-    new Set(matches.map((match) => match.created_by).filter(Boolean))
+    new Set(matches.map((match) => match.owner_id).filter(Boolean))
   ) as string[];
   const { data: profilesData } = creatorIds.length
     ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
@@ -87,10 +87,10 @@ export default async function OwnerVaultPage() {
 
   const frequencyByPlayer = new Map<string, number>();
   for (const match of matches) {
-    if (!match.created_by) continue;
+    if (!match.owner_id) continue;
     frequencyByPlayer.set(
-      match.created_by,
-      (frequencyByPlayer.get(match.created_by) ?? 0) + 1
+      match.owner_id,
+      (frequencyByPlayer.get(match.owner_id) ?? 0) + 1
     );
   }
   const recurrentPlayers = Array.from(frequencyByPlayer.entries())
@@ -151,7 +151,7 @@ export default async function OwnerVaultPage() {
             <Users size={18} className="text-sky-600" />
             <h2 className="text-base font-semibold text-slate-900">Jugadores recurrentes</h2>
           </div>
-          <p className="mt-1 text-sm text-slate-500">Frecuencia de reservas por `matches.created_by`.</p>
+          <p className="mt-1 text-sm text-slate-500">Frecuencia de reservas por `matches.owner_id`.</p>
           <div className="mt-4 space-y-2">
             {recurrentPlayers.length === 0 ? (
               <p className="text-sm text-slate-500">No hay reservas registradas aun.</p>

@@ -31,19 +31,22 @@ export async function fetchPlayerHomeStats(
 ): Promise<PlayerHomeStats> {
   const [{ count: partidosCount }, { count: reservasCount }, { data: profile }] = await Promise.all([
     supabase
-      .from(DB_TABLES.matchPlayers)
+      .from(DB_TABLES.matchParticipants)
       .select("match_id", { count: "exact", head: true })
       .eq("player_id", userId),
     supabase
       .from(DB_TABLES.matches)
       .select("id", { count: "exact", head: true })
-      .eq("created_by", userId),
-    supabase.from(DB_TABLES.profiles).select("level").eq("user_id", userId).maybeSingle(),
+      .eq("owner_id", userId),
+    supabase
+      .from(DB_TABLES.profiles)
+      .select("level_of_play")
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
 
-  const nivelDisplay = levelToDisplayNumber(
-    (profile as { level?: string | null } | null)?.level ?? null
-  );
+  const prof = profile as { level_of_play?: string | null } | null;
+  const nivelDisplay = levelToDisplayNumber(prof?.level_of_play ?? null);
 
   return {
     partidosCount: partidosCount ?? 0,

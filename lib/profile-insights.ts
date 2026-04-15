@@ -3,8 +3,11 @@ import { DB_TABLES } from "@/lib/db-tables";
 
 export type EvolutionPoint = {
   created_at: string;
+  /** Valor para el gráfico: preferentemente `new_score` (histórico decimal). */
   score: number;
   category: string;
+  previous_score?: number | null;
+  new_score?: number | null;
 };
 
 export type ProfileMatchCard = {
@@ -47,11 +50,31 @@ export async function fetchLevelEvolutionSeries(
 ): Promise<EvolutionPoint[]> {
   const { data } = await supabase
     .from(DB_TABLES.levelEvolution)
-    .select("created_at, score, category")
+    .select("created_at, score, category, previous_score, new_score")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
-  return (data ?? []) as EvolutionPoint[];
+  const raw = (data ?? []) as {
+    created_at: string;
+    score: number | string | null;
+    category: string | null;
+    previous_score?: number | string | null;
+    new_score?: number | string | null;
+  }[];
+
+  return raw.map((r) => {
+    const ns = r.new_score != null && r.new_score !== "" ? Number(r.new_score) : NaN;
+    const sc = r.score != null && r.score !== "" ? Number(r.score) : NaN;
+    const resolved = Number.isFinite(ns) ? ns : Number.isFinite(sc) ? sc : 0;
+    const ps = r.previous_score != null && r.previous_score !== "" ? Number(r.previous_score) : null;
+    return {
+      created_at: r.created_at,
+      score: resolved,
+      category: (r.category ?? "").trim() || "—",
+      previous_score: ps != null && Number.isFinite(ps) ? ps : null,
+      new_score: Number.isFinite(ns) ? ns : null,
+    };
+  });
 }
 
 export async function fetchProfileMatchCards(
@@ -60,7 +83,7 @@ export async function fetchProfileMatchCards(
   limit: number
 ): Promise<ProfileMatchCard[]> {
   const { data: mp } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("player_id", userId)
     .limit(500);
@@ -136,7 +159,7 @@ export async function fetchTopCoplayers(
   top = 5
 ): Promise<CoplayerStat[]> {
   const { data: mp } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("player_id", userId)
     .limit(400);
@@ -155,7 +178,7 @@ export async function fetchTopCoplayers(
   if (matchIds.length === 0) return [];
 
   const { data: allPlayers } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("player_id, match_id")
     .in("match_id", matchIds);
 
@@ -203,7 +226,7 @@ export async function fetchTopClubsByReservations(
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
     .select("court_id")
-    .eq("created_by", userId)
+    .eq("owner_id", userId)
     .limit(400);
 
   const courtIds = (matches ?? []).map((m: { court_id: string }) => m.court_id).filter(Boolean);

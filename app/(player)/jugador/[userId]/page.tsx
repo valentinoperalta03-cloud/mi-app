@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Star, Trophy } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { FavoritePlayerButton } from "@/components/favorite-player-button";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivel } from "@/lib/profile-display";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 type PageProps = { params: Promise<{ userId: string }> };
@@ -23,7 +22,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
 
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, category, level, matches_played, wins, avatar_url")
+    .select("user_id, name, level_of_play, technical_score, age, bio, avatar_url")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -33,10 +32,10 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
 
   const row = profile as {
     name: string | null;
-    category: string | null;
-    level: string | number | null;
-    matches_played: number | null;
-    wins: number | null;
+    level_of_play?: string | null;
+    technical_score?: number | null;
+    age: number | null;
+    bio: string | null;
     avatar_url: string | null;
   };
 
@@ -52,9 +51,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       .maybeSingle();
     favorited = Boolean(favRow);
   }
-  const matchesPlayed = row.matches_played ?? 0;
-  const wins = row.wins ?? 0;
-  const nivelLine = formatProfileNivel(row.category, row.level);
+  const nivelLine = formatProfileNivelFromRow(row);
 
   return (
     <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
@@ -73,27 +70,21 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
         <p className="mt-2 text-sm font-medium text-slate-600">{nivelLine}</p>
       </section>
 
-      <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Resumen</h2>
-        <article className="flex items-center gap-3 rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-            <Trophy size={20} strokeWidth={2.1} aria-hidden />
-          </span>
-          <div>
-            <p className="text-2xl font-bold tabular-nums text-slate-900">{matchesPlayed}</p>
-            <p className="text-xs font-semibold text-slate-500">Partidos</p>
-          </div>
-        </article>
-        <article className="flex items-center gap-3 rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-            <Star size={20} strokeWidth={2.1} aria-hidden />
-          </span>
-          <div>
-            <p className="text-2xl font-bold tabular-nums text-slate-900">{wins}</p>
-            <p className="text-xs font-semibold text-slate-500">Victorias</p>
-          </div>
-        </article>
-      </section>
+      {(row.age != null && row.age > 0) || row.bio?.trim() ? (
+        <section className="mt-6 space-y-3">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">Sobre el jugador</h2>
+          {row.age != null && row.age > 0 ? (
+            <p className="rounded-3xl border border-slate-200/80 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+              <span className="font-semibold text-slate-900">Edad:</span> {row.age} años
+            </p>
+          ) : null}
+          {row.bio?.trim() ? (
+            <p className="rounded-3xl border border-slate-200/80 bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+              {row.bio.trim()}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {user ? (
         <div className="fixed bottom-24 right-5 z-40">

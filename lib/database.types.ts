@@ -4,21 +4,16 @@ export type Uuid = string;
 /** `matches.date` y timestamps ISO 8601. */
 export type TimestampIso = string;
 
+/** Columnas actuales de `profiles` en Supabase. */
 export type ProfileRow = {
   user_id: Uuid;
   name: string | null;
-  /** Nivel numérico (1–7 u otra escala) o legado texto. */
-  level: string | number | null;
-  /** Categoría de torneo (ej. 6ta). */
-  category: string | null;
-  matches_played: number | null;
-  wins: number | null;
   avatar_url: string | null;
-  is_leveled?: boolean | null;
-  base_level?: string | null;
-  dominant_hand?: string | null;
-  play_position?: string | null;
-  play_schedule?: string | null;
+  level_of_play: string | null;
+  /** Escala competitiva 0.0–7.0 (fuente de verdad del nivel). */
+  technical_score?: number | null;
+  age: number | null;
+  bio: string | null;
 };
 
 export type MatchResultRow = {
@@ -67,8 +62,10 @@ export type MatchRow = {
   id: Uuid;
   date: TimestampIso;
   court_id: Uuid;
-  created_by?: Uuid | null;
+  owner_id?: Uuid | null;
   is_competitive?: boolean | null;
+  /** `amistoso` | `competitivo` (minúsculas). Solo competitivo afecta `technical_score`. */
+  match_type?: string | null;
 };
 
 export type MatchPlayerRow = {
@@ -78,8 +75,20 @@ export type MatchPlayerRow = {
 
 export type MatchPlayerWithProfile = Pick<MatchPlayerRow, "player_id"> & {
   profiles:
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category" | "level">
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category" | "level">[]
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">[]
+    | null;
+};
+
+export type MatchParticipantRow = {
+  match_id: Uuid;
+  player_id: Uuid;
+};
+
+export type MatchParticipantWithProfile = Pick<MatchParticipantRow, "player_id"> & {
+  profiles:
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">[]
     | null;
 };
 
@@ -90,5 +99,6 @@ export type MatchWithRelations = MatchRow & {
         clubs: Pick<ClubRow, "id" | "name" | "location"> | null;
       })
     | null;
-  match_players: MatchPlayerWithProfile[] | null;
+  match_players?: MatchPlayerWithProfile[] | null;
+  match_participants?: MatchParticipantWithProfile[] | null;
 };

@@ -78,13 +78,18 @@ export async function createMatchAction(
     };
   }
 
+  const matchType: "amistoso" | "competitivo" = isCompetitive ? "competitivo" : "amistoso";
+
   const { data: match, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .insert({
       court_id: courtId,
-      created_by: user.id,
+      owner_id: user.id,
       date: dateIso,
       is_competitive: isCompetitive,
+      match_type: matchType,
+      visibility: "publico",
+      court_status: "app_booking",
     })
     .select("id")
     .single();
@@ -96,7 +101,7 @@ export async function createMatchAction(
     };
   }
 
-  const { error: playerError } = await supabase.from(DB_TABLES.matchPlayers).insert({
+  const { error: playerError } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: match.id,
     player_id: user.id,
   });

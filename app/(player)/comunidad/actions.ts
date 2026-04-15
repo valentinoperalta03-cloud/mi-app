@@ -42,7 +42,7 @@ export async function createPostAction(
       return { ok: false, message: "No tenés un resultado reciente para vincular." };
     }
     const { data: inMatch } = await supabase
-      .from(DB_TABLES.matchPlayers)
+      .from(DB_TABLES.matchParticipants)
       .select("match_id")
       .eq("match_id", latest.match_id)
       .eq("player_id", user.id)

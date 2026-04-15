@@ -20,17 +20,17 @@ export default async function AdminJugadoresPage() {
     ctx.courtIds.length > 0
       ? await supabase
           .from(DB_TABLES.matches)
-          .select("created_by,date")
+          .select("owner_id,date")
           .in("court_id", ctx.courtIds)
-          .not("created_by", "is", null)
+          .not("owner_id", "is", null)
           .order("date", { ascending: false })
       : { data: [] };
 
-  const rows = (matchesRaw ?? []) as { created_by: string | null; date: string }[];
+  const rows = (matchesRaw ?? []) as { owner_id: string | null; date: string }[];
 
   const byUser = new Map<string, { count: number; last: string; first: string }>();
   for (const r of rows) {
-    const uid = r.created_by;
+    const uid = r.owner_id;
     if (!uid) continue;
     const cur = byUser.get(uid);
     if (!cur) {
@@ -81,7 +81,7 @@ export default async function AdminJugadoresPage() {
         <p className={`${adminKicker} text-sky-600`}>CRM</p>
         <h1 className={adminTitle}>Jugadores</h1>
         <p className={adminSubtitle}>
-          Basado en <code className="text-xs text-slate-400">matches.created_by</code> y{" "}
+          Basado en <code className="text-xs text-slate-400">matches.owner_id</code> y{" "}
           <code className="text-xs text-slate-400">profiles.name</code>.
         </p>
       </header>

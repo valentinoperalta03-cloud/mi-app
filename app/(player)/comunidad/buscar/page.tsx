@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { formatProfileNivel } from "@/lib/profile-display";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -15,7 +15,7 @@ export default async function ComunidadBuscarPage() {
 
   const { data: rows } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, category, level")
+    .select("user_id, name, avatar_url, level_of_play, technical_score")
     .neq("user_id", user.id)
     .order("name", { ascending: true })
     .limit(48);
@@ -24,8 +24,8 @@ export default async function ComunidadBuscarPage() {
     user_id: string;
     name: string | null;
     avatar_url: string | null;
-    category: string | null;
-    level: string | number | null;
+    level_of_play?: string | null;
+    technical_score?: number | null;
   }[];
 
   return (
@@ -56,7 +56,7 @@ export default async function ComunidadBuscarPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-900">{label}</p>
                   <p className="text-xs text-slate-500">
-                    {formatProfileNivel(p.category, p.level)}
+                    {formatProfileNivelFromRow(p)}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-sky-600">Ver →</span>

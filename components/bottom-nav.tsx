@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ProfileAvatar } from "@/components/profile-avatar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 
@@ -17,6 +18,7 @@ const items = [
 export default function BottomNav() {
   const pathname = usePathname();
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
+  const [myName, setMyName] = useState<string>("Perfil");
 
   useEffect(() => {
     const supabase = createClient();
@@ -26,11 +28,13 @@ export default function BottomNav() {
       if (!userId) return;
       const { data: profile } = await supabase
         .from(DB_TABLES.profiles)
-        .select("avatar_url")
+        .select("name, avatar_url")
         .eq("user_id", userId)
         .maybeSingle();
       if (!active) return;
-      setMyAvatarUrl((profile as { avatar_url?: string | null } | null)?.avatar_url ?? null);
+      const typed = profile as { name?: string | null; avatar_url?: string | null } | null;
+      setMyAvatarUrl(typed?.avatar_url ?? null);
+      setMyName(typed?.name?.trim() || "Perfil");
     });
     return () => {
       active = false;
@@ -72,14 +76,12 @@ export default function BottomNav() {
                 transition={{ type: "spring", stiffness: 520, damping: 28 }}
               >
                 <span className="relative">
-                  {item.href === "/perfil" && myAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- avatar de storage
-                    <img
-                      src={myAvatarUrl}
-                      alt="Mi avatar"
-                      className={`h-6 w-6 rounded-full object-cover ring-1 ${
-                        active ? "ring-sky-400" : "ring-slate-300"
-                      }`}
+                  {item.href === "/perfil" ? (
+                    <ProfileAvatar
+                      avatarUrl={myAvatarUrl}
+                      name={myName}
+                      size={24}
+                      ringClassName={active ? "ring-1 ring-sky-400" : "ring-1 ring-slate-300"}
                     />
                   ) : (
                     <Icon size={22} strokeWidth={active ? 2.35 : 2} aria-hidden />

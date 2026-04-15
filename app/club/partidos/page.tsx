@@ -17,7 +17,7 @@ type CourtRow = {
 
 type MatchRow = {
   id: string;
-  created_by: string | null;
+  owner_id: string | null;
   court_id: string;
   date: string;
   is_competitive: boolean | null;
@@ -61,14 +61,14 @@ export default async function ClubPartidosPage() {
   const { data: matchesData, error: matchesError } = courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("id,created_by,court_id,date,is_competitive")
+        .select("id,owner_id,court_id,date,is_competitive")
         .in("court_id", courtIds)
         .order("date", { ascending: false })
     : { data: [], error: null };
 
   const matches = (matchesData ?? []) as MatchRow[];
   const creatorIds = Array.from(
-    new Set(matches.map((match) => match.created_by).filter(Boolean))
+    new Set(matches.map((match) => match.owner_id).filter(Boolean))
   ) as string[];
 
   const { data: profilesData, error: profilesError } = creatorIds.length
@@ -124,8 +124,8 @@ export default async function ClubPartidosPage() {
       {!hasError && matches.length > 0 ? (
         <section className="space-y-3">
           {matches.map((match) => {
-            const creatorName = match.created_by
-              ? creatorNameById.get(match.created_by) ?? "Usuario"
+            const creatorName = match.owner_id
+              ? creatorNameById.get(match.owner_id) ?? "Usuario"
               : "Usuario";
             const courtName = courtNameById.get(match.court_id) ?? "Cancha";
             const when = format(parseISO(match.date), "EEE d MMM yyyy · HH:mm", {

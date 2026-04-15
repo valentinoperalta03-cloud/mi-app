@@ -42,7 +42,7 @@ type CourtRow = {
 type MatchRow = {
   date: string;
   court_id: string;
-  created_by: string | null;
+  owner_id: string | null;
 };
 
 type BlockRow = {
@@ -107,7 +107,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   const { data: matchesData, error: matchesError } = selectedCourtId
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("date,court_id,created_by")
+        .select("date,court_id,owner_id")
         .eq("court_id", selectedCourtId)
         .gte("date", dayStartIso)
         .lt("date", nextDayIso)
@@ -125,7 +125,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
   const blocks = (blocksData ?? []) as BlockRow[];
 
   const creatorIds = Array.from(
-    new Set(matches.map((match) => match.created_by).filter(Boolean))
+    new Set(matches.map((match) => match.owner_id).filter(Boolean))
   ) as string[];
   const { data: profilesData } = creatorIds.length
     ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
@@ -234,8 +234,8 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                 : "free";
             const occupiedBy = isBlocked
               ? "Bloqueo manual"
-              : matchAtTime?.created_by
-                ? creatorNameById.get(matchAtTime.created_by) ?? "Jugador"
+              : matchAtTime?.owner_id
+                ? creatorNameById.get(matchAtTime.owner_id) ?? "Jugador"
                 : matchAtTime
                   ? "Jugador"
                   : "";

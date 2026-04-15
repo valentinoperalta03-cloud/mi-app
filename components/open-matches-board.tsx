@@ -1,9 +1,10 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
-import JoinMatchButton from "@/app/(player)/feed/join-match-button";
+import JoinToggleButton from "@/app/(player)/buscar-partido/join-toggle-button";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import { ProfileAvatar } from "@/components/profile-avatar";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
@@ -21,13 +22,15 @@ type MatchFeedRow = {
           | null;
       }
     | null;
-  match_players:
+  match_participants:
     | {
         player_id: string;
         profiles:
           | {
               name: string | null;
+              avatar_url: string | null;
               level_of_play: string | null;
+              technical_score?: number | null;
             }
           | null;
       }[]
@@ -51,8 +54,21 @@ function levelToNumeric(levelLabel: string): number {
   return LEVEL_PRIORITY[trimmed] ?? 1;
 }
 
-function getAverageLevelLabel(players: MatchFeedRow["match_players"]): string {
-  const levels = (players ?? [])
+function getAverageLevelLabel(players: MatchFeedRow["match_participants"]): string {
+  const list = players ?? [];
+  const techScores: number[] = [];
+  for (const player of list) {
+    const prof = player.profiles;
+    const p = Array.isArray(prof) ? prof[0] : prof;
+    const ts = p?.technical_score;
+    if (ts != null && Number.isFinite(Number(ts))) techScores.push(Number(ts));
+  }
+  if (techScores.length === list.length && techScores.length > 0) {
+    const avg = techScores.reduce((a, b) => a + b, 0) / techScores.length;
+    return `Prom. ${avg.toFixed(1)}`;
+  }
+
+  const levels = list
     .map((player) => {
       const raw = player.profiles?.level_of_play;
       if (raw === null || raw === undefined) return "";
@@ -121,11 +137,13 @@ export default async function OpenMatchesBoard({
           location
         )
       ),
-      match_players (
+      match_participants (
         player_id,
         profiles (
           name,
-          level_of_play
+          avatar_url,
+          level_of_play,
+          technical_score
         )
       )
     `
@@ -178,12 +196,15 @@ export default async function OpenMatchesBoard({
         {matches.map((match) => {
           const clubName = match.courts?.clubs?.name ?? "Club sin nombre";
           const clubLocation = match.courts?.clubs?.location ?? "Ubicación pendiente";
-          const playersCount = match.match_players?.length ?? 0;
+          const playersCount = match.match_participants?.length ?? 0;
           const freeSlots = Math.max(0, 4 - playersCount);
           const when = format(parseISO(match.date), "EEE d MMM · HH:mm", {
             locale: es,
           });
-          const levelLabel = getAverageLevelLabel(match.match_players);
+          const levelLabel = getAverageLevelLabel(match.match_participants);
+          const currentUserJoined =
+            !!user?.id &&
+            (match.match_participants ?? []).some((participant) => participant.player_id === user.id);
 
           return (
             <article
@@ -215,9 +236,9 @@ export default async function OpenMatchesBoard({
                 </p>
               </div>
 
-              {match.match_players && match.match_players.length > 0 ? (
-                <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  {match.match_players.map((mp) => {
+              {match.match_participants && match.match_participants.length > 0 ? (
+                <ul className="mt-3 flex flex-wrap gap-2 text-xs">
+                  {match.match_participants.map((mp) => {
                     const prof = mp.profiles;
                     const p = Array.isArray(prof) ? prof[0] : prof;
                     const label = p?.name?.trim() || "Jugador";
@@ -225,8 +246,14 @@ export default async function OpenMatchesBoard({
                       <li key={mp.player_id}>
                         <Link
                           href={`/jugador/${mp.player_id}`}
-                          className="font-semibold text-sky-700 underline decoration-sky-200/70 underline-offset-2 hover:text-sky-800"
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-sky-700 hover:text-sky-800"
                         >
+                          <ProfileAvatar
+                            avatarUrl={p?.avatar_url ?? null}
+                            name={label}
+                            size={24}
+                            ringClassName="ring-1 ring-white"
+                          />
                           {label}
                         </Link>
                       </li>
@@ -238,8 +265,14 @@ export default async function OpenMatchesBoard({
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-xs text-slate-500">{playersCount} jugador(es) anotado(s)</p>
 
-                {freeSlots > 0 && user?.id ? (
-                  <JoinMatchButton matchId={match.id} userId={user.id} />
+                {user?.id ? (
+                  freeSlots > 0 || currentUserJoined ? (
+                    <JoinToggleButton matchId={match.id} isJoined={currentUserJoined} />
+                  ) : (
+                    <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                      Completo
+                    </span>
+                  )
                 ) : freeSlots > 0 ? (
                   <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
                     Iniciá sesión

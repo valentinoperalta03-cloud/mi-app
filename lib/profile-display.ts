@@ -1,3 +1,5 @@
+import { formatTechnicalLevelDisplay } from "@/lib/technical-score";
+
 /** Texto para tarjeta "Nivel": categoría + valor numérico. */
 export function formatProfileNivel(
   category: string | null | undefined,
@@ -14,6 +16,22 @@ export function formatProfileNivel(
   if (cat) return cat;
   if (lv) return lv;
   return "—";
+}
+
+type ProfileNivelRow = {
+  level_of_play?: string | null;
+  technical_score?: number | null;
+};
+
+/** Prioriza `technical_score` (decimal + banda); si no hay, usa `level_of_play`. */
+export function formatProfileNivelFromRow(row: ProfileNivelRow | null | undefined): string {
+  if (!row) return "—";
+  if (row.technical_score != null && Number.isFinite(Number(row.technical_score))) {
+    return formatTechnicalLevelDisplay(Number(row.technical_score));
+  }
+  const play = row.level_of_play?.trim();
+  if (!play) return "—";
+  return play;
 }
 
 export const PROFILE_CATEGORIES = [

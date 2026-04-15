@@ -12,45 +12,63 @@ import { createClient } from "@/utils/supabase/client";
 
 const initial: EditProfileState = { ok: false, message: "" };
 
-const HAND_OPTS = [
-  { value: "derecha", label: "Derecha" },
-  { value: "izquierda", label: "Izquierda" },
-] as const;
-
-const POS_OPTS = [
-  { value: "drive", label: "Drive" },
-  { value: "reves", label: "Revés" },
-  { value: "ambas", label: "Ambas" },
-] as const;
-
-function pillClass(active: boolean): string {
-  return active
-    ? "border-sky-400 bg-sky-50 text-sky-900"
-    : "border-slate-100 bg-slate-50/50 text-slate-700 hover:border-slate-200";
-}
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 export function EditProfileForm({
+  userId,
   defaultName,
   defaultAge,
   defaultBio,
   defaultAvatarUrl,
-  defaultCourtPosition,
-  defaultPreferredHand,
+  competitiveLevelLine,
 }: {
+  userId: string;
   defaultName: string;
   defaultAge: number | null;
   defaultBio: string | null;
   defaultAvatarUrl: string | null;
-  defaultCourtPosition: string;
-  defaultPreferredHand: string;
+  /** Solo lectura: nivel competitivo (no editable acá). */
+  competitiveLevelLine: string;
 }) {
   const [state, formAction, pending] = useActionState(updateMyProfile, initial);
-  const [courtPosition, setCourtPosition] = useState(defaultCourtPosition);
-  const [preferredHand, setPreferredHand] = useState(defaultPreferredHand);
   const [deletePending, startDelete] = useTransition();
   const [previewUrl, setPreviewUrl] = useState(defaultAvatarUrl);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(defaultAvatarUrl ?? "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function handleImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Seleccioná una imagen válida.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setUploadError("La imagen supera 5MB. Elegí un archivo más liviano.");
+      return;
+    }
+    setUploadingAvatar(true);
+    setUploadError(null);
+    const supabase = createClient();
+    const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/webp" ? "webp" : "png";
+    const path = `${userId}/avatar-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, {
+      upsert: true,
+      contentType: file.type || "image/png",
+    });
+    if (error) {
+      setUploadError(`No se pudo subir la imagen: ${error.message}`);
+      setUploadingAvatar(false);
+      return;
+    }
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("avatars").getPublicUrl(path);
+    const nextUrl = `${publicUrl}?v=${Date.now()}`;
+    setAvatarUrl(nextUrl);
+    setPreviewUrl(nextUrl);
+    setUploadingAvatar(false);
+  }
 
   async function handleDeleteAccount() {
     if (
@@ -82,7 +100,15 @@ export function EditProfileForm({
 
   return (
     <div className="space-y-8">
-      <form action={formAction} className="space-y-6" encType="multipart/form-data">
+      <form
+        action={formAction}
+        className="space-y-6"
+        onSubmit={(e) => {
+          if (uploadingAvatar) {
+            e.preventDefault();
+          }
+        }}
+      >
         {state.message ? (
           <p
             role={state.ok ? "status" : "alert"}
@@ -96,9 +122,7 @@ export function EditProfileForm({
           </p>
         ) : null}
 
-        <input type="hidden" name="court_position" value={courtPosition} />
-        <input type="hidden" name="preferred_hand" value={preferredHand} />
-        <input type="hidden" name="current_avatar_url" value={defaultAvatarUrl ?? ""} />
+        <input type="hidden" name="avatar_url" value={avatarUrl} />
 
         <div className="flex justify-center">
           <div className="relative">
@@ -124,26 +148,27 @@ export function EditProfileForm({
             </button>
             <input
               ref={fileInputRef}
-              name="avatar_file"
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(event) => {
+              onChange={async (event) => {
                 const file = event.target.files?.[0] ?? null;
-                setSelectedFile(file);
                 if (!file) return;
                 const objectUrl = URL.createObjectURL(file);
                 setPreviewUrl((prev) => {
                   if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
                   return objectUrl;
                 });
+                await handleImageUpload(file);
               }}
             />
           </div>
         </div>
         <p className="text-center text-xs text-slate-500">
-          Tocá la cámara para subir tu foto. {selectedFile ? "Imagen lista para guardar." : ""}
+          La imagen se sube a Storage desde tu navegador.{" "}
+          {uploadingAvatar ? "Subiendo imagen..." : ""}
         </p>
+        {uploadError ? <p className="text-center text-xs text-rose-600">{uploadError}</p> : null}
 
         <label className="block space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre</span>
@@ -173,6 +198,17 @@ export function EditProfileForm({
           />
         </label>
 
+        <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Nivel competitivo
+          </p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{competitiveLevelLine}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Se actualiza solo con resultados de partidos y la nivelación inicial. No se puede editar
+            acá.
+          </p>
+        </div>
+
         <label className="block space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Descripción del perfil
@@ -187,48 +223,16 @@ export function EditProfileForm({
           />
         </label>
 
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Posición</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {POS_OPTS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => setCourtPosition(o.value)}
-                className={`min-w-[5.5rem] flex-1 rounded-2xl border py-3 text-sm font-medium transition sm:flex-none sm:px-4 ${pillClass(courtPosition === o.value)}`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Mano hábil</p>
-          <div className="mt-2 flex gap-2">
-            {HAND_OPTS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => setPreferredHand(o.value)}
-                className={`flex-1 rounded-2xl border py-3 text-sm font-medium transition ${pillClass(preferredHand === o.value)}`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || uploadingAvatar}
             className="flex flex-1 items-center justify-center gap-2 rounded-3xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-500 disabled:opacity-50"
           >
-            {pending ? (
+            {pending || uploadingAvatar ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Guardando...
+                {uploadingAvatar ? "Subiendo imagen..." : "Guardando..."}
               </>
             ) : (
               "Guardar cambios"

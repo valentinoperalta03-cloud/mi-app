@@ -25,10 +25,38 @@ export async function upsertProfileForAuthUser(
     {
       user_id: user.id,
       name: defaultDisplayName(user),
-      level: "beginner",
     },
     { onConflict: "user_id" }
   );
 
+  return { error: error?.message ?? null };
+}
+
+/**
+ * Garantiza una fila en `profiles` sin pisar datos existentes.
+ * Útil antes de inserts con FK a `profiles.user_id`.
+ */
+export async function ensureProfileRowExists(
+  supabase: SupabaseClient,
+  user: User
+): Promise<{ error: string | null }> {
+  const { data } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (data) {
+    return { error: null };
+  }
+
+  const { error } = await supabase.from(DB_TABLES.profiles).insert({
+    user_id: user.id,
+    name: defaultDisplayName(user),
+  });
+
+  if (error?.code === "23505") {
+    return { error: null };
+  }
   return { error: error?.message ?? null };
 }

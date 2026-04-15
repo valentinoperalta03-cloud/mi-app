@@ -18,7 +18,7 @@ type MatchRow = {
   id: string;
   date: string;
   court_id: string;
-  created_by: string | null;
+  owner_id: string | null;
   payment_status: string | null;
   total_price: number | null;
   is_competitive: boolean | null;
@@ -45,7 +45,7 @@ export default async function AdminReservasPage() {
     ? await supabase
         .from(DB_TABLES.matches)
         .select(
-          "id,date,court_id,created_by,payment_status,total_price,is_competitive,courts(id,name)"
+          "id,date,court_id,owner_id,payment_status,total_price,is_competitive,courts(id,name)"
         )
         .in("court_id", ctx.courtIds)
         .order("date", { ascending: true })
@@ -56,7 +56,7 @@ export default async function AdminReservasPage() {
   })[];
 
   const creatorIds = Array.from(
-    new Set(matches.map((m) => m.created_by).filter(Boolean))
+    new Set(matches.map((m) => m.owner_id).filter(Boolean))
   ) as string[];
 
   const { data: profilesData } = creatorIds.length
@@ -126,8 +126,8 @@ export default async function AdminReservasPage() {
                   const t = format(parseISO(m.date), "HH:mm");
                   const court =
                     m.courts?.name ?? courtNameById.get(m.court_id) ?? "Cancha";
-                  const player = m.created_by
-                    ? nameByUser.get(m.created_by) ?? "Jugador"
+                  const player = m.owner_id
+                    ? nameByUser.get(m.owner_id) ?? "Jugador"
                     : "Sin asignar";
                   const duration = 90;
                   const payRaw = (m.payment_status ?? "—").toString();

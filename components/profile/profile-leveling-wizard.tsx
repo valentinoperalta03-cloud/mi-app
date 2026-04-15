@@ -70,23 +70,26 @@ export function ProfileLevelingWizard() {
       return;
     }
     setBusy(true);
-    const res = await completeLevelingProfile({
-      answers: answers as number[],
-      baseLevel,
-      dominant_hand: hand,
-      play_position: position,
-      play_schedule: schedule,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setError(res.message);
-      return;
+    try {
+      const res = await completeLevelingProfile({
+        answers: answers as number[],
+        baseLevel,
+        preferred_hand: hand,
+        court_position: position,
+        preferred_schedule: schedule,
+      });
+      if (!res.ok) {
+        setError(res.message);
+        return;
+      }
+      await router.refresh();
+    } finally {
+      setBusy(false);
     }
-    router.refresh();
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-8">
+    <div className="flex flex-col gap-5 pb-8" suppressHydrationWarning>
       <header className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
           Nivelación
@@ -238,6 +241,11 @@ export function ProfileLevelingWizard() {
                     · {computation.afterPenalty.toFixed(2)}
                   </span>
                 </p>
+                {computation.category.includes("Elite") ? (
+                  <p className="text-xs leading-relaxed text-slate-500">
+                    Elite: puntuación final entre 4,80 y 5,00 (tope del cuestionario).
+                  </p>
+                ) : null}
                 {computation.penaltyApplied ? (
                   <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-100">
                     Aplicamos un ajuste del 20%: la experiencia declarada (tiempo y frecuencia) no

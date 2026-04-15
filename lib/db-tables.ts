@@ -14,6 +14,7 @@ export const DB_TABLES = {
   courtBlocks: "court_blocks",
   matches: "matches",
   matchPlayers: "match_players",
+  matchParticipants: "match_participants",
   matchResults: "match_results",
   playerRatings: "player_ratings",
   userFavorites: "user_favorites",

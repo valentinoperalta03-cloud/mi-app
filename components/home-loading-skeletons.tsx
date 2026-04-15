@@ -23,3 +23,16 @@ export function HomeSummarySkeleton() {
     </div>
   );
 }
+
+export function HomeReservationsSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      {[1, 2].map((i) => (
+        <div
+          key={i}
+          className="h-32 animate-pulse rounded-[2rem] border border-slate-100 bg-slate-200/40"
+        />
+      ))}
+    </div>
+  );
+}

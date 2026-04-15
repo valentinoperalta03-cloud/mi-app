@@ -30,7 +30,7 @@ type RawMatch = {
   id: string;
   date: string;
   courts: unknown;
-  match_players: RawPlayer[] | null;
+  match_participants: RawPlayer[] | null;
 };
 
 function unwrapEmbedded<T>(v: T | T[] | null | undefined): T | null {
@@ -60,7 +60,7 @@ export async function fetchFinishedMatchActivity(
   userId: string
 ): Promise<FinishedMatchActivity[]> {
   const { data: participation } = await supabase
-    .from(DB_TABLES.matchPlayers)
+    .from(DB_TABLES.matchParticipants)
     .select("match_id")
     .eq("player_id", userId);
 
@@ -83,7 +83,7 @@ export async function fetchFinishedMatchActivity(
           name,
           clubs ( name )
         ),
-        match_players (
+        match_participants (
           player_id,
           profiles ( user_id, name )
         )
@@ -123,7 +123,7 @@ export async function fetchFinishedMatchActivity(
 
     const { courtName, clubName } = namesFromMatch(match);
 
-    const peers: ActivityPeer[] = (match.match_players ?? [])
+    const peers: ActivityPeer[] = (match.match_participants ?? [])
       .filter((p) => p.player_id !== userId)
       .map((p) => {
         const prof = p.profiles;

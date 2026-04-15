@@ -7,9 +7,6 @@ import { createClient } from "@/utils/supabase/server";
 
 export type EditProfileState = { ok: boolean; message: string };
 
-const COURT_POSITIONS = ["drive", "reves", "ambas"] as const;
-const HANDS = ["derecha", "izquierda"] as const;
-
 export async function updateMyProfile(
   _prev: EditProfileState,
   formData: FormData
@@ -45,45 +42,24 @@ export async function updateMyProfile(
     return { ok: false, message: "La descripción no puede superar los 2000 caracteres." };
   }
 
-  const court_position = String(formData.get("court_position") ?? "").trim();
-  if (!COURT_POSITIONS.includes(court_position as (typeof COURT_POSITIONS)[number])) {
-    return { ok: false, message: "Elegí una posición válida." };
+  const avatarUrlRaw = String(formData.get("avatar_url") ?? "").trim();
+  if (avatarUrlRaw.startsWith("data:")) {
+    return {
+      ok: false,
+      message: "La foto debe subirse desde el dispositivo antes de guardar (no se aceptan datos embebidos).",
+    };
+  }
+  if (avatarUrlRaw.length > 2048) {
+    return { ok: false, message: "La URL del avatar es inválida." };
   }
 
-  const preferred_hand = String(formData.get("preferred_hand") ?? "").trim();
-  if (!HANDS.includes(preferred_hand as (typeof HANDS)[number])) {
-    return { ok: false, message: "Elegí una mano hábil válida." };
-  }
-
-  const currentAvatarUrl = String(formData.get("current_avatar_url") ?? "").trim();
-  const avatarFile = formData.get("avatar_file");
   const payload: Record<string, unknown> = {
     name,
     age,
     bio: bio === "" ? null : bio,
-    court_position,
-    preferred_hand,
   };
 
-  if (avatarFile instanceof File && avatarFile.size > 0) {
-    if (!avatarFile.type.startsWith("image/")) {
-      return { ok: false, message: "Subí una imagen válida (JPG, PNG o WEBP)." };
-    }
-    const avatarPath = `${user.id}/avatar.png`;
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(avatarPath, avatarFile, {
-      upsert: true,
-      contentType: avatarFile.type || "image/png",
-    });
-    if (uploadError) {
-      return { ok: false, message: `No se pudo subir la imagen: ${uploadError.message}` };
-    }
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("avatars").getPublicUrl(avatarPath);
-    payload.avatar_url = `${publicUrl}?v=${Date.now()}`;
-  } else if (currentAvatarUrl === "") {
-    payload.avatar_url = null;
-  }
+  payload.avatar_url = avatarUrlRaw === "" ? null : avatarUrlRaw;
 
   const { error } = await supabase.from(DB_TABLES.profiles).update(payload).eq("user_id", user.id);
 
