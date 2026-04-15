@@ -9,6 +9,7 @@ export type ProfileRow = {
   user_id: Uuid;
   name: string | null;
   avatar_url: string | null;
+  level?: number | null;
   level_of_play: string | null;
   /** Escala competitiva 0.0–7.0 (fuente de verdad del nivel). */
   technical_score?: number | null;

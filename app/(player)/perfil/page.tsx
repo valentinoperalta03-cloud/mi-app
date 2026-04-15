@@ -14,7 +14,7 @@ import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { fetchFinishedMatchActivity } from "@/lib/player-match-history";
 import {
   fetchLevelEvolutionSeries,
@@ -27,7 +27,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const PROFILE_SELECT = "name, bio, level_of_play, technical_score, age, avatar_url" as const;
+const PROFILE_SELECT = "name, bio, level, level_of_play, technical_score, age, avatar_url" as const;
 
 const USER_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -122,6 +122,7 @@ export default async function PerfilPage() {
   const isLeveled = hasTechnical || Boolean((row.level_of_play ?? "").trim());
   const displayName = row?.name?.trim() || email.split("@")[0] || "Tu perfil";
   const nivelLine = formatProfileNivelFromRow(row);
+  const nivelParts = splitOfficialCategoryLine(nivelLine);
 
   if (!isLeveled) {
     return (
@@ -154,7 +155,12 @@ export default async function PerfilPage() {
           </div>
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">{displayName}</h1>
           <p className="mt-1 text-sm text-slate-500">{email}</p>
-          <p className="mt-3 text-sm font-medium text-slate-700">{nivelLine}</p>
+          <p className="mt-3 text-sm text-sky-700">
+            <span className="font-bold">{nivelParts.category || "—"}</span>
+            {nivelParts.description ? (
+              <span className="font-medium text-sky-700">{" - "}{nivelParts.description}</span>
+            ) : null}
+          </p>
           {row?.bio?.trim() ? (
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
           ) : null}

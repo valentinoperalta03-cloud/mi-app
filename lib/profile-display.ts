@@ -1,3 +1,4 @@
+import { classifyCategory } from "@/lib/level-quiz-logic";
 import { formatTechnicalLevelDisplay } from "@/lib/technical-score";
 
 /** Texto para tarjeta "Nivel": categoría + valor numérico. */
@@ -19,13 +20,37 @@ export function formatProfileNivel(
 }
 
 type ProfileNivelRow = {
+  level?: number | null;
   level_of_play?: string | null;
   technical_score?: number | null;
 };
 
+function officialFromClassifyLabel(label: string): string {
+  const m = label.match(/^(.+?)\s*\((.+)\)$/);
+  if (!m) return label;
+  const category = (m[1] ?? "").trim();
+  const desc = (m[2] ?? "").trim();
+  return `${category} - ${desc}`;
+}
+
+export function formatOfficialCategoryFromLevel(level: number): string {
+  return officialFromClassifyLabel(classifyCategory(level));
+}
+
+export function splitOfficialCategoryLine(line: string): { category: string; description: string } {
+  const [left, ...rest] = line.split(" - ");
+  return {
+    category: (left ?? "").trim(),
+    description: rest.join(" - ").trim(),
+  };
+}
+
 /** Prioriza `technical_score` (decimal + banda); si no hay, usa `level_of_play`. */
 export function formatProfileNivelFromRow(row: ProfileNivelRow | null | undefined): string {
   if (!row) return "—";
+  if (row.level != null && Number.isFinite(Number(row.level))) {
+    return formatOfficialCategoryFromLevel(Number(row.level));
+  }
   if (row.technical_score != null && Number.isFinite(Number(row.technical_score))) {
     return formatTechnicalLevelDisplay(Number(row.technical_score));
   }
