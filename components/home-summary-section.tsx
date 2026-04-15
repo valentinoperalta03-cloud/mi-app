@@ -1,10 +1,12 @@
 import { Calendar, Star, Trophy } from "lucide-react";
 import { fetchHomeSummary } from "@/lib/home-summary";
+import { splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 export async function HomeSummarySection({ userId }: { userId: string }) {
   const supabase = await createClient();
   const summary = await fetchHomeSummary(supabase, userId);
+  const nivelParts = splitOfficialCategoryLine(summary.nivelLine);
 
   return (
     <div className="grid grid-cols-3 gap-3" suppressHydrationWarning>
@@ -32,8 +34,11 @@ export async function HomeSummarySection({ userId }: { userId: string }) {
         <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
           <Star size={18} strokeWidth={2.1} aria-hidden />
         </span>
-        <p className="line-clamp-2 min-h-[3rem] text-sm font-bold leading-tight text-slate-900">
-          {summary.nivelLine}
+        <p className="line-clamp-2 min-h-[3rem] text-sm leading-tight text-sky-700">
+          <span className="font-bold">{nivelParts.category || "—"}</span>
+          {nivelParts.description ? (
+            <span className="font-medium">{" - "}{nivelParts.description}</span>
+          ) : null}
         </p>
         <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Nivel</p>
       </article>

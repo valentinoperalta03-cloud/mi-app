@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { HomeSuggestionPlus } from "@/components/home-suggestion-plus";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { fetchSuggestedPlayers } from "@/lib/suggested-players";
 import { createClient } from "@/utils/supabase/server";
 
@@ -21,6 +21,8 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
     <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:thin]">
       {list.map((p) => {
         const label = p.name?.trim() || "Jugador";
+        const nivelLine = formatProfileNivelFromRow(p);
+        const nivelParts = splitOfficialCategoryLine(nivelLine);
         return (
           <div
             key={p.user_id}
@@ -36,8 +38,11 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
                 />
               </div>
               <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900">{label}</p>
-              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                {formatProfileNivelFromRow(p)}
+              <p className="mt-0.5 line-clamp-1 text-xs text-sky-700">
+                <span className="font-bold">{nivelParts.category || "—"}</span>
+                {nivelParts.description ? (
+                  <span className="font-medium">{" - "}{nivelParts.description}</span>
+                ) : null}
               </p>
             </Link>
             <div className="mt-3 flex justify-center">

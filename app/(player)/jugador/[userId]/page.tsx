@@ -4,7 +4,7 @@ import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { FavoritePlayerButton } from "@/components/favorite-player-button";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 type PageProps = { params: Promise<{ userId: string }> };
@@ -22,7 +22,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
 
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, level_of_play, technical_score, age, bio, avatar_url")
+    .select("user_id, name, level, level_of_play, technical_score, age, bio, avatar_url")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -32,6 +32,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
 
   const row = profile as {
     name: string | null;
+    level?: number | null;
     level_of_play?: string | null;
     technical_score?: number | null;
     age: number | null;
@@ -52,6 +53,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     favorited = Boolean(favRow);
   }
   const nivelLine = formatProfileNivelFromRow(row);
+  const nivelParts = splitOfficialCategoryLine(nivelLine);
 
   return (
     <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
@@ -67,7 +69,12 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           <ProfileAvatar avatarUrl={row.avatar_url} name={displayName} size={96} />
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
-        <p className="mt-2 text-sm font-medium text-slate-600">{nivelLine}</p>
+        <p className="mt-2 text-sm text-sky-700">
+          <span className="font-bold">{nivelParts.category || "—"}</span>
+          {nivelParts.description ? (
+            <span className="font-medium text-sky-700">{" - "}{nivelParts.description}</span>
+          ) : null}
+        </p>
       </section>
 
       {(row.age != null && row.age > 0) || row.bio?.trim() ? (

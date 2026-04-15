@@ -20,7 +20,7 @@ export async function fetchHomeSummary(
   const [{ data: profile }, { count }] = await Promise.all([
     supabase
       .from(DB_TABLES.profiles)
-      .select("level_of_play, technical_score")
+      .select("level, level_of_play, technical_score")
       .eq("user_id", userId)
       .maybeSingle(),
     supabase
@@ -31,6 +31,7 @@ export async function fetchHomeSummary(
   ]);
 
   const row = profile as {
+    level?: number | null;
     level_of_play?: string | null;
     technical_score?: number | null;
   } | null;

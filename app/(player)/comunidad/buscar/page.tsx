@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -15,7 +15,7 @@ export default async function ComunidadBuscarPage() {
 
   const { data: rows } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level_of_play, technical_score")
+    .select("user_id, name, avatar_url, level, level_of_play, technical_score")
     .neq("user_id", user.id)
     .order("name", { ascending: true })
     .limit(48);
@@ -24,6 +24,7 @@ export default async function ComunidadBuscarPage() {
     user_id: string;
     name: string | null;
     avatar_url: string | null;
+    level?: number | null;
     level_of_play?: string | null;
     technical_score?: number | null;
   }[];
@@ -46,6 +47,8 @@ export default async function ComunidadBuscarPage() {
       <ul className="flex flex-col gap-3">
         {list.map((p) => {
           const label = p.name?.trim() || "Jugador";
+          const nivelLine = formatProfileNivelFromRow(p);
+          const nivelParts = splitOfficialCategoryLine(nivelLine);
           return (
             <li key={p.user_id}>
               <Link
@@ -55,8 +58,11 @@ export default async function ComunidadBuscarPage() {
                 <ProfileAvatar avatarUrl={p.avatar_url} name={label} size={52} />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-900">{label}</p>
-                  <p className="text-xs text-slate-500">
-                    {formatProfileNivelFromRow(p)}
+                  <p className="text-xs text-sky-700">
+                    <span className="font-bold">{nivelParts.category || "—"}</span>
+                    {nivelParts.description ? (
+                      <span className="font-medium">{" - "}{nivelParts.description}</span>
+                    ) : null}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-sky-600">Ver →</span>

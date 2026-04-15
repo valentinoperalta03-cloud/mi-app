@@ -5,7 +5,9 @@ import JoinToggleButton from "@/app/(player)/buscar-partido/join-toggle-button";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import { formatLevel } from "@/lib/level-quiz-logic";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchFeedRow = {
@@ -29,6 +31,7 @@ type MatchFeedRow = {
           | {
               name: string | null;
               avatar_url: string | null;
+              level?: number | null;
               level_of_play: string | null;
               technical_score?: number | null;
             }
@@ -37,56 +40,26 @@ type MatchFeedRow = {
     | null;
 };
 
-const LEVEL_PRIORITY: Record<string, number> = {
-  beginner: 1,
-  intermedio: 2,
-  intermediate: 2,
-  advanced: 3,
-  avanzado: 3,
-  pro: 4,
-};
-
-function levelToNumeric(levelLabel: string): number {
-  const trimmed = levelLabel.trim();
-  if (!trimmed) return 0;
-  const asNum = Number(trimmed);
-  if (!Number.isNaN(asNum)) return asNum;
-  return LEVEL_PRIORITY[trimmed] ?? 1;
-}
-
 function getAverageLevelLabel(players: MatchFeedRow["match_participants"]): string {
   const list = players ?? [];
-  const techScores: number[] = [];
+  const numericLevels: number[] = [];
   for (const player of list) {
     const prof = player.profiles;
     const p = Array.isArray(prof) ? prof[0] : prof;
-    const ts = p?.technical_score;
-    if (ts != null && Number.isFinite(Number(ts))) techScores.push(Number(ts));
+    const level = p?.level;
+    if (level != null && Number.isFinite(Number(level))) numericLevels.push(Number(level));
   }
-  if (techScores.length === list.length && techScores.length > 0) {
-    const avg = techScores.reduce((a, b) => a + b, 0) / techScores.length;
-    return `Prom. ${avg.toFixed(1)}`;
+  if (numericLevels.length === list.length && numericLevels.length > 0) {
+    const avg = numericLevels.reduce((a, b) => a + b, 0) / numericLevels.length;
+    return formatLevel(avg);
   }
-
-  const levels = list
+  const fallbackOfficial = list
     .map((player) => {
-      const raw = player.profiles?.level_of_play;
-      if (raw === null || raw === undefined) return "";
-      return String(raw).toLowerCase().trim();
+      const p = Array.isArray(player.profiles) ? player.profiles[0] : player.profiles;
+      return formatProfileNivelFromRow(p ?? null);
     })
-    .filter(Boolean);
-
-  if (levels.length === 0) {
-    return "Sin nivel definido";
-  }
-
-  const avg =
-    levels.reduce((sum, level) => sum + levelToNumeric(level), 0) / levels.length;
-
-  if (avg >= 4.5) return "Pro";
-  if (avg >= 3.5) return "Avanzado";
-  if (avg >= 2.5) return "Intermedio";
-  return "Inicial";
+    .find((line) => line && line !== "—");
+  return fallbackOfficial ?? "Sin nivel definido";
 }
 
 type OpenMatchesBoardProps = {
@@ -142,6 +115,7 @@ export default async function OpenMatchesBoard({
         profiles (
           name,
           avatar_url,
+          level,
           level_of_play,
           technical_score
         )
@@ -202,6 +176,7 @@ export default async function OpenMatchesBoard({
             locale: es,
           });
           const levelLabel = getAverageLevelLabel(match.match_participants);
+          const levelParts = splitOfficialCategoryLine(levelLabel);
           const currentUserJoined =
             !!user?.id &&
             (match.match_participants ?? []).some((participant) => participant.player_id === user.id);
@@ -229,7 +204,13 @@ export default async function OpenMatchesBoard({
                   <span className="font-medium text-slate-800">Hora:</span> {when}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-800">Nivel promedio:</span> {levelLabel}
+                  <span className="font-medium text-slate-800">Nivel promedio:</span>{" "}
+                  <span className="text-sky-700">
+                    <span className="font-bold">{levelParts.category || "—"}</span>
+                    {levelParts.description ? (
+                      <span className="font-medium">{" - "}{levelParts.description}</span>
+                    ) : null}
+                  </span>
                 </p>
                 <p>
                   <span className="font-medium text-slate-800">Cupos libres:</span> {freeSlots} / 4
@@ -242,6 +223,8 @@ export default async function OpenMatchesBoard({
                     const prof = mp.profiles;
                     const p = Array.isArray(prof) ? prof[0] : prof;
                     const label = p?.name?.trim() || "Jugador";
+                    const nivelLine = formatProfileNivelFromRow(p ?? null);
+                    const nivelParts = splitOfficialCategoryLine(nivelLine);
                     return (
                       <li key={mp.player_id}>
                         <Link
@@ -254,7 +237,15 @@ export default async function OpenMatchesBoard({
                             size={24}
                             ringClassName="ring-1 ring-white"
                           />
-                          {label}
+                          <span className="flex flex-col leading-tight">
+                            <span>{label}</span>
+                            <span className="text-[10px] font-medium text-sky-600/90">
+                              <span className="font-bold">{nivelParts.category || "—"}</span>
+                              {nivelParts.description ? (
+                                <span>{" - "}{nivelParts.description}</span>
+                              ) : null}
+                            </span>
+                          </span>
                         </Link>
                       </li>
                     );

@@ -118,6 +118,19 @@ export function classifyCategory(score: number): string {
   return "8va (Principiante)";
 }
 
+/**
+ * Formato oficial visible en toda la app:
+ * "{Categoria} - {Descripcion}" (ej: "5ta - Intermedio+").
+ */
+export function formatLevel(level: number): string {
+  const label = classifyCategory(level);
+  const m = label.match(/^(.+?)\s*\((.+)\)$/);
+  if (!m) return label;
+  const category = (m[1] ?? "").trim();
+  const description = (m[2] ?? "").trim();
+  return `${category} - ${description}`;
+}
+
 export type BaseLevelChoice = "principiante" | "intermedio" | "avanzado";
 
 export const BASE_LEVEL_OPTIONS: {

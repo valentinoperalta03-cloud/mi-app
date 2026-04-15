@@ -14,7 +14,7 @@ export default async function EditarPerfilPage() {
 
   const { data: profile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("name, age, bio, avatar_url, level_of_play, technical_score")
+    .select("name, age, bio, avatar_url, level, level_of_play, technical_score")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -23,6 +23,7 @@ export default async function EditarPerfilPage() {
     age?: number | null;
     bio?: string | null;
     avatar_url?: string | null;
+    level?: number | null;
     level_of_play?: string | null;
     technical_score?: number | null;
   } | null;

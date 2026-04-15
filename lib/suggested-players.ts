@@ -5,6 +5,7 @@ export type SuggestedPlayer = {
   user_id: string;
   name: string | null;
   avatar_url: string | null;
+  level?: number | null;
   level_of_play: string | null;
   technical_score?: number | null;
 };
@@ -18,11 +19,11 @@ export async function fetchSuggestedPlayers(
 ): Promise<SuggestedPlayer[]> {
   const { data: me } = await supabase
     .from(DB_TABLES.profiles)
-    .select("level_of_play, technical_score")
+    .select("level, level_of_play, technical_score")
     .eq("user_id", userId)
     .maybeSingle();
 
-  const row = me as { level_of_play?: string | null; technical_score?: number | null } | null;
+  const row = me as { level?: number | null; level_of_play?: string | null; technical_score?: number | null } | null;
   const tech = row?.technical_score != null ? Number(row.technical_score) : NaN;
   const legacyBand = row?.level_of_play?.trim() ?? "";
 
@@ -37,7 +38,7 @@ export async function fetchSuggestedPlayers(
 
   let query = supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level_of_play, technical_score")
+    .select("user_id, name, avatar_url, level, level_of_play, technical_score")
     .neq("user_id", userId)
     .limit(48);
 
