@@ -51,13 +51,22 @@ export async function signInWithEmail(formData: FormData) {
   redirect(await resolveHomePath(supabase, user.id));
 }
 
-export async function signUpWithEmail(formData: FormData) {
+export type SignUpWithEmailResult =
+  | { step: "otp"; email: string }
+  | { step: "error"; message: string };
+
+export type OtpActionResult = {
+  success: boolean;
+  message: string;
+};
+
+export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEmailResult> {
   const fullName = getStringField(formData, "full_name");
   const email = getStringField(formData, "email");
   const password = getStringField(formData, "password");
 
   if (!fullName || !email || !password) {
-    loginRedirect("Completa nombre, email y contrasena.");
+    return { step: "error", message: "Completa nombre, email y contrasena." };
   }
 
   const origin = await getAppOrigin();
@@ -75,7 +84,7 @@ export async function signUpWithEmail(formData: FormData) {
   });
 
   if (error) {
-    loginRedirect(formatAuthErrorMessage(error.message));
+    return { step: "error", message: formatAuthErrorMessage(error.message) };
   }
 
   if (data.session) {
@@ -87,12 +96,55 @@ export async function signUpWithEmail(formData: FormData) {
     }
   }
 
-  const params = new URLSearchParams();
-  params.set("kind", "info");
-  params.set(
-    "message",
-    "Revisa tu email para confirmar la cuenta. Luego podes iniciar sesion."
-  );
-  redirect(`/login?${params.toString()}`);
+  return { step: "otp", email };
+}
+
+export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult> {
+  const email = getStringField(formData, "email");
+  const token = getStringField(formData, "token");
+
+  if (!email || !token) {
+    return { success: false, message: "Completá email y código." };
+  }
+  if (!/^\d{6}$/.test(token)) {
+    return { success: false, message: "Ingresá un código de 6 dígitos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "signup",
+  });
+  if (error) {
+    return { success: false, message: "Código incorrecto o expirado. Revisá tu email." };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, message: "No se pudo obtener la sesión. Volvé a intentar." };
+  }
+
+  redirect(await resolveHomePath(supabase, user.id));
+}
+
+export async function resendOtpCode(formData: FormData): Promise<OtpActionResult> {
+  const email = getStringField(formData, "email");
+  if (!email) {
+    return { success: false, message: "Ingresá un email válido para reenviar el código." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+  });
+  if (error) {
+    return { success: false, message: formatAuthErrorMessage(error.message) };
+  }
+
+  return { success: true, message: "Código reenviado. Revisá tu bandeja de entrada." };
 }
 
