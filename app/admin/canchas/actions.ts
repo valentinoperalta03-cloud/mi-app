@@ -14,7 +14,7 @@ function redirectCanchasError(message: string): never {
   redirect(`/admin/canchas?error=${encodeURIComponent(message)}`);
 }
 
-export async function createCourt(formData: FormData): Promise<never> {
+export async function createCourt(formData: FormData): Promise<void> {
   const name = getField(formData, "name");
   const priceRaw = getField(formData, "price");
   const clubId = getField(formData, "club_id");

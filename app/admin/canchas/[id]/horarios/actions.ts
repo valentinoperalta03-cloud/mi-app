@@ -16,7 +16,7 @@ function redirectCanchasError(): never {
   redirect(`/admin/canchas?error=${encodeURIComponent(ERROR_MSG)}`);
 }
 
-export async function saveSchedules(formData: FormData): Promise<never> {
+export async function saveSchedules(formData: FormData): Promise<void> {
   const courtId = getField(formData, "court_id");
   if (!courtId) {
     redirectCanchasError();
