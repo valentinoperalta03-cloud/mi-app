@@ -1,82 +1,215 @@
-import Image from "next/image";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
+import { cancelReservation } from "./actions";
+
+type ReservationRow = {
+  id: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  duration_minutes: number | null;
+  total_price: number | null;
+  match_status: string | null;
+  courts: { name: string | null; clubs: { name: string | null } | null } | null;
+};
+
+function todayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function ReservationCard({
+  row,
+  showCancel,
+}: {
+  row: ReservationRow;
+  showCancel: boolean;
+}) {
+  const club = row.courts?.clubs?.name ?? "Club";
+  const court = row.courts?.name ?? "Cancha";
+  const dateStr = row.scheduled_date ?? "";
+  const fecha =
+    dateStr.length >= 10
+      ? format(parseISO(`${dateStr}T12:00:00`), "EEE d MMM yyyy", { locale: es })
+      : "—";
+  const hora = (row.scheduled_time ?? "").toString().trim().slice(0, 5);
+  const dur = row.duration_minutes ?? 90;
+  const precio = row.total_price != null ? `$${Number(row.total_price)}` : "—";
+  const status = row.match_status ?? "";
+  const badgeReserved = status === "reserved";
+  const badgeCancelled = status === "cancelled";
+
+  return (
+    <article className={`${PLAYER_CARD_INTERACTIVE} p-5`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">{club}</h2>
+          <p className="text-sm font-medium text-slate-600">{court}</p>
+        </div>
+        {badgeReserved ? (
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            Confirmada
+          </span>
+        ) : badgeCancelled ? (
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            Cancelada
+          </span>
+        ) : (
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+            {status || "—"}
+          </span>
+        )}
+      </div>
+      <dl className="mt-3 grid gap-2 text-sm text-slate-600">
+        <div className="flex justify-between">
+          <dt className="text-slate-500">Fecha</dt>
+          <dd className="font-semibold capitalize text-slate-900">{fecha}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-slate-500">Hora</dt>
+          <dd className="font-semibold text-slate-900">{hora || "—"}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-slate-500">Duración</dt>
+          <dd className="font-semibold text-slate-900">{dur} min</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-slate-500">Precio</dt>
+          <dd className="font-semibold text-sky-800">{precio}</dd>
+        </div>
+      </dl>
+      {showCancel && badgeReserved ? (
+        <form action={cancelReservation} className="mt-4">
+          <input type="hidden" name="id" value={row.id} />
+          <button
+            type="submit"
+            className="w-full rounded-2xl border border-rose-200 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+          >
+            Cancelar
+          </button>
+        </form>
+      ) : null}
+    </article>
+  );
+}
 
 export default async function ReservasPage() {
   const supabase = await createClient();
-  const { data: clubs, error } = await supabase
-    .from(DB_TABLES.clubs)
-    .select("id,name,location")
-    .order("name");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const today = todayKey();
+
+  const { data: clubsData } = await supabase.from(DB_TABLES.clubs).select("id").limit(1);
+  const hasClubs = (clubsData?.length ?? 0) > 0;
+
+  const { data: rows, error } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, match_type")
+    .eq("owner_id", user.id)
+    .eq("match_type", "reservation")
+    .order("scheduled_date", { ascending: false });
+
+  const rawList = rows ?? [];
+  const courtIds = [...new Set(rawList.map((r: { court_id: string }) => r.court_id))];
+  const { data: courtsJoin } =
+    courtIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.courts)
+          .select("id, name, club_id, clubs ( name )")
+          .in("id", courtIds)
+      : { data: [] };
+
+  const courtMap = new Map<string, { name: string | null; clubs: { name: string | null } | null }>();
+  for (const c of courtsJoin ?? []) {
+    const row = c as {
+      id: string;
+      name: string | null;
+      clubs: { name: string | null } | { name: string | null }[] | null;
+    };
+    const clubRel = row.clubs;
+    const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+    courtMap.set(row.id, { name: row.name, clubs: clubObj });
+  }
+
+  const list: ReservationRow[] = rawList.map((r: Record<string, unknown>) => {
+    const cid = String(r.court_id ?? "");
+    const embed = courtMap.get(cid) ?? null;
+    return {
+      ...(r as unknown as ReservationRow),
+      courts: embed ? { name: embed.name, clubs: embed.clubs } : null,
+    };
+  });
+
+  const upcoming = list.filter((r) => {
+    const d = r.scheduled_date ?? "";
+    return (d >= today && r.match_status === "reserved") || false;
+  });
+
+  const history = list.filter((r) => {
+    const d = r.scheduled_date ?? "";
+    return d < today || r.match_status === "cancelled";
+  });
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
-      <p className="text-sm font-medium text-sky-500">Inicio</p>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-950">
-        Reservar cancha
-      </h1>
-      <p className="text-sm font-light text-slate-500">
-        Elegi un club en{" "}
-        <code className="rounded bg-slate-100 px-1 text-xs">clubs</code> y horarios en{" "}
-        <code className="rounded bg-slate-100 px-1 text-xs">court_schedules</code>.
-      </p>
+      <header className="space-y-1">
+        <p className="text-sm font-medium text-sky-600">Reservas</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Mis reservas</h1>
+        <p className="text-sm font-light text-slate-500">Canchas que reservaste con FaltaUno.</p>
+      </header>
 
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-          {error.message}
-        </div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error.message}</div>
       ) : null}
 
-      <p className="text-sm font-light text-slate-500">{(clubs?.length ?? 0)} clubes</p>
-
-      {!error && (clubs?.length ?? 0) === 0 ? (
+      {!error && list.length === 0 ? (
         <EmptyStateCard
-          title="No hay clubes disponibles para reservar"
-          subtitle="Activa la agenda de juego creando un partido y sumando canchas para la comunidad."
+          title="Todavía no hiciste ninguna reserva"
+          subtitle="Elegí un club y un horario para asegurar tu cancha."
+          ctaHref={hasClubs ? "/clubes" : "/home"}
+          ctaLabel={hasClubs ? "Reservar cancha" : "Volver al inicio"}
         />
       ) : null}
 
-      <section className="space-y-3">
-        {(clubs ?? []).map((club) => (
-          <article
-            key={club.id}
-            className={`${PLAYER_CARD_INTERACTIVE} p-5`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-4">
-                <Image
-                  src="/club-thumb.svg"
-                  alt="Club"
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 rounded-2xl object-cover"
-                />
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                    {club.name ?? "Club sin nombre"}
-                  </h2>
-                  <p className="text-sm font-light text-slate-500">
-                    {club.location ?? "Sin ubicacion"}
-                  </p>
-                </div>
-              </div>
-            </div>
+      {!error && upcoming.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Próximas</h2>
+          <div className="space-y-3">
+            {upcoming.map((r) => (
+              <ReservationCard key={r.id} row={r} showCancel />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-            <div className="mt-3 flex justify-end">
-              <Link
-                href={`/clubes/${club.id}`}
-                className={PLAYER_PRIMARY_BUTTON}
-              >
-                Ver canchas
-              </Link>
-            </div>
-          </article>
-        ))}
-      </section>
+      {!error && history.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Historial</h2>
+          <div className="space-y-3">
+            {history.map((r) => (
+              <ReservationCard key={r.id} row={r} showCancel={false} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <Link href="/clubes" className={`inline-flex justify-center ${PLAYER_PRIMARY_BUTTON} w-full py-3`}>
+        Buscar clubes para reservar
+      </Link>
     </MotionPage>
   );
 }

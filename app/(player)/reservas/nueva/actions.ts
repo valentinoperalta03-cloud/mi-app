@@ -1,0 +1,121 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { DB_TABLES } from "@/lib/db-tables";
+import { createClient } from "@/utils/supabase/server";
+
+function getField(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function toIsoDateTime(date: string, time: string) {
+  return new Date(`${date}T${time}:00`).toISOString();
+}
+
+function clockToMinutes(clock: string): number {
+  const t = clock.trim().slice(0, 5);
+  const [h, m] = t.split(":").map((x) => Number.parseInt(x, 10));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return 0;
+  return h * 60 + m;
+}
+
+function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
+  const aEnd = aStart + aLen;
+  const bEnd = bStart + bLen;
+  return aStart < bEnd && bStart < aEnd;
+}
+
+export type CreateReservationResult = { error: string } | void;
+
+export async function createReservation(formData: FormData): Promise<CreateReservationResult> {
+  const courtId = getField(formData, "court_id");
+  const scheduledDate = getField(formData, "scheduled_date");
+  const scheduledTime = getField(formData, "scheduled_time");
+  const durationMinutes = getField(formData, "duration_minutes");
+  const totalPrice = getField(formData, "total_price");
+  const clubName = getField(formData, "club_name");
+  const courtName = getField(formData, "court_name");
+
+  if (!courtId || !scheduledDate || !scheduledTime || !durationMinutes || !totalPrice) {
+    return { error: "Faltan datos de la reserva." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+  const slotStart = clockToMinutes(timeNorm);
+  const slotDur = Number(durationMinutes);
+  if (!Number.isFinite(slotDur) || slotDur <= 0) {
+    return { error: "Duración inválida." };
+  }
+
+  const { data: conflicts } = await supabase
+    .from(DB_TABLES.matches)
+    .select("scheduled_time,duration_minutes")
+    .eq("court_id", courtId)
+    .eq("scheduled_date", scheduledDate)
+    .neq("match_status", "cancelled");
+
+  for (const row of conflicts ?? []) {
+    const r = row as { scheduled_time: string | null; duration_minutes: number | null };
+    const otherStart = clockToMinutes(String(r.scheduled_time ?? "").trim());
+    const otherDur =
+      r.duration_minutes && Number(r.duration_minutes) > 0 ? Number(r.duration_minutes) : 90;
+    if (overlaps(slotStart, slotDur, otherStart, otherDur)) {
+      return { error: "Este horario ya fue reservado. Elegí otro." };
+    }
+  }
+
+  const { data: blocks } = await supabase
+    .from(DB_TABLES.courtBlocks)
+    .select("start_time")
+    .eq("court_id", courtId)
+    .eq("date", scheduledDate);
+
+  for (const b of blocks ?? []) {
+    const bt = String((b as { start_time: string | null }).start_time ?? "").trim();
+    if (bt && clockToMinutes(bt) === slotStart) {
+      return { error: "Este horario no está disponible." };
+    }
+  }
+
+  const dateIso = toIsoDateTime(scheduledDate, timeNorm);
+
+  const { data, error } = await supabase
+    .from(DB_TABLES.matches)
+    .insert({
+      court_id: courtId,
+      owner_id: user.id,
+      scheduled_date: scheduledDate,
+      scheduled_time: timeNorm,
+      duration_minutes: Number(durationMinutes),
+      total_price: Number(totalPrice),
+      payment_status: "pending",
+      match_status: "reserved",
+      match_type: "reservation",
+      is_competitive: false,
+      visibility: "privado",
+      location_name: clubName || "Club",
+      date: dateIso,
+      gender_category: "mixto",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { error: "No se pudo crear la reserva. Intentá de nuevo." };
+  }
+
+  const q = new URLSearchParams({
+    id: data.id,
+    court: courtName || "Cancha",
+    club: clubName || "Club",
+  });
+  redirect(`/reservas/confirmacion?${q.toString()}`);
+}

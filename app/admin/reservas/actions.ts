@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
@@ -9,6 +10,46 @@ export type ManualBlockState = { success: boolean; message: string };
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+export async function adminCancelReservation(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  if (!matchId) {
+    redirect("/admin/reservas");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    redirect("/login");
+  }
+
+  const { data: row, error: fetchErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("court_id,match_type")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    redirect("/admin/reservas");
+  }
+
+  const typed = row as { court_id: string; match_type: string | null };
+  if (!ctx.courtIds.includes(typed.court_id) || typed.match_type !== "reservation") {
+    redirect("/admin/reservas");
+  }
+
+  const { error } = await supabase
+    .from(DB_TABLES.matches)
+    .update({ match_status: "cancelled" })
+    .eq("id", matchId);
+
+  if (error) {
+    redirect("/admin/reservas");
+  }
+
+  revalidatePath("/admin/reservas");
+  redirect("/admin/reservas");
 }
 
 export async function createManualCourtBlockAction(
