@@ -12,14 +12,14 @@ function getField(formData: FormData, key: string) {
 
 const ERROR_MSG = "No se pudieron guardar los horarios";
 
-function redirectWithError(courtId: string) {
-  redirect(`/admin/canchas/${courtId}/horarios?error=${encodeURIComponent(ERROR_MSG)}`);
+function redirectCanchasError(): never {
+  redirect(`/admin/canchas?error=${encodeURIComponent(ERROR_MSG)}`);
 }
 
 export async function saveSchedules(formData: FormData): Promise<never> {
   const courtId = getField(formData, "court_id");
   if (!courtId) {
-    redirect("/admin/canchas");
+    redirectCanchasError();
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -28,7 +28,7 @@ export async function saveSchedules(formData: FormData): Promise<never> {
     redirect("/login");
   }
   if (!ctx.courtIds.includes(courtId)) {
-    redirectWithError(courtId);
+    redirectCanchasError();
   }
 
   for (let d = 0; d <= 6; d++) {
@@ -42,7 +42,7 @@ export async function saveSchedules(formData: FormData): Promise<never> {
       .eq("court_id", courtId)
       .eq("day_of_week", d);
     if (delErr) {
-      redirectWithError(courtId);
+      redirectCanchasError();
     }
 
     if (active) {
@@ -53,7 +53,7 @@ export async function saveSchedules(formData: FormData): Promise<never> {
         close_time: close.length >= 5 ? close.slice(0, 5) : close,
       });
       if (insErr) {
-        redirectWithError(courtId);
+        redirectCanchasError();
       }
     }
   }
