@@ -34,6 +34,13 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  if (user && !user.email_confirmed_at) {
+    if (pathname === "/verificar-email" || pathname.startsWith("/auth/")) {
+      return response;
+    }
+    return redirectPreservingSupabaseCookies(request, "/verificar-email", response);
+  }
+
   if (!user) {
     if (isPublicAuthPath(pathname)) {
       return response;
