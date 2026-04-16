@@ -21,6 +21,7 @@ export function EditProfileForm({
   defaultAge,
   defaultBio,
   defaultAvatarUrl,
+  defaultGender,
   competitiveLevelLine,
 }: {
   userId: string;
@@ -28,6 +29,7 @@ export function EditProfileForm({
   defaultAge: number | null;
   defaultBio: string | null;
   defaultAvatarUrl: string | null;
+  defaultGender: "masculino" | "femenino" | null;
   /** Solo lectura: nivel competitivo (no editable acá). */
   competitiveLevelLine: string;
 }) {
@@ -35,6 +37,7 @@ export function EditProfileForm({
   const [deletePending, startDelete] = useTransition();
   const [previewUrl, setPreviewUrl] = useState(defaultAvatarUrl);
   const [avatarUrl, setAvatarUrl] = useState(defaultAvatarUrl ?? "");
+  const [gender, setGender] = useState<"masculino" | "femenino">(defaultGender ?? "masculino");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -199,6 +202,37 @@ export function EditProfileForm({
             className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200/50"
           />
         </label>
+
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sexo</span>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setGender("masculino")}
+              aria-pressed={gender === "masculino"}
+              className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
+                gender === "masculino"
+                  ? "border-sky-500 bg-sky-500 text-white shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+              }`}
+            >
+              Masculino
+            </button>
+            <button
+              type="button"
+              onClick={() => setGender("femenino")}
+              aria-pressed={gender === "femenino"}
+              className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
+                gender === "femenino"
+                  ? "border-sky-500 bg-sky-500 text-white shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+              }`}
+            >
+              Femenino
+            </button>
+          </div>
+          <input type="hidden" name="gender" value={gender} />
+        </div>
 
         <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">

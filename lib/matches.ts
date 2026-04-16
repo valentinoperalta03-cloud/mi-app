@@ -9,6 +9,7 @@ export const matchListSelect = `
   owner_id,
   is_competitive,
   match_type,
+  gender_category,
   courts (
     id,
     name,
@@ -26,6 +27,7 @@ export const matchListSelect = `
       user_id,
       name,
       avatar_url,
+      gender,
       level_of_play,
       technical_score
     )

@@ -29,6 +29,13 @@ function normalizeVisibility(raw: string): "publico" | "privado" {
   return "publico";
 }
 
+function normalizeGenderCategory(raw: string): "masculino" | "femenino" | "mixto" {
+  const v = raw.toLowerCase().trim();
+  if (v === "femenino") return "femenino";
+  if (v === "mixto") return "mixto";
+  return "masculino";
+}
+
 function toIso(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString();
 }
@@ -45,6 +52,7 @@ export async function createWizardMatchAction(
   const scheduledTime = getField(formData, "scheduled_time");
   const matchType = normalizeMatchType(getField(formData, "match_type"));
   const visibility = normalizeVisibility(getField(formData, "visibility"));
+  const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
 
   if (!clubId || !courtId || !scheduledDate || !scheduledTime) {
     return { success: false, message: "Completa ubicación, fecha, horario y cancha." };
@@ -84,6 +92,7 @@ export async function createWizardMatchAction(
     is_competitive: matchType === "competitivo",
     match_type: matchType,
     visibility,
+    gender_category: genderCategory,
     court_status: "app_booking",
     location_name: locationName || "Rosario",
     scheduled_date: scheduledDate,

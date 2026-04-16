@@ -14,7 +14,7 @@ export default async function EditarPerfilPage() {
 
   const { data: profile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("name, age, bio, avatar_url, level, level_of_play, technical_score")
+    .select("name, age, bio, avatar_url, level, level_of_play, technical_score, gender")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -26,6 +26,7 @@ export default async function EditarPerfilPage() {
     level?: number | null;
     level_of_play?: string | null;
     technical_score?: number | null;
+    gender?: "masculino" | "femenino" | null;
   } | null;
 
   const emailLocal = user.email?.split("@")[0] ?? "Jugador";
@@ -49,6 +50,7 @@ export default async function EditarPerfilPage() {
           defaultAge={row?.age ?? null}
           defaultBio={row?.bio ?? null}
           defaultAvatarUrl={row?.avatar_url ?? null}
+          defaultGender={row?.gender ?? null}
           competitiveLevelLine={competitiveLevelLine}
         />
       </section>

@@ -8,6 +8,7 @@ export type TimestampIso = string;
 export type ProfileRow = {
   user_id: Uuid;
   name: string | null;
+  gender?: "masculino" | "femenino" | null;
   avatar_url: string | null;
   level?: number | null;
   level_of_play: string | null;
@@ -63,6 +64,7 @@ export type MatchRow = {
   id: Uuid;
   date: TimestampIso;
   court_id: Uuid;
+  gender_category?: "masculino" | "femenino" | "mixto" | null;
   owner_id?: Uuid | null;
   is_competitive?: boolean | null;
   /** `amistoso` | `competitivo` (minúsculas). Solo competitivo afecta `technical_score`. */

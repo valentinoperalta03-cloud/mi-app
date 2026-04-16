@@ -32,6 +32,15 @@ function timeKeyFromIso(iso: string) {
 
 export default async function CrearPartidoPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from(DB_TABLES.profiles).select("gender").eq("user_id", user.id).maybeSingle()
+    : { data: null };
+
+  const creatorGender =
+    (profile as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? "masculino";
   const today = new Date();
   const maxDate = new Date(today);
   maxDate.setDate(maxDate.getDate() + 14);
@@ -85,6 +94,7 @@ export default async function CrearPartidoPage() {
             price: court.price ?? null,
           }))}
           reservations={reservations}
+          creatorGender={creatorGender}
         />
       )}
     </MotionPage>

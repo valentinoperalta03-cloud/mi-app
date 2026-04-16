@@ -41,6 +41,19 @@ export async function toggleMatchParticipationAction(
 
   const playerId = user.id;
 
+  const { data: profileRow, error: profileError } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("gender")
+    .eq("user_id", playerId)
+    .maybeSingle();
+  if (profileError) {
+    return {
+      success: false,
+      message: `No pudimos validar tu perfil: ${profileError.message}`,
+    };
+  }
+  const playerGender = (profileRow as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? null;
+
   if (intent === "leave") {
     const { error: deleteError } = await supabase
       .from(DB_TABLES.matchParticipants)
@@ -79,6 +92,24 @@ export async function toggleMatchParticipationAction(
 
   if (existingRow) {
     return { success: false, message: "Ya estas anotado en este partido." };
+  }
+
+  const { data: matchRow, error: matchError } = await supabase
+    .from(DB_TABLES.matches)
+    .select("gender_category")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (matchError || !matchRow) {
+    return {
+      success: false,
+      message: `No pudimos validar el partido: ${matchError?.message ?? "partido inexistente"}`,
+    };
+  }
+  const genderCategory =
+    (matchRow as { gender_category?: "masculino" | "femenino" | "mixto" | null }).gender_category ?? "mixto";
+  if (genderCategory !== "mixto" && playerGender !== genderCategory) {
+    const categoryLabel = genderCategory === "masculino" ? "Masculino" : "Femenino";
+    return { success: false, message: `Este partido es exclusivo para ${categoryLabel}.` };
   }
 
   const { count, error: countError } = await supabase

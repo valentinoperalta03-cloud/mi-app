@@ -26,9 +26,16 @@ function SubmitButton({ isJoined }: { isJoined: boolean }) {
 type JoinToggleButtonProps = {
   matchId: string;
   isJoined: boolean;
+  disabled?: boolean;
+  disabledMessage?: string;
 };
 
-export default function JoinToggleButton({ matchId, isJoined }: JoinToggleButtonProps) {
+export default function JoinToggleButton({
+  matchId,
+  isJoined,
+  disabled = false,
+  disabledMessage,
+}: JoinToggleButtonProps) {
   const router = useRouter();
   const [state, formAction] = useActionState(toggleMatchParticipationAction, initialState);
 
@@ -43,8 +50,23 @@ export default function JoinToggleButton({ matchId, isJoined }: JoinToggleButton
       <form action={formAction}>
         <input type="hidden" name="match_id" value={matchId} />
         <input type="hidden" name="intent" value={isJoined ? "leave" : "join"} />
-        <SubmitButton isJoined={isJoined} />
+        {disabled ? (
+          <button
+            type="button"
+            disabled
+            title={disabledMessage}
+            className={`${PLAYER_PRIMARY_BUTTON} cursor-not-allowed opacity-60`}
+          >
+            Unirse
+          </button>
+        ) : (
+          <SubmitButton isJoined={isJoined} />
+        )}
       </form>
+
+      {!isJoined && disabled && disabledMessage ? (
+        <p className="text-right text-[11px] font-medium text-rose-600">{disabledMessage}</p>
+      ) : null}
 
       {state.message ? (
         <p

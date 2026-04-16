@@ -5,6 +5,7 @@ import JoinToggleButton from "@/app/(player)/buscar-partido/join-toggle-button";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import { DB_TABLES } from "@/lib/db-tables";
 import { formatLevel } from "@/lib/level-quiz-logic";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -14,6 +15,7 @@ type MatchFeedRow = {
   id: string;
   date: string;
   is_competitive?: boolean | null;
+  gender_category?: "masculino" | "femenino" | "mixto" | null;
   courts:
     | {
         clubs:
@@ -96,6 +98,10 @@ export default async function OpenMatchesBoard({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const { data: myProfile } = user
+    ? await supabase.from(DB_TABLES.profiles).select("gender").eq("user_id", user.id).maybeSingle()
+    : { data: null };
+  const currentUserGender = (myProfile as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? null;
 
   const { data, error } = await supabase
     .from("matches")
@@ -104,6 +110,7 @@ export default async function OpenMatchesBoard({
       id,
       date,
       is_competitive,
+      gender_category,
       courts (
         clubs (
           name,
@@ -180,6 +187,19 @@ export default async function OpenMatchesBoard({
           const currentUserJoined =
             !!user?.id &&
             (match.match_participants ?? []).some((participant) => participant.player_id === user.id);
+          const genderCategory = match.gender_category ?? "mixto";
+          const categoryLabel =
+            genderCategory === "masculino"
+              ? "Masculino"
+              : genderCategory === "femenino"
+                ? "Femenino"
+                : "Mixto";
+          const userCanJoinByGender =
+            genderCategory === "mixto" || (currentUserGender != null && currentUserGender === genderCategory);
+          const genderRestrictionMessage =
+            !currentUserJoined && !userCanJoinByGender
+              ? `Este partido es exclusivo para ${categoryLabel}.`
+              : null;
 
           return (
             <article
@@ -192,11 +212,16 @@ export default async function OpenMatchesBoard({
                   <p className="text-sm text-slate-500">{clubLocation}</p>
                 </div>
 
-                {match.is_competitive ? (
-                  <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                    Partido competitivo
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {categoryLabel}
                   </span>
-                ) : null}
+                  {match.is_competitive ? (
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      Partido competitivo
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               <div className="mt-4 grid gap-2 text-sm text-slate-600">
@@ -258,7 +283,12 @@ export default async function OpenMatchesBoard({
 
                 {user?.id ? (
                   freeSlots > 0 || currentUserJoined ? (
-                    <JoinToggleButton matchId={match.id} isJoined={currentUserJoined} />
+                    <JoinToggleButton
+                      matchId={match.id}
+                      isJoined={currentUserJoined}
+                      disabled={!currentUserJoined && !userCanJoinByGender}
+                      disabledMessage={genderRestrictionMessage ?? undefined}
+                    />
                   ) : (
                     <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
                       Completo

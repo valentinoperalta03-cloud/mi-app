@@ -41,6 +41,10 @@ export async function updateMyProfile(
   if (bio.length > 2000) {
     return { ok: false, message: "La descripción no puede superar los 2000 caracteres." };
   }
+  const genderRaw = String(formData.get("gender") ?? "").trim().toLowerCase();
+  if (genderRaw !== "masculino" && genderRaw !== "femenino") {
+    return { ok: false, message: "Seleccioná sexo masculino o femenino." };
+  }
 
   const avatarUrlRaw = String(formData.get("avatar_url") ?? "").trim();
   if (avatarUrlRaw.startsWith("data:")) {
@@ -57,6 +61,7 @@ export async function updateMyProfile(
     name,
     age,
     bio: bio === "" ? null : bio,
+    gender: genderRaw,
   };
 
   payload.avatar_url = avatarUrlRaw === "" ? null : avatarUrlRaw;

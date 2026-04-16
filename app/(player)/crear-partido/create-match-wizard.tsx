@@ -90,10 +90,12 @@ export default function CreateMatchWizard({
   clubs,
   courts,
   reservations,
+  creatorGender,
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
   reservations: ReservationRow[];
+  creatorGender: "masculino" | "femenino";
 }) {
   const router = useRouter();
   const [state, action] = useActionState(createWizardMatchAction, initialState);
@@ -105,6 +107,7 @@ export default function CreateMatchWizard({
   const [selectedCourtId, setSelectedCourtId] = useState("");
   const [matchType, setMatchType] = useState<"amistoso" | "competitivo">("amistoso");
   const [visibility, setVisibility] = useState<"publico" | "privado">("publico");
+  const [genderCategory, setGenderCategory] = useState<"masculino" | "femenino" | "mixto">(creatorGender);
   const dateItems = useMemo(() => nextDates(10), []);
   const timeSlots = useMemo(() => buildTimeSlots(), []);
 
@@ -155,6 +158,7 @@ export default function CreateMatchWizard({
         <input type="hidden" name="scheduled_time" value={scheduledTime} />
         <input type="hidden" name="match_type" value={matchType} />
         <input type="hidden" name="visibility" value={visibility} />
+        <input type="hidden" name="gender_category" value={genderCategory} />
 
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
           {[1, 2, 3].map((item) => (
@@ -349,6 +353,48 @@ export default function CreateMatchWizard({
                 />
               </button>
             </label>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-900">Categoría de género</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => setGenderCategory("masculino")}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                    genderCategory === "masculino"
+                      ? "border-sky-300 bg-sky-50 text-sky-700 ring-2 ring-sky-200"
+                      : "border-slate-200 bg-white text-slate-700"
+                  }`}
+                >
+                  Masculino
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGenderCategory("femenino")}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                    genderCategory === "femenino"
+                      ? "border-sky-300 bg-sky-50 text-sky-700 ring-2 ring-sky-200"
+                      : "border-slate-200 bg-white text-slate-700"
+                  }`}
+                >
+                  Femenino
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGenderCategory("mixto")}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                    genderCategory === "mixto"
+                      ? "border-sky-300 bg-sky-50 text-sky-700 ring-2 ring-sky-200"
+                      : "border-slate-200 bg-white text-slate-700"
+                  }`}
+                >
+                  Mixto
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                Masculino y Femenino restringen cupos. Mixto permite anotarse a todos.
+              </p>
+            </div>
           </section>
         ) : null}
 
@@ -366,6 +412,14 @@ export default function CreateMatchWizard({
               <p>
                 <span className="font-semibold text-slate-900">Tipo de partido:</span>{" "}
                 {matchType === "competitivo" ? "Competitivo" : "Amistoso"}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Categoría:</span>{" "}
+                {genderCategory === "masculino"
+                  ? "Masculino"
+                  : genderCategory === "femenino"
+                    ? "Femenino"
+                    : "Mixto"}
               </p>
               <p>
                 <span className="font-semibold text-slate-900">Precio:</span>{" "}
