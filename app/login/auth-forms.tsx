@@ -96,7 +96,53 @@ function EmailSubmitButton({
   );
 }
 
-export function EmailAuthForm() {
+function LoginForm() {
+  return (
+    <form className="space-y-4">
+      <div>
+        <label htmlFor="login-email" className={labelClass}>
+          Correo electrónico
+        </label>
+        <input
+          id="login-email"
+          type="email"
+          name="email"
+          placeholder="tu@email.com"
+          required
+          autoComplete="email"
+          className={inputClass}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="login-password" className={labelClass}>
+          Contraseña
+        </label>
+        <input
+          id="login-password"
+          type="password"
+          name="password"
+          placeholder="Mínimo 6 caracteres"
+          required
+          minLength={6}
+          autoComplete="current-password"
+          className={inputClass}
+        />
+      </div>
+
+      <div className="pt-2">
+        <EmailSubmitButton
+          formAction={signInWithEmail}
+          idleLabel="Iniciar sesión"
+          busyLabel="Iniciando sesión..."
+          variant="primary"
+        />
+      </div>
+    </form>
+  );
+}
+
+function RegisterForm() {
   return (
     <form className="space-y-4">
       <div>
@@ -152,13 +198,25 @@ export function EmailAuthForm() {
           busyLabel="Creando cuenta..."
           variant="primary"
         />
-        <EmailSubmitButton
-          formAction={signInWithEmail}
-          idleLabel="¿Ya tenés cuenta? Iniciá sesión"
-          busyLabel="Iniciando sesión..."
-          variant="ghost"
-        />
       </div>
     </form>
+  );
+}
+
+export function EmailAuthForm() {
+  const [isLogin, setIsLogin] = useState(true);
+
+  return (
+    <div className="space-y-3">
+      {isLogin ? <LoginForm /> : <RegisterForm />}
+
+      <button
+        type="button"
+        onClick={() => setIsLogin((prev) => !prev)}
+        className="w-full rounded-2xl py-4 text-[15px] font-semibold text-sky-600 transition-all duration-200 hover:bg-sky-50/90 active:scale-[0.99]"
+      >
+        {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
+      </button>
+    </div>
   );
 }
