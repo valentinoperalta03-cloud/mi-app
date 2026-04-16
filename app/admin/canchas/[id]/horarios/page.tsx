@@ -6,12 +6,13 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import type { CourtScheduleRow } from "@/lib/database.types";
 import { createClient } from "@/utils/supabase/server";
-import { saveSchedules } from "../../actions";
+import { saveSchedules } from "./actions";
 
 const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
 };
 
 function normalizeTime(t: string | null | undefined, fallback: string) {
@@ -20,8 +21,10 @@ function normalizeTime(t: string | null | undefined, fallback: string) {
   return s.length >= 5 ? s.slice(0, 5) : fallback;
 }
 
-export default async function AdminCanchaHorariosPage({ params }: PageProps) {
+export default async function AdminCanchaHorariosPage({ params, searchParams }: PageProps) {
   const { id: courtId } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const errorFlash = sp.error?.trim() ?? "";
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -53,6 +56,12 @@ export default async function AdminCanchaHorariosPage({ params }: PageProps) {
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>
         <p className={adminSubtitle}>Activá los días y definí apertura y cierre.</p>
       </header>
+
+      {errorFlash ? (
+        <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
+          {errorFlash}
+        </div>
+      ) : null}
 
       <form action={saveSchedules} className={`${adminCard} space-y-5`}>
         <input type="hidden" name="court_id" value={courtId} />
