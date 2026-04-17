@@ -7,16 +7,16 @@ export type ScheduleInput = {
   close_time: string | null;
 };
 
-export type GeneratedSlot = { time: string; duration: 60 | 90 };
+export type GeneratedSlot = { time: string; duration: 90 };
 
 const FALLBACK_SLOTS: GeneratedSlot[] = [
-  { time: "08:00", duration: 60 },
+  { time: "08:00", duration: 90 },
   { time: "09:30", duration: 90 },
-  { time: "11:00", duration: 60 },
+  { time: "11:00", duration: 90 },
   { time: "12:30", duration: 90 },
-  { time: "14:00", duration: 60 },
+  { time: "14:00", duration: 90 },
   { time: "15:30", duration: 90 },
-  { time: "17:00", duration: 60 },
+  { time: "17:00", duration: 90 },
   { time: "18:30", duration: 90 },
 ];
 
@@ -35,7 +35,7 @@ function minutesToClock(total: number): string {
 }
 
 /**
- * Une horarios de todas las canchas del club para el día y genera slots alternando 60/90 min.
+ * Une horarios de todas las canchas del club para el día y genera slots de 90 min.
  */
 export function buildSlotsForDay(
   courtIds: string[],
@@ -66,11 +66,10 @@ export function buildSlotsForDay(
 
   const slots: GeneratedSlot[] = [];
   let cur = minM;
-  let dur: 60 | 90 = 60;
+  const dur = 90;
   while (cur + dur <= maxM) {
     slots.push({ time: minutesToClock(cur), duration: dur });
     cur += dur;
-    dur = dur === 60 ? 90 : 60;
   }
 
   return slots.length ? slots : FALLBACK_SLOTS;
