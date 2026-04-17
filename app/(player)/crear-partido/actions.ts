@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -150,7 +151,8 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     }
 
     redirect(`/partidos/${data.id}`);
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { error: "No se pudo crear el partido." };
   }
 }
