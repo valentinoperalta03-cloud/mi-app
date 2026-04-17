@@ -67,7 +67,7 @@ export function buildSlotsForDay(
   const slots: GeneratedSlot[] = [];
   let cur = minM;
   const dur = 90;
-  while (cur + dur <= maxM) {
+  while (cur < maxM) {
     slots.push({ time: minutesToClock(cur), duration: dur });
     cur += dur;
   }
