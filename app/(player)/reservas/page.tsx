@@ -102,7 +102,28 @@ function ReservationCard({
   );
 }
 
-export default async function ReservasPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  cancel: "No se pudo cancelar la reserva. Intentá de nuevo.",
+  mp_reembolso:
+    "No pudimos procesar el reembolso con Mercado Pago. Contactá soporte o intentá más tarde.",
+};
+
+const INFO_MESSAGES: Record<string, string> = {
+  sin_reembolso:
+    "Reserva cancelada. No aplica reembolso automático porque falta menos de una hora para el horario.",
+};
+
+export default async function ReservasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; info?: string }>;
+}) {
+  const sp = await searchParams;
+  const urlError = sp.error?.trim();
+  const urlInfo = sp.info?.trim();
+  const urlErrorMessage = urlError ? ERROR_MESSAGES[urlError] ?? null : null;
+  const urlInfoMessage = urlInfo ? INFO_MESSAGES[urlInfo] ?? null : null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -174,6 +195,14 @@ export default async function ReservasPage() {
 
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error.message}</div>
+      ) : null}
+
+      {!error && urlErrorMessage ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">{urlErrorMessage}</div>
+      ) : null}
+
+      {!error && urlInfoMessage ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{urlInfoMessage}</div>
       ) : null}
 
       {!error && list.length === 0 ? (

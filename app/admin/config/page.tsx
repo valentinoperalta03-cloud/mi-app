@@ -61,6 +61,19 @@ export default async function AdminConfigPage() {
 
       <section className="flex flex-col gap-4 md:grid md:grid-cols-2">
         <Link
+          href="/admin/config/mp-connect"
+          className={`group flex h-full flex-col rounded-2xl border border-emerald-200/55 bg-gradient-to-br from-emerald-500/10 to-teal-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.1)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-emerald-300/80 hover:shadow-lg`}
+        >
+          <p className="text-sm font-semibold text-emerald-700">Cobros</p>
+          <p className="mt-2 text-base font-bold text-slate-900">Mercado Pago</p>
+          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
+            Conectá la cuenta del club para cobrar reservas con split de comisión.
+          </p>
+          <span className="mt-5 text-sm font-semibold text-emerald-600 group-hover:text-emerald-500">
+            Conectar
+          </span>
+        </Link>
+        <Link
           href="/club/horarios"
           className={`group flex h-full flex-col rounded-2xl border border-sky-200/55 bg-gradient-to-br from-sky-500/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-sky-300/80 hover:shadow-lg`}
         >

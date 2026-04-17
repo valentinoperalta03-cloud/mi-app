@@ -1,5 +1,6 @@
 "use server";
 
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -57,6 +58,46 @@ async function getUser() {
   return { supabase, user };
 }
 
+async function getServerOrigin(): Promise<string> {
+  const h = await headers();
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+    (() => {
+      const host = h.get("x-forwarded-host") ?? h.get("host");
+      const proto = h.get("x-forwarded-proto") ?? "http";
+      return host ? `${proto}://${host}` : "http://localhost:3000";
+    })()
+  );
+}
+
+async function requestMercadoPagoPreference(payload: {
+  match_id: string;
+  amount: number;
+  club_name: string;
+  court_name: string;
+  date: string;
+}): Promise<{ init_point?: string; error?: string }> {
+  const origin = await getServerOrigin();
+  const jar = await cookies();
+  const cookieStr = jar.getAll().map((c) => `${c.name}=${encodeURIComponent(c.value)}`).join("; ");
+  const res = await fetch(`${origin}/api/mp/create-preference`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookieStr ? { Cookie: cookieStr } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = (await res.json().catch(() => ({}))) as { init_point?: string; error?: string };
+  if (!res.ok) {
+    return { error: typeof data.error === "string" ? data.error : "No se pudo iniciar el pago con Mercado Pago." };
+  }
+  if (!data.init_point) {
+    return { error: "Mercado Pago no devolvió un enlace de pago." };
+  }
+  return { init_point: data.init_point };
+}
+
 export async function crearPartido(formData: FormData): Promise<{ error: string } | void> {
   const courtId = getField(formData, "court_id");
   const scheduledDate = getField(formData, "scheduled_date");
@@ -81,7 +122,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
-      .select("price, clubs!inner(name)")
+      .select("price, name, clubs!inner(name)")
       .eq("id", courtId)
       .maybeSingle();
 
@@ -93,6 +134,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
+    const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
     const totalPrice = pricePerHour * (durationMinutes / 60);
 
     const slotStart = clockToMinutes(scheduledTime);
@@ -150,7 +192,25 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       return { error: "No se pudo crear el partido." };
     }
 
-    redirect(`/partidos/${data.id}`);
+    const mp = await requestMercadoPagoPreference({
+      match_id: data.id,
+      amount: totalPrice,
+      club_name: clubName,
+      court_name: courtName,
+      date: scheduledDate,
+    });
+
+    if (mp.error || !mp.init_point) {
+      await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
+      await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+      return {
+        error:
+          mp.error ??
+          "No pudimos conectar con Mercado Pago. Revisá la configuración o intentá más tarde.",
+      };
+    }
+
+    redirect(mp.init_point);
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { error: "No se pudo crear el partido." };

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -23,6 +24,46 @@ function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
   const aEnd = aStart + aLen;
   const bEnd = bStart + bLen;
   return aStart < bEnd && bStart < aEnd;
+}
+
+async function getServerOrigin(): Promise<string> {
+  const h = await headers();
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+    (() => {
+      const host = h.get("x-forwarded-host") ?? h.get("host");
+      const proto = h.get("x-forwarded-proto") ?? "http";
+      return host ? `${proto}://${host}` : "http://localhost:3000";
+    })()
+  );
+}
+
+async function requestMercadoPagoPreference(payload: {
+  match_id: string;
+  amount: number;
+  club_name: string;
+  court_name: string;
+  date: string;
+}): Promise<{ init_point?: string; error?: string }> {
+  const origin = await getServerOrigin();
+  const jar = await cookies();
+  const cookieStr = jar.getAll().map((c) => `${c.name}=${encodeURIComponent(c.value)}`).join("; ");
+  const res = await fetch(`${origin}/api/mp/create-preference`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookieStr ? { Cookie: cookieStr } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = (await res.json().catch(() => ({}))) as { init_point?: string; error?: string };
+  if (!res.ok) {
+    return { error: typeof data.error === "string" ? data.error : "No se pudo iniciar el pago con Mercado Pago." };
+  }
+  if (!data.init_point) {
+    return { error: "Mercado Pago no devolvió un enlace de pago." };
+  }
+  return { init_point: data.init_point };
 }
 
 export type CreateReservationResult = { error: string } | void;
@@ -87,6 +128,11 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const dateIso = toIsoDateTime(scheduledDate, timeNorm);
 
+  const baseAmount = Number(totalPrice);
+  if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+    return { error: "Precio inválido." };
+  }
+
   const { data, error } = await supabase
     .from(DB_TABLES.matches)
     .insert({
@@ -95,7 +141,7 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       scheduled_date: scheduledDate,
       scheduled_time: timeNorm,
       duration_minutes: Number(durationMinutes),
-      total_price: Number(totalPrice),
+      total_price: baseAmount,
       payment_status: "pending",
       match_status: "reserved",
       match_type: "reservation",
@@ -112,10 +158,22 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "No se pudo crear la reserva. Intentá de nuevo." };
   }
 
-  const q = new URLSearchParams({
-    id: data.id,
-    court: courtName || "Cancha",
-    club: clubName || "Club",
+  const mp = await requestMercadoPagoPreference({
+    match_id: data.id,
+    amount: baseAmount,
+    club_name: clubName || "Club",
+    court_name: courtName || "Cancha",
+    date: scheduledDate,
   });
-  redirect(`/reservas/confirmacion?${q.toString()}`);
+
+  if (mp.error || !mp.init_point) {
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return {
+      error:
+        mp.error ??
+        "No pudimos conectar con Mercado Pago. Revisá la configuración o intentá más tarde.",
+    };
+  }
+
+  redirect(mp.init_point);
 }

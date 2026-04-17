@@ -24,4 +24,5 @@ export const DB_TABLES = {
   posts: "posts",
   messages: "messages",
   levelEvolution: "level_evolution",
+  payments: "payments",
 } as const;
