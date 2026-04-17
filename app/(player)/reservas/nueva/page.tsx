@@ -50,7 +50,9 @@ function NuevaReservaContent() {
   const clubName = searchParams.get("club_name") ?? "";
   const courtName = searchParams.get("court_name") ?? "";
   const priceRaw = searchParams.get("price") ?? "0";
-  const pricePerHour = Number.parseInt(priceRaw, 10) || 0;
+  /** Precio total del turno (90 min) desde la cancha. */
+  const precioTurno = Number.parseInt(priceRaw, 10) || 0;
+  const tuParte = precioTurno > 0 ? Math.round((precioTurno / 4) * 100) / 100 : 0;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -153,8 +155,7 @@ function NuevaReservaContent() {
       ? format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM yyyy", { locale: es })
       : "";
 
-  const totalPrice =
-    selectedSlot != null ? Math.round(pricePerHour * (selectedSlot.duration / 60)) : 0;
+  const totalTurno = selectedSlot != null ? precioTurno : 0;
 
   function StepIndicator({ active }: { active: 1 | 2 | 3 }) {
     return (
@@ -291,10 +292,18 @@ function NuevaReservaContent() {
                 <dd className="text-right font-semibold text-slate-900">{selectedSlot.duration} min</dd>
               </div>
               <div className="flex justify-between gap-2 border-t border-slate-100 pt-2">
-                <dt className="font-medium text-slate-500">Total</dt>
-                <dd className="text-right text-lg font-bold text-sky-700">${totalPrice}</dd>
+                <dt className="font-medium text-slate-500">Precio del turno</dt>
+                <dd className="text-right text-lg font-bold text-sky-700">${totalTurno}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="font-medium text-slate-500">Tu parte (1/4)</dt>
+                <dd className="text-right font-semibold text-slate-900">${tuParte}</dd>
               </div>
             </dl>
+            <p className="mt-3 border-t border-slate-100 pt-3 text-xs font-medium leading-relaxed text-slate-600">
+              Los otros 3 jugadores también abonan su cuarta parte al sumarse al turno. El cobro total del turno es la
+              suma de las cuatro partes.
+            </p>
           </div>
 
           <form
@@ -319,7 +328,6 @@ function NuevaReservaContent() {
             <input type="hidden" name="scheduled_date" value={selectedDate} />
             <input type="hidden" name="scheduled_time" value={selectedSlot.time} />
             <input type="hidden" name="duration_minutes" value={String(selectedSlot.duration)} />
-            <input type="hidden" name="total_price" value={String(totalPrice)} />
             <input type="hidden" name="club_name" value={clubName} />
             <input type="hidden" name="court_name" value={courtName} />
 

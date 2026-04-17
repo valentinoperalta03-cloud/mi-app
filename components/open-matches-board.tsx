@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase/server";
 type MatchFeedRow = {
   id: string;
   date: string;
+  total_price?: number | null;
   is_competitive?: boolean | null;
   level_restricted?: boolean | null;
   gender_category?: "masculino" | "femenino" | "mixto" | null;
@@ -110,6 +111,7 @@ export default async function OpenMatchesBoard({
       `
       id,
       date,
+      total_price,
       is_competitive,
       level_restricted,
       gender_category,
@@ -203,6 +205,11 @@ export default async function OpenMatchesBoard({
               ? `Este partido es exclusivo para ${categoryLabel}.`
               : null;
 
+          const turnTotal = Number(match.total_price ?? 0);
+          const joinShare =
+            turnTotal > 0 ? Math.round((turnTotal / 4) * 100) / 100 : 0;
+          const requiresPaymentToJoin = turnTotal > 0 && !currentUserJoined;
+
           return (
             <article
               key={match.id}
@@ -244,6 +251,12 @@ export default async function OpenMatchesBoard({
                     ) : null}
                   </span>
                 </p>
+                {turnTotal > 0 ? (
+                  <p>
+                    <span className="font-medium text-slate-800">💳 Costo para unirse:</span>{" "}
+                    <span className="font-semibold text-sky-800">${joinShare}</span>
+                  </p>
+                ) : null}
                 <p>
                   <span className="font-medium text-slate-800">Cupos libres:</span> {freeSlots} / 4
                 </p>
@@ -294,6 +307,7 @@ export default async function OpenMatchesBoard({
                       matchId={match.id}
                       isJoined={currentUserJoined}
                       levelRestricted={Boolean(match.level_restricted)}
+                      requiresPayment={requiresPaymentToJoin}
                       disabled={!currentUserJoined && !userCanJoinByGender}
                       disabledMessage={genderRestrictionMessage ?? undefined}
                     />

@@ -73,11 +73,10 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const scheduledDate = getField(formData, "scheduled_date");
   const scheduledTime = getField(formData, "scheduled_time");
   const durationMinutes = getField(formData, "duration_minutes");
-  const totalPrice = getField(formData, "total_price");
   const clubName = getField(formData, "club_name");
   const courtName = getField(formData, "court_name");
 
-  if (!courtId || !scheduledDate || !scheduledTime || !durationMinutes || !totalPrice) {
+  if (!courtId || !scheduledDate || !scheduledTime || !durationMinutes) {
     return { error: "Faltan datos de la reserva." };
   }
 
@@ -128,9 +127,19 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const dateIso = toIsoDateTime(scheduledDate, timeNorm);
 
-  const baseAmount = Number(totalPrice);
+  const { data: courtPriceRow, error: priceErr } = await supabase
+    .from(DB_TABLES.courts)
+    .select("price")
+    .eq("id", courtId)
+    .maybeSingle();
+
+  if (priceErr || !courtPriceRow) {
+    return { error: "No se pudo obtener el precio del turno." };
+  }
+
+  const baseAmount = Number((courtPriceRow as { price: number | null }).price ?? 0);
   if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
-    return { error: "Precio inválido." };
+    return { error: "Precio del turno inválido." };
   }
 
   const { data, error } = await supabase

@@ -130,12 +130,11 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       return { error: "No se pudo obtener la información de la cancha." };
     }
 
-    const pricePerHour = Number((courtData as { price: number | null }).price ?? 0);
+    const totalPrice = Number((courtData as { price: number | null }).price ?? 0);
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
     const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
-    const totalPrice = pricePerHour * (durationMinutes / 60);
 
     const slotStart = clockToMinutes(scheduledTime);
     const { data: conflicts, error: conflictsError } = await supabase

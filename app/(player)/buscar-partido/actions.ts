@@ -97,7 +97,7 @@ export async function toggleMatchParticipationAction(
 
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
-    .select("gender_category, level_restricted, owner_id")
+    .select("gender_category, level_restricted, owner_id, total_price")
     .eq("id", matchId)
     .maybeSingle();
   if (matchError || !matchRow) {
@@ -110,6 +110,7 @@ export async function toggleMatchParticipationAction(
     gender_category?: "masculino" | "femenino" | "mixto" | null;
     level_restricted?: boolean | null;
     owner_id?: string | null;
+    total_price?: number | null;
   };
   const genderCategory = matchData.gender_category ?? "mixto";
   if (genderCategory !== "mixto" && playerGender !== genderCategory) {
@@ -193,6 +194,15 @@ export async function toggleMatchParticipationAction(
         message: "Tu nivel no es compatible. Se envió una solicitud a los jugadores del partido para que voten.",
       };
     }
+  }
+
+  const turnPrice = Number(matchData.total_price ?? 0);
+  if (turnPrice > 0) {
+    const share = Math.round((turnPrice / 4) * 100) / 100;
+    return {
+      success: false,
+      message: `Para unirte debés abonar tu parte ($${share}). Hacé click en 'Pagar y unirse'.`,
+    };
   }
 
   const { error: insertError } = await supabase.from(DB_TABLES.matchParticipants).insert({

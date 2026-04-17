@@ -195,10 +195,20 @@ export default function CrearPartidoForm({
         >
           {availableCourts.map((court) => (
             <option key={court.id} value={court.id}>
-              {court.name} · ${court.price}/hora
+              {court.name} · ${court.price}/turno
             </option>
           ))}
         </select>
+        {selectedCourt ? (
+          <p className="text-sm font-medium text-slate-700">
+            Precio del turno: <span className="font-semibold text-slate-900">${selectedCourt.price}</span>
+            {" · "}
+            Tu parte:{" "}
+            <span className="font-semibold text-sky-800">
+              ${Math.round((selectedCourt.price / 4) * 100) / 100} por jugador
+            </span>
+          </p>
+        ) : null}
       </section>
 
       <section className="space-y-2">
@@ -375,16 +385,24 @@ export default function CrearPartidoForm({
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
 
-      {selectedCourt ? (
-        <p className="text-xs text-slate-500">
-          Precio de referencia: <span className="font-semibold text-slate-700">${selectedCourt.price}/hora</span>
-        </p>
-      ) : null}
-
       {error ? (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
           {error}
         </p>
+      ) : null}
+
+      {selectedCourt ? (
+        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/80 px-4 py-3 text-sm text-slate-800">
+          <p className="font-semibold text-sky-900">💳 Cada jugador abona su parte</p>
+          <p className="mt-2 font-medium leading-relaxed text-slate-700">
+            Al crear el partido pagás{" "}
+            <span className="font-bold text-slate-900">
+              ${Math.round((selectedCourt.price / 4) * 100) / 100}
+            </span>{" "}
+            (1/4 del turno). Los otros jugadores pagarán su parte al unirse. El turno queda confirmado cuando los 4
+            jugadores paguen.
+          </p>
+        </div>
       ) : null}
 
       <button

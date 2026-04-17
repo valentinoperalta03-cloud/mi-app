@@ -8,9 +8,10 @@ import { toggleMatchParticipationAction, type ToggleJoinState } from "./actions"
 
 const initialState: ToggleJoinState = { success: false, message: "" };
 
-function SubmitButton({ isJoined }: { isJoined: boolean }) {
+function SubmitButton({ isJoined, requiresPayment }: { isJoined: boolean; requiresPayment: boolean }) {
   const { pending } = useFormStatus();
-  const pendingLabel = isJoined ? "Saliendo..." : "Uniendote...";
+  const pendingLabel = isJoined ? "Saliendo..." : requiresPayment ? "Procesando..." : "Uniendote...";
+  const joinLabel = requiresPayment ? "Pagar y unirse" : "Unirse";
 
   return (
     <button
@@ -18,7 +19,7 @@ function SubmitButton({ isJoined }: { isJoined: boolean }) {
       disabled={pending}
       className={`${PLAYER_PRIMARY_BUTTON} disabled:cursor-not-allowed disabled:opacity-60`}
     >
-      {pending ? pendingLabel : isJoined ? "Salir" : "Unirse"}
+      {pending ? pendingLabel : isJoined ? "Salir" : joinLabel}
     </button>
   );
 }
@@ -27,6 +28,8 @@ type JoinToggleButtonProps = {
   matchId: string;
   isJoined: boolean;
   levelRestricted?: boolean;
+  /** Si el partido tiene precio y el usuario no está anotado, el botón es "Pagar y unirse". */
+  requiresPayment?: boolean;
   disabled?: boolean;
   disabledMessage?: string;
 };
@@ -35,6 +38,7 @@ export default function JoinToggleButton({
   matchId,
   isJoined,
   levelRestricted = false,
+  requiresPayment = false,
   disabled = false,
   disabledMessage,
 }: JoinToggleButtonProps) {
@@ -63,7 +67,7 @@ export default function JoinToggleButton({
             Unirse
           </button>
         ) : (
-          <SubmitButton isJoined={isJoined} />
+          <SubmitButton isJoined={isJoined} requiresPayment={requiresPayment && !isJoined} />
         )}
       </form>
 

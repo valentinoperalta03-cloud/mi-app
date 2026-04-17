@@ -79,7 +79,9 @@ export default async function AdminCanchasPage() {
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Precio por hora</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Precio del turno (90 min)
+              </span>
               <input
                 name="price"
                 type="number"
@@ -114,7 +116,7 @@ export default async function AdminCanchasPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-lg font-bold text-slate-900">{c.name ?? "Cancha"}</p>
-                  <p className="text-sm font-medium text-sky-700">${c.price ?? 0}/hora</p>
+                  <p className="text-sm font-medium text-sky-700">${c.price ?? 0}/turno</p>
                 </div>
                 <Link
                   href={`/admin/canchas/${c.id}/horarios`}
