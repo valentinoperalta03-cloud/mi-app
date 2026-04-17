@@ -127,11 +127,14 @@ export async function cancelReservation(formData: FormData) {
       const start = matchStartMs(scheduledDate, scheduledTime);
       const minutesUntil = (start - Date.now()) / 60_000;
       if (minutesUntil < 60) {
-        await supabase
+        const { error: cancelNoRefundErr } = await supabase
           .from(DB_TABLES.matches)
           .update({ match_status: "cancelled" })
-          .eq("id", id)
-          .eq("owner_id", user.id);
+          .eq("id", id);
+        if (cancelNoRefundErr) {
+          console.error("[cancelReservation]", cancelNoRefundErr);
+          redirect("/reservas?error=cancel");
+        }
         revalidatePath("/reservas");
         redirect("/reservas?info=sin_reembolso");
       }
@@ -148,14 +151,17 @@ export async function cancelReservation(formData: FormData) {
         .update({ status: "refunded", updated_at: new Date().toISOString() })
         .eq("match_id", id)
         .eq("user_id", user.id);
-      await supabase
+      const { error: cancelRefundErr } = await supabase
         .from(DB_TABLES.matches)
         .update({
           match_status: "cancelled",
           payment_status: "refunded",
         })
-        .eq("id", id)
-        .eq("owner_id", user.id);
+        .eq("id", id);
+      if (cancelRefundErr) {
+        console.error("[cancelReservation]", cancelRefundErr);
+        redirect("/reservas?error=cancel");
+      }
       revalidatePath("/reservas");
       redirect("/reservas");
     }
@@ -171,10 +177,10 @@ export async function cancelReservation(formData: FormData) {
   const { error } = await supabase
     .from(DB_TABLES.matches)
     .update({ match_status: "cancelled" })
-    .eq("id", id)
-    .eq("owner_id", user.id);
+    .eq("id", id);
 
   if (error) {
+    console.error("[cancelReservation]", error);
     redirect("/reservas?error=cancel");
   }
 

@@ -14,6 +14,8 @@ import { createClient } from "@/utils/supabase/server";
 type MatchFeedRow = {
   id: string;
   date: string;
+  owner_id?: string | null;
+  visibility?: "publico" | "privado" | string | null;
   total_price?: number | null;
   is_competitive?: boolean | null;
   level_restricted?: boolean | null;
@@ -105,12 +107,19 @@ export default async function OpenMatchesBoard({
     : { data: null };
   const currentUserGender = (myProfile as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? null;
 
+  const { data: myFavorites } = user
+    ? await supabase.from(DB_TABLES.userFavorites).select("favorite_id").eq("user_id", user.id)
+    : { data: [] };
+  const favoriteIds = ((myFavorites ?? []) as { favorite_id: string }[]).map((f) => f.favorite_id);
+
   const { data, error } = await supabase
-    .from("matches")
+    .from(DB_TABLES.matches)
     .select(
       `
       id,
       date,
+      owner_id,
+      visibility,
       total_price,
       is_competitive,
       level_restricted,
@@ -134,9 +143,17 @@ export default async function OpenMatchesBoard({
     `
     )
     .gt("date", nowIso)
+    .neq("match_status", "cancelled")
     .order("date", { ascending: true });
 
-  const matches = (data ?? []) as unknown as MatchFeedRow[];
+  const rawMatches = (data ?? []) as unknown as MatchFeedRow[];
+  const matches = rawMatches.filter((match) => {
+    const vis = String(match.visibility ?? "publico").toLowerCase();
+    if (vis !== "privado") return true;
+    if (user?.id && match.owner_id && user.id === match.owner_id) return true;
+    if (!match.owner_id) return true;
+    return favoriteIds.includes(match.owner_id);
+  });
 
   return (
     <MotionPage

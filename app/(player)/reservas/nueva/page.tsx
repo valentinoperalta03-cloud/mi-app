@@ -43,6 +43,10 @@ type BlockRow = {
   start_time: string | null;
 };
 
+function fmtAr(numero: number) {
+  return new Intl.NumberFormat("es-AR").format(numero);
+}
+
 function NuevaReservaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,7 +56,6 @@ function NuevaReservaContent() {
   const priceRaw = searchParams.get("price") ?? "0";
   /** Precio total del turno (90 min) desde la cancha. */
   const precioTurno = Number.parseInt(priceRaw, 10) || 0;
-  const tuParte = precioTurno > 0 ? Math.round((precioTurno / 4) * 100) / 100 : 0;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -154,8 +157,6 @@ function NuevaReservaContent() {
     selectedDate != null
       ? format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM yyyy", { locale: es })
       : "";
-
-  const totalTurno = selectedSlot != null ? precioTurno : 0;
 
   function StepIndicator({ active }: { active: 1 | 2 | 3 }) {
     return (
@@ -291,20 +292,43 @@ function NuevaReservaContent() {
                 <dt className="font-medium text-slate-500">Duración</dt>
                 <dd className="text-right font-semibold text-slate-900">{selectedSlot.duration} min</dd>
               </div>
-              <div className="flex justify-between gap-2 border-t border-slate-100 pt-2">
-                <dt className="font-medium text-slate-500">Precio del turno</dt>
-                <dd className="text-right text-lg font-bold text-sky-700">${totalTurno}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Tu parte (1/4)</dt>
-                <dd className="text-right font-semibold text-slate-900">${tuParte}</dd>
-              </div>
             </dl>
-            <p className="mt-3 border-t border-slate-100 pt-3 text-xs font-medium leading-relaxed text-slate-600">
-              Los otros 3 jugadores también abonan su cuarta parte al sumarse al turno. El cobro total del turno es la
-              suma de las cuatro partes.
-            </p>
           </div>
+
+          {(() => {
+            const precioCancha = Math.round(precioTurno / 4);
+            const comision = Math.round(precioCancha * 0.05);
+            const total = precioCancha + comision;
+            return (
+              <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between gap-3 text-sm text-slate-600">
+                    <span>Precio de cancha</span>
+                    <span className="shrink-0 font-medium text-slate-700">${fmtAr(precioCancha)}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-sm text-slate-600">
+                    <div className="min-w-0 leading-snug">
+                      <p>Servicio Padelibre</p>
+                      <p>e impuestos incluidos</p>
+                    </div>
+                    <span className="shrink-0 self-start font-medium text-slate-700">${fmtAr(comision)}</span>
+                  </div>
+                </div>
+                <div className="my-2 border-t border-slate-100" />
+                <div className="flex justify-between gap-3 text-base font-bold text-slate-900">
+                  <span>Total a pagar</span>
+                  <span>${fmtAr(total)}</span>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                  <span className="mr-1" aria-hidden>
+                    ℹ️
+                  </span>
+                  El precio ya incluye todos los impuestos y comisiones del servicio de Padelibre.
+                </p>
+              </div>
+            );
+          })()}
 
           <form
             className="space-y-3"

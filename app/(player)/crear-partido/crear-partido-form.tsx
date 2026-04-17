@@ -9,6 +9,10 @@ import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/client";
 import { crearPartido } from "./actions";
 
+function fmtAr(numero: number) {
+  return new Intl.NumberFormat("es-AR").format(numero);
+}
+
 export type GenderCategory = "masculino" | "femenino" | "mixto";
 
 export type ClubOption = {
@@ -151,6 +155,13 @@ export default function CrearPartidoForm({
   const selectedCourt = availableCourts.find((court) => court.id === selectedCourtId) ?? null;
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
+  const resumenPago = useMemo(() => {
+    if (!selectedCourt) return { precioCancha: 0, comision: 0, total: 0 };
+    const precioCancha = Math.round(selectedCourt.price / 4);
+    const comision = Math.round(precioCancha * 0.05);
+    return { precioCancha, comision, total: precioCancha + comision };
+  }, [selectedCourt]);
+
   return (
     <form
       className="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm"
@@ -200,14 +211,33 @@ export default function CrearPartidoForm({
           ))}
         </select>
         {selectedCourt ? (
-          <p className="text-sm font-medium text-slate-700">
-            Precio del turno: <span className="font-semibold text-slate-900">${selectedCourt.price}</span>
-            {" · "}
-            Tu parte:{" "}
-            <span className="font-semibold text-sky-800">
-              ${Math.round((selectedCourt.price / 4) * 100) / 100} por jugador
-            </span>
-          </p>
+          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between gap-3 text-sm text-slate-600">
+                <span>Precio de cancha</span>
+                <span className="shrink-0 font-medium text-slate-700">${fmtAr(resumenPago.precioCancha)}</span>
+              </div>
+              <div className="flex justify-between gap-3 text-sm text-slate-600">
+                <div className="min-w-0 leading-snug">
+                  <p>Servicio Padelibre</p>
+                  <p>e impuestos incluidos</p>
+                </div>
+                <span className="shrink-0 self-start font-medium text-slate-700">${fmtAr(resumenPago.comision)}</span>
+              </div>
+            </div>
+            <div className="my-2 border-t border-slate-100" />
+            <div className="flex justify-between gap-3 text-base font-bold text-slate-900">
+              <span>Total a pagar</span>
+              <span>${fmtAr(resumenPago.total)}</span>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+              <span className="mr-1" aria-hidden>
+                ℹ️
+              </span>
+              El precio ya incluye todos los impuestos y comisiones del servicio de Padelibre.
+            </p>
+          </div>
         ) : null}
       </section>
 
@@ -396,11 +426,9 @@ export default function CrearPartidoForm({
           <p className="font-semibold text-sky-900">💳 Cada jugador abona su parte</p>
           <p className="mt-2 font-medium leading-relaxed text-slate-700">
             Al crear el partido pagás{" "}
-            <span className="font-bold text-slate-900">
-              ${Math.round((selectedCourt.price / 4) * 100) / 100}
-            </span>{" "}
-            (1/4 del turno). Los otros jugadores pagarán su parte al unirse. El turno queda confirmado cuando los 4
-            jugadores paguen.
+            <span className="font-bold text-slate-900">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno
+            y el servicio de Padelibre). Los otros jugadores pagarán su parte al unirse. El turno queda confirmado
+            cuando los 4 jugadores paguen.
           </p>
         </div>
       ) : null}
