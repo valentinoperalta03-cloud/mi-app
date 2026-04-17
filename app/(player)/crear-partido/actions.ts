@@ -1,132 +1,156 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
-export type CreateWizardMatchState = {
-  success: boolean;
-  message: string;
-  matchId?: string;
-};
+type MatchType = "amistoso" | "competitivo";
+type Visibility = "publico" | "privado";
+type GenderCategory = "masculino" | "femenino" | "mixto";
 
-const initialState: CreateWizardMatchState = { success: false, message: "" };
+type ConflictRow = {
+  scheduled_time: string | null;
+  duration_minutes: number | null;
+};
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-/** CHECK en DB: solo `amistoso` | `competitivo` (minúsculas). */
-function normalizeMatchType(raw: string): "amistoso" | "competitivo" {
-  const v = raw.toLowerCase().trim();
-  return v === "competitivo" ? "competitivo" : "amistoso";
+function normalizeMatchType(raw: string): MatchType {
+  return raw.toLowerCase().trim() === "competitivo" ? "competitivo" : "amistoso";
 }
 
-/** CHECK en DB: solo `publico` | `privado` (español, minúsculas). */
-function normalizeVisibility(raw: string): "publico" | "privado" {
-  const v = raw.toLowerCase().trim();
-  if (v === "privado") return "privado";
-  if (v === "publico") return "publico";
-  return "publico";
+function normalizeVisibility(raw: string): Visibility {
+  return raw.toLowerCase().trim() === "privado" ? "privado" : "publico";
 }
 
-function normalizeGenderCategory(raw: string): "masculino" | "femenino" | "mixto" {
-  const v = raw.toLowerCase().trim();
-  if (v === "femenino") return "femenino";
-  if (v === "mixto") return "mixto";
+function normalizeGenderCategory(raw: string): GenderCategory {
+  const value = raw.toLowerCase().trim();
+  if (value === "femenino") return "femenino";
+  if (value === "mixto") return "mixto";
   return "masculino";
 }
 
-function toIso(date: string, time: string) {
-  return new Date(`${date}T${time}:00`).toISOString();
+function clockToMinutes(clock: string): number {
+  const normalized = clock.trim().slice(0, 5);
+  const [hours, minutes] = normalized.split(":").map((value) => Number.parseInt(value, 10));
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+  return hours * 60 + minutes;
 }
 
-export async function createWizardMatchAction(
-  prevState: CreateWizardMatchState = initialState,
-  formData: FormData
-): Promise<CreateWizardMatchState> {
-  void prevState;
-  const clubId = getField(formData, "club_id");
-  const courtId = getField(formData, "court_id");
-  const locationName = getField(formData, "location_name");
-  const scheduledDate = getField(formData, "scheduled_date");
-  const scheduledTime = getField(formData, "scheduled_time");
-  const matchType = normalizeMatchType(getField(formData, "match_type"));
-  const visibility = normalizeVisibility(getField(formData, "visibility"));
-  const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
+function overlapsSlot(slotStartMin: number, slotDur: number, otherStartMin: number, otherDur: number): boolean {
+  const slotEnd = slotStartMin + slotDur;
+  const otherEnd = otherStartMin + otherDur;
+  return slotStartMin < otherEnd && otherStartMin < slotEnd;
+}
 
-  if (!clubId || !courtId || !scheduledDate || !scheduledTime) {
-    return { success: false, message: "Completa ubicación, fecha, horario y cancha." };
-  }
-
-  const scheduledIso = toIso(scheduledDate, scheduledTime);
-  if (Number.isNaN(new Date(scheduledIso).getTime())) {
-    return { success: false, message: "Fecha u horario inválido." };
-  }
-
-  const now = new Date();
-  if (new Date(scheduledIso) < now) {
-    return { success: false, message: "Selecciona un horario futuro." };
-  }
-
+async function getUser() {
   const supabase = await createClient({ allowCookieWrites: true });
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
-    return { success: false, message: "Necesitas iniciar sesión para crear el partido." };
+    redirect("/login");
+  }
+  return { supabase, user };
+}
+
+export async function crearPartido(formData: FormData): Promise<{ error: string } | void> {
+  const courtId = getField(formData, "court_id");
+  const scheduledDate = getField(formData, "scheduled_date");
+  const scheduledTime = getField(formData, "scheduled_time");
+  const durationMinutesRaw = getField(formData, "duration_minutes");
+  const matchType = normalizeMatchType(getField(formData, "match_type"));
+  const visibility = normalizeVisibility(getField(formData, "visibility"));
+  const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
+  const levelRestricted = getField(formData, "level_restricted") === "true";
+
+  if (!courtId || !scheduledDate || !scheduledTime || !durationMinutesRaw) {
+    return { error: "Completá club, cancha, fecha y horario." };
   }
 
-  const { data: courtRow, error: courtError } = await supabase
-    .from(DB_TABLES.courts)
-    .select("id, club_id")
-    .eq("id", courtId)
-    .maybeSingle();
-  if (courtError || !courtRow || courtRow.club_id !== clubId) {
-    return { success: false, message: "La cancha seleccionada no coincide con el club." };
+  const durationMinutes = Number.parseInt(durationMinutesRaw, 10);
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return { error: "Duración inválida." };
   }
 
-  const payload = {
-    court_id: courtId,
-    date: scheduledIso,
-    is_competitive: matchType === "competitivo",
-    match_type: matchType,
-    visibility,
-    gender_category: genderCategory,
-    court_status: "app_booking",
-    location_name: locationName || "Rosario",
-    scheduled_date: scheduledDate,
-    scheduled_time: scheduledTime,
-    owner_id: user.id,
-  };
+  try {
+    const { supabase, user } = await getUser();
 
-  const { data: match, error: insertError } = await supabase
-    .from(DB_TABLES.matches)
-    .insert(payload)
-    .select("id")
-    .single();
+    const { data: courtData, error: courtError } = await supabase
+      .from(DB_TABLES.courts)
+      .select("price, clubs!inner(name)")
+      .eq("id", courtId)
+      .maybeSingle();
 
-  if (insertError || !match) {
-    return {
-      success: false,
-      message: `No se pudo crear el partido: ${insertError?.message ?? "error desconocido"}`,
-    };
+    if (courtError || !courtData) {
+      return { error: "No se pudo obtener la información de la cancha." };
+    }
+
+    const pricePerHour = Number((courtData as { price: number | null }).price ?? 0);
+    const clubName = String(
+      ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
+    );
+    const totalPrice = pricePerHour * (durationMinutes / 60);
+
+    const slotStart = clockToMinutes(scheduledTime);
+    const { data: conflicts, error: conflictsError } = await supabase
+      .from(DB_TABLES.matches)
+      .select("scheduled_time,duration_minutes")
+      .eq("court_id", courtId)
+      .eq("scheduled_date", scheduledDate)
+      .neq("match_status", "cancelled");
+
+    if (conflictsError) {
+      return { error: "No se pudo validar disponibilidad." };
+    }
+
+    for (const row of (conflicts ?? []) as ConflictRow[]) {
+      const otherStart = clockToMinutes(String(row.scheduled_time ?? ""));
+      const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
+      if (overlapsSlot(slotStart, durationMinutes, otherStart, otherDur)) {
+        return { error: "Ese horario ya no está disponible." };
+      }
+    }
+
+    const { data, error } = await supabase
+      .from(DB_TABLES.matches)
+      .insert({
+        court_id: courtId,
+        owner_id: user.id,
+        scheduled_date: scheduledDate,
+        scheduled_time: scheduledTime.slice(0, 5),
+        duration_minutes: Number(durationMinutes),
+        total_price: totalPrice,
+        payment_status: "pending",
+        match_status: "scheduled",
+        match_type: matchType,
+        is_competitive: matchType === "competitivo",
+        visibility,
+        gender_category: genderCategory,
+        level_restricted: levelRestricted,
+        location_name: clubName,
+        date: new Date(`${scheduledDate}T${scheduledTime}`).toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return { error: "No se pudo crear el partido." };
+    }
+
+    const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
+      match_id: data.id,
+      player_id: user.id,
+    });
+
+    if (participantError) {
+      return { error: "No se pudo crear el partido." };
+    }
+
+    redirect(`/partidos/${data.id}`);
+  } catch {
+    return { error: "No se pudo crear el partido." };
   }
-
-  const { error: playerError } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: match.id,
-    player_id: user.id,
-  });
-  if (playerError) {
-    return {
-      success: false,
-      message: `Partido creado, pero no pudimos anotarte: ${playerError.message}`,
-    };
-  }
-
-  return {
-    success: true,
-    message: "Partido creado con éxito.",
-    matchId: match.id,
-  };
 }

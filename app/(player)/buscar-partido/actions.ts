@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isLevelCompatible } from "@/lib/match-level";
 import { createClient } from "@/utils/supabase/server";
 
 export type ToggleJoinState = {
@@ -96,7 +97,7 @@ export async function toggleMatchParticipationAction(
 
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
-    .select("gender_category")
+    .select("gender_category, level_restricted, owner_id")
     .eq("id", matchId)
     .maybeSingle();
   if (matchError || !matchRow) {
@@ -105,8 +106,12 @@ export async function toggleMatchParticipationAction(
       message: `No pudimos validar el partido: ${matchError?.message ?? "partido inexistente"}`,
     };
   }
-  const genderCategory =
-    (matchRow as { gender_category?: "masculino" | "femenino" | "mixto" | null }).gender_category ?? "mixto";
+  const matchData = matchRow as {
+    gender_category?: "masculino" | "femenino" | "mixto" | null;
+    level_restricted?: boolean | null;
+    owner_id?: string | null;
+  };
+  const genderCategory = matchData.gender_category ?? "mixto";
   if (genderCategory !== "mixto" && playerGender !== genderCategory) {
     const categoryLabel = genderCategory === "masculino" ? "Masculino" : "Femenino";
     return { success: false, message: `Este partido es exclusivo para ${categoryLabel}.` };
@@ -126,6 +131,68 @@ export async function toggleMatchParticipationAction(
 
   if ((count ?? 0) >= TOTAL_SLOTS) {
     return { success: false, message: "Este partido ya esta completo." };
+  }
+
+  if (matchData.level_restricted) {
+    const { data: playerCategoryRow, error: playerCategoryError } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("category")
+      .eq("user_id", playerId)
+      .maybeSingle();
+    if (playerCategoryError) {
+      return { success: false, message: "No pudimos validar tu nivel." };
+    }
+
+    const ownerId = matchData.owner_id ?? "";
+    const { data: creatorCategoryRow, error: creatorCategoryError } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("category")
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (creatorCategoryError) {
+      return { success: false, message: "No pudimos validar el nivel del creador." };
+    }
+
+    const playerCategory = (playerCategoryRow as { category?: string | null } | null)?.category ?? null;
+    const creatorCategory = (creatorCategoryRow as { category?: string | null } | null)?.category ?? null;
+    const compatible = isLevelCompatible(playerCategory, creatorCategory);
+
+    if (!compatible) {
+      const { data: existingRequest, error: existingRequestError } = await supabase
+        .from(DB_TABLES.matchJoinRequests)
+        .select("id,status")
+        .eq("match_id", matchId)
+        .eq("player_id", playerId)
+        .maybeSingle();
+      if (existingRequestError) {
+        return { success: false, message: "No pudimos validar tu solicitud de acceso." };
+      }
+      if (existingRequest && (existingRequest as { status?: string | null }).status === "pending") {
+        return {
+          success: false,
+          message: "Ya enviaste una solicitud para este partido. Está pendiente de aprobación.",
+        };
+      }
+
+      const { error: requestError } = await supabase.from(DB_TABLES.matchJoinRequests).upsert(
+        {
+          match_id: matchId,
+          player_id: playerId,
+          status: "pending",
+        },
+        { onConflict: "match_id,player_id" }
+      );
+      if (requestError) {
+        return { success: false, message: "No se pudo enviar la solicitud de acceso." };
+      }
+
+      revalidatePath("/home");
+      revalidatePath(`/partidos/${matchId}/solicitudes`);
+      return {
+        success: true,
+        message: "Tu nivel no es compatible. Se envió una solicitud a los jugadores del partido para que voten.",
+      };
+    }
   }
 
   const { error: insertError } = await supabase.from(DB_TABLES.matchParticipants).insert({

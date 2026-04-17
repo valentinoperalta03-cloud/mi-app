@@ -2,33 +2,7 @@ import Link from "next/link";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import CreateMatchWizard from "./create-match-wizard";
-
-type ClubOption = {
-  id: string;
-  name: string | null;
-  location: string | null;
-};
-
-type CourtOption = {
-  id: string;
-  club_id: string;
-  name: string | null;
-  price: number | null;
-};
-
-type MatchReservation = {
-  court_id: string;
-  date: string;
-};
-
-function dateKeyFromIso(iso: string) {
-  return iso.slice(0, 10);
-}
-
-function timeKeyFromIso(iso: string) {
-  return iso.slice(11, 16);
-}
+import CrearPartidoForm, { type ClubOption, type CourtOption, type GenderCategory } from "./crear-partido-form";
 
 export default async function CrearPartidoPage() {
   const supabase = await createClient();
@@ -39,29 +13,32 @@ export default async function CrearPartidoPage() {
     ? await supabase.from(DB_TABLES.profiles).select("gender").eq("user_id", user.id).maybeSingle()
     : { data: null };
 
-  const creatorGender =
-    (profile as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? "masculino";
-  const today = new Date();
-  const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + 14);
+  const profileGender = (profile as { gender?: string | null } | null)?.gender ?? null;
+  const defaultGender: GenderCategory =
+    profileGender === "femenino" ? "femenino" : profileGender === "masculino" ? "masculino" : "mixto";
 
-  const [{ data: clubsRaw, error: clubsError }, { data: courtsRaw, error: courtsError }, { data: matchesRaw }] =
-    await Promise.all([
-      supabase.from(DB_TABLES.clubs).select("id, name, location").order("name", { ascending: true }),
-      supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
-      supabase
-        .from(DB_TABLES.matches)
-        .select("court_id, date")
-        .gte("date", today.toISOString())
-        .lte("date", maxDate.toISOString()),
-    ]);
+  const [{ data: clubsRaw, error: clubsError }, { data: courtsRaw, error: courtsError }] = await Promise.all([
+    supabase.from(DB_TABLES.clubs).select("id, name, location").order("name", { ascending: true }),
+    supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
+  ]);
 
-  const clubs = (clubsRaw ?? []) as ClubOption[];
-  const courts = (courtsRaw ?? []) as CourtOption[];
-  const reservations = ((matchesRaw ?? []) as MatchReservation[]).map((item) => ({
-    courtId: item.court_id,
-    dateKey: dateKeyFromIso(item.date),
-    timeKey: timeKeyFromIso(item.date),
+  const clubs: ClubOption[] = ((clubsRaw ?? []) as Array<{ id: string; name: string | null; location: string | null }>).map(
+    (club) => ({
+      id: club.id,
+      name: club.name ?? "Club sin nombre",
+      location: club.location ?? "",
+    })
+  );
+  const courts: CourtOption[] = ((courtsRaw ?? []) as Array<{
+    id: string;
+    club_id: string;
+    name: string | null;
+    price: number | null;
+  }>).map((court) => ({
+    id: court.id,
+    clubId: court.club_id,
+    name: court.name ?? "Cancha",
+    price: court.price ?? 0,
   }));
 
   return (
@@ -81,21 +58,7 @@ export default async function CrearPartidoPage() {
           No se pudo cargar la disponibilidad de clubes y canchas.
         </section>
       ) : (
-        <CreateMatchWizard
-          clubs={clubs.map((club) => ({
-            id: club.id,
-            name: club.name ?? "Club sin nombre",
-            location: club.location ?? "Rosario",
-          }))}
-          courts={courts.map((court) => ({
-            id: court.id,
-            clubId: court.club_id,
-            name: court.name ?? "Cancha",
-            price: court.price ?? null,
-          }))}
-          reservations={reservations}
-          creatorGender={creatorGender}
-        />
+        <CrearPartidoForm clubs={clubs} courts={courts} defaultGender={defaultGender} />
       )}
     </MotionPage>
   );

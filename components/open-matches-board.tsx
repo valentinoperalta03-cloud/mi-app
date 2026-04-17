@@ -15,6 +15,7 @@ type MatchFeedRow = {
   id: string;
   date: string;
   is_competitive?: boolean | null;
+  level_restricted?: boolean | null;
   gender_category?: "masculino" | "femenino" | "mixto" | null;
   courts:
     | {
@@ -110,6 +111,7 @@ export default async function OpenMatchesBoard({
       id,
       date,
       is_competitive,
+      level_restricted,
       gender_category,
       courts (
         clubs (
@@ -221,6 +223,11 @@ export default async function OpenMatchesBoard({
                       Partido competitivo
                     </span>
                   ) : null}
+                  {match.level_restricted ? (
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      Nivel restringido 🎯
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -286,6 +293,7 @@ export default async function OpenMatchesBoard({
                     <JoinToggleButton
                       matchId={match.id}
                       isJoined={currentUserJoined}
+                      levelRestricted={Boolean(match.level_restricted)}
                       disabled={!currentUserJoined && !userCanJoinByGender}
                       disabledMessage={genderRestrictionMessage ?? undefined}
                     />

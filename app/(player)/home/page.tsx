@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
+import HomeJoinRequestsSection from "@/components/home-join-requests-section";
 import { HomeReservationsSection } from "@/components/home-reservations-section";
 import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
@@ -150,6 +151,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ))}
         </section>
       ) : null}
+
+      <section className="space-y-4">
+        <Suspense fallback={null}>
+          <HomeJoinRequestsSection userId={user.id} />
+        </Suspense>
+      </section>
 
       <section className="space-y-4">
         <h2 className="text-lg font-bold tracking-tight text-slate-900">Sugerencias para vos</h2>

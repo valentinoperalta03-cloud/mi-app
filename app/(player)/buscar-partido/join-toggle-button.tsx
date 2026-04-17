@@ -26,6 +26,7 @@ function SubmitButton({ isJoined }: { isJoined: boolean }) {
 type JoinToggleButtonProps = {
   matchId: string;
   isJoined: boolean;
+  levelRestricted?: boolean;
   disabled?: boolean;
   disabledMessage?: string;
 };
@@ -33,6 +34,7 @@ type JoinToggleButtonProps = {
 export default function JoinToggleButton({
   matchId,
   isJoined,
+  levelRestricted = false,
   disabled = false,
   disabledMessage,
 }: JoinToggleButtonProps) {
@@ -50,6 +52,7 @@ export default function JoinToggleButton({
       <form action={formAction}>
         <input type="hidden" name="match_id" value={matchId} />
         <input type="hidden" name="intent" value={isJoined ? "leave" : "join"} />
+        <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
         {disabled ? (
           <button
             type="button"
