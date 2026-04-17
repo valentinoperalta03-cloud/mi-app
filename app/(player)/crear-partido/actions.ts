@@ -193,7 +193,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const mp = await requestMercadoPagoPreference({
       match_id: data.id,
-      amount: totalPrice,
+      amount: Math.round(totalPrice / 4),
       club_name: clubName,
       court_name: courtName,
       date: scheduledDate,

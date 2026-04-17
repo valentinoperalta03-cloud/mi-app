@@ -169,7 +169,7 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const mp = await requestMercadoPagoPreference({
     match_id: data.id,
-    amount: baseAmount,
+    amount: Math.round(baseAmount / 4),
     club_name: clubName || "Club",
     court_name: courtName || "Cancha",
     date: scheduledDate,
