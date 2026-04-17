@@ -4,6 +4,7 @@ import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { Suspense } from "react";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -42,7 +43,7 @@ type BlockRow = {
   start_time: string | null;
 };
 
-export default function NuevaReservaPage() {
+function NuevaReservaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courtId = searchParams.get("court_id") ?? "";
@@ -347,5 +348,19 @@ export default function NuevaReservaPage() {
         </p>
       ) : null}
     </div>
+  );
+}
+
+export default function NuevaReservaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto min-h-screen w-full max-w-md px-4 pt-6">
+          <p className="text-sm text-slate-500">Cargando...</p>
+        </div>
+      }
+    >
+      <NuevaReservaContent />
+    </Suspense>
   );
 }
