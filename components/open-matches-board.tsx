@@ -230,8 +230,18 @@ export default async function OpenMatchesBoard({
           return (
             <article
               key={match.id}
-              className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]`}
+              className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)] ${
+                match.is_competitive ? "border-t-2 border-t-sky-500" : "border-t-2 border-t-emerald-400"
+              }`}
             >
+              <div className="absolute right-3 top-3 opacity-5">
+                <svg width="32" height="32" viewBox="0 0 32 32" className="text-sky-800">
+                  <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <path d="M5 12 Q16 10 27 12" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                  <path d="M5 16 Q16 14 27 16" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                  <path d="M5 20 Q16 18 27 20" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                </svg>
+              </div>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="truncate text-xl font-semibold leading-tight tracking-tight text-slate-900">{clubName}</h2>

@@ -26,28 +26,24 @@ const quickActions = [
     desc: "Organizá un partido y encontrá rivales",
     href: "/crear-partido",
     Icon: CirclePlus,
-    iconWrap: "bg-sky-100 text-sky-600 ring-sky-200/60",
   },
   {
     title: "Aprender",
     desc: "Clases y entrenamientos",
     href: "/clases",
     Icon: GraduationCap,
-    iconWrap: "bg-emerald-100 text-emerald-700 ring-emerald-200/60",
   },
   {
     title: "Competir",
     desc: "Torneos y competencias",
     href: "/torneos",
     Icon: Trophy,
-    iconWrap: "bg-orange-100 text-orange-700 ring-orange-200/55",
   },
   {
     title: "Buscar partido",
     desc: "Unite a partidos abiertos",
     href: "/buscar-partido",
     Icon: Search,
-    iconWrap: "bg-violet-100 text-violet-700 ring-violet-200/55",
   },
 ] as const;
 
@@ -107,32 +103,56 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
       ) : null}
 
-      <section className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-sky-600 via-sky-600 to-indigo-600 p-6 text-white shadow-[0_12px_40px_-12px_rgba(2,132,199,0.55)]">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
-            <Zap size={20} strokeWidth={2.25} className="text-amber-200" aria-hidden />
+      <section
+        className="relative overflow-hidden rounded-3xl p-6 text-white"
+        style={{
+          background: "linear-gradient(135deg, #0a1628 0%, #0d2444 60%, #0f3460 100%)",
+          boxShadow: "0 8px 32px rgba(10, 22, 40, 0.3)",
+        }}
+      >
+        <div className="absolute right-4 top-4 opacity-10">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
+            <circle cx="40" cy="40" r="24" fill="none" stroke="white" strokeWidth="2" />
+            <circle cx="40" cy="40" r="12" fill="none" stroke="white" strokeWidth="1.5" />
+            <path d="M10 30 Q40 25 70 30" stroke="white" strokeWidth="2" fill="none" />
+            <path d="M10 40 Q40 35 70 40" stroke="white" strokeWidth="2" fill="none" />
+            <path d="M10 50 Q40 45 70 50" stroke="white" strokeWidth="2" fill="none" />
+          </svg>
+        </div>
+
+        <div className="relative z-10 flex items-start gap-3">
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 ring-1 ring-sky-400/30">
+            <Zap size={20} strokeWidth={2.25} className="text-sky-300" aria-hidden />
           </span>
           <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
           </h1>
         </div>
+        <div
+          className="mt-4 h-px w-full"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4), transparent)" }}
+        />
       </section>
 
       <section className="grid grid-cols-2 gap-4">
-        {quickActions.map(({ title, desc, href, Icon, iconWrap }) => (
+        {quickActions.map(({ title, desc, href, Icon }) => (
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-[2rem] border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] transition-all duration-200 hover:border-slate-300/90 hover:shadow-md active:scale-[0.98]"
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, #0d2444 0%, #0a1f3d 100%)",
+              border: "1px solid rgba(56, 189, 248, 0.15)",
+              boxShadow: "0 4px 16px rgba(10, 22, 40, 0.2)",
+            }}
           >
-            <span
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${iconWrap}`}
-            >
-              <Icon size={22} strokeWidth={2.1} aria-hidden />
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/15 ring-1 ring-sky-400/25">
+              <Icon size={22} className="text-sky-400" aria-hidden />
             </span>
             <div className="mt-3">
-              <h2 className="text-[15px] font-bold leading-tight text-slate-900">{title}</h2>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-500">{desc}</p>
+              <h2 className="text-[15px] font-bold leading-tight text-white">{title}</h2>
+              <p className="mt-1 text-[11px] font-medium leading-snug text-white/50">{desc}</p>
             </div>
           </Link>
         ))}

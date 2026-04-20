@@ -1,8 +1,14 @@
 export const PLAYER_CARD =
-  "rounded-3xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]";
+  "rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)]";
 
 export const PLAYER_CARD_INTERACTIVE =
-  "rounded-3xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-300 hover:border-sky-200 hover:shadow-[0_16px_36px_rgba(14,116,144,0.10)] active:scale-[0.99]";
+  "rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)] transition-all duration-300 hover:border-sky-200 hover:shadow-[0_4px_20px_-4px_rgba(14,165,233,0.15)] active:scale-[0.99]";
 
 export const PLAYER_PRIMARY_BUTTON =
-  "rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-95";
+  "rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(14,165,233,0.4)] transition-all duration-300 hover:from-sky-400 hover:to-sky-500 active:scale-[0.99]";
+
+export const PLAYER_SECONDARY_BUTTON =
+  "rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-sky-200 hover:bg-sky-50/50";
+
+export const PLAYER_CARD_HIGHLIGHT =
+  "rounded-2xl border border-sky-200/60 bg-gradient-to-br from-sky-50 to-white shadow-[0_4px_20px_-4px_rgba(14,165,233,0.15)]";

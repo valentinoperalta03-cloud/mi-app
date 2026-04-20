@@ -103,32 +103,55 @@ export default function TopNav() {
   return (
     <>
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center">
-        <div className="flex h-14 w-full max-w-md items-center justify-between bg-sky-500 px-4">
-          <span className="text-lg font-bold text-white">Padelibre</span>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/notificaciones"
-              className="rounded-full p-2 text-white transition-opacity hover:opacity-90"
-              aria-label="Ir a notificaciones"
-            >
-              <div className="relative">
-                <Bell size={22} className="text-white" />
+        <div className="w-full max-w-md">
+          <div
+            className="flex h-14 items-center justify-between px-4"
+            style={{
+              background: "linear-gradient(135deg, #0a1628 0%, #0d2444 50%, #0f2d55 100%)",
+              boxShadow: "0 4px 24px -4px rgba(10, 22, 40, 0.4)",
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <circle cx="11" cy="11" r="10" fill="#0ea5e9" opacity="0.9" />
+                <circle cx="11" cy="11" r="10" fill="none" stroke="#38bdf8" strokeWidth="1" />
+                <path d="M4 8 Q11 6 18 8" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
+                <path d="M4 11 Q11 9 18 11" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
+                <path d="M4 14 Q11 12 18 14" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
+              </svg>
+              <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
+                Padelibre
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Link
+                href="/notificaciones"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+                aria-label="Ir a notificaciones"
+              >
+                <Bell size={20} className="text-white/90" />
                 {unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 ) : null}
-              </div>
-            </Link>
-            <button
-              type="button"
-              className="rounded-full p-2 text-white transition-opacity hover:opacity-90"
-              onClick={() => setOpen(true)}
-              aria-label="Abrir menú lateral"
-            >
-              <Menu size={20} />
-            </button>
+              </Link>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+                onClick={() => setOpen(true)}
+                aria-label="Abrir menú lateral"
+              >
+                <Menu size={20} className="text-white/90" />
+              </button>
+            </div>
           </div>
+
+          <div
+            className="h-0.5 w-full"
+            style={{ background: "linear-gradient(90deg, transparent, #38bdf8, #0ea5e9, #38bdf8, transparent)" }}
+          />
         </div>
       </header>
 
@@ -150,34 +173,40 @@ export default function TopNav() {
             <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
               <div className="pointer-events-none relative w-full max-w-md">
                 <motion.aside
-                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto bg-white shadow-2xl"
+                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto shadow-2xl"
+                  style={{
+                    background: "linear-gradient(180deg, #0a1628 0%, #0d2444 100%)",
+                    boxShadow: "-8px 0 32px rgba(0,0,0,0.4)",
+                  }}
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "100%" }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
-                  <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
-                    {avatarUrl?.trim() ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        width={44}
-                        height={44}
-                        className="h-11 w-11 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
-                        {initial}
+                  <div className="border-b border-white/10 p-5">
+                    <div className="flex items-center gap-3">
+                      {avatarUrl?.trim() ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-sky-400/50"
+                        />
+                      ) : (
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white ring-2 ring-sky-400/50">
+                          {initial}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-white">{name}</p>
+                        <p className="truncate text-xs text-sky-300">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                      <p className="truncate text-xs text-slate-500">{category || "Sin categoría"}</p>
                     </div>
                   </div>
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">TU CUENTA</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-sky-400/60">TU CUENTA</p>
                   {accountItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -185,9 +214,9 @@ export default function TopNav() {
                         key={item.href}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
                       >
-                        <span className="rounded-full bg-slate-100 p-2">
+                        <span className="rounded-full bg-white/5 p-2 text-sky-400">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -195,7 +224,7 @@ export default function TopNav() {
                     );
                   })}
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">SOPORTE</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-sky-400/60">SOPORTE</p>
                   {supportItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -203,9 +232,9 @@ export default function TopNav() {
                         key={item.label}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
                       >
-                        <span className="rounded-full bg-slate-100 p-2">
+                        <span className="rounded-full bg-white/5 p-2 text-sky-400">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -217,9 +246,9 @@ export default function TopNav() {
                     type="button"
                     onClick={() => void handleSignOut()}
                     disabled={busy}
-                    className="mt-auto flex items-center gap-3 border-t border-slate-200 px-4 py-3 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mx-4 mb-4 mt-auto flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    <span className="rounded-full bg-slate-100 p-2 text-slate-700">
+                    <span className="rounded-full bg-red-500/10 p-2 text-red-300">
                       <LogOut size={16} />
                     </span>
                     <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>

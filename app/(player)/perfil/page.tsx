@@ -149,32 +149,43 @@ export default async function PerfilPage() {
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-slate-50 px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
-        <div className="flex flex-col items-center text-center">
+        <div
+          className="relative overflow-hidden rounded-3xl p-6 text-center"
+          style={{
+            background: "linear-gradient(135deg, #0a1628 0%, #0d2444 60%, #0f3460 100%)",
+          }}
+        >
+          <div className="absolute bottom-0 left-4 opacity-5">
+            <svg width="60" height="120" viewBox="0 0 60 120">
+              <ellipse cx="30" cy="35" rx="28" ry="32" fill="white" />
+              <rect x="26" y="65" width="8" height="50" rx="4" fill="white" />
+            </svg>
+          </div>
+          <div className="relative z-10 flex flex-col items-center text-center">
           <div className="mx-auto w-fit">
             <ProfileAvatar
               avatarUrl={row?.avatar_url ?? null}
               name={displayName}
               size={96}
-              ringClassName="ring-[6px] ring-slate-100"
+              ringClassName="ring-4 ring-sky-400/40 ring-offset-2 ring-offset-sky-900"
             />
           </div>
-          <h1 className="mt-5 text-2xl font-semibold leading-tight tracking-tight text-slate-900">{displayName}</h1>
-          <p className="mt-1 break-words text-sm text-slate-500">{email}</p>
-          <p className="mt-3 text-sm text-sky-700">
-            <span className="font-bold">{nivelParts.category || "—"}</span>
-            {nivelParts.description ? (
-              <span className="font-medium text-sky-700">{" - "}{nivelParts.description}</span>
-            ) : null}
-          </p>
+            <h1 className="mt-4 text-2xl font-bold text-white">{displayName}</h1>
+            <p className="mt-1 text-sm text-sky-300">
+              {nivelParts.category || "—"}
+              {nivelParts.description ? ` — ${nivelParts.description}` : ""}
+            </p>
+            <p className="mt-1 break-words text-xs text-sky-200/80">{email}</p>
           {row?.bio?.trim() ? (
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-sky-100/90">{row.bio.trim()}</p>
           ) : null}
           <Link
             href="/perfil/editar"
-            className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99]"
+              className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 py-3.5 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-sky-500 active:scale-[0.99]"
           >
             Editar perfil
           </Link>
+          </div>
         </div>
       </ProfileMotionSurface>
 
