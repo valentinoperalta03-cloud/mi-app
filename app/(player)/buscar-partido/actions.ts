@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { isLevelCompatible } from "@/lib/match-level";
 import { createClient } from "@/utils/supabase/server";
 
@@ -44,7 +45,7 @@ export async function toggleMatchParticipationAction(
 
   const { data: profileRow, error: profileError } = await supabase
     .from(DB_TABLES.profiles)
-    .select("gender")
+    .select("gender,name")
     .eq("user_id", playerId)
     .maybeSingle();
   if (profileError) {
@@ -54,6 +55,7 @@ export async function toggleMatchParticipationAction(
     };
   }
   const playerGender = (profileRow as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? null;
+  const playerName = (profileRow as { name?: string | null } | null)?.name?.trim() || "Un jugador";
 
   if (intent === "leave") {
     const { error: deleteError } = await supabase
@@ -218,6 +220,17 @@ export async function toggleMatchParticipationAction(
       success: false,
       message: `No se pudo completar la inscripcion: ${insertError.message}`,
     };
+  }
+
+  if (matchData.owner_id && matchData.owner_id !== playerId) {
+    const tpl = NOTIFICATION_TEMPLATES.player_joined(playerName, "tu partido");
+    await createNotification(supabase, {
+      user_id: matchData.owner_id,
+      type: "player_joined",
+      title: tpl.title,
+      body: tpl.body,
+      match_id: matchId,
+    });
   }
 
   revalidatePath("/buscar-partido");

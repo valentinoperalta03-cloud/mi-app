@@ -43,6 +43,7 @@ export default function TopNav() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [name, setName] = useState("Jugador");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
@@ -69,6 +70,14 @@ export default function TopNav() {
       setName(typed?.name?.trim() || "Jugador");
       setAvatarUrl(typed?.avatar_url ?? null);
       setCategory(typed?.category ?? null);
+
+      const { count } = await supabase
+        .from(DB_TABLES.notifications)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("read", false);
+      if (!active) return;
+      setUnreadCount(count ?? 0);
     });
 
     return () => {
@@ -102,7 +111,14 @@ export default function TopNav() {
               className="rounded-full p-2 text-white transition-opacity hover:opacity-90"
               aria-label="Ir a notificaciones"
             >
-              <Bell size={20} />
+              <div className="relative">
+                <Bell size={22} className="text-white" />
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </div>
             </Link>
             <button
               type="button"

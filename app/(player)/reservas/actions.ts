@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getPaymentRefundClient } from "@/lib/mercadopago";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 function matchStartMs(scheduledDate: string, scheduledTime: string): number {
@@ -102,7 +103,7 @@ export async function cancelReservation(formData: FormData) {
 
   const { data: match, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, scheduled_date, scheduled_time, payment_status")
+    .select("id, owner_id, court_id, scheduled_date, scheduled_time, payment_status")
     .eq("id", id)
     .maybeSingle();
 
@@ -113,6 +114,11 @@ export async function cancelReservation(formData: FormData) {
   const payStatus = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
   const scheduledDate = String((match as { scheduled_date: string | null }).scheduled_date ?? "");
   const scheduledTime = String((match as { scheduled_time: string | null }).scheduled_time ?? "");
+  const courtId = String((match as { court_id?: string | null }).court_id ?? "");
+  const { data: courtRow } = courtId
+    ? await supabase.from(DB_TABLES.courts).select("name").eq("id", courtId).maybeSingle()
+    : { data: null };
+  const courtName = (courtRow as { name?: string | null } | null)?.name?.trim() || "Cancha";
 
   if (payStatus === "paid" && scheduledDate && scheduledTime) {
     const { data: payment } = await supabase
@@ -135,6 +141,14 @@ export async function cancelReservation(formData: FormData) {
           console.error("[cancelReservation]", cancelNoRefundErr);
           redirect("/reservas?error=cancel");
         }
+        const tplNoRefund = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
+        await createNotification(supabase, {
+          user_id: user.id,
+          type: "reservation_cancelled",
+          title: tplNoRefund.title,
+          body: tplNoRefund.body,
+          match_id: id,
+        });
         revalidatePath("/reservas");
         redirect("/reservas?info=sin_reembolso");
       }
@@ -162,6 +176,14 @@ export async function cancelReservation(formData: FormData) {
         console.error("[cancelReservation]", cancelRefundErr);
         redirect("/reservas?error=cancel");
       }
+      const tplRefund = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
+      await createNotification(supabase, {
+        user_id: user.id,
+        type: "reservation_cancelled",
+        title: tplRefund.title,
+        body: tplRefund.body,
+        match_id: id,
+      });
       revalidatePath("/reservas");
       redirect("/reservas");
     }
@@ -183,6 +205,15 @@ export async function cancelReservation(formData: FormData) {
     console.error("[cancelReservation]", error);
     redirect("/reservas?error=cancel");
   }
+
+  const tpl = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
+  await createNotification(supabase, {
+    user_id: user.id,
+    type: "reservation_cancelled",
+    title: tpl.title,
+    body: tpl.body,
+    match_id: id,
+  });
 
   revalidatePath("/reservas");
   redirect("/reservas");

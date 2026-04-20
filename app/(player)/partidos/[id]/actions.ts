@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -212,6 +213,23 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?invite=true&join_error=error`);
   }
 
+  if (m.owner_id) {
+    const { data: reqProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const requesterName = (reqProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+    const tpl = NOTIFICATION_TEMPLATES.join_request(requesterName);
+    await createNotification(supabase, {
+      user_id: m.owner_id,
+      type: "join_request",
+      title: tpl.title,
+      body: tpl.body,
+      match_id: matchId,
+    });
+  }
+
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
@@ -288,6 +306,15 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=db`);
   }
 
+  const approvedTpl = NOTIFICATION_TEMPLATES.join_approved("tu partido");
+  await createNotification(supabase, {
+    user_id: playerId,
+    type: "join_approved",
+    title: approvedTpl.title,
+    body: approvedTpl.body,
+    match_id: matchId,
+  });
+
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
@@ -319,6 +346,13 @@ export async function rejectJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=permiso`);
   }
 
+  const { data: reqRow } = await supabase
+    .from(DB_TABLES.matchJoinRequests)
+    .select("player_id")
+    .eq("id", requestId)
+    .eq("match_id", matchId)
+    .maybeSingle();
+
   const { error: uErr } = await supabase
     .from(DB_TABLES.matchJoinRequests)
     .update({ status: "rejected" })
@@ -329,6 +363,18 @@ export async function rejectJoinRequest(formData: FormData): Promise<void> {
   if (uErr) {
     console.error("[rejectJoinRequest]", uErr);
     redirect(`/partidos/${matchId}?join_error=db`);
+  }
+
+  const rejectedPlayerId = String((reqRow as { player_id?: string } | null)?.player_id ?? "").trim();
+  if (rejectedPlayerId) {
+    const rejectedTpl = NOTIFICATION_TEMPLATES.join_rejected("tu partido");
+    await createNotification(supabase, {
+      user_id: rejectedPlayerId,
+      type: "join_rejected",
+      title: rejectedTpl.title,
+      body: rejectedTpl.body,
+      match_id: matchId,
+    });
   }
 
   revalidatePath(`/partidos/${matchId}`);

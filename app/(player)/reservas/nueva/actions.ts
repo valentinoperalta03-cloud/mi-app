@@ -3,6 +3,7 @@
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -166,6 +167,19 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   if (error || !data) {
     return { error: "No se pudo crear la reserva. Intentá de nuevo." };
   }
+
+  const reservationTpl = NOTIFICATION_TEMPLATES.reservation_confirmed(
+    courtName || "Cancha",
+    scheduledDate,
+    timeNorm
+  );
+  await createNotification(supabase, {
+    user_id: user.id,
+    type: "reservation_confirmed",
+    title: reservationTpl.title,
+    body: reservationTpl.body,
+    match_id: data.id,
+  });
 
   const mp = await requestMercadoPagoPreference({
     match_id: data.id,
