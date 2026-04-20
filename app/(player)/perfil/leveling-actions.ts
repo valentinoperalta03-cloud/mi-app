@@ -45,7 +45,7 @@ export async function completeLevelingProfile(payload: {
 
   const { data: prof, error: profileReadError } = await supabase
     .from(DB_TABLES.profiles)
-    .select("level")
+    .select("level, is_leveled, level_of_play")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -58,8 +58,11 @@ export async function completeLevelingProfile(payload: {
     };
   }
 
-  const row = prof as { level?: number | null } | null;
-  const hasLevel = row?.level != null && Number.isFinite(Number(row.level));
+  const prof2 = prof as { level?: number | null; is_leveled?: boolean | null; level_of_play?: string | null } | null;
+  const hasLevel =
+    (prof2?.level != null && Number.isFinite(Number(prof2.level))) ||
+    prof2?.is_leveled === true ||
+    Boolean((prof2?.level_of_play ?? "").trim());
   if (hasLevel) {
     return { ok: false, message: "Ya completaste la nivelación." };
   }
@@ -101,11 +104,13 @@ export async function completeLevelingProfile(payload: {
 
   const { error: upErr } = await supabase
     .from(DB_TABLES.profiles)
-    .upsert({
-      user_id: user.id,
+    .update({
       level: finalLevel,
       level_of_play: category,
-    });
+      category: category,
+      is_leveled: true,
+    })
+    .eq("user_id", user.id);
 
   if (upErr) {
     return {

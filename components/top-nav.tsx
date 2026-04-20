@@ -126,87 +126,91 @@ export default function TopNav() {
           >
             <button
               type="button"
-              className="absolute inset-0 bg-black/40"
+              className="fixed inset-0 z-40 bg-black/40"
               onClick={closeDrawer}
               aria-label="Cerrar menú"
             />
 
-            <motion.aside
-              className="fixed right-0 top-0 z-50 flex h-full w-80 max-w-[85vw] flex-col bg-white"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
-                {avatarUrl?.trim() ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    width={44}
-                    height={44}
-                    className="h-11 w-11 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
-                    {initial}
+            <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
+              <div className="pointer-events-none relative w-full max-w-md">
+                <motion.aside
+                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto bg-white shadow-2xl"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
+                  <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
+                    {avatarUrl?.trim() ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
+                        {initial}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+                      <p className="truncate text-xs text-slate-500">{category || "Sin categoría"}</p>
+                    </div>
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                  <p className="truncate text-xs text-slate-500">{category || "Sin categoría"}</p>
-                </div>
+
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">TU CUENTA</p>
+                  {accountItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={closeDrawer}
+                        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                      >
+                        <span className="rounded-full bg-slate-100 p-2">
+                          <Icon size={16} />
+                        </span>
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">SOPORTE</p>
+                  {supportItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={closeDrawer}
+                        className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                      >
+                        <span className="rounded-full bg-slate-100 p-2">
+                          <Icon size={16} />
+                        </span>
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => void handleSignOut()}
+                    disabled={busy}
+                    className="mt-auto flex items-center gap-3 border-t border-slate-200 px-4 py-3 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <span className="rounded-full bg-slate-100 p-2 text-slate-700">
+                      <LogOut size={16} />
+                    </span>
+                    <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
+                  </button>
+                </motion.aside>
               </div>
-
-              <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">TU CUENTA</p>
-              {accountItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closeDrawer}
-                    className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
-                  >
-                    <span className="rounded-full bg-slate-100 p-2">
-                      <Icon size={16} />
-                    </span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-
-              <p className="px-4 py-2 text-xs uppercase tracking-widest text-slate-400">SOPORTE</p>
-              {supportItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={closeDrawer}
-                    className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
-                  >
-                    <span className="rounded-full bg-slate-100 p-2">
-                      <Icon size={16} />
-                    </span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={() => void handleSignOut()}
-                disabled={busy}
-                className="mt-auto flex items-center gap-3 border-t border-slate-200 px-4 py-3 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <span className="rounded-full bg-slate-100 p-2 text-slate-700">
-                  <LogOut size={16} />
-                </span>
-                <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
-              </button>
-            </motion.aside>
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>

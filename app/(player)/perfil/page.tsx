@@ -27,7 +27,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const PROFILE_SELECT = "name, bio, level, level_of_play, technical_score, age, avatar_url" as const;
+const PROFILE_SELECT = "name, bio, level, level_of_play, technical_score, age, avatar_url, category, is_leveled" as const;
 
 const USER_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -116,10 +116,15 @@ export default async function PerfilPage() {
     }
   }
 
-  const row = profile as ProfileRow;
+  const row = profile as ProfileRow & { category?: string | null; is_leveled?: boolean | null };
   const hasTechnical =
     row.technical_score != null && Number.isFinite(Number(row.technical_score));
-  const isLeveled = hasTechnical || Boolean((row.level_of_play ?? "").trim());
+  const isLeveled =
+    (row.level != null && Number.isFinite(Number(row.level))) ||
+    Boolean((row.level_of_play ?? "").trim()) ||
+    Boolean((row.category ?? "").trim()) ||
+    row.is_leveled === true ||
+    hasTechnical;
   const displayName = row?.name?.trim() || email.split("@")[0] || "Tu perfil";
   const nivelLine = formatProfileNivelFromRow(row);
   const nivelParts = splitOfficialCategoryLine(nivelLine);
