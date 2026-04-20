@@ -63,7 +63,7 @@ export default async function PerfilPage() {
 
   if (profileError) {
     return (
-      <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+      <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-slate-50 px-4 pb-24 pt-6">
         <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
           <p className="font-medium">No pudimos cargar tu perfil.</p>
           <p className="mt-2 text-xs text-rose-800/90">
@@ -84,7 +84,7 @@ export default async function PerfilPage() {
     const ensured = await ensureProfileRowExists(supabase, user);
     if (ensured.error) {
       return (
-        <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-slate-50 px-4 pb-24 pt-6">
           <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
             <p className="font-medium">No hay fila en perfiles para tu cuenta.</p>
             <p className="mt-2 text-xs text-rose-800/90">{ensured.error}</p>
@@ -101,7 +101,7 @@ export default async function PerfilPage() {
     profileError = retry.error;
     if (profileError || profile === null) {
       return (
-        <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-slate-50 px-4 pb-24 pt-6">
           <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
             <p className="font-medium">No se pudo leer el perfil después de crearlo.</p>
             {profileError ? (
@@ -126,7 +126,7 @@ export default async function PerfilPage() {
 
   if (!isLeveled) {
     return (
-      <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 bg-slate-50 px-4 pb-28 pt-6">
+      <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-2 bg-slate-50 px-4 pb-24 pt-6">
         <ProfileLevelingWizard />
         <ProfileSessionFooter />
       </MotionPage>
@@ -142,7 +142,7 @@ export default async function PerfilPage() {
   ]);
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-5 bg-slate-50 px-4 pb-28 pt-6">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-slate-50 px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
         <div className="flex flex-col items-center text-center">
           <div className="mx-auto w-fit">
@@ -153,8 +153,8 @@ export default async function PerfilPage() {
               ringClassName="ring-[6px] ring-slate-100"
             />
           </div>
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">{displayName}</h1>
-          <p className="mt-1 text-sm text-slate-500">{email}</p>
+          <h1 className="mt-5 text-2xl font-semibold leading-tight tracking-tight text-slate-900">{displayName}</h1>
+          <p className="mt-1 break-words text-sm text-slate-500">{email}</p>
           <p className="mt-3 text-sm text-sky-700">
             <span className="font-bold">{nivelParts.category || "—"}</span>
             {nivelParts.description ? (

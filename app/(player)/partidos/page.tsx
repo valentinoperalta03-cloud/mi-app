@@ -23,12 +23,14 @@ export default async function PartidosPage() {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
-      <p className="text-sm font-medium text-sky-500">Inicio</p>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-950">Matches</h1>
-      <p className="text-sm font-light text-slate-500">
-        Partidos abiertos y proximos en la tabla{" "}
-        <code className="rounded bg-slate-100 px-1 text-xs">matches</code>.
-      </p>
+      <header className="space-y-1">
+        <p className="text-sm font-medium text-sky-600">Inicio</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Matches</h1>
+        <p className="text-sm font-light text-slate-500">
+          Partidos abiertos y proximos en la tabla{" "}
+          <code className="rounded bg-slate-100 px-1 text-xs">matches</code>.
+        </p>
+      </header>
 
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -46,10 +48,7 @@ export default async function PartidosPage() {
           const n = item.match_participants?.length ?? 0;
 
           return (
-            <article
-              key={item.id}
-              className={`${PLAYER_CARD_INTERACTIVE} p-5`}
-            >
+            <article key={item.id} className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
               <div className="flex items-center gap-4">
                 <Image
                   src="/club-thumb.svg"
@@ -58,19 +57,19 @@ export default async function PartidosPage() {
                   height={64}
                   className="h-16 w-16 rounded-2xl object-cover"
                 />
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950">
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-xl font-bold leading-tight tracking-tight text-slate-950">
                     {matchCourtName(item)}
                   </h2>
-                  <p className="text-sm font-light text-slate-500">{clubName}</p>
+                  <p className="truncate text-sm font-light text-slate-500">{clubName}</p>
                 </div>
-                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                <span className="shrink-0 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
                   {n} jug.
                 </span>
               </div>
               <p className="mt-2 text-sm font-light text-slate-500">{when}</p>
               <div className="mt-2 flex items-center justify-between">
-                <p className="text-lg font-bold tracking-tight text-slate-950">
+                <p className="shrink-0 text-lg font-bold tracking-tight text-slate-950">
                   {courtPrice != null ? `$${courtPrice}` : "Consultar"}
                 </p>
                 <Link

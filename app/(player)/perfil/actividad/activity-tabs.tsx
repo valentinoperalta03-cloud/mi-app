@@ -25,6 +25,30 @@ function formatDate(input: string | null) {
   return format(parseISO(`${input}T12:00:00`), "EEE d MMM yyyy", { locale: es });
 }
 
+function translateStatus(status: string | null): string {
+  const map: Record<string, string> = {
+    scheduled: "Programado",
+    reserved: "Reservado",
+    cancelled: "Cancelado",
+    finished: "Finalizado",
+    paid: "Pagado",
+    pending: "Pendiente",
+    refunded: "Reembolsado",
+    rejected: "Rechazado",
+    approved: "Aprobado",
+  };
+  return map[status ?? ""] ?? status ?? "—";
+}
+
+function translateType(type: string | null): string {
+  const map: Record<string, string> = {
+    competitivo: "Competitivo",
+    amistoso: "Amistoso",
+    reservation: "Reserva de cancha",
+  };
+  return map[type ?? ""] ?? type ?? "—";
+}
+
 export default function ActivityTabs({
   matches,
   reservations,
@@ -40,9 +64,9 @@ export default function ActivityTabs({
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
+      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
-        <h1 className="text-2xl font-bold">Tu actividad</h1>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight">Tu actividad</h1>
       </header>
 
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1">
@@ -79,15 +103,13 @@ export default function ActivityTabs({
             matches.map((item) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                    {item.match_status || "sin estado"}
+                  <p className="min-w-0 truncate text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                    {translateStatus(item.match_status)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">Club: {item.club_name}</p>
-                <p className="text-sm text-slate-700">
-                  Tipo: {item.match_type === "competitivo" ? "competitivo" : "amistoso"}
-                </p>
+                <p className="mt-2 truncate text-sm text-slate-700">Club: {item.club_name}</p>
+                <p className="text-sm text-slate-700">Tipo: {translateType(item.match_type)}</p>
               </article>
             ))
           )}
@@ -104,12 +126,12 @@ export default function ActivityTabs({
             reservations.map((item) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                    {item.match_status || "sin estado"}
+                  <p className="min-w-0 truncate text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                    {translateStatus(item.match_status)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">Cancha: {item.court_name}</p>
+                <p className="mt-2 truncate text-sm text-slate-700">Cancha: {item.court_name}</p>
                 <p className="text-sm text-slate-700">
                   Precio: {item.total_price != null ? money.format(item.total_price) : "—"}
                 </p>

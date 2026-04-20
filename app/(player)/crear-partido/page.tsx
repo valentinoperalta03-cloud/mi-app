@@ -42,12 +42,12 @@ export default async function CrearPartidoPage() {
   }));
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-32 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-24 pt-6">
       <header className="space-y-2">
         <Link href="/home" className="inline-block text-sm font-semibold text-sky-600 hover:text-sky-700">
           ← Volver al inicio
         </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Crear partido</h1>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">Crear partido</h1>
         <p className="text-sm text-slate-500">
           Reserva tu cancha en pocos pasos y publica el partido para la comunidad.
         </p>

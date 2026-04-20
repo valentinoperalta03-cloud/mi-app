@@ -132,7 +132,7 @@ export default function TopNav() {
             />
 
             <motion.aside
-              className="absolute right-0 top-0 flex h-full w-full max-w-80 flex-col bg-white"
+              className="fixed right-0 top-0 z-50 flex h-full w-80 max-w-[85vw] flex-col bg-white"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

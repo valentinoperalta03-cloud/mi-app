@@ -44,7 +44,7 @@ export default function BottomNav() {
   return (
     <nav
       className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4"
-      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       aria-label="Navegación principal"
     >
       <div className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-full border border-white/60 bg-white/80 px-2 py-2 shadow-[0_8px_32px_-10px_rgba(15,23,42,0.2)] backdrop-blur-md backdrop-saturate-150">

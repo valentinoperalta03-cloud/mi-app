@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { LegalDocumentSheet, type LegalDocKind } from "@/components/legal-document-sheet";
+import Link from "next/link";
 
 export function LegalFooterLinks({
   variant,
@@ -10,8 +9,6 @@ export function LegalFooterLinks({
   variant: "login" | "profile";
   className?: string;
 }) {
-  const [open, setOpen] = useState<LegalDocKind | null>(null);
-
   const wrap =
     variant === "login"
       ? "text-center text-xs leading-relaxed text-slate-400"
@@ -23,18 +20,15 @@ export function LegalFooterLinks({
       : "text-slate-500 underline decoration-slate-300/70 underline-offset-[3px] transition-colors hover:text-slate-600 hover:decoration-slate-400/80";
 
   return (
-    <>
-      <p className={`${wrap} ${className}`.trim()}>
-        <span className="font-normal">Legal: </span>
-        <button type="button" className={`${link} bg-transparent p-0 font-medium`} onClick={() => setOpen("terms")}>
-          Términos de Uso
-        </button>
-        <span className="font-normal"> y </span>
-        <button type="button" className={`${link} bg-transparent p-0 font-medium`} onClick={() => setOpen("privacy")}>
-          Política de Privacidad
-        </button>
-      </p>
-      <LegalDocumentSheet open={open} onClose={() => setOpen(null)} />
-    </>
+    <p className={`${wrap} ${className}`.trim()}>
+      <span className="font-normal">Legal: </span>
+      <Link href="/legal/terminos" className={`${link} bg-transparent p-0 font-medium`}>
+        Términos de Uso
+      </Link>
+      <span className="font-normal"> y </span>
+      <Link href="/legal/privacidad" className={`${link} bg-transparent p-0 font-medium`}>
+        Política de Privacidad
+      </Link>
+    </p>
   );
 }

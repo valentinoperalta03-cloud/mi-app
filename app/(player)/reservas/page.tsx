@@ -49,22 +49,22 @@ function ReservationCard({
   const badgeCancelled = status === "cancelled";
 
   return (
-    <article className={`${PLAYER_CARD_INTERACTIVE} p-5`}>
+    <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-950">{club}</h2>
-          <p className="text-sm font-medium text-slate-600">{court}</p>
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">{club}</h2>
+          <p className="truncate text-sm font-medium text-slate-600">{court}</p>
         </div>
         {badgeReserved ? (
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
             Confirmada
           </span>
         ) : badgeCancelled ? (
-          <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+          <span className="shrink-0 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             Cancelada
           </span>
         ) : (
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+          <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
             {status || "—"}
           </span>
         )}
@@ -84,7 +84,7 @@ function ReservationCard({
         </div>
         <div className="flex justify-between">
           <dt className="text-slate-500">Precio</dt>
-          <dd className="font-semibold text-sky-800">{precio}</dd>
+          <dd className="shrink-0 font-bold text-sky-800">{precio}</dd>
         </div>
       </dl>
       {showCancel && badgeReserved ? (

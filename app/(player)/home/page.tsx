@@ -97,7 +97,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-32 pt-6">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-24 pt-6">
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm">
           <p className="text-sm font-semibold">Perfil guardado con exito.</p>
@@ -112,7 +112,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
             <Zap size={20} strokeWidth={2.25} className="text-amber-200" aria-hidden />
           </span>
-          <h1 className="text-xl font-bold leading-snug tracking-tight md:text-[1.35rem]">
+          <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
           </h1>
         </div>

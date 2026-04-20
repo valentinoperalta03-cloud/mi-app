@@ -12,7 +12,7 @@ type PageProps = {
 
 export default function BuscarPartidoPage({ searchParams }: PageProps) {
   return (
-    <div className="mx-auto min-h-screen max-w-md bg-slate-50 pb-32">
+    <div className="mx-auto min-h-screen w-full max-w-md bg-slate-50 pb-24">
       <OpenMatchesBoard
         searchParams={searchParams}
         kicker="Comunidad"

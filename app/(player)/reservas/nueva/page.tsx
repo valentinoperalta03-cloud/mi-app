@@ -180,7 +180,7 @@ function NuevaReservaContent() {
       {step === 1 ? (
         <>
           <StepIndicator active={1} />
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">¿Cuándo querés jugar?</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">¿Cuándo querés jugar?</h1>
           <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dateChips.map((chip) => {
               const selected = selectedDate === chip.key;
@@ -214,7 +214,7 @@ function NuevaReservaContent() {
       {step === 2 ? (
         <>
           <StepIndicator active={2} />
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Elegí un horario</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">Elegí un horario</h1>
           <p className="text-sm font-medium text-slate-500">{selectedDateLabel}</p>
 
           {loading ? (
@@ -268,17 +268,17 @@ function NuevaReservaContent() {
       {step === 3 && selectedDate && selectedSlot ? (
         <>
           <StepIndicator active={3} />
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950">Confirmá tu reserva</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">Confirmá tu reserva</h1>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <dl className="space-y-2 text-sm text-slate-600">
               <div className="flex justify-between gap-2">
                 <dt className="font-medium text-slate-500">Club</dt>
-                <dd className="text-right font-semibold text-slate-900">{clubName || "—"}</dd>
+                <dd className="min-w-0 break-words text-right font-semibold text-slate-900">{clubName || "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="font-medium text-slate-500">Cancha</dt>
-                <dd className="text-right font-semibold text-slate-900">{courtName || "—"}</dd>
+                <dd className="min-w-0 break-words text-right font-semibold text-slate-900">{courtName || "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="font-medium text-slate-500">Fecha</dt>
@@ -387,7 +387,7 @@ export default function NuevaReservaPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto min-h-screen w-full max-w-md px-4 pt-6">
+        <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-6">
           <p className="text-sm text-slate-500">Cargando...</p>
         </div>
       }

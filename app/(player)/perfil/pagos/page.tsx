@@ -32,9 +32,9 @@ export default async function PerfilPagosPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
+      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
-        <h1 className="text-2xl font-bold">Tus pagos</h1>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight">Tus pagos</h1>
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -54,11 +54,11 @@ export default async function PerfilPagosPage() {
               return (
                 <article key={typed.id} className="rounded-2xl border border-slate-100 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="min-w-0 truncate text-sm font-semibold text-slate-900">
                       {date ? date.toLocaleDateString("es-AR") : "Sin fecha"}
                     </p>
                     <span
-                      className={`rounded-full border px-2 py-1 text-xs font-semibold ${statusBadgeClass(
+                      className={`shrink-0 rounded-full border px-2 py-1 text-xs font-semibold ${statusBadgeClass(
                         typed.status ?? "rejected"
                       )}`}
                     >

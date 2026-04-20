@@ -157,13 +157,13 @@ export default async function OpenMatchesBoard({
 
   return (
     <MotionPage
-      className={`mx-auto min-h-screen w-full space-y-6 bg-slate-50 px-4 pb-32 pt-6 ${
+      className={`mx-auto min-h-screen w-full space-y-6 bg-slate-50 px-4 pb-24 pt-6 ${
         mobileFirst ? "max-w-md" : "max-w-2xl"
       }`}
     >
       <header className="space-y-2">
         <p className="text-sm font-medium text-sky-600">{kicker}</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
         <p className="text-sm text-slate-500">{description}</p>
       </header>
 
@@ -230,25 +230,25 @@ export default async function OpenMatchesBoard({
           return (
             <article
               key={match.id}
-              className={`${PLAYER_CARD_INTERACTIVE} rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]`}
+              className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight text-slate-900">{clubName}</h2>
-                  <p className="text-sm text-slate-500">{clubLocation}</p>
+                  <h2 className="truncate text-xl font-semibold leading-tight tracking-tight text-slate-900">{clubName}</h2>
+                  <p className="truncate text-sm text-slate-500">{clubLocation}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                  <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                     {categoryLabel}
                   </span>
                   {match.is_competitive ? (
-                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                    <span className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
                       Partido competitivo
                     </span>
                   ) : null}
                   {match.level_restricted ? (
-                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                    <span className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
                       Nivel restringido 🎯
                     </span>
                   ) : null}
@@ -316,7 +316,7 @@ export default async function OpenMatchesBoard({
               ) : null}
 
               <div className="mt-4 flex items-center justify-between">
-                <p className="text-xs text-slate-500">{playersCount} jugador(es) anotado(s)</p>
+                <p className="min-w-0 text-xs text-slate-500">{playersCount} jugador(es) anotado(s)</p>
 
                 {user?.id ? (
                   freeSlots > 0 || currentUserJoined ? (

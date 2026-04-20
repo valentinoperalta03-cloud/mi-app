@@ -170,14 +170,14 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
       ) : null}
       {headerBlock}
 
-      <section className={`${PLAYER_CARD} space-y-3 p-5`}>
+      <section className={`${PLAYER_CARD} w-full space-y-3 overflow-hidden p-5`}>
         <div className="flex justify-between gap-2 text-sm">
           <span className="font-medium text-slate-500">Club</span>
-          <span className="font-semibold text-slate-900">{clubLabel}</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{clubLabel}</span>
         </div>
         <div className="flex justify-between gap-2 text-sm">
           <span className="font-medium text-slate-500">Cancha</span>
-          <span className="font-semibold text-slate-900">{courtLabel}</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{courtLabel}</span>
         </div>
         <div className="flex justify-between gap-2 text-sm">
           <span className="font-medium text-slate-500">Fecha</span>
