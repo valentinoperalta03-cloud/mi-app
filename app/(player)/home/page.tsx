@@ -108,8 +108,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section
         className="relative overflow-hidden rounded-3xl p-6 text-white"
         style={{
-          background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-          boxShadow: "0 8px 32px rgba(37,99,235,0.25)",
+          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          boxShadow: "0 8px 32px rgba(5,133,252,0.25)",
         }}
       >
         <div className="absolute right-4 top-4 opacity-[0.07]">
@@ -142,10 +142,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(37,99,235,0.25)] active:scale-[0.98] active:translate-y-0"
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(5,133,252,0.25)] active:scale-[0.98] active:translate-y-0"
             style={{
-              background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-              boxShadow: "0 2px 8px rgba(37,99,235,0.2)",
+              background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+              boxShadow: "0 2px 8px rgba(5,133,252,0.2)",
             }}
           >
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">

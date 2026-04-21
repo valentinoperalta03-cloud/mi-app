@@ -20,7 +20,7 @@ export async function HomeSummarySection({ userId }: { userId: string }) {
         </p>
       </article>
       <article className="flex flex-col items-center justify-center rounded-[2rem] border border-slate-200/80 bg-white px-2 py-5 text-center shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-        <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+        <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl bg-[#0585FC]/10 text-[#0585FC]">
           <Calendar size={18} strokeWidth={2.1} aria-hidden />
         </span>
         <p className="text-xl font-bold tabular-nums text-slate-900">
@@ -34,7 +34,7 @@ export async function HomeSummarySection({ userId }: { userId: string }) {
         <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
           <Star size={18} strokeWidth={2.1} aria-hidden />
         </span>
-        <p className="line-clamp-2 min-h-[3rem] text-sm leading-tight text-sky-700">
+        <p className="line-clamp-2 min-h-[3rem] text-sm leading-tight text-[#0585FC]">
           <span className="font-bold">{nivelParts.category || "—"}</span>
           {nivelParts.description ? (
             <span className="font-medium">{" - "}{nivelParts.description}</span>

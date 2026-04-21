@@ -152,8 +152,8 @@ export default async function PerfilPage() {
         <div
           className="relative overflow-hidden rounded-3xl p-6 text-center"
           style={{
-            background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-            boxShadow: "0 8px 32px rgba(37,99,235,0.2)",
+            background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+            boxShadow: "0 8px 32px rgba(5,133,252,0.2)",
           }}
         >
           <div className="absolute bottom-0 left-4 opacity-5">

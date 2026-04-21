@@ -107,8 +107,8 @@ export default function TopNav() {
           <div
             className="flex h-14 items-center justify-between px-4"
             style={{
-              background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-              boxShadow: "0 2px 12px rgba(37,99,235,0.3)",
+              background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+              boxShadow: "0 2px 12px rgba(5,133,252,0.3)",
             }}
           >
             <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ export default function TopNav() {
 
           <div
             className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
           />
         </div>
       </header>
@@ -175,8 +175,8 @@ export default function TopNav() {
                 <motion.aside
                   className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto shadow-2xl"
                   style={{
-                    background: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%)",
-                    boxShadow: "-8px 0 32px rgba(37,99,235,0.3)",
+                    background: "linear-gradient(180deg, #0461C4 0%, #0350A8 50%, #024090 100%)",
+                    boxShadow: "-8px 0 32px rgba(5,133,252,0.25)",
                   }}
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}

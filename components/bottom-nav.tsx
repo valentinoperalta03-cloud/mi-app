@@ -48,7 +48,12 @@ export default function BottomNav() {
       aria-label="Navegación principal"
     >
       <div
-        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl border border-blue-500/20 bg-[rgba(10,22,40,0.92)] px-2 py-2 shadow-[0_-4px_32px_rgba(10,22,40,0.3),0_8px_32px_rgba(10,22,40,0.2)] backdrop-blur-[20px] dark:border-slate-700/40 dark:bg-[rgba(2,6,23,0.92)]"
+        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl px-2 py-2 backdrop-blur-[20px]"
+        style={{
+          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          boxShadow: "0 -2px 20px rgba(5,133,252,0.25)",
+          border: "1px solid rgba(255,255,255,0.15)",
+        }}
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -62,7 +67,7 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition-colors ${
-                active ? "text-sky-400" : "text-white/40"
+                active ? "text-white" : "text-white/50"
               }`}
             >
               {active ? (
