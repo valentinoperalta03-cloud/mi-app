@@ -3,8 +3,6 @@
 @theme {
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
-
-  /* Paleta principal — Azul pádel */
   --color-sky-50: #f0f9ff;
   --color-sky-100: #e0f2fe;
   --color-sky-200: #bae6fd;
@@ -16,24 +14,18 @@
   --color-sky-800: #075985;
   --color-sky-900: #0c4a6e;
   --color-sky-950: #082f49;
-
-  /* Azul profundo deportivo */
-  --color-brand-dark: #0a1628;
-  --color-brand-mid: #0d2444;
-  --color-brand-light: #1a3a6b;
-  --color-brand-accent: #0ea5e9;
-  --color-brand-glow: #38bdf8;
 }
 
+/* ── LIGHT MODE ─────────────────────────────────── */
 body {
   margin: 0;
-  background-color: #f0f7ff;
+  background-color: #f8fafc;
+  color: #0f172a;
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Fondo animado deportivo */
 body::before {
   content: "";
   position: fixed;
@@ -41,210 +33,72 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 10% 10%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 5%, rgba(56, 189, 248, 0.06) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 90%, rgba(3, 105, 161, 0.05) 0%, transparent 50%),
-    linear-gradient(180deg, #f0f7ff 0%, #e8f4fd 50%, #f0f7ff 100%);
-  animation: bgPulse 20s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 15% 0%, rgba(14,165,233,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 10%, rgba(56,189,248,0.04) 0%, transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #f0f7ff 100%);
 }
 
-@keyframes bgPulse {
-  0% { opacity: 0.8; }
-  100% { opacity: 1; }
-}
-
-/* Shimmer skeleton */
-.shimmer {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(90deg, #e2eef7 25%, #cce4f5 37%, #e2eef7 63%);
-  background-size: 400% 100%;
-  animation: shimmerMove 1.6s ease-in-out infinite;
-}
-
-@keyframes shimmerMove {
-  0% { background-position: 100% 0; }
-  100% { background-position: 0 0; }
-}
-
-/* Decoración de pádel — elementos SVG inline como clases */
-.padel-decoration {
-  position: relative;
-  overflow: hidden;
-}
-
-.padel-decoration::after {
-  content: "";
-  position: absolute;
-  bottom: -20px;
-  right: -20px;
-  width: 120px;
-  height: 120px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.04'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%230ea5e9' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%230ea5e9' stroke-width='2'/%3E%3Ccircle cx='50' cy='50' r='15' fill='none' stroke='%230ea5e9' stroke-width='1.5'/%3E%3C/svg%3E");
-  background-size: contain;
-  pointer-events: none;
-}
-
-.logo-adapt {
-  transition: filter 180ms ease;
-}
-
+/* ── DARK MODE ──────────────────────────────────── */
 .dark body {
-  background-color: #020617;
+  background-color: #0a0f1a;
   color: #e2e8f0;
 }
 
 .dark body::before {
   background:
-    radial-gradient(ellipse at 8% 10%, rgba(14,165,233,0.16) 0%, transparent 45%),
-    radial-gradient(ellipse at 92% 8%, rgba(56,189,248,0.1) 0%, transparent 40%),
-    radial-gradient(ellipse at 50% 92%, rgba(30,41,59,0.35) 0%, transparent 50%),
-    linear-gradient(180deg, #020617 0%, #0b1220 55%, #020617 100%);
+    radial-gradient(ellipse at 15% 0%, rgba(14,165,233,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 10%, rgba(56,189,248,0.05) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0f1a 0%, #0d1424 100%);
 }
 
-.dark .shimmer {
-  background: linear-gradient(90deg, #1e293b 25%, #0f172a 37%, #1e293b 63%);
-  background-size: 400% 100%;
-}
+/* White → dark slate in dark mode */
+.dark .bg-white { background-color: #111827 !important; }
+.dark .bg-slate-50 { background-color: #111827 !important; }
+.dark .bg-slate-100 { background-color: #1f2937 !important; }
+.dark .border-slate-200 { border-color: #1f2937 !important; }
+.dark .border-slate-100 { border-color: #1f2937 !important; }
+.dark .border-slate-200\/80 { border-color: rgba(31,41,55,0.8) !important; }
 
-.dark .logo-adapt {
-  filter: brightness(1.14) contrast(1.06);
-}
+/* Text in dark mode */
+.dark .text-slate-950 { color: #f9fafb !important; }
+.dark .text-slate-900 { color: #f3f4f6 !important; }
+.dark .text-slate-800 { color: #e5e7eb !important; }
+.dark .text-slate-700 { color: #d1d5db !important; }
+.dark .text-slate-600 { color: #9ca3af !important; }
+.dark .text-slate-500 { color: #6b7280 !important; }
 
-/* Dark mode global overrides */
-.dark {
-  color-scheme: dark;
-}
-
-.dark body {
-  background-color: #020617;
-  color: #e2e8f0;
-}
-
-/* All white backgrounds become dark */
-.dark .bg-white {
-  background-color: #0f172a !important;
-}
-
-.dark .bg-slate-50 {
-  background-color: #0f172a !important;
-}
-
-.dark .bg-slate-100 {
-  background-color: #1e293b !important;
-}
-
-/* All borders become darker */
-.dark .border-slate-200 {
-  border-color: #1e293b !important;
-}
-
-.dark .border-slate-100 {
-  border-color: #1e293b !important;
-}
-
-/* All dark text becomes light */
-.dark .text-slate-900 {
-  color: #f1f5f9 !important;
-}
-
-.dark .text-slate-800 {
-  color: #e2e8f0 !important;
-}
-
-.dark .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-.dark .text-slate-600 {
-  color: #94a3b8 !important;
-}
-
-.dark .text-slate-500 {
-  color: #64748b !important;
-}
-
-.dark .text-slate-950 {
-  color: #f8fafc !important;
-}
-
-/* Cards with shadow */
-.dark .shadow-sm,
-.dark .shadow,
-.dark [class*="shadow-"] {
-  --tw-shadow-color: rgba(0, 0, 0, 0.4);
-}
-
-/* Inputs and forms */
+/* Inputs in dark mode */
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
-  color: #e2e8f0 !important;
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb !important;
 }
-
 .dark input::placeholder,
-.dark textarea::placeholder {
-  color: #475569 !important;
+.dark textarea::placeholder { color: #6b7280 !important; }
+
+/* Colored backgrounds in dark mode */
+.dark .bg-sky-50 { background-color: #0c1e2e !important; }
+.dark .bg-emerald-50 { background-color: #061a0e !important; }
+.dark .bg-rose-50 { background-color: #1a0607 !important; }
+.dark .bg-amber-50 { background-color: #1a1006 !important; }
+
+/* ── SHIMMER ────────────────────────────────────── */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400% 100%;
+  animation: shimmerMove 1.6s ease-in-out infinite;
 }
 
-/* Interactive cards */
-.dark [class*="PLAYER_CARD"],
-.dark [class*="adminCard"] {
-  background-color: #0f172a !important;
-  border-color: #1e293b !important;
-}
-
-/* Shimmer in dark mode */
 .dark .shimmer {
-  background: linear-gradient(
-    90deg,
-    #1e293b 25%,
-    #0f172a 37%,
-    #1e293b 63%
-  ) !important;
-  background-size: 400% 100% !important;
+  background: linear-gradient(90deg, #1f2937 25%, #111827 37%, #1f2937 63%);
+  background-size: 400% 100%;
 }
 
-/* Bottom nav already dark - keep as is */
-
-/* Gradients used as page backgrounds */
-.dark .bg-transparent {
-  background-color: transparent !important;
-}
-
-/* White/light gradient backgrounds on sections */
-.dark [style*="background: linear-gradient"] {
-  /* Keep brand dark gradients as is */
-}
-
-/* Fix for specific sky-50 backgrounds used in info boxes */
-.dark .bg-sky-50 {
-  background-color: #0c2a3e !important;
-}
-
-.dark .bg-emerald-50 {
-  background-color: #052e16 !important;
-}
-
-.dark .bg-rose-50 {
-  background-color: #2d0a0a !important;
-}
-
-.dark .bg-amber-50 {
-  background-color: #2d1a00 !important;
-}
-
-/* Text on colored backgrounds */
-.dark .text-emerald-800 {
-  color: #6ee7b7 !important;
-}
-
-.dark .text-rose-800 {
-  color: #fca5a5 !important;
-}
-
-.dark .text-amber-800 {
-  color: #fcd34d !important;
+@keyframes shimmerMove {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
 }

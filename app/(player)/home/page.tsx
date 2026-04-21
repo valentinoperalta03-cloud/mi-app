@@ -112,7 +112,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           boxShadow: "0 8px 32px rgba(10, 22, 40, 0.3)",
         }}
       >
-        <div className="absolute right-4 top-4 opacity-10">
+        <div className="absolute right-4 top-4 opacity-[0.07]">
           <svg width="80" height="80" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
             <circle cx="40" cy="40" r="24" fill="none" stroke="white" strokeWidth="2" />
@@ -142,19 +142,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 active:scale-[0.98]"
-            style={{
-              background: "linear-gradient(135deg, #0d2444 0%, #0a1f3d 100%)",
-              border: "1px solid rgba(56, 189, 248, 0.15)",
-              boxShadow: "0 4px 16px rgba(10, 22, 40, 0.2)",
-            }}
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-sky-200 hover:shadow-md active:scale-[0.98] dark:border-slate-700/80 dark:bg-slate-800/80 dark:hover:border-sky-700"
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/15 ring-1 ring-sky-400/25">
-              <Icon size={22} className="text-sky-400" aria-hidden />
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 ring-1 ring-sky-100 dark:bg-sky-900/30 dark:ring-sky-800/50">
+              <Icon size={22} className="text-sky-600 dark:text-sky-400" aria-hidden />
             </span>
             <div className="mt-3">
-              <h2 className="text-[15px] font-bold leading-tight text-white">{title}</h2>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-white/50">{desc}</p>
+              <h2 className="text-[15px] font-bold leading-tight text-slate-900 dark:text-white">{title}</h2>
+              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-500 dark:text-slate-400">{desc}</p>
             </div>
           </Link>
         ))}
