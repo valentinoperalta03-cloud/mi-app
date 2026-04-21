@@ -5,9 +5,9 @@ import { CircleDot } from "lucide-react";
 export default function NotFound() {
   return (
     <main className="relative flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-sky-50 via-white to-slate-50" />
-      <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-sky-200/40 blur-3xl" />
-      <div className="absolute -right-20 bottom-12 h-64 w-64 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0585FC] via-white to-slate-50" />
+      <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[#0585FC]/10 blur-3xl" />
+      <div className="absolute -right-20 bottom-12 h-64 w-64 rounded-full bg-[#0585FC]/10 blur-3xl" />
 
       <section className="relative w-full max-w-md overflow-hidden rounded-[32px] border border-slate-200/70 bg-white/90 p-8 text-center shadow-[0_20px_60px_-28px_rgba(15,23,42,0.28)] backdrop-blur-[2px] sm:p-10">
         <div className="mx-auto mb-6">
@@ -16,7 +16,7 @@ export default function NotFound() {
           </div>
         </div>
 
-        <div className="mx-auto mb-7 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-sky-50 text-sky-800 ring-1 ring-sky-200/80">
+        <div className="mx-auto mb-7 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0585FC]/5 text-[#0585FC] ring-1 ring-[#0585FC]/20/80">
           <CircleDot size={34} strokeWidth={2.1} aria-hidden />
         </div>
 
@@ -35,7 +35,7 @@ export default function NotFound() {
         </svg>
 
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Error 404</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0461C4]">Error 404</p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Esta página no existe</h1>
           <p className="mx-auto max-w-sm text-sm font-medium leading-relaxed text-slate-600">
             Parece que la página que buscás se tomó un descanso. ¡Volvamos a la cancha!

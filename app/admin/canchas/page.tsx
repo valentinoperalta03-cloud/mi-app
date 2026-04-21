@@ -34,7 +34,7 @@ export default async function AdminCanchasPage() {
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-sky-600`}>Canchas</p>
+        <p className={`${adminKicker} text-[#0585FC]`}>Canchas</p>
         <h1 className={adminTitle}>Mis canchas</h1>
         <p className={adminSubtitle}>Gestioná precios y horarios de cada cancha.</p>
       </header>
@@ -47,8 +47,8 @@ export default async function AdminCanchasPage() {
 
       {ctx.clubs.length > 0 ? (
         <details className={`${adminCard} group`}>
-          <summary className="cursor-pointer list-none text-sm font-semibold text-sky-700 marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2 group-open:border-sky-300">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-2 group-open:border-[#0585FC]/30">
               Nueva cancha +
             </span>
           </summary>
@@ -58,7 +58,7 @@ export default async function AdminCanchasPage() {
               <select
                 name="club_id"
                 required
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                 defaultValue={ctx.clubs[0]?.id ?? ""}
               >
                 {ctx.clubs.map((c) => (
@@ -75,7 +75,7 @@ export default async function AdminCanchasPage() {
                 type="text"
                 required
                 placeholder="Ej. Cancha 1"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
               />
             </label>
             <label className="block space-y-1.5">
@@ -88,7 +88,7 @@ export default async function AdminCanchasPage() {
                 min={0}
                 required
                 placeholder="0"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
               />
             </label>
             <button
@@ -116,11 +116,11 @@ export default async function AdminCanchasPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-lg font-bold text-slate-900">{c.name ?? "Cancha"}</p>
-                  <p className="text-sm font-medium text-sky-700">${c.price ?? 0}/turno</p>
+                  <p className="text-sm font-medium text-[#0461C4]">${c.price ?? 0}/turno</p>
                 </div>
                 <Link
                   href={`/admin/canchas/${c.id}/horarios`}
-                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                  className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5"
                 >
                   Horarios
                 </Link>

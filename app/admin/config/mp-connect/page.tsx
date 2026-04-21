@@ -65,7 +65,7 @@ export default async function MercadoPagoConnectPage() {
                 {href ? (
                   <a
                     href={href}
-                    className={`inline-flex w-full items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 ${adminPressable}`}
+                    className={`inline-flex w-full items-center justify-center rounded-2xl bg-[#0461C4] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#0585FC]/50 ${adminPressable}`}
                   >
                     Conectar con Mercado Pago — {club.name ?? "Club"}
                   </a>
@@ -78,7 +78,7 @@ export default async function MercadoPagoConnectPage() {
             );
           })}
         </ul>
-        <Link href="/admin/config" className="text-sm font-semibold text-sky-600 hover:text-sky-500">
+        <Link href="/admin/config" className="text-sm font-semibold text-[#0585FC] hover:text-[#0585FC]">
           Volver a configuración
         </Link>
       </section>

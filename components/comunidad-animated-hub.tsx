@@ -12,7 +12,7 @@ const sections = [
     cta: "Buscar jugadores",
     Icon: Users,
     iconClass:
-      "bg-gradient-to-br from-sky-400 via-sky-500 to-indigo-500 text-white shadow-inner shadow-white/20",
+      "bg-gradient-to-br from-[#0585FC] via-[#0585FC] to-indigo-500 text-white shadow-inner shadow-white/20",
   },
   {
     title: "Para ti",
@@ -21,7 +21,7 @@ const sections = [
     cta: "Ver feed",
     Icon: Sparkles,
     iconClass:
-      "bg-gradient-to-br from-indigo-400 via-sky-500 to-cyan-400 text-white shadow-inner shadow-white/20",
+      "bg-gradient-to-br from-indigo-400 via-[#0585FC] to-cyan-400 text-white shadow-inner shadow-white/20",
   },
   {
     title: "Mensajes",
@@ -30,7 +30,7 @@ const sections = [
     cta: "Abrir mensajes",
     Icon: MessageCircle,
     iconClass:
-      "bg-gradient-to-br from-cyan-400 via-sky-500 to-sky-600 text-white shadow-inner shadow-white/20",
+      "bg-gradient-to-br from-cyan-400 via-[#0585FC] to-[#0461C4] text-white shadow-inner shadow-white/20",
   },
 ] as const;
 
@@ -72,7 +72,7 @@ export function ComunidadAnimatedHub() {
             <p className="text-sm leading-relaxed text-slate-500">{description}</p>
             <Link
               href={href}
-              className="inline-flex rounded-[2rem] bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-sky-600/20 transition hover:bg-sky-500"
+              className="inline-flex rounded-[2rem] bg-[#0461C4] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-sky-600/20 transition hover:bg-[#0585FC]/50"
             >
               {cta}
             </Link>

@@ -75,15 +75,15 @@ export default async function AdminConfigPage() {
         </Link>
         <Link
           href="/club/horarios"
-          className={`group flex h-full flex-col rounded-2xl border border-sky-200/55 bg-gradient-to-br from-sky-500/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-sky-300/80 hover:shadow-lg`}
+          className={`group flex h-full flex-col rounded-2xl border border-[#0585FC]/20/55 bg-gradient-to-br from-[#0585FC]/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-[#0585FC]/30/80 hover:shadow-lg`}
         >
-          <p className="text-sm font-semibold text-sky-700">Horarios</p>
+          <p className="text-sm font-semibold text-[#0461C4]">Horarios</p>
           <p className="mt-2 text-base font-bold text-slate-900">Configuración de canchas</p>
           <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
             Apertura y cierre por día (
             <code className="text-xs text-slate-500">court_schedules</code>).
           </p>
-          <span className="mt-5 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
+          <span className="mt-5 text-sm font-semibold text-[#0585FC] group-hover:text-[#0585FC]">
             Abrir
           </span>
         </Link>
@@ -96,7 +96,7 @@ export default async function AdminConfigPage() {
           <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
             Grilla del día, bloqueos manuales y estado frente a partidos reservados.
           </p>
-          <span className="mt-5 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
+          <span className="mt-5 text-sm font-semibold text-[#0585FC] group-hover:text-[#0585FC]">
             Abrir
           </span>
         </Link>
@@ -121,7 +121,7 @@ export default async function AdminConfigPage() {
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/60 ring-1 ring-slate-200/40">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-300/90 via-sky-400/85 to-sky-500/75 shadow-sm"
+                    className="h-full rounded-full bg-gradient-to-r from-[#0585FC]/90 via-[#0585FC]/85 to-[#0461C4]/75 shadow-sm"
                     style={{
                       width: `${maxG > 0 ? Math.max(8, (g.count / maxG) * 100) : 0}%`,
                     }}

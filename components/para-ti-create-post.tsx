@@ -55,7 +55,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
           rows={5}
           placeholder="¿Qué querés compartir?"
           disabled={pending}
-          className="w-full resize-none rounded-[2rem] border border-slate-200/90 bg-slate-50/80 px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-200/50"
+          className="w-full resize-none rounded-[2rem] border border-slate-200/90 bg-slate-50/80 px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0585FC] focus:bg-white focus:ring-2 focus:ring-[#0585FC]/20/50"
         />
 
         {latestMatch ? (
@@ -64,7 +64,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
               type="checkbox"
               name="link_match"
               disabled={pending}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 disabled:opacity-50"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0585FC] disabled:opacity-50"
             />
             <span className="text-sm leading-snug text-slate-600">
               <span className="font-semibold text-slate-800">
@@ -93,7 +93,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-[2rem] bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-500 disabled:opacity-50"
+          className="w-full rounded-[2rem] bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50 disabled:opacity-50"
         >
           {pending ? "Publicando…" : "Publicar"}
         </button>
@@ -125,7 +125,7 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
               type="button"
               onClick={handleOpen}
               aria-label="Nueva publicación"
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-[0_12px_40px_-8px_rgba(2,132,199,0.55)] ring-4 ring-white/90 transition hover:bg-sky-500 hover:shadow-lg active:scale-95"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0461C4] text-white shadow-[0_12px_40px_-8px_rgba(2,132,199,0.55)] ring-4 ring-white/90 transition hover:bg-[#0585FC]/50 hover:shadow-lg active:scale-95"
             >
               <Plus size={28} strokeWidth={2.25} aria-hidden />
             </button>

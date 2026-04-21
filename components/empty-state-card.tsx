@@ -41,7 +41,7 @@ export default function EmptyStateCard({
 
         <Link
           href={ctaHref}
-          className="mt-8 inline-flex w-full items-center justify-center rounded-3xl bg-gradient-to-r from-sky-500 to-cyan-500 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-[0.99]"
+          className="mt-8 inline-flex w-full items-center justify-center rounded-3xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-[0.99]"
         >
           {ctaLabel}
         </Link>

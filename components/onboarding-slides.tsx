@@ -87,7 +87,7 @@ export default function OnboardingSlides() {
                 "radial-gradient(120% 120% at 0% 0%, #eff6ff 0%, #dbeafe 38%, #e0f2fe 65%, #f8fafc 100%)",
             }}
           >
-            <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-sky-300/30 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[#0585FC]/10 blur-3xl" />
             <div className="pointer-events-none absolute -left-12 bottom-8 h-44 w-44 rounded-full bg-indigo-200/35 blur-3xl" />
 
             <div className="relative z-10 flex min-h-[72vh] flex-col px-6 pb-6 pt-7">
@@ -106,7 +106,7 @@ export default function OnboardingSlides() {
                   transition={{ duration: 0.28, ease: "easeOut" }}
                   className="flex flex-1 flex-col items-center justify-center text-center"
                 >
-                  <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-white/75 text-sky-700 shadow-[0_8px_20px_-12px_rgba(2,132,199,0.45)] ring-1 ring-sky-100">
+                  <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-white/75 text-[#0461C4] shadow-[0_8px_20px_-12px_rgba(2,132,199,0.45)] ring-1 ring-[#0585FC]/40">
                     <current.Icon size={36} strokeWidth={2.1} />
                   </div>
                   <h2 className="text-3xl font-bold tracking-tight text-slate-900">{current.title}</h2>
@@ -121,7 +121,7 @@ export default function OnboardingSlides() {
                   <span
                     key={slide.title}
                     className={`h-2 rounded-full transition-all duration-250 ${
-                      dotIndex === index ? "w-6 bg-sky-600" : "w-2 bg-slate-300"
+                      dotIndex === index ? "w-6 bg-[#0461C4]" : "w-2 bg-slate-300"
                     }`}
                   />
                 ))}

@@ -80,8 +80,8 @@ export default function TimeGrid({
                     occupied
                       ? "cursor-not-allowed bg-slate-100 text-slate-400 opacity-60"
                       : isSelected
-                        ? "border-sky-200 bg-sky-500 text-white shadow-sm"
-                        : "bg-white text-slate-700 hover:bg-sky-50 hover:border-sky-100"
+                        ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-sm"
+                        : "bg-white text-slate-700 hover:bg-[#0585FC]/5 hover:border-[#0585FC]/20"
                   }`}
                 >
                   {occupied ? "Ocupada" : isSelected ? "Seleccionada" : "Disponible"}

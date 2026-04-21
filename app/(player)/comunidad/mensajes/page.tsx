@@ -21,7 +21,7 @@ export default async function MensajesPage() {
       <header className="mb-6 space-y-2">
         <Link
           href="/comunidad"
-          className="inline-block text-sm font-semibold text-sky-600 hover:text-sky-700"
+          className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]"
         >
           ← Comunidad
         </Link>
@@ -56,7 +56,7 @@ export default async function MensajesPage() {
                     <p className="mt-0.5 text-xs font-medium text-slate-400">{when}</p>
                   ) : null}
                 </div>
-                <span className="text-sky-600">→</span>
+                <span className="text-[#0585FC]">→</span>
               </Link>
             </li>
           );
@@ -66,7 +66,7 @@ export default async function MensajesPage() {
       {conversations.length === 0 ? (
         <p className="rounded-[2.5rem] border border-dashed border-slate-200/90 bg-white/90 px-5 py-8 text-center text-sm text-slate-500">
           Agregá jugadores a{" "}
-          <Link href="/comunidad/buscar" className="font-semibold text-sky-700 underline">
+          <Link href="/comunidad/buscar" className="font-semibold text-[#0461C4] underline">
             favoritos
           </Link>{" "}
           o esperá un mensaje para ver conversaciones acá.

@@ -56,7 +56,7 @@ function ChatInputBar({
             type="button"
             disabled={pending || !value.trim()}
             onClick={() => void submit()}
-            className="mb-0.5 shrink-0 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:opacity-40"
+            className="mb-0.5 shrink-0 rounded-full bg-[#0461C4] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:opacity-40"
           >
             Enviar
           </button>
@@ -136,14 +136,14 @@ export function ChatThread({
               <div
                 className={`max-w-[85%] rounded-[1.75rem] px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
                   mine
-                    ? "rounded-br-md bg-sky-600 text-white"
+                    ? "rounded-br-md bg-[#0461C4] text-white"
                     : "rounded-bl-md bg-slate-100 text-slate-800"
                 }`}
               >
                 <p className="whitespace-pre-wrap">{m.content}</p>
                 <p
                   className={`mt-1 text-[10px] font-medium tabular-nums ${
-                    mine ? "text-sky-100/90" : "text-slate-400"
+                    mine ? "text-[#0585FC]" : "text-slate-400"
                   }`}
                 >
                   {format(new Date(m.created_at), "HH:mm", { locale: es })}

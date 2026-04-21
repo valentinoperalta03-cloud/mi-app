@@ -92,7 +92,7 @@ export function MatchResultForm({
           <button
             type="submit"
             disabled={lockedByTeammate}
-            className="w-full rounded-2xl bg-sky-600 py-3.5 text-base font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="w-full rounded-2xl bg-[#0461C4] py-3.5 text-base font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             Cargar Resultado
           </button>

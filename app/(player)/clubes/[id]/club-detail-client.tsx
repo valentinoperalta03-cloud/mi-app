@@ -150,7 +150,7 @@ export default function ClubDetailClient({
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-40 pt-6 font-sans tracking-tight">
-      <Link href="/clubes" className="text-sm font-medium text-sky-500">
+      <Link href="/clubes" className="text-sm font-medium text-[#0585FC]">
         Volver a clubes
       </Link>
 
@@ -190,8 +190,8 @@ export default function ClubDetailClient({
                 whileTap={{ scale: 0.96 }}
                 className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs transition-all duration-300 ${
                   active
-                    ? "border-sky-500 bg-sky-500 text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-sky-300"
+                    ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30"
                 }`}
               >
                 <p className="font-semibold">{format(dateItem, "EEE")}</p>

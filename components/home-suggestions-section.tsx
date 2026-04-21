@@ -38,7 +38,7 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
                 />
               </div>
               <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900">{label}</p>
-              <p className="mt-0.5 line-clamp-1 text-xs text-sky-700">
+              <p className="mt-0.5 line-clamp-1 text-xs text-[#0461C4]">
                 <span className="font-bold">{nivelParts.category || "—"}</span>
                 {nivelParts.description ? (
                   <span className="font-medium">{" - "}{nivelParts.description}</span>

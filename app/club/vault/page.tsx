@@ -105,7 +105,7 @@ export default async function OwnerVaultPage() {
     <main className="space-y-6">
       <AdminBackLink href="/admin/dashboard" label="Volver al panel" />
       <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-sky-600">Boveda del Dueno</p>
+        <p className="text-sm font-medium text-[#0585FC]">Boveda del Dueno</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">Ingresos y jugadores clave</h1>
         <p className="mt-2 text-sm text-slate-500">
           Informacion financiera y de comportamiento del club.
@@ -148,7 +148,7 @@ export default async function OwnerVaultPage() {
 
         <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">
-            <Users size={18} className="text-sky-600" />
+            <Users size={18} className="text-[#0585FC]" />
             <h2 className="text-base font-semibold text-slate-900">Jugadores recurrentes</h2>
           </div>
           <p className="mt-1 text-sm text-slate-500">Frecuencia de reservas por `matches.owner_id`.</p>
@@ -162,7 +162,7 @@ export default async function OwnerVaultPage() {
                   className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
                 >
                   <span className="text-sm font-medium text-slate-800">{player.name}</span>
-                  <span className="text-xs font-semibold text-sky-700">
+                  <span className="text-xs font-semibold text-[#0461C4]">
                     {player.count} reserva(s)
                   </span>
                 </div>

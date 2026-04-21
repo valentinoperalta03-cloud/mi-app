@@ -140,7 +140,7 @@ export default function FriendsSearchClient({
                   <ProfileAvatar avatarUrl={player.avatar_url} name={label} size={48} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">{label}</p>
-                    <span className="mt-1 inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700">
+                    <span className="mt-1 inline-flex rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-2.5 py-1 text-[11px] font-semibold text-[#0461C4]">
                       {nivelParts.category || "Sin nivel"}
                     </span>
                   </div>

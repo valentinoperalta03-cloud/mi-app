@@ -59,7 +59,7 @@ function ManualBlockDialog({
             <select
               name="court_id"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
             >
               {courts.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -74,7 +74,7 @@ function ManualBlockDialog({
               name="date"
               type="date"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
             />
           </label>
           <label className="block space-y-1.5">
@@ -82,7 +82,7 @@ function ManualBlockDialog({
             <select
               name="start_time"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
             >
               {SLOT_TIMES.map((t) => (
                 <option key={t} value={t}>

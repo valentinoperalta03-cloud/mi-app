@@ -3,12 +3,12 @@ import Link from "next/link";
 export default function TerminosPage() {
   return (
     <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-6">
-      <Link href="/perfil" className="text-sm font-semibold text-sky-600">
+      <Link href="/perfil" className="text-sm font-semibold text-[#0585FC]">
         Volver
       </Link>
 
       <header className="mb-6 mt-3 space-y-1">
-        <p className="text-sm font-medium text-sky-600">Legal</p>
+        <p className="text-sm font-medium text-[#0585FC]">Legal</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Términos y Condiciones de Uso</h1>
         <p className="text-xs text-slate-400">Última actualización: Abril 2026</p>
       </header>

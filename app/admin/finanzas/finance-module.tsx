@@ -194,7 +194,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4));
             setPinError(false);
           }}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
           placeholder="····"
           autoComplete="one-time-code"
         />

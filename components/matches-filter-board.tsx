@@ -115,7 +115,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
               }`}
             >
               <div className="absolute right-3 top-3 opacity-5">
-                <svg width="32" height="32" viewBox="0 0 32 32" className="text-sky-800">
+                <svg width="32" height="32" viewBox="0 0 32 32" className="text-[#0585FC]">
                   <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
                   <path d="M5 12 Q16 10 27 12" stroke="currentColor" strokeWidth="1.5" fill="none" />
                   <path d="M5 16 Q16 14 27 16" stroke="currentColor" strokeWidth="1.5" fill="none" />
@@ -134,12 +134,12 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                     {categoryLabel}
                   </span>
                   {match.is_competitive ? (
-                    <span className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                    <span className="shrink-0 rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]">
                       Partido competitivo
                     </span>
                   ) : null}
                   {match.level_restricted ? (
-                    <span className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                    <span className="shrink-0 rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]">
                       Nivel restringido 🎯
                     </span>
                   ) : null}
@@ -152,7 +152,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                 </p>
                 <p>
                   <span className="font-medium text-slate-800">Nivel promedio:</span>{" "}
-                  <span className="text-sky-700">
+                  <span className="text-[#0461C4]">
                     <span className="font-bold">{match.levelCategory || "—"}</span>
                     {match.levelDescription ? (
                       <span className="font-medium">{" - "}{match.levelDescription}</span>
@@ -162,7 +162,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                 {match.joinShare > 0 ? (
                   <p>
                     <span className="font-medium text-slate-800">💳 Costo para unirse:</span>{" "}
-                    <span className="font-semibold text-sky-800">${match.joinShare}</span>
+                    <span className="font-semibold text-[#0585FC]">${match.joinShare}</span>
                   </p>
                 ) : null}
                 <p>
@@ -176,7 +176,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                     <li key={mp.player_id}>
                       <Link
                         href={`/jugador/${mp.player_id}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-sky-700 hover:text-sky-800"
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0585FC]"
                       >
                         <ProfileAvatar
                           avatarUrl={mp.avatar_url}
@@ -186,7 +186,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                         />
                         <span className="flex flex-col leading-tight">
                           <span>{mp.name}</span>
-                          <span className="text-[10px] font-medium text-sky-600/90">
+                          <span className="text-[10px] font-medium text-[#0585FC]/90">
                             <span className="font-bold">{mp.nivelCategory || "—"}</span>
                             {mp.nivelDescription ? (
                               <span>{" - "}{mp.nivelDescription}</span>

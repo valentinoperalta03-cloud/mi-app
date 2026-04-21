@@ -17,7 +17,7 @@ function displayMessage(raw: string | undefined) {
 function LoginMark() {
   return (
     <div
-      className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-sky-600 to-indigo-600 shadow-[0_4px_14px_-2px_rgba(2,132,199,0.35)] ring-4 ring-white/90"
+      className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] via-[#0585FC] to-indigo-600 shadow-[0_4px_14px_-2px_rgba(2,132,199,0.35)] ring-4 ring-white/90"
       aria-hidden
     >
       <svg width="22" height="22" viewBox="0 0 32 32" fill="none" className="text-white">
@@ -55,7 +55,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               className={
                 isError
                   ? "mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800"
-                  : "mb-6 rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-sm font-medium text-sky-900"
+                  : "mb-6 rounded-2xl border border-[#0585FC]/20/80 bg-[#0585FC]/5/90 px-4 py-3 text-sm font-medium text-[#0585FC]"
               }
             >
               {text}

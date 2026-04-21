@@ -25,7 +25,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-3xl bg-gradient-to-r from-sky-500 to-cyan-500 px-5 py-3 text-base font-semibold text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+      className="w-full rounded-3xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-5 py-3 text-base font-semibold text-white shadow-sm transition-all duration-300 hover:opacity-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Creando partido..." : "Crear partido"}
     </button>
@@ -66,7 +66,7 @@ export default function CreateMatchForm({
           required
           value={selectedClubId}
           onChange={(event) => setSelectedClubId(event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
         >
           {clubs.map((club) => (
             <option key={club.id} value={club.id}>
@@ -86,7 +86,7 @@ export default function CreateMatchForm({
           key={selectedClubId}
           required
           disabled={availableCourts.length === 0}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
         >
           {availableCourts.length === 0 ? (
             <option value="">No hay canchas para este club</option>
@@ -111,7 +111,7 @@ export default function CreateMatchForm({
           min={defaultDate}
           defaultValue={defaultDate}
           required
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
         />
       </div>
 
@@ -124,7 +124,7 @@ export default function CreateMatchForm({
           name="match_time"
           type="time"
           required
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
         />
       </div>
 
@@ -139,7 +139,7 @@ export default function CreateMatchForm({
           <input
             name="is_competitive"
             type="checkbox"
-            className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:inline-block before:h-5 before:w-5 before:translate-x-0.5 before:rounded-full before:bg-white before:shadow before:transition checked:bg-sky-500 checked:before:translate-x-5"
+            className="h-6 w-11 cursor-pointer appearance-none rounded-full bg-slate-300 transition before:inline-block before:h-5 before:w-5 before:translate-x-0.5 before:rounded-full before:bg-white before:shadow before:transition checked:bg-[#0585FC]/50 checked:before:translate-x-5"
           />
         </label>
 

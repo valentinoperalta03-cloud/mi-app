@@ -12,7 +12,7 @@ export const PLAYER_CARD_INTERACTIVE =
   "hover:shadow-[0_2px_8px_rgba(0,0,0,0.08),0_8px_24px_rgba(0,0,0,0.06)] " +
   "hover:-translate-y-0.5 active:scale-[0.99] active:translate-y-0 " +
   "dark:bg-slate-900 dark:border-white/[0.06] " +
-  "dark:hover:border-sky-800/50";
+  "dark:hover:border-[#0585FC]/20";
 
 // Sky blue gradient button — iOS style
 export const PLAYER_PRIMARY_BUTTON =
@@ -28,7 +28,7 @@ export const PLAYER_SECONDARY_BUTTON =
   "px-4 py-2 text-sm font-semibold text-slate-700 " +
   "shadow-[0_1px_2px_rgba(0,0,0,0.04)] " +
   "transition-all duration-200 " +
-  "hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 " +
+  "hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 hover:text-[#0461C4] " +
   "active:scale-[0.98] " +
   "dark:border-white/[0.08] dark:bg-slate-800 dark:text-slate-200";
 

@@ -41,7 +41,7 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
                   <Link
                     href={`/jugador/${p.user_id}`}
-                    className="font-semibold text-slate-900 hover:text-sky-700"
+                    className="font-semibold text-slate-900 hover:text-[#0461C4]"
                   >
                     {name}
                   </Link>
@@ -54,7 +54,7 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
                   {p.content}
                 </p>
                 {p.match_id ? (
-                  <p className="mt-3 inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 ring-1 ring-sky-200/60">
+                  <p className="mt-3 inline-flex items-center rounded-full bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0585FC] ring-1 ring-[#0585FC]/20/60">
                     <span className="mr-1.5" aria-hidden>
                       🏆
                     </span>

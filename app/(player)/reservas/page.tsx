@@ -65,7 +65,7 @@ function ReservationCard({
             const normalized = (status || "").toLowerCase();
             if (normalized.includes("compet")) {
               return (
-                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200/80 dark:bg-sky-950/50 dark:text-sky-400 dark:ring-sky-800/50">
+                <span className="rounded-full bg-[#0585FC]/5 px-2.5 py-1 text-[11px] font-semibold text-[#0461C4] ring-1 ring-[#0585FC]/20/80 dark:bg-[#0585FC]/10 dark:text-[#0585FC] dark:ring-[#0585FC]/40">
                   Competitivo
                 </span>
               );
@@ -107,7 +107,7 @@ function ReservationCard({
         </div>
         <div className="flex justify-between">
           <dt className="text-slate-500">Precio</dt>
-          <dd className="shrink-0 font-bold text-sky-800">{precio}</dd>
+          <dd className="shrink-0 font-bold text-[#0585FC]">{precio}</dd>
         </div>
       </dl>
       {showCancel && badgeReserved ? (
@@ -211,7 +211,7 @@ export default async function ReservasPage({
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-sky-600">Reservas</p>
+        <p className="text-sm font-medium text-[#0585FC]">Reservas</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">Mis reservas</h1>
         <p className="text-sm font-light text-slate-500">Canchas que reservaste con FaltaUno.</p>
       </header>

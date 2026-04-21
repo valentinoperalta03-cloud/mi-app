@@ -52,7 +52,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/canchas" />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-sky-600`}>Horarios</p>
+        <p className={`${adminKicker} text-[#0585FC]`}>Horarios</p>
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>
         <p className={adminSubtitle}>Activá los días y definí apertura y cierre.</p>
       </header>
@@ -83,7 +83,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                     type="time"
                     name={`day_${d}_open`}
                     defaultValue={normalizeTime(row?.open_time ?? null, "08:00")}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                   />
                 </label>
                 <label className="block space-y-1">
@@ -92,7 +92,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                     type="time"
                     name={`day_${d}_close`}
                     defaultValue={normalizeTime(row?.close_time ?? null, "22:00")}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                   />
                 </label>
               </div>

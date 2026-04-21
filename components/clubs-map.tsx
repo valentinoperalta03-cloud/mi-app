@@ -42,7 +42,7 @@ export default function ClubsMap({ clubs, userLocation, onClubClick }: Props) {
 
       if (userLocation) {
         const userIcon = L.divIcon({
-          html: '<div style="background:#0ea5e9;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>',
+          html: '<div style="background:#0585FC;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>',
           iconSize: [16, 16],
           className: "",
         });
@@ -64,7 +64,7 @@ export default function ClubsMap({ clubs, userLocation, onClubClick }: Props) {
           .bindPopup(`
             <b>${club.name ?? "Club"}</b><br>
             ${club.location ?? ""}<br>
-            <a href="/clubes/${club.id}" style="color:#0ea5e9">Ver canchas →</a>
+            <a href="/clubes/${club.id}" style="color:#0585FC">Ver canchas →</a>
           `);
       });
     });

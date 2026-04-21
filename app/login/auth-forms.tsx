@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { resendOtpCode, signInWithEmail, signUpWithEmail, verifyOtpCode } from "./actions";
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-sky-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
+  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
 
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400";
 
@@ -80,9 +80,9 @@ function EmailSubmitButton({
   const base =
     "w-full rounded-2xl py-4 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55";
   const primary =
-    "bg-gradient-to-b from-sky-500 to-sky-600 text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-sky-400 hover:to-sky-500 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
+    "bg-gradient-to-b from-[#0585FC] to-[#0461C4] text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
   const ghost =
-    "mt-1 text-sky-600 hover:bg-sky-50/90 active:scale-[0.99]";
+    "mt-1 text-[#0585FC] hover:bg-[#0585FC]/5/90 active:scale-[0.99]";
 
   return (
     <button
@@ -213,7 +213,7 @@ function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => voi
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-sky-400 hover:to-sky-500 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+          className="w-full rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
         >
           {pending ? "Creando cuenta..." : "Crear mi cuenta"}
         </button>
@@ -295,7 +295,7 @@ function OtpForm({
         <button
           type="submit"
           disabled={verifyPending}
-          className="w-full rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-sky-400 hover:to-sky-500 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+          className="w-full rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
         >
           {verifyPending ? "Verificando..." : "Verificar código"}
         </button>
@@ -319,7 +319,7 @@ function OtpForm({
             setCooldown(30);
           });
         }}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-sky-600 transition-all duration-200 hover:bg-sky-50/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
       >
         {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviar código"}
       </button>
@@ -327,7 +327,7 @@ function OtpForm({
       <button
         type="button"
         onClick={onBack}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-sky-600 transition-all duration-200 hover:bg-sky-50/90 active:scale-[0.99]"
+        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99]"
       >
         Volver
       </button>
@@ -370,7 +370,7 @@ export function EmailAuthForm() {
         <button
           type="button"
           onClick={() => setIsLogin((prev) => !prev)}
-          className="w-full rounded-2xl py-4 text-[15px] font-semibold text-sky-600 transition-all duration-200 hover:bg-sky-50/90 active:scale-[0.99]"
+          className="w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99]"
         >
           {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
         </button>

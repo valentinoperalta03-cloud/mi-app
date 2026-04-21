@@ -9,7 +9,7 @@ export default function TestPage() {
       </p>
       <Link
         href="/"
-        className="inline-block rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white"
+        className="inline-block rounded-2xl bg-[#0585FC]/50 px-4 py-2 text-sm font-semibold text-white"
       >
         Volver al inicio
       </Link>

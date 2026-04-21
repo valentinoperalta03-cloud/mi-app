@@ -11,7 +11,7 @@ import {
   computeLevelFromAnswers,
 } from "@/lib/level-quiz-logic";
 
-const ACCENT_BLUE = "bg-sky-600";
+const ACCENT_BLUE = "bg-[#0461C4]";
 
 export function ProfileLevelingWizard() {
   const router = useRouter();
@@ -92,7 +92,7 @@ export function ProfileLevelingWizard() {
   return (
     <div className="flex flex-col gap-5 pb-8" suppressHydrationWarning>
       <header className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.22)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0461C4]">
           FaltaUno
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
@@ -131,7 +131,7 @@ export function ProfileLevelingWizard() {
             transition={{ duration: 0.3 }}
             className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.22)]"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0461C4]">
               {currentQuestion.title}
             </p>
             <h2 className="mt-3 text-[1.65rem] font-semibold leading-tight text-slate-950">
@@ -148,8 +148,8 @@ export function ProfileLevelingWizard() {
                     onClick={() => handleSelectAnswer(opt.score)}
                     className={`w-full rounded-3xl border bg-white px-5 py-4 text-left transition ${
                       on
-                        ? "border-sky-600 ring-2 ring-sky-300"
-                        : "border-slate-200 hover:border-sky-300"
+                        ? "border-[#0585FC]/20 ring-2 ring-[#0585FC]/40"
+                        : "border-slate-200 hover:border-[#0585FC]/30"
                     }`}
                   >
                     <p className="text-base font-semibold text-slate-900">{opt.text}</p>
@@ -173,7 +173,7 @@ export function ProfileLevelingWizard() {
                 type="button"
                 disabled={!selectedAnswer || autoAdvancing || busy}
                 onClick={() => goToNextQuestion()}
-                className={`flex-1 rounded-3xl py-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${ACCENT_BLUE} hover:bg-sky-500`}
+                className={`flex-1 rounded-3xl py-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${ACCENT_BLUE} hover:bg-[#0585FC]/50`}
               >
                 {busy
                   ? "Guardando..."
@@ -199,7 +199,7 @@ export function ProfileLevelingWizard() {
             transition={{ duration: 0.3 }}
             className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.22)]"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0461C4]">
               Nivelacion completada
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
@@ -219,7 +219,7 @@ export function ProfileLevelingWizard() {
                 router.push("/home?nivelacion=ok");
                 router.refresh();
               }}
-              className={`mt-6 w-full rounded-3xl py-4 text-base font-semibold text-white transition hover:bg-sky-500 ${ACCENT_BLUE}`}
+              className={`mt-6 w-full rounded-3xl py-4 text-base font-semibold text-white transition hover:bg-[#0585FC]/50 ${ACCENT_BLUE}`}
             >
               Guardar y Empezar
             </button>

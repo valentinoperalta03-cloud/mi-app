@@ -8,9 +8,9 @@
   --color-sky-200: #bae6fd;
   --color-sky-300: #7dd3fc;
   --color-sky-400: #38bdf8;
-  --color-sky-500: #0ea5e9;
-  --color-sky-600: #0284c7;
-  --color-sky-700: #0369a1;
+  --color-sky-500: #0585FC;
+  --color-sky-600: #0461C4;
+  --color-sky-700: #0461C4;
   --color-sky-800: #075985;
   --color-sky-900: #0c4a6e;
   --color-sky-950: #082f49;
@@ -51,12 +51,12 @@ body::before {
 
 /* Premium button */
 .btn-primary {
-  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
   box-shadow: 0 1px 3px rgba(2,132,199,0.3), 0 4px 12px rgba(14,165,233,0.2);
   transition: all 0.2s ease;
 }
 .btn-primary:hover {
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
+  background: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
   box-shadow: 0 1px 3px rgba(2,132,199,0.4), 0 6px 16px rgba(14,165,233,0.3);
 }
 .btn-primary:active {
@@ -102,7 +102,7 @@ body::before {
   border-color: #334155 !important;
   color: #e2e8f0 !important;
 }
-.dark .bg-sky-50 { background-color: #0c1e2e !important; }
+.dark .bg-\[\#0585FC\]\/5 { background-color: #0c1e2e !important; }
 .dark .bg-emerald-50 { background-color: #061a0e !important; }
 .dark .bg-rose-50 { background-color: #1a0607 !important; }
 .dark .bg-amber-50 { background-color: #1a1006 !important; }

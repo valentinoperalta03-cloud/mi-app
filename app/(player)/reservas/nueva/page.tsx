@@ -165,7 +165,7 @@ function NuevaReservaContent() {
           <span
             key={n}
             className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-              active === n ? "bg-sky-500 text-white" : "bg-slate-200 text-slate-500"
+              active === n ? "bg-[#0585FC]/50 text-white" : "bg-slate-200 text-slate-500"
             }`}
           >
             {n}
@@ -196,8 +196,8 @@ function NuevaReservaContent() {
                   }}
                   className={`flex min-w-[4.5rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center text-sm font-semibold transition-all ${
                     selected
-                      ? "border-sky-500 bg-sky-500 text-white shadow-md"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                      ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                   }`}
                 >
                   <span className="text-[11px] font-semibold uppercase leading-tight opacity-90">
@@ -240,8 +240,8 @@ function NuevaReservaContent() {
                     }}
                     className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center text-xs font-semibold transition-all ${
                       selected
-                        ? "border-sky-500 bg-sky-500 text-white shadow-md"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                        ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                     }`}
                   >
                     <span>{slot.time}</span>
@@ -258,7 +258,7 @@ function NuevaReservaContent() {
               setStep(1);
               setSelectedSlot(null);
             }}
-            className="w-full rounded-2xl py-3 text-sm font-semibold text-sky-600 transition hover:bg-sky-50"
+            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
           >
             Cambiar fecha
           </button>
@@ -367,7 +367,7 @@ function NuevaReservaContent() {
           <button
             type="button"
             onClick={() => setStep(2)}
-            className="w-full rounded-2xl py-3 text-sm font-semibold text-sky-600 transition hover:bg-sky-50"
+            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
           >
             Cambiar horario
           </button>

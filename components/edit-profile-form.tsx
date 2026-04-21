@@ -136,10 +136,10 @@ export function EditProfileForm({
               <img
                 src={previewUrl}
                 alt="Preview del avatar"
-                className="h-28 w-28 rounded-full object-cover ring-4 ring-sky-100"
+                className="h-28 w-28 rounded-full object-cover ring-4 ring-[#0585FC]/40"
               />
             ) : (
-              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-4xl font-semibold text-white ring-4 ring-sky-100">
+              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[#0585FC] to-cyan-500 text-4xl font-semibold text-white ring-4 ring-[#0585FC]/40">
                 {(defaultName.trim()[0] ?? "J").toUpperCase()}
               </div>
             )}
@@ -184,7 +184,7 @@ export function EditProfileForm({
             autoComplete="name"
             defaultValue={defaultName}
             maxLength={120}
-            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200/50"
+            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
           />
         </label>
 
@@ -199,7 +199,7 @@ export function EditProfileForm({
             pattern="[0-9]*"
             placeholder="Ej. 28"
             defaultValue={defaultAge ?? ""}
-            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200/50"
+            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
           />
         </label>
 
@@ -212,8 +212,8 @@ export function EditProfileForm({
               aria-pressed={gender === "masculino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "masculino"
-                  ? "border-sky-500 bg-sky-500 text-white shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
               }`}
             >
               Masculino
@@ -224,8 +224,8 @@ export function EditProfileForm({
               aria-pressed={gender === "femenino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "femenino"
-                  ? "border-sky-500 bg-sky-500 text-white shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
               }`}
             >
               Femenino
@@ -238,7 +238,7 @@ export function EditProfileForm({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
             Nivel competitivo
           </p>
-          <p className="mt-1 text-sm text-sky-700">
+          <p className="mt-1 text-sm text-[#0461C4]">
             <span className="font-bold">{levelParts.category || "—"}</span>
             {levelParts.description ? (
               <span className="font-medium">{" - "}{levelParts.description}</span>
@@ -260,7 +260,7 @@ export function EditProfileForm({
             maxLength={2000}
             placeholder="Contá un poco sobre vos, tu estilo de juego…"
             defaultValue={defaultBio ?? ""}
-            className="w-full resize-y rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200/50"
+            className="w-full resize-y rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
           />
         </label>
 
@@ -268,7 +268,7 @@ export function EditProfileForm({
           <button
             type="submit"
             disabled={pending || uploadingAvatar}
-            className="flex flex-1 items-center justify-center gap-2 rounded-3xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-500 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-3xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50 disabled:opacity-50"
           >
             {pending || uploadingAvatar ? (
               <>

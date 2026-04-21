@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { resendEmailOtp, verifyEmailOtp } from "./actions";
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-sky-400 focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
+  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
 
 export default function VerificarEmailPage() {
   const router = useRouter();
@@ -81,7 +81,7 @@ export default function VerificarEmailPage() {
           <button
             type="submit"
             disabled={verifyPending || token.length !== 6}
-            className="w-full rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-sky-400 hover:to-sky-500 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+            className="w-full rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
           >
             {verifyPending ? "Verificando..." : "Verificar código"}
           </button>
@@ -103,7 +103,7 @@ export default function VerificarEmailPage() {
               setCooldown(30);
             });
           }}
-          className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-sky-600 transition-all duration-200 hover:bg-sky-50/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+          className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
         >
           {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviar código"}
         </button>

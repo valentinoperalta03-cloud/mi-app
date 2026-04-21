@@ -34,13 +34,13 @@ function AdminBottomNavInner() {
                 href={item.href}
                 prefetch
                 className={`relative flex min-w-0 flex-1 touch-manipulation select-none flex-col items-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[10px] font-semibold leading-tight sm:text-[11px] ${
-                  active ? "text-sky-700" : "text-slate-500 active:text-slate-800"
+                  active ? "text-[#0461C4]" : "text-slate-500 active:text-slate-800"
                 }`}
               >
                 {active ? (
                   <motion.span
                     layoutId="admin-bottom-nav-pill"
-                    className="absolute inset-x-0.5 inset-y-0.5 -z-10 rounded-2xl bg-sky-100/95 ring-1 ring-sky-200/50"
+                    className="absolute inset-x-0.5 inset-y-0.5 -z-10 rounded-2xl bg-[#0585FC]/10/95 ring-1 ring-[#0585FC]/20/50"
                     transition={{ type: "spring", stiffness: 440, damping: 32 }}
                   />
                 ) : null}
@@ -52,7 +52,7 @@ function AdminBottomNavInner() {
                   <Icon
                     size={21}
                     strokeWidth={active ? 2.35 : 2}
-                    className={active ? "text-sky-600" : "text-slate-400"}
+                    className={active ? "text-[#0585FC]" : "text-slate-400"}
                     aria-hidden
                   />
                   <span className="line-clamp-2 text-center">{item.label}</span>

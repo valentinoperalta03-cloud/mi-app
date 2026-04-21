@@ -42,7 +42,7 @@ export function ProfileMatchCardsPremium({
                 <p className="mt-0.5 truncate text-xs text-slate-500">{c.courtName}</p>
               </div>
               {c.scoreLabel ? (
-                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-sky-700 shadow-sm ring-1 ring-slate-100">
+                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-[#0461C4] shadow-sm ring-1 ring-slate-100">
                   {c.scoreLabel}
                 </span>
               ) : null}

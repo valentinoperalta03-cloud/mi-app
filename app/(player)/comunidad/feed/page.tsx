@@ -27,12 +27,12 @@ export default async function ParaTiFeedPage() {
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/comunidad"
-            className="text-sm font-semibold text-sky-600 transition hover:text-sky-700"
+            className="text-sm font-semibold text-[#0585FC] transition hover:text-[#0461C4]"
           >
             ← Comunidad
           </Link>
         </div>
-        <p className="text-sm font-medium text-sky-600">Para vos</p>
+        <p className="text-sm font-medium text-[#0585FC]">Para vos</p>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Para ti</h1>
         <p className="text-sm text-slate-500">
           Novedades y resultados de quienes juegan con vos.

@@ -201,7 +201,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
       : scheduledDate;
 
   return (
-    <div className="mt-4 rounded-2xl border border-sky-200/70 bg-white p-5 shadow-sm ring-1 ring-slate-100">
+    <div className="mt-4 rounded-2xl border border-[#0585FC]/20/70 bg-white p-5 shadow-sm ring-1 ring-slate-100">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Editar partido</p>
       <p className="mt-1 text-sm font-medium text-slate-600">{dateLabel}</p>
 
@@ -242,9 +242,9 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
                       onClick={() => setSelectedSlot(slot)}
                       className={`flex min-h-[4rem] flex-col items-center justify-center rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${
                         selected
-                          ? "border-sky-500 bg-sky-500 text-white shadow-md"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
-                      } ${isCurrent && !selected ? "ring-2 ring-sky-300" : ""}`}
+                          ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                      } ${isCurrent && !selected ? "ring-2 ring-[#0585FC]/40" : ""}`}
                     >
                       <span>{slot.time}</span>
                       <span className="mt-0.5 opacity-90">{slot.duration} min</span>
@@ -264,7 +264,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setMatchType("amistoso")}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 matchType === "amistoso"
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -275,7 +275,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setMatchType("competitivo")}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 matchType === "competitivo"
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -292,7 +292,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setVisibility("publico")}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 visibility === "publico"
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -303,7 +303,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setVisibility("privado")}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 visibility === "privado"
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -322,7 +322,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
                 onClick={() => setGenderCategory(opt)}
                 className={`rounded-2xl border px-2 py-3 text-xs font-semibold transition ${
                   genderCategory === opt
-                    ? "border-sky-500 bg-sky-500 text-white"
+                    ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                     : "border-slate-200 bg-white text-slate-700"
                 }`}
               >
@@ -340,7 +340,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setLevelRestricted(false)}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 !levelRestricted
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -351,7 +351,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
               onClick={() => setLevelRestricted(true)}
               className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                 levelRestricted
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >

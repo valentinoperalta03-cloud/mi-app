@@ -107,10 +107,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       <AdminBackLink />
 
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-100/60 blur-2xl" />
+        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0585FC]/10/60 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <p className={`${adminKicker} text-sky-600`}>Agenda diaria</p>
+            <p className={`${adminKicker} text-[#0585FC]`}>Agenda diaria</p>
             <h1 className={adminTitle}>Gestión de reservas</h1>
             <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
           </div>
@@ -130,7 +130,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             type="date"
             name="date"
             defaultValue={selectedDate}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none ring-sky-200 transition focus:ring-2"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none ring-[#0585FC]/20 transition focus:ring-2"
           />
           <button
             type="submit"
@@ -187,9 +187,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                       <Link
                         key={slotKey}
                         href={`/admin/reservas?date=${selectedDate}&selected=${reservation.id}`}
-                        className="block min-h-16 border-r border-slate-100/90 bg-sky-50/50 px-2 py-2 transition-all duration-200 hover:bg-sky-100/60"
+                        className="block min-h-16 border-r border-slate-100/90 bg-[#0585FC]/5/50 px-2 py-2 transition-all duration-200 hover:bg-[#0585FC]/10/60"
                       >
-                        <div className="rounded-xl border border-sky-200/80 bg-sky-500 px-3 py-2 text-white shadow-sm">
+                        <div className="rounded-xl border border-[#0585FC]/20/80 bg-[#0585FC]/50 px-3 py-2 text-white shadow-sm">
                           <p className="truncate text-sm font-semibold">{player}</p>
                           <p className="text-xs opacity-90">{getTimeFromMatch(reservation)}</p>
                         </div>
@@ -204,7 +204,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       )}
 
       {selectedMatch ? (
-        <section className={`${adminCard} border-sky-200/80 bg-sky-50/40`}>
+        <section className={`${adminCard} border-[#0585FC]/20/80 bg-[#0585FC]/5/40`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <PlayerAvatar

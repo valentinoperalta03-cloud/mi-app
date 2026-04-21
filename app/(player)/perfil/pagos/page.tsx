@@ -32,8 +32,8 @@ export default async function PerfilPagosPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
-        <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
+      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
+        <p className="text-xs uppercase tracking-widest text-[#0585FC]">Perfil</p>
         <h1 className="text-2xl font-bold leading-tight tracking-tight">Tus pagos</h1>
       </header>
 
@@ -82,7 +82,7 @@ export default async function PerfilPagosPage() {
           href="https://www.mercadopago.com.ar"
           target="_blank"
           rel="noreferrer"
-          className="mt-3 inline-flex w-full justify-center rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white"
+          className="mt-3 inline-flex w-full justify-center rounded-2xl bg-[#0585FC]/50 px-4 py-2 text-sm font-semibold text-white"
         >
           Ir a Mercado Pago
         </Link>

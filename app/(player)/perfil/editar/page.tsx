@@ -36,7 +36,7 @@ export default async function EditarPerfilPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-24 pt-6">
       <header className="mb-6 space-y-1">
-        <p className="text-sm font-medium text-sky-600">Perfil</p>
+        <p className="text-sm font-medium text-[#0585FC]">Perfil</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Editar perfil</h1>
         <p className="text-sm text-slate-500">
           La foto se sube a Supabase desde tu dispositivo; al guardar solo enviamos la URL pública.

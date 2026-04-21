@@ -125,13 +125,13 @@ export default function ClubesPage() {
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-3">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-sky-600">Clubes</p>
+          <p className="text-sm font-medium text-[#0585FC]">Clubes</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Clubes disponibles</h1>
         </div>
 
         <button
           onClick={detectLocation}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 py-3 text-sm font-semibold text-sky-700"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 py-3 text-sm font-semibold text-[#0461C4]"
         >
           <MapPin size={16} />
           {userLocation ? "📍 Ubicación detectada — Ver más cercanos" : "Detectar mi ubicación"}
@@ -141,7 +141,7 @@ export default function ClubesPage() {
           <button
             onClick={() => setViewMode("lista")}
             className={`rounded-2xl py-2.5 text-sm font-semibold transition ${
-              viewMode === "lista" ? "bg-sky-500 text-white" : "border border-slate-200 text-slate-600"
+              viewMode === "lista" ? "bg-[#0585FC]/50 text-white" : "border border-slate-200 text-slate-600"
             }`}
           >
             Lista
@@ -149,7 +149,7 @@ export default function ClubesPage() {
           <button
             onClick={() => setViewMode("mapa")}
             className={`rounded-2xl py-2.5 text-sm font-semibold transition ${
-              viewMode === "mapa" ? "bg-sky-500 text-white" : "border border-slate-200 text-slate-600"
+              viewMode === "mapa" ? "bg-[#0585FC]/50 text-white" : "border border-slate-200 text-slate-600"
             }`}
           >
             Mapa
@@ -195,7 +195,7 @@ export default function ClubesPage() {
                     </h2>
                     <p className="truncate text-sm font-light text-slate-500">{club.location ?? "Sin ubicacion"}</p>
                     {club.distance != null ? (
-                      <p className="mt-1 text-xs font-medium text-sky-600">📍 {club.distance.toFixed(1)} km</p>
+                      <p className="mt-1 text-xs font-medium text-[#0585FC]">📍 {club.distance.toFixed(1)} km</p>
                     ) : null}
                   </div>
                 </div>

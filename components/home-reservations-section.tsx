@@ -30,10 +30,10 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
           <article className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
             <div
               className="-mx-5 -mt-5 mb-4 h-1"
-              style={{ background: "linear-gradient(90deg, #0585FC, #0461C4)" }}
+              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
             />
             <div className="flex gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/10 text-[#0461C4]">
                 {r.matchTypeLabel === "Competitivo" ? (
                   <Trophy size={18} strokeWidth={2.1} aria-hidden />
                 ) : (

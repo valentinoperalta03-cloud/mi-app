@@ -119,14 +119,14 @@ export default async function MatchDetailPage({ params }: PageProps) {
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-28 pt-6">
       <Link
         href="/home"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-sky-600"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-[#0585FC]"
       >
         <ArrowLeft size={18} strokeWidth={2} />
         Volver
       </Link>
 
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-600">Partido</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#0585FC]">Partido</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           {resultAffectsLevel ? "Competitivo" : "Amistoso"}
         </h1>
@@ -136,7 +136,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
         <p className="text-lg font-bold text-slate-900">{matchCourtName(m)}</p>
         <p className="text-sm font-medium text-slate-500">{matchClubName(m)}</p>
         <div className="mt-4 flex items-center gap-2 text-sm text-slate-700">
-          <Clock size={16} className="text-sky-600" strokeWidth={2} />
+          <Clock size={16} className="text-[#0585FC]" strokeWidth={2} />
           {when}
         </div>
         <p className="mt-3 text-sm text-slate-600">{n} jugador(es) anotados</p>
@@ -148,7 +148,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       {players.length > 0 ? (
         <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-2 text-slate-900">
-            <Users size={18} className="text-sky-600" strokeWidth={2} aria-hidden />
+            <Users size={18} className="text-[#0585FC]" strokeWidth={2} aria-hidden />
             <h2 className="text-sm font-bold tracking-tight">Jugadores</h2>
           </div>
           <p className="mt-1 text-xs text-slate-500">
@@ -166,7 +166,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                   </span>
                   <Link
                     href={`/jugador/${mp.player_id}`}
-                    className="font-semibold text-sky-700 underline decoration-sky-200/80 underline-offset-2 transition hover:text-sky-800"
+                    className="font-semibold text-[#0461C4] underline decoration-sky-200/80 underline-offset-2 transition hover:text-[#0585FC]"
                   >
                     {name}
                   </Link>
@@ -211,9 +211,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
       ) : null}
 
       {hasPendingProposal && rr ? (
-        <section className="rounded-3xl border border-sky-200 bg-sky-50/60 p-4">
-          <p className="text-sm font-semibold text-sky-900">Resultado pendiente de confirmación</p>
-          <p className="mt-1 text-xs text-sky-800">
+        <section className="rounded-3xl border border-[#0585FC]/20 bg-[#0585FC]/5/60 p-4">
+          <p className="text-sm font-semibold text-[#0585FC]">Resultado pendiente de confirmación</p>
+          <p className="mt-1 text-xs text-[#0585FC]">
             Score propuesto: {rr.team_a_score} - {rr.team_b_score}. Deben confirmar los 4.
           </p>
         </section>
@@ -253,7 +253,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
       <Link
         href="/buscar-partido"
-        className="flex w-full items-center justify-center rounded-2xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-500"
+        className="flex w-full items-center justify-center rounded-2xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50"
       >
         Ver en feed y unirme
       </Link>

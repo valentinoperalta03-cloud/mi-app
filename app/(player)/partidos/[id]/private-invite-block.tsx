@@ -20,7 +20,7 @@ export default function PrivateInviteBlock({ inviteUrl }: Props) {
   }, [inviteUrl]);
 
   return (
-    <section className="rounded-2xl border border-sky-200/80 bg-sky-50/80 p-5 shadow-sm">
+    <section className="rounded-2xl border border-[#0585FC]/20/80 bg-[#0585FC]/5/80 p-5 shadow-sm">
       <h2 className="text-lg font-bold tracking-tight text-slate-900">Invitar jugadores</h2>
       <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
         Compartí este link con los jugadores que querés invitar.
@@ -31,7 +31,7 @@ export default function PrivateInviteBlock({ inviteUrl }: Props) {
       <button
         type="button"
         onClick={() => void onCopy()}
-        className="mt-3 w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-500"
+        className="mt-3 w-full rounded-2xl bg-[#0461C4] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50"
       >
         {copied ? "¡Copiado!" : "Copiar link"}
       </button>

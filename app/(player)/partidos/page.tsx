@@ -24,7 +24,7 @@ export default async function PartidosPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-sky-600">Inicio</p>
+        <p className="text-sm font-medium text-[#0585FC]">Inicio</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Matches</h1>
         <p className="text-sm font-light text-slate-500">
           Partidos abiertos y proximos en la tabla{" "}
@@ -63,7 +63,7 @@ export default async function PartidosPage() {
                   </h2>
                   <p className="truncate text-sm font-light text-slate-500">{clubName}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                <span className="shrink-0 rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">
                   {n} jug.
                 </span>
               </div>
@@ -74,7 +74,7 @@ export default async function PartidosPage() {
                 </p>
                 <Link
                   href="/reservas"
-                  className="rounded-2xl px-3 py-2 text-sm font-medium text-sky-600 transition-all duration-300 hover:opacity-95 active:scale-95"
+                  className="rounded-2xl px-3 py-2 text-sm font-medium text-[#0585FC] transition-all duration-300 hover:opacity-95 active:scale-95"
                 >
                   Reservar cancha
                 </Link>

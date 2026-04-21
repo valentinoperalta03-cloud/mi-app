@@ -40,7 +40,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-sky-600">Club</p>
+        <p className="text-sm font-medium text-[#0585FC]">Club</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">{clubName}</h1>
         {location ? <p className="text-sm font-light text-slate-500">{location}</p> : null}
       </header>
@@ -63,7 +63,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-lg font-bold tracking-tight text-slate-950">{courtName}</h2>
-                    <p className="text-sm font-medium text-sky-700">${price}/hora</p>
+                    <p className="text-sm font-medium text-[#0461C4]">${price}/hora</p>
                   </div>
                   <Link href={href} className={`inline-flex justify-center ${PLAYER_PRIMARY_BUTTON}`}>
                     Reservar

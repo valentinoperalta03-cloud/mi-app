@@ -71,11 +71,11 @@ export default async function HomeJoinRequestsSection({ userId }: { userId: stri
   if (visible.length === 0) return null;
 
   return (
-    <article className="rounded-[2rem] border border-sky-200 bg-sky-50/70 p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+    <article className="rounded-[2rem] border border-[#0585FC]/20 bg-[#0585FC]/5/70 p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
       <h2 className="text-lg font-bold tracking-tight text-slate-900">Solicitudes pendientes</h2>
       <ul className="mt-3 space-y-2">
         {visible.slice(0, 6).map((item) => (
-          <li key={item.id} className="flex gap-3 rounded-2xl border border-sky-100 bg-white/90 px-3 py-2">
+          <li key={item.id} className="flex gap-3 rounded-2xl border border-[#0585FC]/20 bg-white/90 px-3 py-2">
             <ProfileAvatar avatarUrl={item.avatarUrl} name={item.requesterName} size={40} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-slate-900">{item.requesterName}</p>
@@ -86,7 +86,7 @@ export default async function HomeJoinRequestsSection({ userId }: { userId: stri
                     ? `/partidos/${item.matchId}`
                     : `/partidos/${item.matchId}/solicitudes`
                 }
-                className="mt-1 inline-block text-xs font-semibold text-sky-700 underline decoration-sky-200/80 underline-offset-2"
+                className="mt-1 inline-block text-xs font-semibold text-[#0461C4] underline decoration-sky-200/80 underline-offset-2"
               >
                 {item.isOwnerRequest ? "Gestionar acceso" : "Ver y votar"}
               </Link>

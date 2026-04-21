@@ -138,7 +138,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
       <Link
         href="/home"
-        className="mb-4 inline-block text-sm font-semibold text-slate-600 transition hover:text-sky-600"
+        className="mb-4 inline-block text-sm font-semibold text-slate-600 transition hover:text-[#0585FC]"
       >
         ← Volver
       </Link>
@@ -155,10 +155,10 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           </div>
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
-        <p className="mt-2 text-sm text-sky-700">
+        <p className="mt-2 text-sm text-[#0461C4]">
           <span className="font-bold">{nivelParts.category || "—"}</span>
           {nivelParts.description ? (
-            <span className="font-medium text-sky-700">{" - "}{nivelParts.description}</span>
+            <span className="font-medium text-[#0461C4]">{" - "}{nivelParts.description}</span>
           ) : null}
         </p>
         <p className="mt-1 text-xs font-medium text-slate-500">Categoría: {categoriaLabel}</p>

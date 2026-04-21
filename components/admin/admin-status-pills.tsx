@@ -105,7 +105,7 @@ export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null
       <Pill
         Icon={Trophy}
         label="Competitivo"
-        className="bg-sky-100/90 text-sky-900 ring-1 ring-sky-200/55"
+        className="bg-[#0585FC]/10/90 text-[#0585FC] ring-1 ring-[#0585FC]/20/55"
       />
     );
   }
@@ -124,7 +124,7 @@ export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente"
       <Pill
         Icon={Users}
         label="Recurrente"
-        className="bg-sky-100/90 text-sky-900 ring-1 ring-sky-200/55"
+        className="bg-[#0585FC]/10/90 text-[#0585FC] ring-1 ring-[#0585FC]/20/55"
       />
     );
   }
@@ -141,7 +141,7 @@ export function PlayerAvatar({ name }: { name: string }) {
   const initial = (name.trim().charAt(0) || "?").toUpperCase();
   return (
     <div
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 text-base font-bold text-sky-900 ring-1 ring-sky-200/50"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-indigo-100 text-base font-bold text-[#0585FC] ring-1 ring-[#0585FC]/20/50"
       aria-hidden
     >
       {initial}

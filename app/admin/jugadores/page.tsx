@@ -78,7 +78,7 @@ export default async function AdminJugadoresPage() {
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-sky-600`}>CRM</p>
+        <p className={`${adminKicker} text-[#0585FC]`}>CRM</p>
         <h1 className={adminTitle}>Jugadores</h1>
         <p className={adminSubtitle}>
           Basado en <code className="text-xs text-slate-400">matches.owner_id</code> y{" "}

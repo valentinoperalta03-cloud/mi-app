@@ -105,7 +105,7 @@ export default function AyudaPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-transparent">
-      <header className="flex h-14 items-center gap-2 bg-sky-500 px-4 text-white">
+      <header className="flex h-14 items-center gap-2 bg-[#0585FC]/50 px-4 text-white">
         <HelpCircle size={18} />
         <h1 className="text-lg font-bold">Centro de ayuda</h1>
       </header>
@@ -114,7 +114,7 @@ export default function AyudaPage() {
         {messages.length === 0 ? (
           <section className="space-y-4">
             <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-5 text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#0585FC]/10 text-[#0585FC]">
                 <MessageCircle size={28} />
               </div>
               <h2 className="text-lg font-bold text-slate-900">¿En qué podemos ayudarte?</h2>
@@ -142,7 +142,7 @@ export default function AyudaPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory(null)}
-                    className="text-xs font-semibold text-sky-600"
+                    className="text-xs font-semibold text-[#0585FC]"
                   >
                     Volver
                   </button>
@@ -167,7 +167,7 @@ export default function AyudaPage() {
             {messages.map((m, idx) => (
               <div key={`${m.question}-${idx}`} className="space-y-2">
                 <div className="flex justify-end">
-                  <div className="max-w-[85%] break-words rounded-2xl bg-sky-500 px-4 py-2 text-sm text-white">{m.question}</div>
+                  <div className="max-w-[85%] break-words rounded-2xl bg-[#0585FC]/50 px-4 py-2 text-sm text-white">{m.question}</div>
                 </div>
                 <div className="flex justify-start">
                   <div className="max-w-[85%] break-words rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-800">
@@ -178,7 +178,7 @@ export default function AyudaPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory(m.category)}
-                    className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
+                    className="rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]"
                   >
                     Ver más preguntas de {m.category}
                   </button>

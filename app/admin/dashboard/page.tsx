@@ -19,8 +19,8 @@ const modules = [
     title: "Reservas",
     description: "Agenda de partidos, estado de pago y bloqueo manual de canchas.",
     icon: Target,
-    accent: "from-sky-500/14 to-cyan-500/10 border-sky-200/55",
-    iconBg: "bg-sky-500/12 text-sky-700 ring-1 ring-sky-200/40",
+    accent: "from-[#0585FC]/14 to-cyan-500/10 border-[#0585FC]/20/55",
+    iconBg: "bg-[#0585FC]/50/12 text-[#0461C4] ring-1 ring-[#0585FC]/20/40",
   },
   {
     href: "/admin/finanzas",
@@ -124,7 +124,7 @@ export default async function AdminDashboardPage() {
   const maxHourly = Math.max(1, ...chartData.map((b) => b.total));
 
   const todayMetrics = [
-    { label: "Reservas hoy", value: String(reservasHoy), icon: Target, color: "text-sky-700" },
+    { label: "Reservas hoy", value: String(reservasHoy), icon: Target, color: "text-[#0461C4]" },
     { label: "Ingresos hoy", value: money.format(ingresosHoy), icon: DollarSign, color: "text-emerald-700" },
     {
       label: "Canchas hoy",
@@ -150,11 +150,11 @@ export default async function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-12 -top-10 h-40 w-40 rounded-full bg-sky-100/50 blur-2xl" />
+        <div className="absolute -right-12 -top-10 h-40 w-40 rounded-full bg-[#0585FC]/10/50 blur-2xl" />
         <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
-              <CalendarDays size={15} className="text-sky-600" strokeWidth={2.25} />
+              <CalendarDays size={15} className="text-[#0585FC]" strokeWidth={2.25} />
               {todayLong}
             </div>
             <h1 className={adminTitle}>Panel de administración</h1>
@@ -203,7 +203,7 @@ export default async function AdminDashboardPage() {
             <div key={item.hour} className="flex min-w-10 flex-col items-center gap-2">
               <div className="flex h-40 w-8 items-end rounded-xl bg-slate-100/90 p-1 ring-1 ring-slate-200/60">
                 <div
-                  className="w-full rounded-lg bg-gradient-to-t from-sky-600 to-cyan-400"
+                  className="w-full rounded-lg bg-gradient-to-t from-[#0585FC] to-cyan-400"
                   style={{ height: `${Math.max(6, (item.total / maxHourly) * 100)}%` }}
                   title={`${item.total} reservas`}
                 />
@@ -217,7 +217,7 @@ export default async function AdminDashboardPage() {
 
       <header className="space-y-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
-          <Target size={15} className="text-sky-600" strokeWidth={2.25} />
+          <Target size={15} className="text-[#0585FC]" strokeWidth={2.25} />
           Módulos de gestión
         </div>
         <h2 className={adminTitle}>Tu operación, en un solo lugar</h2>
@@ -244,7 +244,7 @@ export default async function AdminDashboardPage() {
                 <span className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
                   {section.description}
                 </span>
-                <span className="mt-5 text-sm font-semibold text-sky-600 group-hover:text-sky-500">
+                <span className="mt-5 text-sm font-semibold text-[#0585FC] group-hover:text-[#0585FC]">
                   Abrir
                 </span>
               </Link>
@@ -258,19 +258,19 @@ export default async function AdminDashboardPage() {
         <div className="mt-4 flex flex-col gap-3 text-sm font-semibold sm:flex-row sm:flex-wrap sm:gap-x-6">
           <Link
             href="/club/gestion"
-            className={`text-sky-600 hover:text-sky-500 ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
+            className={`text-[#0585FC] hover:text-[#0585FC] ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
           >
             Grilla de turnos
           </Link>
           <Link
             href="/club/horarios"
-            className={`text-sky-600 hover:text-sky-500 ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
+            className={`text-[#0585FC] hover:text-[#0585FC] ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
           >
             Horarios de canchas
           </Link>
           <Link
             href="/club/partidos"
-            className={`text-sky-600 hover:text-sky-500 ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
+            className={`text-[#0585FC] hover:text-[#0585FC] ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
           >
             Lista de partidos
           </Link>

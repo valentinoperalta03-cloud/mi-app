@@ -6,7 +6,7 @@ export function ProfileAvatar({
   avatarUrl,
   name,
   size = 96,
-  ringClassName = "ring-4 ring-sky-100",
+  ringClassName = "ring-4 ring-[#0585FC]/40",
 }: {
   avatarUrl: string | null;
   name: string;
@@ -34,7 +34,7 @@ export function ProfileAvatar({
 
   return (
     <div
-      className={`flex items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 font-semibold tracking-tight text-white ${ringClassName}`}
+      className={`flex items-center justify-center rounded-full bg-gradient-to-br from-[#0585FC] to-cyan-500 font-semibold tracking-tight text-white ${ringClassName}`}
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
       {initial}

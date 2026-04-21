@@ -78,7 +78,7 @@ export default async function CrearPartidoPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-24 pt-6">
       <header className="space-y-2">
-        <Link href="/home" className="inline-block text-sm font-semibold text-sky-600 hover:text-sky-700">
+        <Link href="/home" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver al inicio
         </Link>
         <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">Crear partido</h1>

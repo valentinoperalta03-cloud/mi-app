@@ -17,7 +17,7 @@ export default function ProfileStatsPanel({
   eloRanking,
 }: ProfileStatsPanelProps) {
   const items = [
-    { label: "Partidos", value: String(partidosJugados), tone: "text-sky-700", icon: Trophy },
+    { label: "Partidos", value: String(partidosJugados), tone: "text-[#0461C4]", icon: Trophy },
     { label: "Victorias", value: String(victoriasTotales), tone: "text-emerald-700", icon: Trophy },
     { label: "Nivel", value: nivelActual || "—", tone: "text-violet-700", icon: Zap },
     { label: "ELO", value: eloRanking, tone: "text-indigo-700", icon: Zap },

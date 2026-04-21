@@ -35,17 +35,17 @@ function AdminDesktopHeaderInner() {
                 href={item.href}
                 prefetch
                 className={`relative inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-semibold touch-manipulation transition-transform duration-150 hover:scale-[1.02] active:scale-[0.96] ${
-                  active ? "text-sky-700" : "text-slate-600 hover:bg-slate-50 hover:text-sky-600"
+                  active ? "text-[#0461C4]" : "text-slate-600 hover:bg-slate-50 hover:text-[#0585FC]"
                 }`}
               >
                 {active ? (
                   <motion.span
                     layoutId="admin-desktop-nav-pill"
-                    className="absolute inset-0 -z-10 rounded-2xl bg-sky-100/85 ring-1 ring-sky-200/50"
+                    className="absolute inset-0 -z-10 rounded-2xl bg-[#0585FC]/10/85 ring-1 ring-[#0585FC]/20/50"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 ) : null}
-                <Icon size={16} strokeWidth={2} className={active ? "text-sky-600" : "text-slate-400"} />
+                <Icon size={16} strokeWidth={2} className={active ? "text-[#0585FC]" : "text-slate-400"} />
                 {item.label}
               </Link>
             );

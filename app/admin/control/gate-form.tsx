@@ -22,7 +22,7 @@ export default function GateForm() {
       className="mx-auto max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
     >
       <div>
-        <p className="text-sm font-medium text-sky-600">Panel de Control</p>
+        <p className="text-sm font-medium text-[#0585FC]">Panel de Control</p>
         <h2 className="mt-1 text-xl font-semibold text-slate-900">Acceso protegido</h2>
         <p className="mt-2 text-sm text-slate-500">
           Ingresa la contrasena de administrador para ver facturacion e indicadores.
@@ -36,7 +36,7 @@ export default function GateForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-200"
+          className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
         />
       </label>
 
@@ -49,7 +49,7 @@ export default function GateForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? "Verificando..." : "Ingresar al Panel"}
       </button>

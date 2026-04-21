@@ -18,7 +18,7 @@ export default function FeedLoading() {
           <div className="h-4 w-56 animate-pulse rounded bg-slate-100" />
           <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
           <div className="h-4 w-36 animate-pulse rounded bg-slate-100" />
-          <div className="h-9 w-24 animate-pulse rounded-2xl bg-sky-100" />
+          <div className="h-9 w-24 animate-pulse rounded-2xl bg-[#0585FC]/10" />
         </article>
       ))}
     </MotionPage>

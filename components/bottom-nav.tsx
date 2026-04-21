@@ -73,7 +73,7 @@ export default function BottomNav() {
               {active ? (
                 <motion.span
                   layoutId="player-bottom-nav-glow"
-                  className="absolute inset-x-1 inset-y-1 -z-10 rounded-full bg-sky-500/20"
+                  className="absolute inset-x-1 inset-y-1 -z-10 rounded-full bg-[#0585FC]/50/20"
                   transition={{ type: "spring", stiffness: 420, damping: 32 }}
                 />
               ) : null}
@@ -88,13 +88,13 @@ export default function BottomNav() {
                       avatarUrl={myAvatarUrl}
                       name={myName}
                       size={24}
-                      ringClassName={active ? "ring-1 ring-sky-400" : "ring-1 ring-slate-300"}
+                      ringClassName={active ? "ring-1 ring-[#0585FC]/40" : "ring-1 ring-slate-300"}
                     />
                   ) : (
                     <Icon size={22} strokeWidth={active ? 2.35 : 2} aria-hidden />
                   )}
                   {active ? (
-                    <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-sky-400" />
+                    <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#0585FC]" />
                   ) : null}
                 </span>
                 <span>{item.label}</span>

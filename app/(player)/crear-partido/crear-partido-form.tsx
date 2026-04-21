@@ -218,7 +218,7 @@ export default function CrearPartidoForm({
           name="club_id"
           value={selectedClubId}
           onChange={(event) => setSelectedClubId(event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-sky-200 transition focus:ring-2"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2"
         >
           {clubs.map((club) => (
             <option key={club.id} value={club.id}>
@@ -237,7 +237,7 @@ export default function CrearPartidoForm({
             setSelectedCourtId(event.target.value);
             setSelectedSlot(null);
           }}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-sky-200 transition focus:ring-2"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2"
         >
           {availableCourts.map((court) => (
             <option key={court.id} value={court.id}>
@@ -302,8 +302,8 @@ export default function CrearPartidoForm({
                 onClick={() => setSelectedDate(date.key)}
                 className={`flex min-w-[4.75rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center transition ${
                   selected
-                    ? "border-sky-500 bg-sky-500 text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                    ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                 }`}
               >
                 <span className="text-[11px] font-semibold uppercase leading-tight">{date.top}</span>
@@ -342,7 +342,7 @@ export default function CrearPartidoForm({
                       type="button"
                       onClick={() => toggleFriend(friend.userId)}
                       className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
-                        selected ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"
+                        selected ? "border-[#0585FC]/20 bg-[#0585FC]/5" : "border-slate-200 bg-white"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -350,14 +350,14 @@ export default function CrearPartidoForm({
                           {friend.avatarUrl ? (
                             <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
                           ) : (
-                            <span className="flex h-full w-full items-center justify-center bg-sky-100 text-xs font-semibold text-sky-700">
+                            <span className="flex h-full w-full items-center justify-center bg-[#0585FC]/10 text-xs font-semibold text-[#0461C4]">
                               {friend.name.slice(0, 1).toUpperCase()}
                             </span>
                           )}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900">{friend.name}</p>
-                          <p className="mt-1 text-xs font-medium text-sky-700">{nivelParts.category || "Sin nivel"}</p>
+                          <p className="mt-1 text-xs font-medium text-[#0461C4]">{nivelParts.category || "Sin nivel"}</p>
                         </div>
                       </div>
                     </button>
@@ -379,7 +379,7 @@ export default function CrearPartidoForm({
                       aria-pressed={checked}
                       onClick={() => togglePaidFor(friendId)}
                       className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
-                        checked ? "bg-sky-500" : "bg-slate-300"
+                        checked ? "bg-[#0585FC]/50" : "bg-slate-300"
                       }`}
                     >
                       <span
@@ -414,8 +414,8 @@ export default function CrearPartidoForm({
                   onClick={() => setSelectedSlot(slot)}
                   className={`min-h-[4rem] rounded-2xl border px-2 py-2 text-xs font-semibold transition ${
                     selected
-                      ? "border-sky-500 bg-sky-500 text-white"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-200"
+                      ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                   }`}
                 >
                   {slot.time} · {slot.duration}min
@@ -438,7 +438,7 @@ export default function CrearPartidoForm({
             onClick={() => setMatchType("amistoso")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               matchType === "amistoso"
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -449,7 +449,7 @@ export default function CrearPartidoForm({
             onClick={() => setMatchType("competitivo")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               matchType === "competitivo"
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -466,7 +466,7 @@ export default function CrearPartidoForm({
             onClick={() => setVisibility("publico")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               visibility === "publico"
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -477,7 +477,7 @@ export default function CrearPartidoForm({
             onClick={() => setVisibility("privado")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               visibility === "privado"
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -496,7 +496,7 @@ export default function CrearPartidoForm({
               onClick={() => setGenderCategory(option)}
               className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
                 genderCategory === option
-                  ? "border-sky-500 bg-sky-500 text-white"
+                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                   : "border-slate-200 bg-white text-slate-700"
               }`}
             >
@@ -514,7 +514,7 @@ export default function CrearPartidoForm({
             onClick={() => setLevelRestricted(false)}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               !levelRestricted
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -525,7 +525,7 @@ export default function CrearPartidoForm({
             onClick={() => setLevelRestricted(true)}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               levelRestricted
-                ? "border-sky-500 bg-sky-500 text-white"
+                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
                 : "border-slate-200 bg-white text-slate-700"
             }`}
           >
@@ -555,8 +555,8 @@ export default function CrearPartidoForm({
       ) : null}
 
       {selectedCourt ? (
-        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/80 px-4 py-3 text-sm text-slate-800">
-          <p className="font-semibold text-sky-900">💳 Pago inicial del creador</p>
+        <div className="rounded-2xl border border-[#0585FC]/20/70 bg-[#0585FC]/5/80 px-4 py-3 text-sm text-slate-800">
+          <p className="font-semibold text-[#0585FC]">💳 Pago inicial del creador</p>
           <p className="mt-2 font-medium leading-relaxed text-slate-700">
             Al crear el partido pagás{" "}
             <span className="font-bold text-slate-900">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno

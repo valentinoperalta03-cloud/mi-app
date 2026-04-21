@@ -17,7 +17,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60"
+      className="rounded-2xl bg-[#0585FC]/50 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0461C4] disabled:opacity-60"
     >
       {pending ? "Guardando..." : label}
     </button>
@@ -51,7 +51,7 @@ export function CreateCourtForm({ clubId }: { clubId: string }) {
           name="name"
           placeholder="Nombre de cancha"
           required
-          className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+          className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0585FC]/40"
         />
         <input
           name="price"
@@ -60,7 +60,7 @@ export function CreateCourtForm({ clubId }: { clubId: string }) {
           min="0"
           placeholder="Precio"
           required
-          className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+          className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0585FC]/40"
         />
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -98,14 +98,14 @@ export function ScheduleForm({
         type="time"
         defaultValue={openTime ?? ""}
         required
-        className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+        className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0585FC]/40"
       />
       <input
         name="close_time"
         type="time"
         defaultValue={closeTime ?? ""}
         required
-        className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+        className="rounded-2xl border border-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0585FC]/40"
       />
       <SubmitButton label="Guardar" />
       <div className="sm:col-span-3">

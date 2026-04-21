@@ -30,17 +30,17 @@ type NotificationRow = {
 };
 
 const TYPE_UI: Record<string, { Icon: typeof UserPlus; className: string }> = {
-  join_request: { Icon: UserPlus, className: "text-sky-600" },
+  join_request: { Icon: UserPlus, className: "text-[#0585FC]" },
   join_approved: { Icon: CheckCircle, className: "text-emerald-600" },
   join_rejected: { Icon: XCircle, className: "text-rose-600" },
-  player_joined: { Icon: Users, className: "text-sky-600" },
+  player_joined: { Icon: Users, className: "text-[#0585FC]" },
   match_reminder: { Icon: Clock, className: "text-amber-600" },
   result_pending: { Icon: AlertCircle, className: "text-amber-600" },
   reservation_confirmed: { Icon: CalendarCheck, className: "text-emerald-600" },
   reservation_cancelled: { Icon: CalendarX, className: "text-rose-600" },
   payment_approved: { Icon: CreditCard, className: "text-emerald-600" },
   payment_rejected: { Icon: CreditCard, className: "text-rose-600" },
-  level_up: { Icon: TrendingUp, className: "text-sky-600" },
+  level_up: { Icon: TrendingUp, className: "text-[#0585FC]" },
 };
 
 export async function markAllAsRead() {
@@ -93,7 +93,7 @@ export default async function NotificacionesPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-sky-600">Notificaciones</p>
+        <p className="text-sm font-medium text-[#0585FC]">Notificaciones</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tu actividad reciente</h1>
       </header>
 
@@ -120,7 +120,7 @@ export default async function NotificacionesPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-bold text-slate-900">{n.title}</p>
-                            {!n.read ? <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500" /> : null}
+                            {!n.read ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#0585FC]/50" /> : null}
                           </div>
                           <p className="mt-1 break-words text-sm text-slate-600">{n.body}</p>
                           <p className="mt-2 text-xs text-slate-400">{rel}</p>

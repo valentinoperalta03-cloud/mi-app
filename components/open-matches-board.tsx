@@ -205,7 +205,7 @@ export default async function OpenMatchesBoard({
       }`}
     >
       <header className="space-y-2">
-        <p className="text-sm font-medium text-sky-600">{kicker}</p>
+        <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>
         <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
         <p className="text-sm text-slate-500">{description}</p>
       </header>
@@ -215,7 +215,7 @@ export default async function OpenMatchesBoard({
           className={`rounded-[2rem] border p-4 text-sm shadow-sm ${
             flashKind === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-sky-200 bg-sky-50 text-sky-800"
+              : "border-[#0585FC]/20 bg-[#0585FC]/5 text-[#0585FC]"
           }`}
         >
           {flashMessage}

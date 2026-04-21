@@ -125,8 +125,8 @@ export default function SettingsClient({
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-4 text-white">
-        <p className="text-xs uppercase tracking-widest text-sky-100">Ajustes</p>
+      <header className="rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
+        <p className="text-xs uppercase tracking-widest text-[#0585FC]">Ajustes</p>
         <h1 className="text-2xl font-bold">Configuración</h1>
       </header>
 
@@ -145,7 +145,7 @@ export default function SettingsClient({
           <button
             type="button"
             onClick={detectLocation}
-            className="inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-3 py-2 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#0585FC]/50 px-3 py-2 text-sm font-semibold text-white"
           >
             <MapPin size={16} />
             Detectar mi ubicación
@@ -191,7 +191,7 @@ export default function SettingsClient({
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">Mi nivel</h2>
-          <p className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">{category || "—"}</p>
+          <p className="rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">{category || "—"}</p>
         </div>
         <button
           type="button"
@@ -242,7 +242,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Nueva contraseña"
-              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-500"
+              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0585FC]/20"
             />
             <input
               type="password"
@@ -250,9 +250,9 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Confirmar contraseña"
-              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-sky-500"
+              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0585FC]/20"
             />
-            <button type="submit" className="w-full rounded-2xl bg-sky-500 py-2 text-sm font-semibold text-white">
+            <button type="submit" className="w-full rounded-2xl bg-[#0585FC]/50 py-2 text-sm font-semibold text-white">
               Guardar nueva contraseña
             </button>
           </form>
@@ -267,7 +267,7 @@ export default function SettingsClient({
             // eslint-disable-next-line @next/next/no-img-element -- avatar externo de usuario
             <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0585FC]/50 text-sm font-bold text-white">
               {(name[0] ?? "J").toUpperCase()}
             </div>
           )}

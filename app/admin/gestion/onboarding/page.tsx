@@ -68,7 +68,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-sky-100/70 blur-2xl" />
+        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-[#0585FC]/10/70 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className={adminKicker}>Onboarding</p>
@@ -107,7 +107,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Padel Norte Club"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -121,7 +121,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Av. Libertador 1234"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -135,7 +135,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Buenos Aires"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -149,7 +149,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               required
               rows={4}
               placeholder="Conta brevemente que ofrece tu club, servicios y propuesta."
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -163,7 +163,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="tel"
               required
               placeholder="Ej: +54 11 1234-5678"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -177,7 +177,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Lun a Dom de 08:00 a 23:00"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 
@@ -191,7 +191,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="https://..."
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
             />
           </div>
 

@@ -113,7 +113,7 @@ export default function TopNav() {
           >
             <div className="flex items-center gap-2">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="11" cy="11" r="10" fill="#0ea5e9" opacity="0.9" />
+                <circle cx="11" cy="11" r="10" fill="#0585FC" opacity="0.9" />
                 <circle cx="11" cy="11" r="10" fill="none" stroke="#38bdf8" strokeWidth="1" />
                 <path d="M4 8 Q11 6 18 8" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
                 <path d="M4 11 Q11 9 18 11" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
@@ -175,7 +175,7 @@ export default function TopNav() {
                 <motion.aside
                   className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto shadow-2xl"
                   style={{
-                    background: "linear-gradient(180deg, #0461C4 0%, #0350A8 50%, #024090 100%)",
+                    background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
                     boxShadow: "-8px 0 32px rgba(5,133,252,0.25)",
                   }}
                   initial={{ x: "100%" }}
@@ -192,16 +192,16 @@ export default function TopNav() {
                           alt=""
                           width={44}
                           height={44}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-sky-400/50"
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-[#0585FC]/40/50"
                         />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white ring-2 ring-sky-400/50">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0585FC]/50 text-sm font-bold text-white ring-2 ring-[#0585FC]/40/50">
                           {initial}
                         </div>
                       )}
                       <div className="min-w-0">
                         <p className="truncate font-bold text-white">{name}</p>
-                        <p className="truncate text-xs text-sky-300">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
+                        <p className="truncate text-xs text-[#0585FC]">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
                       </div>
                     </div>
                   </div>
@@ -216,7 +216,7 @@ export default function TopNav() {
                         onClick={closeDrawer}
                         className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-sky-400">
+                        <span className="rounded-full bg-white/5 p-2 text-[#0585FC]">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -234,7 +234,7 @@ export default function TopNav() {
                         onClick={closeDrawer}
                         className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-sky-400">
+                        <span className="rounded-full bg-white/5 p-2 text-[#0585FC]">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>

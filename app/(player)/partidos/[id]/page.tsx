@@ -287,7 +287,7 @@ Link del partido: ${partyUrl}`;
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-2">
-        <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-sky-600 hover:text-sky-700">
+        <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">Detalle del partido</h1>
@@ -297,7 +297,7 @@ Link del partido: ${partyUrl}`;
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h2 className="text-xl font-bold tracking-tight text-slate-950">{detail.club_name ?? "Club"}</h2>
           {isPrivate ? (
-            <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800">
+            <span className="rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0585FC]">
               Privado
             </span>
           ) : null}
@@ -332,7 +332,7 @@ Link del partido: ${partyUrl}`;
           </div>
           <div className="flex justify-between gap-2 border-t border-slate-100 pt-2">
             <dt className="font-medium text-slate-500">Precio</dt>
-            <dd className="text-lg font-bold text-sky-700">${detail.total_price ?? 0}</dd>
+            <dd className="text-lg font-bold text-[#0461C4]">${detail.total_price ?? 0}</dd>
           </div>
         </dl>
       </article>
@@ -358,14 +358,14 @@ Link del partido: ${partyUrl}`;
       {isOwner && isPrivate ? <PrivateInviteBlock inviteUrl={inviteUrl} /> : null}
 
       {isPrivate && !isOwner && !isParticipant && inviteOpen ? (
-        <section className="rounded-2xl border border-sky-200/80 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-[#0585FC]/20/80 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold tracking-tight text-slate-900">Unirte al partido</h2>
           <p className="mt-2 text-sm text-slate-600">
             Este partido es privado. Enviá una solicitud al creador para sumarte.
           </p>
           <div className="mt-4">
             {hasPendingAccessRequest ? (
-              <p className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-900">
+              <p className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-medium text-[#0585FC]">
                 Ya enviaste una solicitud pendiente.
               </p>
             ) : (
@@ -403,7 +403,7 @@ Link del partido: ${partyUrl}`;
                       <input type="hidden" name="match_id" value={id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 sm:w-auto"
+                        className="w-full rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 sm:w-auto"
                       >
                         Aceptar
                       </button>
@@ -490,7 +490,7 @@ Link del partido: ${partyUrl}`;
         </div>
 
         {freeSlots > 0 ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-3 py-2.5">
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#0585FC]/20/70 bg-[#0585FC]/5/70 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="relative h-7 w-20 overflow-hidden rounded-xl border border-slate-200/70 bg-white/90">
                 <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-1" />
@@ -526,7 +526,7 @@ Link del partido: ${partyUrl}`;
       {isParticipant && (pendingRequestsCount ?? 0) > 0 ? (
         <Link
           href={`/partidos/${id}/solicitudes`}
-          className="block w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+          className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10"
         >
           Ver solicitudes ({pendingRequestsCount})
         </Link>
@@ -534,7 +534,7 @@ Link del partido: ${partyUrl}`;
 
       <Link
         href="/buscar-partido"
-        className="block w-full rounded-2xl bg-sky-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-sky-500"
+        className="block w-full rounded-2xl bg-[#0461C4] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#0585FC]/50"
       >
         Volver
       </Link>

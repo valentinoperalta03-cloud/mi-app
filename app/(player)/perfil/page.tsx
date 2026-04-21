@@ -200,7 +200,7 @@ export default async function PerfilPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/home"
-              className="rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500"
+              className="rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0585FC]/50"
             >
               Ir a vista Jugador
             </Link>
@@ -227,7 +227,7 @@ export default async function PerfilPage() {
 
       <ProfileMotionSection title="Datos" description="Información de tu perfil.">
         <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4">
-          <User className="h-5 w-5 shrink-0 text-sky-600" strokeWidth={1.6} aria-hidden />
+          <User className="h-5 w-5 shrink-0 text-[#0585FC]" strokeWidth={1.6} aria-hidden />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Edad</p>
             <p className="text-sm font-medium text-slate-900">
@@ -277,7 +277,7 @@ export default async function PerfilPage() {
                   className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-3 transition hover:border-slate-200 hover:bg-white"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <Building2 className="h-4 w-4 shrink-0 text-sky-600" strokeWidth={1.6} />
+                    <Building2 className="h-4 w-4 shrink-0 text-[#0585FC]" strokeWidth={1.6} />
                     <span className="truncate text-sm font-medium text-slate-900">{c.name}</span>
                   </span>
                   <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-600 ring-1 ring-slate-100">

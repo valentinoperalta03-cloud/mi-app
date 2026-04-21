@@ -124,8 +124,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         <div className="relative z-10 flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 ring-1 ring-sky-400/30">
-            <Zap size={20} strokeWidth={2.25} className="text-sky-300" aria-hidden />
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/50/20 ring-1 ring-[#0585FC]/40/30">
+            <Zap size={20} strokeWidth={2.25} className="text-[#0585FC]" aria-hidden />
           </span>
           <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
