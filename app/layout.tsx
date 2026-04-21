@@ -44,6 +44,14 @@ export const metadata: Metadata = {
     description: "Digitalizando el pádel en Argentina.",
     images: ["/og-image.png"],
   },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
+  },
   robots: { index: true, follow: true },
 };
 
