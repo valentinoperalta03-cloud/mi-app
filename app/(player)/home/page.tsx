@@ -142,14 +142,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-sky-200 hover:shadow-md active:scale-[0.98] dark:border-slate-700/80 dark:bg-slate-800/80 dark:hover:border-sky-700"
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl bg-white border border-black/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] transition-all duration-200 ease-out hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 dark:bg-slate-900 dark:border-white/[0.06]"
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 ring-1 ring-sky-100 dark:bg-sky-900/30 dark:ring-sky-800/50">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-900/20">
               <Icon size={22} className="text-sky-600 dark:text-sky-400" aria-hidden />
             </span>
             <div className="mt-3">
-              <h2 className="text-[15px] font-bold leading-tight text-slate-900 dark:text-white">{title}</h2>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-500 dark:text-slate-400">{desc}</p>
+              <h2 className="text-[15px] font-semibold leading-tight text-slate-900 dark:text-white">{title}</h2>
+              <p className="mt-0.5 text-[12px] leading-snug text-slate-400 dark:text-slate-500">{desc}</p>
             </div>
           </Link>
         ))}
