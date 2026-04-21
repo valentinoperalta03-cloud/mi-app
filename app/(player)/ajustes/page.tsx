@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import ThemeToggleButton from "@/components/theme-toggle-button";
 import SettingsClient from "./settings-client";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -152,20 +153,28 @@ export default async function AjustesPage({
   }
 
   return (
-    <SettingsClient
-      initialLocation={typed?.location ?? null}
-      notificationsEnabled={typed?.notifications_enabled ?? true}
-      isPublic={typed?.is_public ?? true}
-      category={typed?.category ?? null}
-      name={typed?.name?.trim() || "Jugador"}
-      avatarUrl={typed?.avatar_url ?? null}
-      levelDowngraded={sp.success === "nivel_bajado"}
-      updateLocationAction={updateLocation}
-      updateNotificationsAction={updateNotifications}
-      updatePrivacyAction={updatePrivacy}
-      downgradeLevelAction={downgradeLevel}
-      changePasswordAction={changePassword}
-      deleteAccountAction={deleteAccount}
-    />
+    <>
+      <section className="mx-auto w-full max-w-md space-y-3 px-4 pt-6">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+          Apariencia
+        </h2>
+        <ThemeToggleButton />
+      </section>
+      <SettingsClient
+        initialLocation={typed?.location ?? null}
+        notificationsEnabled={typed?.notifications_enabled ?? true}
+        isPublic={typed?.is_public ?? true}
+        category={typed?.category ?? null}
+        name={typed?.name?.trim() || "Jugador"}
+        avatarUrl={typed?.avatar_url ?? null}
+        levelDowngraded={sp.success === "nivel_bajado"}
+        updateLocationAction={updateLocation}
+        updateNotificationsAction={updateNotifications}
+        updatePrivacyAction={updatePrivacy}
+        downgradeLevelAction={downgradeLevel}
+        changePasswordAction={changePassword}
+        deleteAccountAction={deleteAccount}
+      />
+    </>
   );
 }
