@@ -107,8 +107,8 @@ export default function TopNav() {
           <div
             className="flex h-14 items-center justify-between px-4"
             style={{
-              background: "linear-gradient(135deg, #0a1628 0%, #0d2444 50%, #0f2d55 100%)",
-              boxShadow: "0 4px 24px -4px rgba(10, 22, 40, 0.4)",
+              background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+              boxShadow: "0 2px 12px rgba(37,99,235,0.3)",
             }}
           >
             <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ export default function TopNav() {
 
           <div
             className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, transparent, #38bdf8, #0ea5e9, #38bdf8, transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
           />
         </div>
       </header>
@@ -175,8 +175,8 @@ export default function TopNav() {
                 <motion.aside
                   className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto shadow-2xl"
                   style={{
-                    background: "linear-gradient(180deg, #0a1628 0%, #0d2444 100%)",
-                    boxShadow: "-8px 0 32px rgba(0,0,0,0.4)",
+                    background: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%)",
+                    boxShadow: "-8px 0 32px rgba(37,99,235,0.3)",
                   }}
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
@@ -206,7 +206,7 @@ export default function TopNav() {
                     </div>
                   </div>
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-sky-400/60">TU CUENTA</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-blue-200/60">TU CUENTA</p>
                   {accountItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -214,7 +214,7 @@ export default function TopNav() {
                         key={item.href}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
                         <span className="rounded-full bg-white/5 p-2 text-sky-400">
                           <Icon size={16} />
@@ -224,7 +224,7 @@ export default function TopNav() {
                     );
                   })}
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-sky-400/60">SOPORTE</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-blue-200/60">SOPORTE</p>
                   {supportItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -232,7 +232,7 @@ export default function TopNav() {
                         key={item.label}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
+                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
                         <span className="rounded-full bg-white/5 p-2 text-sky-400">
                           <Icon size={16} />

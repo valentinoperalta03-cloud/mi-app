@@ -48,7 +48,7 @@ export default function BottomNav() {
       aria-label="Navegación principal"
     >
       <div
-        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl border border-sky-300/15 bg-[rgba(10,22,40,0.92)] px-2 py-2 shadow-[0_-4px_32px_rgba(10,22,40,0.3),0_8px_32px_rgba(10,22,40,0.2)] backdrop-blur-[20px] dark:border-slate-700/40 dark:bg-[rgba(2,6,23,0.92)]"
+        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl border border-blue-500/20 bg-[rgba(10,22,40,0.92)] px-2 py-2 shadow-[0_-4px_32px_rgba(10,22,40,0.3),0_8px_32px_rgba(10,22,40,0.2)] backdrop-blur-[20px] dark:border-slate-700/40 dark:bg-[rgba(2,6,23,0.92)]"
       >
         {items.map((item) => {
           const Icon = item.icon;

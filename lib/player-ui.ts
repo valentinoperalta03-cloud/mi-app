@@ -16,13 +16,11 @@ export const PLAYER_CARD_INTERACTIVE =
 
 // Sky blue gradient button — iOS style
 export const PLAYER_PRIMARY_BUTTON =
-  "rounded-2xl bg-gradient-to-b from-sky-400 to-sky-600 " +
-  "px-4 py-2 text-sm font-semibold text-white " +
-  "shadow-[0_1px_3px_rgba(2,132,199,0.3),0_4px_12px_rgba(14,165,233,0.2)] " +
+  "rounded-2xl px-4 py-2 text-sm font-semibold text-white " +
+  "shadow-[0_2px_8px_rgba(37,99,235,0.3)] " +
   "transition-all duration-200 " +
-  "hover:from-sky-300 hover:to-sky-500 " +
-  "hover:shadow-[0_2px_6px_rgba(2,132,199,0.4),0_6px_16px_rgba(14,165,233,0.3)] " +
-  "active:scale-[0.98] active:from-sky-500 active:to-sky-700";
+  "hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(37,99,235,0.4)] " +
+  "active:scale-[0.98] active:translate-y-0";
 
 // Ghost secondary button
 export const PLAYER_SECONDARY_BUTTON =

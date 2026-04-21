@@ -152,7 +152,8 @@ export default async function PerfilPage() {
         <div
           className="relative overflow-hidden rounded-3xl p-6 text-center"
           style={{
-            background: "linear-gradient(135deg, #0a1628 0%, #0d2444 60%, #0f3460 100%)",
+            background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+            boxShadow: "0 8px 32px rgba(37,99,235,0.2)",
           }}
         >
           <div className="absolute bottom-0 left-4 opacity-5">
@@ -167,21 +168,21 @@ export default async function PerfilPage() {
               avatarUrl={row?.avatar_url ?? null}
               name={displayName}
               size={96}
-              ringClassName="ring-4 ring-sky-400/40 ring-offset-2 ring-offset-sky-900"
+              ringClassName="ring-4 ring-white/30 ring-offset-2 ring-offset-blue-700"
             />
           </div>
             <h1 className="mt-4 text-2xl font-bold text-white">{displayName}</h1>
-            <p className="mt-1 text-sm text-sky-300">
+            <p className="mt-1 text-sm text-blue-100">
               {nivelParts.category || "—"}
               {nivelParts.description ? ` — ${nivelParts.description}` : ""}
             </p>
-            <p className="mt-1 break-words text-xs text-sky-200/80">{email}</p>
+            <p className="mt-1 break-words text-xs text-white">{email}</p>
           {row?.bio?.trim() ? (
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-sky-100/90">{row.bio.trim()}</p>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-white">{row.bio.trim()}</p>
           ) : null}
           <Link
             href="/perfil/editar"
-              className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-gradient-to-b from-sky-500 to-sky-600 py-3.5 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-sky-500 active:scale-[0.99]"
+              className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-white/15 py-3.5 text-sm font-semibold text-white transition hover:bg-white/25 active:scale-[0.99]"
           >
             Editar perfil
           </Link>

@@ -108,8 +108,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section
         className="relative overflow-hidden rounded-3xl p-6 text-white"
         style={{
-          background: "linear-gradient(135deg, #0a1628 0%, #0d2444 60%, #0f3460 100%)",
-          boxShadow: "0 8px 32px rgba(10, 22, 40, 0.3)",
+          background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+          boxShadow: "0 8px 32px rgba(37,99,235,0.25)",
         }}
       >
         <div className="absolute right-4 top-4 opacity-[0.07]">
@@ -142,14 +142,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl bg-white border border-black/[0.06] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] transition-all duration-200 ease-out hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 dark:bg-slate-900 dark:border-white/[0.06]"
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(37,99,235,0.25)] active:scale-[0.98] active:translate-y-0"
+            style={{
+              background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+              boxShadow: "0 2px 8px rgba(37,99,235,0.2)",
+            }}
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-900/20">
-              <Icon size={22} className="text-sky-600 dark:text-sky-400" aria-hidden />
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <Icon size={22} className="text-white" aria-hidden />
             </span>
             <div className="mt-3">
-              <h2 className="text-[15px] font-semibold leading-tight text-slate-900 dark:text-white">{title}</h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-slate-400 dark:text-slate-500">{desc}</p>
+              <h2 className="text-[15px] font-semibold leading-tight text-white">{title}</h2>
+              <p className="mt-0.5 text-[12px] leading-snug text-white/60">{desc}</p>
             </div>
           </Link>
         ))}
