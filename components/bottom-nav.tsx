@@ -5,9 +5,7 @@ import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import NotificationsCenter from "@/components/notifications-center";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import ThemeToggle from "@/components/theme-toggle";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 
@@ -99,8 +97,6 @@ export default function BottomNav() {
             </Link>
           );
         })}
-        <ThemeToggle />
-        <NotificationsCenter />
       </div>
     </nav>
   );
