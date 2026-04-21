@@ -110,3 +110,141 @@ body::before {
 .dark .logo-adapt {
   filter: brightness(1.14) contrast(1.06);
 }
+
+/* Dark mode global overrides */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+/* All white backgrounds become dark */
+.dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+/* All borders become darker */
+.dark .border-slate-200 {
+  border-color: #1e293b !important;
+}
+
+.dark .border-slate-100 {
+  border-color: #1e293b !important;
+}
+
+/* All dark text becomes light */
+.dark .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-500 {
+  color: #64748b !important;
+}
+
+.dark .text-slate-950 {
+  color: #f8fafc !important;
+}
+
+/* Cards with shadow */
+.dark .shadow-sm,
+.dark .shadow,
+.dark [class*="shadow-"] {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Inputs and forms */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #475569 !important;
+}
+
+/* Interactive cards */
+.dark [class*="PLAYER_CARD"],
+.dark [class*="adminCard"] {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+/* Shimmer in dark mode */
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    #1e293b 25%,
+    #0f172a 37%,
+    #1e293b 63%
+  ) !important;
+  background-size: 400% 100% !important;
+}
+
+/* Bottom nav already dark - keep as is */
+
+/* Gradients used as page backgrounds */
+.dark .bg-transparent {
+  background-color: transparent !important;
+}
+
+/* White/light gradient backgrounds on sections */
+.dark [style*="background: linear-gradient"] {
+  /* Keep brand dark gradients as is */
+}
+
+/* Fix for specific sky-50 backgrounds used in info boxes */
+.dark .bg-sky-50 {
+  background-color: #0c2a3e !important;
+}
+
+.dark .bg-emerald-50 {
+  background-color: #052e16 !important;
+}
+
+.dark .bg-rose-50 {
+  background-color: #2d0a0a !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: #2d1a00 !important;
+}
+
+/* Text on colored backgrounds */
+.dark .text-emerald-800 {
+  color: #6ee7b7 !important;
+}
+
+.dark .text-rose-800 {
+  color: #fca5a5 !important;
+}
+
+.dark .text-amber-800 {
+  color: #fcd34d !important;
+}
