@@ -8,17 +8,51 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Padel App",
-  description: "Reserva canchas y gestiona tus partidos de padel",
+  title: "Padelibre — Reservá tu cancha de pádel",
+  description:
+    "La app para reservar canchas, crear partidos y encontrar jugadores de pádel en Argentina.",
+  keywords: [
+    "pádel",
+    "padel argentina",
+    "reservar cancha de pádel",
+    "partidos de pádel",
+    "Padelibre",
+    "turnos de pádel",
+  ],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "FaltaUno",
+    title: "Padelibre",
   },
+  openGraph: {
+    title: "Padelibre — La comunidad de pádel más grande de Argentina",
+    description: "Reservá, jugá y conectá. Todo en un solo lugar.",
+    url: "https://padelibre.app",
+    siteName: "Padelibre",
+    locale: "es_AR",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        alt: "Padelibre — Reservá, jugá y conectá",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Padelibre",
+    description: "Digitalizando el pádel en Argentina.",
+    images: ["/og-image.png"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

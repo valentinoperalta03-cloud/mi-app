@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
@@ -10,6 +11,7 @@ import { createClient } from "@/utils/supabase/server";
 import PartidoEditSection from "./partido-edit-section";
 import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
+import WhatsappShareButton from "./whatsapp-share-button";
 import { acceptJoinRequest, rejectJoinRequest } from "./actions";
 
 type PageProps = {
@@ -184,6 +186,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
   const inviteUrl = siteOrigin ? `${siteOrigin}/partidos/${id}?invite=true` : `/partidos/${id}?invite=true`;
+  const sharePath = siteOrigin ? `${siteOrigin}/partidos/${id}` : `/partidos/${id}`;
 
   const { data: myPendingAccess } =
     isPrivate && !isOwner && !isParticipant && inviteOpen
@@ -424,12 +427,24 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       />
 
       <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold tracking-tight text-slate-950">Jugadores anotados</h2>
           <span className="text-xs font-medium text-slate-500">
             {freeSlots} cupo{freeSlots === 1 ? "" : "s"} libre{freeSlots === 1 ? "" : "s"} de 4
           </span>
         </div>
+
+        {freeSlots > 0 ? (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <div className="relative h-7 w-20 overflow-hidden rounded-xl border border-slate-200/70 bg-white/90">
+                <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-1" />
+              </div>
+              <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
+            </div>
+            <WhatsappShareButton fallbackPath={sharePath} />
+          </div>
+        ) : null}
 
         {participants.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">

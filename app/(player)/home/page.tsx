@@ -13,6 +13,7 @@ import {
   HomeSuggestionsSkeleton,
   HomeSummarySkeleton,
 } from "@/components/home-loading-skeletons";
+import OnboardingSlides from "@/components/onboarding-slides";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -94,6 +95,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-24 pt-6">
+      <OnboardingSlides />
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm">
           <p className="text-sm font-semibold">Perfil guardado con exito.</p>
