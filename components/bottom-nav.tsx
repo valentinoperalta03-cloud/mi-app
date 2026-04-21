@@ -5,7 +5,9 @@ import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import NotificationsCenter from "@/components/notifications-center";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import ThemeToggle from "@/components/theme-toggle";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 
@@ -48,13 +50,7 @@ export default function BottomNav() {
       aria-label="Navegación principal"
     >
       <div
-        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl px-2 py-2"
-        style={{
-          background: "rgba(10, 22, 40, 0.92)",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 -4px 32px rgba(10, 22, 40, 0.3), 0 8px 32px rgba(10, 22, 40, 0.2)",
-          border: "1px solid rgba(56, 189, 248, 0.15)",
-        }}
+        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl border border-sky-300/15 bg-[rgba(10,22,40,0.92)] px-2 py-2 shadow-[0_-4px_32px_rgba(10,22,40,0.3),0_8px_32px_rgba(10,22,40,0.2)] backdrop-blur-[20px] dark:border-slate-700/40 dark:bg-[rgba(2,6,23,0.92)]"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -103,6 +99,8 @@ export default function BottomNav() {
             </Link>
           );
         })}
+        <ThemeToggle />
+        <NotificationsCenter />
       </div>
     </nav>
   );

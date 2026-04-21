@@ -2,7 +2,12 @@ import Link from "next/link";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import CrearPartidoForm, { type ClubOption, type CourtOption, type GenderCategory } from "./crear-partido-form";
+import CrearPartidoForm, {
+  type ClubOption,
+  type CourtOption,
+  type FriendOption,
+  type GenderCategory,
+} from "./crear-partido-form";
 
 export default async function CrearPartidoPage() {
   const supabase = await createClient();
@@ -22,6 +27,20 @@ export default async function CrearPartidoPage() {
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
   ]);
 
+  const { data: favoritesRaw } = user
+    ? await supabase
+        .from(DB_TABLES.userFavorites)
+        .select("favorite_user_id")
+        .eq("user_id", user.id)
+    : { data: [] };
+  const favoriteIds = (favoritesRaw ?? []).map((row: { favorite_user_id: string }) => row.favorite_user_id);
+  const { data: friendProfilesRaw } = favoriteIds.length
+    ? await supabase
+        .from(DB_TABLES.profiles)
+        .select("user_id, name, avatar_url, level, level_of_play, technical_score")
+        .in("user_id", favoriteIds)
+    : { data: [] };
+
   const clubs: ClubOption[] = ((clubsRaw ?? []) as Array<{ id: string; name: string | null; location: string | null }>).map(
     (club) => ({
       id: club.id,
@@ -39,6 +58,21 @@ export default async function CrearPartidoPage() {
     clubId: court.club_id,
     name: court.name ?? "Cancha",
     price: court.price ?? 0,
+  }));
+  const friends: FriendOption[] = ((friendProfilesRaw ?? []) as Array<{
+    user_id: string;
+    name: string | null;
+    avatar_url: string | null;
+    level?: number | null;
+    level_of_play?: string | null;
+    technical_score?: number | null;
+  }>).map((friend) => ({
+    userId: friend.user_id,
+    name: friend.name?.trim() || "Jugador",
+    avatarUrl: friend.avatar_url ?? null,
+    level: friend.level ?? null,
+    levelOfPlay: friend.level_of_play ?? null,
+    technicalScore: friend.technical_score ?? null,
   }));
 
   return (
@@ -58,7 +92,7 @@ export default async function CrearPartidoPage() {
           No se pudo cargar la disponibilidad de clubes y canchas.
         </section>
       ) : (
-        <CrearPartidoForm clubs={clubs} courts={courts} defaultGender={defaultGender} />
+        <CrearPartidoForm clubs={clubs} courts={courts} defaultGender={defaultGender} friends={friends} />
       )}
     </MotionPage>
   );

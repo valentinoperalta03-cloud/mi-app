@@ -2,9 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { MessageCircle, Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
@@ -263,6 +265,24 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     match.scheduled_time != null && String(match.scheduled_time).trim() !== ""
       ? String(match.scheduled_time).trim().slice(0, 5)
       : format(parseISO(match.date), "HH:mm");
+  const longDateArRaw = formatDateInArgentina(match.date, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const longDateAr = longDateArRaw.charAt(0).toUpperCase() + longDateArRaw.slice(1);
+  const hourAr = formatDateInArgentina(match.date, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
+  const ownerWhatsMessage = `¡Hola! Ya reservé la cancha para nuestro partido en ${detail.club_name ?? "el club"}.
+Día: ${longDateAr} a las ${hourAr}.
+Link del partido: ${partyUrl}`;
+  const ownerWhatsHref = `https://wa.me/?text=${encodeURIComponent(ownerWhatsMessage)}`;
+  const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
+  const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
@@ -403,6 +423,41 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               );
             })}
           </ul>
+        </section>
+      ) : null}
+
+      {(isOwner || (isParticipant && !isOwner && payStatus !== "paid")) ? (
+        <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-emerald-200/70 bg-white p-4 shadow-sm`}>
+          <div className="mb-3 flex items-center gap-2">
+            <div className="relative h-5 w-16 overflow-hidden opacity-60">
+              <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones por WhatsApp</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {isOwner ? (
+              <a
+                href={ownerWhatsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 active:scale-[0.98]"
+              >
+                <MessageCircle size={16} aria-hidden />
+                Avisá al grupo
+              </a>
+            ) : null}
+            {isParticipant && !isOwner && payStatus !== "paid" ? (
+              <a
+                href={assistWhatsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 active:scale-[0.98]"
+              >
+                <Send size={16} aria-hidden />
+                Confirmar asistencia
+              </a>
+            ) : null}
+          </div>
         </section>
       ) : null}
 

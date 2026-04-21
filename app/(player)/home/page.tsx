@@ -94,12 +94,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-24 pt-6 dark:bg-transparent">
       <OnboardingSlides />
       {levelingDone ? (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm">
+        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200">
           <p className="text-sm font-semibold">Perfil guardado con exito.</p>
-          <p className="mt-1 text-xs text-emerald-700">
+          <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
             Tu nivel y preferencias ya se actualizaron correctamente.
           </p>
         </section>
@@ -162,7 +162,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">Resultados pendientes</h2>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Resultados pendientes</h2>
           {pendingForMe.slice(0, 2).map((p) => (
             <CompetitiveResultConfirmationCard
               key={p.match_id}
@@ -181,21 +181,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Sugerencias para vos</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Sugerencias para vos</h2>
         <Suspense fallback={<HomeSuggestionsSkeleton />}>
           <HomeSuggestionsSection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Tu resumen</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Mis Reservas</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Mis Reservas</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>

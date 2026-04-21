@@ -22,4 +22,18 @@ export function formatLongDateInArgentina(now: Date = new Date()): string {
   }).format(now);
 }
 
+export function formatDateInArgentina(
+  value: string | number | Date,
+  options: Intl.DateTimeFormatOptions = {}
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: AR_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    ...options,
+  }).format(date);
+}
+
 export { AR_TIME_ZONE };

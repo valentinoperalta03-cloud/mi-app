@@ -19,6 +19,17 @@ function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function parseFriendIds(raw: string, max = 3): string[] {
+  if (!raw) return [];
+  const unique = new Set(
+    raw
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => x.length > 0)
+  );
+  return [...unique].slice(0, max);
+}
+
 function normalizeMatchType(raw: string): MatchType {
   return raw.toLowerCase().trim() === "competitivo" ? "competitivo" : "amistoso";
 }
@@ -107,6 +118,8 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   const visibility = normalizeVisibility(getField(formData, "visibility"));
   const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
   const levelRestricted = getField(formData, "level_restricted") === "true";
+  const invitedFriendIdsRaw = parseFriendIds(getField(formData, "invited_friend_ids"));
+  const paidFriendIdsRaw = parseFriendIds(getField(formData, "paid_friend_ids"));
 
   if (!courtId || !scheduledDate || !scheduledTime || !durationMinutesRaw) {
     return { error: "Completá club, cancha, fecha y horario." };
@@ -115,6 +128,9 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   const durationMinutes = Number.parseInt(durationMinutesRaw, 10);
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
     return { error: "Duración inválida." };
+  }
+  if (invitedFriendIdsRaw.length > 3) {
+    return { error: "Solo podés invitar hasta 3 amigos." };
   }
 
   try {
@@ -130,7 +146,26 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       return { error: "No se pudo obtener la información de la cancha." };
     }
 
+    const { data: favRows } = invitedFriendIdsRaw.length
+      ? await supabase
+          .from(DB_TABLES.userFavorites)
+          .select("favorite_user_id")
+          .eq("user_id", user.id)
+          .in("favorite_user_id", invitedFriendIdsRaw)
+      : { data: [] };
+    const allowedFriendIds = new Set(
+      (favRows ?? []).map((row: { favorite_user_id: string }) => row.favorite_user_id)
+    );
+    const invitedFriendIds = invitedFriendIdsRaw.filter((id) => allowedFriendIds.has(id));
+    const paidFriendIds = paidFriendIdsRaw.filter((id) => invitedFriendIds.includes(id));
+    const paidFriendSet = new Set(paidFriendIds);
+
     const totalPrice = Number((courtData as { price: number | null }).price ?? 0);
+    const perPlayerBase = Math.round(totalPrice / 4);
+    const feeRate = Number.parseFloat(process.env.MP_MARKETPLACE_FEE ?? "0.05");
+    const safeFeeRate = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0.05;
+    const perPlayerFee = Math.round(perPlayerBase * safeFeeRate * 100) / 100;
+    const perPlayerTotal = Math.round((perPlayerBase + perPlayerFee) * 100) / 100;
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
@@ -182,18 +217,36 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       return { error: "No se pudo crear el partido." };
     }
 
-    const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
-      match_id: data.id,
-      player_id: user.id,
-    });
+    const participantRows: Array<{ match_id: string; player_id: string }> = [
+      { match_id: data.id, player_id: user.id },
+      ...invitedFriendIds.map((friendId) => ({ match_id: data.id, player_id: friendId })),
+    ];
+    const uniqueParticipants = Array.from(
+      new Map(participantRows.map((row) => [row.player_id, row])).values()
+    ).slice(0, 4);
+
+    const { error: participantError } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .insert(uniqueParticipants);
 
     if (participantError) {
       return { error: "No se pudo crear el partido." };
     }
 
+    const invitedPaymentRows = invitedFriendIds.map((friendId) => ({
+      match_id: data.id,
+      user_id: friendId,
+      status: paidFriendSet.has(friendId) ? "approved" : "pending",
+      amount: perPlayerTotal,
+      marketplace_fee: perPlayerFee,
+    }));
+    if (invitedPaymentRows.length > 0) {
+      await supabase.from(DB_TABLES.payments).insert(invitedPaymentRows);
+    }
+
     const mp = await requestMercadoPagoPreference({
       match_id: data.id,
-      amount: Math.round(totalPrice / 4),
+      amount: Math.round(perPlayerTotal * (1 + paidFriendIds.length) * 100) / 100,
       club_name: clubName,
       court_name: courtName,
       date: scheduledDate,

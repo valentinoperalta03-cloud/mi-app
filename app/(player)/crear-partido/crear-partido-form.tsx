@@ -1,10 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/client";
 import { crearPartido } from "./actions";
@@ -26,6 +29,15 @@ export type CourtOption = {
   clubId: string;
   name: string;
   price: number;
+};
+
+export type FriendOption = {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  level: number | null;
+  levelOfPlay: string | null;
+  technicalScore: number | null;
 };
 
 type MatchRow = {
@@ -50,10 +62,12 @@ export default function CrearPartidoForm({
   clubs,
   courts,
   defaultGender,
+  friends,
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
   defaultGender: GenderCategory;
+  friends: FriendOption[];
 }) {
   const [selectedClubId, setSelectedClubId] = useState<string>(clubs[0]?.id ?? "");
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
@@ -66,6 +80,8 @@ export default function CrearPartidoForm({
   const [visibility, setVisibility] = useState<"publico" | "privado">("publico");
   const [genderCategory, setGenderCategory] = useState<GenderCategory>(defaultGender);
   const [levelRestricted, setLevelRestricted] = useState(false);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  const [paidForFriendIds, setPaidForFriendIds] = useState<string[]>([]);
   const [isSubmitting, startSubmit] = useTransition();
 
   const dates = useMemo(() => {
@@ -156,11 +172,30 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt) return { precioCancha: 0, comision: 0, total: 0 };
-    const precioCancha = Math.round(selectedCourt.price / 4);
-    const comision = Math.round(precioCancha * 0.05);
-    return { precioCancha, comision, total: precioCancha + comision };
-  }, [selectedCourt]);
+    if (!selectedCourt) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0, jugadoresPagados: 1 };
+    const precioCanchaJugador = Math.round(selectedCourt.price / 4);
+    const comisionPorJugador = Math.round(precioCanchaJugador * 0.05);
+    const jugadoresPagados = 1 + paidForFriendIds.length;
+    const total = (precioCanchaJugador + comisionPorJugador) * jugadoresPagados;
+    return { precioCanchaJugador, comisionPorJugador, total, jugadoresPagados };
+  }, [selectedCourt, paidForFriendIds.length]);
+
+  function toggleFriend(friendId: string) {
+    setSelectedFriendIds((prev) => {
+      const exists = prev.includes(friendId);
+      if (exists) {
+        setPaidForFriendIds((paid) => paid.filter((id) => id !== friendId));
+        return prev.filter((id) => id !== friendId);
+      }
+      if (prev.length >= 3) return prev;
+      return [...prev, friendId];
+    });
+  }
+
+  function togglePaidFor(friendId: string) {
+    if (!selectedFriendIds.includes(friendId)) return;
+    setPaidForFriendIds((prev) => (prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]));
+  }
 
   return (
     <form
@@ -211,19 +246,33 @@ export default function CrearPartidoForm({
           ))}
         </select>
         {selectedCourt ? (
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
+          <motion.div
+            layout
+            className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60"
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
+            <div className="mt-2 flex items-center gap-2 opacity-70">
+              <div className="relative h-5 w-16 overflow-hidden rounded-md border border-slate-200/70 bg-white/90">
+                <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain p-0.5" />
+              </div>
+            </div>
             <div className="mt-4 space-y-2">
               <div className="flex justify-between gap-3 text-sm text-slate-600">
-                <span>Precio de cancha</span>
-                <span className="shrink-0 font-medium text-slate-700">${fmtAr(resumenPago.precioCancha)}</span>
+                <span>Precio por jugador</span>
+                <span className="shrink-0 font-medium text-slate-700">${fmtAr(resumenPago.precioCanchaJugador)}</span>
               </div>
               <div className="flex justify-between gap-3 text-sm text-slate-600">
                 <div className="min-w-0 leading-snug">
                   <p>Servicio Padelibre</p>
                   <p>e impuestos incluidos</p>
                 </div>
-                <span className="shrink-0 self-start font-medium text-slate-700">${fmtAr(resumenPago.comision)}</span>
+                <span className="shrink-0 self-start font-medium text-slate-700">
+                  ${fmtAr(resumenPago.comisionPorJugador)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 text-sm text-slate-600">
+                <span>Jugadores que pagás ahora</span>
+                <span className="shrink-0 font-medium text-slate-700">{resumenPago.jugadoresPagados}</span>
               </div>
             </div>
             <div className="my-2 border-t border-slate-100" />
@@ -237,7 +286,7 @@ export default function CrearPartidoForm({
               </span>
               El precio ya incluye todos los impuestos y comisiones del servicio de Padelibre.
             </p>
-          </div>
+          </motion.div>
         ) : null}
       </section>
 
@@ -264,6 +313,88 @@ export default function CrearPartidoForm({
           })}
         </div>
       </section>
+
+      {selectedSlot ? (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invitar amigos</p>
+          <p className="text-xs text-slate-500">
+            Seleccioná hasta 3 amigos para completar el partido (4 jugadores contando al creador).
+          </p>
+          {friends.length === 0 ? (
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              Todavía no tenés amigos agregados.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {friends.map((friend) => {
+                  const selected = selectedFriendIds.includes(friend.userId);
+                  const nivelParts = splitOfficialCategoryLine(
+                    formatProfileNivelFromRow({
+                      level: friend.level,
+                      level_of_play: friend.levelOfPlay,
+                      technical_score: friend.technicalScore,
+                    })
+                  );
+                  return (
+                    <button
+                      key={friend.userId}
+                      type="button"
+                      onClick={() => toggleFriend(friend.userId)}
+                      className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
+                        selected ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200">
+                          {friend.avatarUrl ? (
+                            <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center bg-sky-100 text-xs font-semibold text-sky-700">
+                              {friend.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{friend.name}</p>
+                          <p className="mt-1 text-xs font-medium text-sky-700">{nivelParts.category || "Sin nivel"}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedFriendIds.map((friendId) => {
+                const friend = friends.find((f) => f.userId === friendId);
+                if (!friend) return null;
+                const checked = paidForFriendIds.includes(friendId);
+                return (
+                  <label
+                    key={`pay-${friendId}`}
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5"
+                  >
+                    <span className="text-sm font-medium text-slate-700">¿Pagar por esta persona? ({friend.name})</span>
+                    <button
+                      type="button"
+                      aria-pressed={checked}
+                      onClick={() => togglePaidFor(friendId)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
+                        checked ? "bg-sky-500" : "bg-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                          checked ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Horario</p>
@@ -414,6 +545,8 @@ export default function CrearPartidoForm({
       <input type="hidden" name="visibility" value={visibility} />
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
+      <input type="hidden" name="invited_friend_ids" value={selectedFriendIds.join(",")} />
+      <input type="hidden" name="paid_friend_ids" value={paidForFriendIds.join(",")} />
 
       {error ? (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
@@ -423,12 +556,12 @@ export default function CrearPartidoForm({
 
       {selectedCourt ? (
         <div className="rounded-2xl border border-sky-200/70 bg-sky-50/80 px-4 py-3 text-sm text-slate-800">
-          <p className="font-semibold text-sky-900">💳 Cada jugador abona su parte</p>
+          <p className="font-semibold text-sky-900">💳 Pago inicial del creador</p>
           <p className="mt-2 font-medium leading-relaxed text-slate-700">
             Al crear el partido pagás{" "}
             <span className="font-bold text-slate-900">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno
-            y el servicio de Padelibre). Los otros jugadores pagarán su parte al unirse. El turno queda confirmado
-            cuando los 4 jugadores paguen.
+            y el servicio de Padelibre). Si marcás "¿Pagar por él/ella?" para un invitado, su parte también se suma a
+            este pago.
           </p>
         </div>
       ) : null}
