@@ -192,10 +192,10 @@ export default function TopNav() {
                           alt=""
                           width={44}
                           height={44}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-[#0585FC]/40/50"
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-white/40"
                         />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0585FC]/50 text-sm font-bold text-white ring-2 ring-[#0585FC]/40/50">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/40">
                           {initial}
                         </div>
                       )}
@@ -216,7 +216,7 @@ export default function TopNav() {
                         onClick={closeDrawer}
                         className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-[#0585FC]">
+                        <span className="rounded-full bg-white/5 p-2 text-white">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -234,7 +234,7 @@ export default function TopNav() {
                         onClick={closeDrawer}
                         className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-[#0585FC]">
+                        <span className="rounded-full bg-white/5 p-2 text-white">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
