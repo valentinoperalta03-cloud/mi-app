@@ -146,7 +146,7 @@ export function EditProfileForm({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-slate-900 text-white shadow-lg transition hover:bg-slate-800"
+            className="absolute -bottom-1 -right-1 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-slate-900 text-white shadow-lg transition hover:bg-slate-800 dark:border-slate-600"
               aria-label="Cambiar foto de perfil"
             >
               <Camera size={18} />
@@ -169,7 +169,7 @@ export function EditProfileForm({
             />
           </div>
         </div>
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           La imagen se sube a Storage desde tu navegador.{" "}
           {uploadingAvatar ? "Subiendo imagen..." : ""}
         </p>
@@ -204,7 +204,7 @@ export function EditProfileForm({
         </label>
 
         <div className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sexo</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sexo</span>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -212,8 +212,8 @@ export function EditProfileForm({
               aria-pressed={gender === "masculino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "masculino"
-                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                  ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                  : "bg-transparent border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
               Masculino
@@ -224,8 +224,8 @@ export function EditProfileForm({
               aria-pressed={gender === "femenino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "femenino"
-                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                  ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                  : "bg-transparent border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
               Femenino
@@ -234,8 +234,8 @@ export function EditProfileForm({
           <input type="hidden" name="gender" value={gender} />
         </div>
 
-        <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
             Nivel competitivo
           </p>
           <p className="mt-1 text-sm text-[#0461C4]">
@@ -244,7 +244,7 @@ export function EditProfileForm({
               <span className="font-medium">{" - "}{levelParts.description}</span>
             ) : null}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Se actualiza solo con resultados de partidos y la nivelación inicial. No se puede editar
             acá.
           </p>
@@ -260,7 +260,7 @@ export function EditProfileForm({
             maxLength={2000}
             placeholder="Contá un poco sobre vos, tu estilo de juego…"
             defaultValue={defaultBio ?? ""}
-            className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+            className="w-full rounded-xl border border-slate-300 bg-transparent dark:bg-slate-950 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
           />
         </label>
 
@@ -281,19 +281,19 @@ export function EditProfileForm({
           </button>
           <Link
             href="/perfil"
-            className="flex flex-1 items-center justify-center rounded-3xl border border-slate-200 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="flex flex-1 items-center justify-center rounded-3xl bg-transparent border border-slate-300 dark:border-slate-700 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Volver
           </Link>
         </div>
       </form>
 
-      <div className="border-t border-slate-100 pt-8">
+      <div className="border-t border-slate-200 dark:border-slate-800 pt-8">
         <button
           type="button"
           disabled={deletePending}
           onClick={() => void handleDeleteAccount()}
-          className="w-full rounded-2xl border border-rose-200/90 bg-white py-3.5 text-sm font-medium text-rose-600 transition hover:border-rose-300 hover:bg-rose-50/50 disabled:opacity-50"
+          className="w-full rounded-2xl border border-rose-200/90 bg-white dark:bg-slate-900 py-3.5 text-sm font-medium text-rose-600 dark:text-rose-400 transition hover:border-rose-300 hover:bg-rose-50/50 dark:border-rose-800 dark:hover:bg-rose-950/30 disabled:opacity-50"
         >
           {deletePending ? "Eliminando…" : "Eliminar cuenta"}
         </button>

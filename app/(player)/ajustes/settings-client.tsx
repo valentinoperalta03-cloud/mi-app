@@ -131,7 +131,7 @@ export default function SettingsClient({
       </header>
 
       {levelDowngraded ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           Tu nivel fue actualizado correctamente.
         </div>
       ) : null}
@@ -153,10 +153,10 @@ export default function SettingsClient({
           {locationMsg ? <p className="text-xs text-slate-500">{locationMsg}</p> : null}
         </div>
 
-        <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-100 p-3">
+        <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Notificaciones</p>
-            <p className="text-xs text-slate-500">Recibí avisos de partidos y reservas</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Notificaciones</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Recibí avisos de partidos y reservas</p>
           </div>
           <button
             type="button"
@@ -168,12 +168,12 @@ export default function SettingsClient({
             {notifEnabled ? "ON" : "OFF"}
           </button>
         </div>
-        {notifMsg ? <p className="mt-1 text-xs text-slate-500">{notifMsg}</p> : null}
+        {notifMsg ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{notifMsg}</p> : null}
 
-        <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-100 p-3">
+        <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Privacidad</p>
-            <p className="text-xs text-slate-500">{privacyPublic ? "Perfil público" : "Perfil privado"}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Privacidad</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{privacyPublic ? "Perfil público" : "Perfil privado"}</p>
           </div>
           <button
             type="button"
@@ -185,7 +185,7 @@ export default function SettingsClient({
             {privacyPublic ? "Público" : "Privado"}
           </button>
         </div>
-        {privacyMsg ? <p className="mt-1 text-xs text-slate-500">{privacyMsg}</p> : null}
+        {privacyMsg ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{privacyMsg}</p> : null}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -196,13 +196,13 @@ export default function SettingsClient({
         <button
           type="button"
           onClick={() => setLevelOpen((v) => !v)}
-          className="mt-3 flex w-full items-center justify-between rounded-2xl border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700"
+          className="mt-3 flex w-full items-center justify-between rounded-2xl border border-slate-300 bg-transparent px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Ver detalle de categorías
           <ChevronDown size={16} className={levelOpen ? "rotate-180 transition-transform" : "transition-transform"} />
         </button>
         {levelOpen ? (
-          <div className="mt-2 space-y-1 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+          <div className="mt-2 space-y-1 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
             {LEVEL_INFO.map((line) => (
               <p key={line}>{line}</p>
             ))}
@@ -211,7 +211,7 @@ export default function SettingsClient({
         <button
           type="button"
           onClick={() => setShowDowngradeModal(true)}
-          className="mt-3 w-full rounded-2xl border border-amber-300 bg-amber-50 py-2 text-sm font-semibold text-amber-800"
+          className="mt-3 w-full rounded-2xl border border-slate-300 bg-transparent py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Bajar mi nivel
         </button>
@@ -222,7 +222,7 @@ export default function SettingsClient({
         <button
           type="button"
           onClick={() => setPwdOpen((v) => !v)}
-          className="mt-3 w-full rounded-2xl border border-slate-200 px-3 py-2 text-left text-sm font-medium text-slate-700"
+          className="mt-3 w-full rounded-2xl border border-slate-300 bg-transparent px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Cambiar contraseña
         </button>
@@ -242,7 +242,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Nueva contraseña"
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
             <input
               type="password"
@@ -250,7 +250,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Confirmar contraseña"
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
             <button
               type="submit"
@@ -260,7 +260,7 @@ export default function SettingsClient({
             </button>
           </form>
         ) : null}
-        {pwdMsg ? <p className="mt-2 text-xs text-slate-600">{pwdMsg}</p> : null}
+        {pwdMsg ? <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{pwdMsg}</p> : null}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -274,7 +274,7 @@ export default function SettingsClient({
               {(name[0] ?? "J").toUpperCase()}
             </div>
           )}
-          <p className="text-sm font-medium text-slate-700">{name}</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{name}</p>
         </div>
         <button
           type="button"
@@ -287,13 +287,13 @@ export default function SettingsClient({
 
       {showDowngradeModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-4">
-            <p className="text-sm text-slate-800">¿Estás seguro? Tu nivel bajará un escalón.</p>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm text-slate-800 dark:text-slate-200">¿Estás seguro? Tu nivel bajará un escalón.</p>
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowDowngradeModal(false)}
-                className="flex-1 rounded-2xl border border-slate-200 py-2 text-sm font-medium text-slate-700"
+                className="flex-1 rounded-2xl border border-slate-300 bg-transparent py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancelar
               </button>
@@ -315,13 +315,13 @@ export default function SettingsClient({
 
       {showDeleteModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-4">
-            <p className="text-sm text-slate-800">Esta acción es irreversible.</p>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-sm text-slate-800 dark:text-slate-200">Esta acción es irreversible.</p>
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 rounded-2xl border border-slate-200 py-2 text-sm font-medium text-slate-700"
+                className="flex-1 rounded-2xl border border-slate-300 bg-transparent py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancelar
               </button>
