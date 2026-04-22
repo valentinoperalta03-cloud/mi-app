@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -26,7 +27,7 @@ export async function adminCancelReservation(formData: FormData): Promise<void> 
 
   const { data: row, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("court_id,match_type")
+    .select("court_id,match_type,owner_id")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -34,7 +35,7 @@ export async function adminCancelReservation(formData: FormData): Promise<void> 
     redirect("/admin/reservas");
   }
 
-  const typed = row as { court_id: string; match_type: string | null };
+  const typed = row as { court_id: string; match_type: string | null; owner_id: string | null };
   if (!ctx.courtIds.includes(typed.court_id) || typed.match_type !== "reservation") {
     redirect("/admin/reservas");
   }
@@ -46,6 +47,17 @@ export async function adminCancelReservation(formData: FormData): Promise<void> 
 
   if (error) {
     redirect("/admin/reservas");
+  }
+
+  if (typed.owner_id) {
+    const tpl = NOTIFICATION_TEMPLATES.reservation_cancelled("la cancha");
+    await createNotification(supabase, {
+      user_id: typed.owner_id,
+      type: "reservation_cancelled",
+      title: tpl.title,
+      body: "Tu reserva fue cancelada por la administración del club.",
+      match_id: matchId,
+    });
   }
 
   revalidatePath("/admin/reservas");

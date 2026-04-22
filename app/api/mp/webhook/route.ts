@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getPaymentClient } from "@/lib/mercadopago";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -84,6 +85,25 @@ async function handleNotification(req: Request) {
       .from(DB_TABLES.matches)
       .update({ payment_status: "paid", match_status: "reserved" })
       .eq("id", matchId);
+    const { data: matchRow } = await admin
+      .from(DB_TABLES.matches)
+      .select("owner_id,total_price")
+      .eq("id", matchId)
+      .maybeSingle();
+    const ownerId = String((matchRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    if (ownerId) {
+      const amount = Number((matchRow as { total_price?: number | null } | null)?.total_price ?? 0);
+      const tpl = NOTIFICATION_TEMPLATES.payment_approved(
+        Number.isFinite(amount) ? String(Math.round(amount)) : "0"
+      );
+      await createNotification(admin, {
+        user_id: ownerId,
+        type: "payment_approved",
+        title: tpl.title,
+        body: tpl.body,
+        match_id: matchId,
+      });
+    }
   } else if (status === "rejected" || status === "cancelled" || status === "expired") {
     await admin
       .from(DB_TABLES.payments)
@@ -97,6 +117,22 @@ async function handleNotification(req: Request) {
       .from(DB_TABLES.matches)
       .update({ payment_status: status === "cancelled" ? "cancelled" : "rejected", match_status: "cancelled" })
       .eq("id", matchId);
+    const { data: ownerRow } = await admin
+      .from(DB_TABLES.matches)
+      .select("owner_id")
+      .eq("id", matchId)
+      .maybeSingle();
+    const ownerId = String((ownerRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    if (ownerId) {
+      const tpl = NOTIFICATION_TEMPLATES.payment_rejected();
+      await createNotification(admin, {
+        user_id: ownerId,
+        type: "payment_rejected",
+        title: tpl.title,
+        body: tpl.body,
+        match_id: matchId,
+      });
+    }
   } else if (status === "refunded" || status === "charged_back") {
     await admin
       .from(DB_TABLES.payments)

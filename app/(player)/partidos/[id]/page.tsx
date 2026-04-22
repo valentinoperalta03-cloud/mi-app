@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { MessageCircle, Send } from "lucide-react";
@@ -20,6 +21,59 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ edit_error?: string; invite?: string; join_sent?: string; join_error?: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select(
+      "id,date,courts(name,clubs(name))"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (!matchRow) {
+    return {};
+  }
+  const match = matchRow as unknown as {
+    id: string;
+    date: string;
+    courts:
+      | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }
+      | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }[]
+      | null;
+  };
+  const courtRel = Array.isArray(match.courts) ? match.courts[0] ?? null : match.courts;
+  const clubRel = courtRel?.clubs;
+  const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+  const { count: participantsCount } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", id);
+  const clubName = clubObj?.name ?? "Padelibre";
+  const when = parseISO(match.date);
+  const day = format(when, "EEEE d 'de' MMMM", { locale: es });
+  const hour = format(when, "HH:mm", { locale: es });
+  const faltan = Math.max(0, 4 - (participantsCount ?? 0));
+  const title = `🎾 ¡Sumate al partido en ${clubName}!`;
+  const description = `${day} a las ${hour} - Faltan ${faltan} jugadores.`;
+  const imageUrl = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://padelibre.app"}/logo-marca.png`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: imageUrl, alt: "Padelibre" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
 
 const EDIT_ERROR_MESSAGES: Record<string, string> = {
   datos: "Faltan datos para guardar los cambios.",
@@ -283,6 +337,7 @@ Link del partido: ${partyUrl}`;
   const ownerWhatsHref = `https://wa.me/?text=${encodeURIComponent(ownerWhatsMessage)}`;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
   const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
+  const shareWhatsText = `🎾 ¡Sumate! Jugamos en ${detail.club_name ?? "el club"} el ${longDateAr} a las ${hourAr}. Te esperamos.`;
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
@@ -497,7 +552,7 @@ Link del partido: ${partyUrl}`;
               </div>
               <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
             </div>
-            <WhatsappShareButton fallbackPath={sharePath} />
+            <WhatsappShareButton fallbackPath={sharePath} shareText={shareWhatsText} />
           </div>
         ) : null}
 

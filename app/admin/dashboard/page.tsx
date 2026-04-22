@@ -23,6 +23,14 @@ const modules = [
     iconBg: "bg-[#0585FC]/10 text-[#0461C4] ring-1 ring-[#0585FC]/20 dark:bg-[#0585FC]/20 dark:text-sky-300",
   },
   {
+    href: "/admin/agenda",
+    title: "Agenda",
+    description: "Grilla horaria por cancha con disponibilidad y detalle rápido de reservas.",
+    icon: CalendarDays,
+    accent: "from-blue-500/12 to-sky-500/10 border-blue-200/55",
+    iconBg: "bg-blue-500/12 text-blue-800 ring-1 ring-blue-200/40",
+  },
+  {
     href: "/admin/finanzas",
     title: "Finanzas",
     description: "Ingresos por periodo, por cancha y comparativa mes a mes.",
@@ -103,11 +111,11 @@ export default async function AdminDashboardPage() {
   }>;
 
   const reservasHoy = todayRows.length;
-  const ingresosHoy = todayRows
+  const ingresosEstimados = todayRows
     .filter((r) => String(r.payment_status ?? "").toLowerCase() === "paid")
     .reduce((sum, r) => sum + (r.total_price ?? 0), 0);
   const canchasOcupadas = new Set(todayRows.map((r) => r.court_id)).size;
-  const canchasDisponibles = Math.max(0, courtIds.length - canchasOcupadas);
+  const ocupacionPct = courtIds.length > 0 ? Math.round((canchasOcupadas / courtIds.length) * 100) : 0;
   const jugadoresActivos = new Set(todayRows.map((r) => r.owner_id).filter((id): id is string => Boolean(id)))
     .size;
 
@@ -124,15 +132,10 @@ export default async function AdminDashboardPage() {
   const maxHourly = Math.max(1, ...chartData.map((b) => b.total));
 
   const todayMetrics = [
-    { label: "Reservas hoy", value: String(reservasHoy), icon: Target, color: "text-[#0461C4]" },
-    { label: "Ingresos hoy", value: money.format(ingresosHoy), icon: DollarSign, color: "text-emerald-700" },
-    {
-      label: "Canchas hoy",
-      value: `${canchasOcupadas} ocupadas / ${canchasDisponibles} libres`,
-      icon: Activity,
-      color: "text-violet-700",
-    },
-    { label: "Jugadores activos", value: String(jugadoresActivos), icon: Users, color: "text-amber-700" },
+    { label: "Reservas de Hoy", value: String(reservasHoy), icon: Target, color: "text-[#0461C4]" },
+    { label: "Ingresos Estimados", value: money.format(ingresosEstimados), icon: DollarSign, color: "text-emerald-700" },
+    { label: "Ocupación de Canchas (%)", value: `${ocupacionPct}%`, icon: Activity, color: "text-violet-700" },
+    { label: "Jugadores Activos", value: String(jugadoresActivos), icon: Users, color: "text-amber-700" },
   ] as const;
 
   if (!owned) {
@@ -184,6 +187,14 @@ export default async function AdminDashboardPage() {
             <Icon size={18} className={color} strokeWidth={2} />
             <p className={adminKicker}>{label}</p>
             <p className={`text-lg font-bold tabular-nums ${color}`}>{value}</p>
+            {label.includes("Ocupación") ? (
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
+                  style={{ width: `${ocupacionPct}%` }}
+                />
+              </div>
+            ) : null}
           </div>
         ))}
       </section>
@@ -192,24 +203,24 @@ export default async function AdminDashboardPage() {
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <p className={`${adminKicker} text-slate-500`}>Actividad del día</p>
-            <h2 className="text-lg font-bold text-slate-900">Reservas por hora</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Horas pico del día</h2>
           </div>
           <p className="text-sm font-semibold text-slate-500">
             Total: <span className="text-slate-800">{reservasHoy}</span>
           </p>
         </div>
-        <div className="flex items-end gap-2 overflow-x-auto pb-2">
+        <div className="space-y-3">
           {chartData.map((item) => (
-            <div key={item.hour} className="flex min-w-10 flex-col items-center gap-2">
-              <div className="flex h-40 w-8 items-end rounded-xl bg-slate-100/90 p-1 ring-1 ring-slate-200/60">
+            <div key={item.hour} className="grid grid-cols-[44px_1fr_36px] items-center gap-3">
+              <p className="text-[11px] font-semibold text-slate-500">{String(item.hour).padStart(2, "0")}:00</p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
-                  className="w-full rounded-lg bg-gradient-to-t from-[#0585FC] to-cyan-400"
-                  style={{ height: `${Math.max(6, (item.total / maxHourly) * 100)}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
+                  style={{ width: `${Math.max(6, (item.total / maxHourly) * 100)}%` }}
                   title={`${item.total} reservas`}
                 />
               </div>
-              <p className="text-[11px] font-semibold text-slate-500">{String(item.hour).padStart(2, "0")}h</p>
-              <p className="text-xs font-bold text-slate-700">{item.total}</p>
+              <p className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{item.total}</p>
             </div>
           ))}
         </div>

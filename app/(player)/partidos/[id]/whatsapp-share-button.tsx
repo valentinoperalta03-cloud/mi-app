@@ -4,15 +4,16 @@ import { Share2 } from "lucide-react";
 
 type WhatsappShareButtonProps = {
   fallbackPath: string;
+  shareText: string;
 };
 
-export default function WhatsappShareButton({ fallbackPath }: WhatsappShareButtonProps) {
+export default function WhatsappShareButton({ fallbackPath, shareText }: WhatsappShareButtonProps) {
   function handleShare() {
     const pageUrl =
       typeof window !== "undefined" && window.location?.href
         ? window.location.href
         : fallbackPath;
-    const message = `¡Sumate a mi partido de pádel! ${pageUrl}`;
+    const message = `${shareText} ${pageUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
     if (typeof window !== "undefined") {

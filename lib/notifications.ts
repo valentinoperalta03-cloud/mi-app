@@ -11,7 +11,9 @@ type NotificationType =
   | "reservation_cancelled"
   | "payment_approved"
   | "payment_rejected"
-  | "level_up";
+  | "level_up"
+  | "match_cancelled"
+  | "match_owner_changed";
 
 export async function createNotification(
   supabase: SupabaseClient,
@@ -72,6 +74,14 @@ export const NOTIFICATION_TEMPLATES = {
   payment_rejected: () => ({
     title: "Pago rechazado",
     body: "Tu pago no pudo procesarse. Intentá con otro medio de pago.",
+  }),
+  match_cancelled: (matchInfo: string) => ({
+    title: "Partido cancelado",
+    body: `El partido en ${matchInfo} fue cancelado.`,
+  }),
+  match_owner_changed: (matchInfo: string) => ({
+    title: "Nuevo organizador asignado",
+    body: `Ahora sos el organizador del partido en ${matchInfo}.`,
   }),
   level_up: (newLevel: string) => ({
     title: "¡Subiste de nivel! 🎾",
