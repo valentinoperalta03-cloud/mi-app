@@ -27,24 +27,36 @@ const quickActions = [
     desc: "Organizá un partido y encontrá rivales",
     href: "/crear-partido",
     Icon: CirclePlus,
+    gradient: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+    shadow: "0 2px 8px rgba(22,163,74,0.25)",
+    hoverShadow: "hover:shadow-[0_8px_24px_rgba(22,163,74,0.28)]",
   },
   {
     title: "Aprender",
     desc: "Clases y entrenamientos",
     href: "/clases",
     Icon: GraduationCap,
+    gradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+    shadow: "0 2px 8px rgba(5,133,252,0.2)",
+    hoverShadow: "hover:shadow-[0_8px_24px_rgba(5,133,252,0.25)]",
   },
   {
     title: "Competir",
     desc: "Torneos y competencias",
     href: "/torneos",
     Icon: Trophy,
+    gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    shadow: "0 2px 8px rgba(245,158,11,0.25)",
+    hoverShadow: "hover:shadow-[0_8px_24px_rgba(245,158,11,0.3)]",
   },
   {
     title: "Buscar partido",
     desc: "Unite a partidos abiertos",
     href: "/buscar-partido",
     Icon: Search,
+    gradient: "linear-gradient(135deg, #facc15 0%, #eab308 100%)",
+    shadow: "0 2px 8px rgba(234,179,8,0.24)",
+    hoverShadow: "hover:shadow-[0_8px_24px_rgba(234,179,8,0.28)]",
   },
 ] as const;
 
@@ -138,14 +150,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="grid grid-cols-2 gap-4">
-        {quickActions.map(({ title, desc, href, Icon }) => (
+        {quickActions.map(({ title, desc, href, Icon, gradient, shadow, hoverShadow }) => (
           <Link
             key={title}
             href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(5,133,252,0.25)] active:scale-[0.98] active:translate-y-0"
+            className={`group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${hoverShadow} active:scale-[0.98] active:translate-y-0`}
             style={{
-              background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-              boxShadow: "0 2px 8px rgba(5,133,252,0.2)",
+              background: gradient,
+              boxShadow: shadow,
             }}
           >
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
