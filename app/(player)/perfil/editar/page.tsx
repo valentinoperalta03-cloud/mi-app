@@ -34,16 +34,16 @@ export default async function EditarPerfilPage() {
   const competitiveLevelLine = formatProfileNivelFromRow(row);
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-24 pt-6 dark:from-slate-950 dark:to-slate-900">
       <header className="mb-6 space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Perfil</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Editar perfil</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Editar perfil</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           La foto se sube a Supabase desde tu dispositivo; al guardar solo enviamos la URL pública.
         </p>
       </header>
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
         <EditProfileForm
           userId={user.id}
           defaultName={defaultName}

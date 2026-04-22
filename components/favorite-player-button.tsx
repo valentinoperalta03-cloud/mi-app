@@ -51,7 +51,7 @@ export function FavoritePlayerButton({
         onClick={() => handleClick()}
         aria-pressed={favorited}
         aria-label={favorited ? "Quitar de favoritos" : "Añadir a favoritos"}
-        className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 text-slate-500 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.15)] backdrop-blur-sm transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-50"
+        className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 text-slate-500 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.15)] backdrop-blur-sm transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100"
       >
         <Star
           size={22}

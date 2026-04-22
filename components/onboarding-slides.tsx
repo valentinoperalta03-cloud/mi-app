@@ -131,7 +131,7 @@ export default function OnboardingSlides() {
                 <button
                   type="button"
                   onClick={closeOnboarding}
-                  className="rounded-2xl border border-slate-300/80 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                  className="rounded-2xl border border-slate-300 bg-transparent px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Saltar
                 </button>
