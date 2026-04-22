@@ -98,7 +98,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
       <section className={adminCard}>
         <form action={createClubOnboardingAction} className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
-            <label htmlFor="nombre" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Nombre del club
             </label>
             <input
@@ -107,12 +107,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Padel Norte Club"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="direccion" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="direccion" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Direccion completa
             </label>
             <input
@@ -121,12 +121,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Av. Libertador 1234"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="ciudad" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="ciudad" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Ciudad
             </label>
             <input
@@ -135,12 +135,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Buenos Aires"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5 md:col-span-2">
-            <label htmlFor="descripcion" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="descripcion" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Descripcion del club
             </label>
             <textarea
@@ -149,12 +149,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               required
               rows={4}
               placeholder="Conta brevemente que ofrece tu club, servicios y propuesta."
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="telefono" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="telefono" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Telefono de contacto
             </label>
             <input
@@ -163,12 +163,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="tel"
               required
               placeholder="Ej: +54 11 1234-5678"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="horario" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="horario" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Horario de atencion general
             </label>
             <input
@@ -177,12 +177,12 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="Ej: Lun a Dom de 08:00 a 23:00"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 
           <div className="space-y-1.5 md:col-span-2">
-            <label htmlFor="foto_url" className="text-sm font-semibold text-slate-700">
+            <label htmlFor="foto_url" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Foto del club (URL)
             </label>
             <input
@@ -191,7 +191,7 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
               type="text"
               required
               placeholder="https://..."
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/40"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </div>
 

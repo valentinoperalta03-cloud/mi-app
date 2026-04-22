@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { MessageSquareDashed } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { RelativeTime } from "@/components/relative-time";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { PostFeedItem } from "@/lib/para-ti-posts";
 
 export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
   if (posts.length === 0) {
     return (
-      <p className="rounded-[2.5rem] border border-dashed border-slate-200/90 bg-white/90 px-5 py-8 text-center text-sm text-slate-500">
-        Todavía no hay publicaciones. Sé el primero en compartir algo con la comunidad.
-      </p>
+      <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <EmptyState
+          icon={MessageSquareDashed}
+          title="Todavía no hay publicaciones"
+          description="Sé el primero en compartir algo con la comunidad."
+        />
+      </div>
     );
   }
 
@@ -54,12 +61,12 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
                   {p.content}
                 </p>
                 {p.match_id ? (
-                  <p className="mt-3 inline-flex items-center rounded-full bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0585FC] ring-1 ring-[#0585FC]/20/60">
+                  <Badge variant="brand" className="mt-3 inline-flex items-center">
                     <span className="mr-1.5" aria-hidden>
                       🏆
                     </span>
                     {p.scoreLabel ?? "Partido vinculado"}
-                  </p>
+                  </Badge>
                 ) : null}
               </div>
             </div>

@@ -54,12 +54,12 @@ function ManualBlockDialog({
         </p>
 
         <form action={formAction} className="mt-4 space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700">Cancha</span>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Cancha</span>
             <select
               name="court_id"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             >
               {courts.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -68,21 +68,21 @@ function ManualBlockDialog({
               ))}
             </select>
           </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700">Fecha</span>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Fecha</span>
             <input
               name="date"
               type="date"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-semibold text-slate-700">Hora inicio</span>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Hora inicio</span>
             <select
               name="start_time"
               required
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             >
               {SLOT_TIMES.map((t) => (
                 <option key={t} value={t}>

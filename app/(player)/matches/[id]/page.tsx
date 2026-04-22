@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { MatchResultForm } from "@/components/match-result-form";
+import { Badge } from "@/components/ui/badge";
 import {
   fetchMatchById,
   matchClubName,
@@ -161,9 +162,9 @@ export default async function MatchDetailPage({ params }: PageProps) {
               const tag = idx < 2 ? "A" : "B";
               return (
                 <li key={mp.player_id} className="flex items-center gap-2 text-sm">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                  <Badge variant="neutral" className="px-2 py-0.5 text-[10px] font-bold">
                     {tag}
-                  </span>
+                  </Badge>
                   <Link
                     href={`/jugador/${mp.player_id}`}
                     className="font-semibold text-[#0461C4] underline decoration-sky-200/80 underline-offset-2 transition hover:text-[#0585FC]"

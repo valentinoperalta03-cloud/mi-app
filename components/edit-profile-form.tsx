@@ -175,8 +175,8 @@ export function EditProfileForm({
         </p>
         {uploadError ? <p className="text-center text-xs text-rose-600">{uploadError}</p> : null}
 
-        <label className="block space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre</span>
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Nombre</span>
           <input
             name="name"
             type="text"
@@ -184,12 +184,12 @@ export function EditProfileForm({
             autoComplete="name"
             defaultValue={defaultName}
             maxLength={120}
-            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
+            className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
           />
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Edad <span className="font-normal normal-case text-slate-400">(opcional)</span>
           </span>
           <input
@@ -199,7 +199,7 @@ export function EditProfileForm({
             pattern="[0-9]*"
             placeholder="Ej. 28"
             defaultValue={defaultAge ?? ""}
-            className="w-full rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
+            className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
           />
         </label>
 
@@ -250,8 +250,8 @@ export function EditProfileForm({
           </p>
         </div>
 
-        <label className="block space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Descripción del perfil
           </span>
           <textarea
@@ -260,7 +260,7 @@ export function EditProfileForm({
             maxLength={2000}
             placeholder="Contá un poco sobre vos, tu estilo de juego…"
             defaultValue={defaultBio ?? ""}
-            className="w-full resize-y rounded-3xl border border-slate-200/90 bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-900 outline-none transition focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20/50"
+            className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
           />
         </label>
 

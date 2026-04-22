@@ -9,23 +9,24 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function Pill({
   Icon,
   label,
+  variant,
   className,
 }: {
   Icon: LucideIcon;
   label: string;
+  variant: "brand" | "success" | "warning" | "neutral";
   className: string;
 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold leading-none ${className}`}
-    >
+    <Badge variant={variant} className={`gap-1 ${className}`}>
       <Icon size={12} strokeWidth={2.25} className="shrink-0 opacity-90" aria-hidden />
       {label}
-    </span>
+    </Badge>
   );
 }
 
@@ -58,7 +59,8 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={Ticket}
           label={label}
-          className="bg-emerald-100/90 text-emerald-800 ring-1 ring-emerald-200/60"
+          variant="success"
+          className=""
         />
       );
     case "pending":
@@ -66,7 +68,8 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={Clock}
           label={label}
-          className="bg-amber-100/90 text-amber-900 ring-1 ring-amber-200/55"
+          variant="warning"
+          className=""
         />
       );
     case "failed":
@@ -74,7 +77,8 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={Ban}
           label={label}
-          className="bg-rose-100/85 text-rose-800 ring-1 ring-rose-200/55"
+          variant="neutral"
+          className=""
         />
       );
     case "unknown":
@@ -82,7 +86,8 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={HelpCircle}
           label={label}
-          className="bg-slate-100/90 text-slate-600 ring-1 ring-slate-200/70"
+          variant="neutral"
+          className=""
         />
       );
     default:
@@ -90,7 +95,8 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={HelpCircle}
           label={label}
-          className="bg-violet-100/85 text-violet-800 ring-1 ring-violet-200/55"
+          variant="brand"
+          className=""
         />
       );
   }
@@ -105,7 +111,8 @@ export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null
       <Pill
         Icon={Trophy}
         label="Competitivo"
-        className="bg-[#0585FC]/10/90 text-[#0585FC] ring-1 ring-[#0585FC]/20/55"
+        variant="brand"
+        className=""
       />
     );
   }
@@ -113,7 +120,8 @@ export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null
     <Pill
       Icon={HeartHandshake}
       label="Amistoso"
-      className="bg-fuchsia-100/85 text-fuchsia-900 ring-1 ring-fuchsia-200/50"
+      variant="brand"
+      className=""
     />
   );
 }
@@ -124,7 +132,8 @@ export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente"
       <Pill
         Icon={Users}
         label="Recurrente"
-        className="bg-[#0585FC]/10/90 text-[#0585FC] ring-1 ring-[#0585FC]/20/55"
+        variant="brand"
+        className=""
       />
     );
   }
@@ -132,7 +141,8 @@ export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente"
     <Pill
       Icon={UserPlus}
       label="Nuevo"
-      className="bg-amber-100/90 text-amber-900 ring-1 ring-amber-200/55"
+      variant="warning"
+      className=""
     />
   );
 }

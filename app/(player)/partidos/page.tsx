@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CalendarX2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import {
   fetchUpcomingMatches,
@@ -63,9 +65,9 @@ export default async function PartidosPage() {
                   </h2>
                   <p className="truncate text-sm font-light text-slate-500">{clubName}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">
+                <Badge variant="brand" className="shrink-0">
                   {n} jug.
-                </span>
+                </Badge>
               </div>
               <p className="mt-2 text-sm font-light text-slate-500">{when}</p>
               <div className="mt-2 flex items-center justify-between">
@@ -85,9 +87,10 @@ export default async function PartidosPage() {
       </section>
 
       {!error && matches.length === 0 ? (
-        <EmptyStateCard
-          title="Nadie armo partido para hoy todavia"
-          subtitle="Convoca jugadores cerca tuyo y crea el primer encuentro del dia en segundos."
+        <EmptyState
+          icon={CalendarX2}
+          title="Nadie armó partidos todavía"
+          description="Convocá jugadores cerca tuyo y creá el primer encuentro del día en segundos."
         />
       ) : null}
     </MotionPage>

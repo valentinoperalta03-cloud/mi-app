@@ -2,7 +2,10 @@
 
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { CalendarX2, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type MatchActivity = {
   id: string;
@@ -102,17 +105,21 @@ export default function ActivityTabs({
       {tab === "partidos" ? (
         <section className="space-y-2">
           {matches.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              Aún no tenés partidos registrados.
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <EmptyState
+                icon={CalendarX2}
+                title="Aún no tenés partidos"
+                description="Cuando juegues tus primeros encuentros, van a aparecer acá."
+              />
             </div>
           ) : (
             matches.map((item) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 truncate text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                  <Badge variant="neutral" className="shrink-0">
                     {translateStatus(item.match_status)}
-                  </span>
+                  </Badge>
                 </div>
                 <p className="mt-2 truncate text-sm text-slate-700">Club: {item.club_name}</p>
                 <p className="text-sm text-slate-700">Tipo: {translateType(item.match_type)}</p>
@@ -125,17 +132,21 @@ export default function ActivityTabs({
       {tab === "reservas" ? (
         <section className="space-y-2">
           {reservations.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              Aún no tenés reservas registradas.
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <EmptyState
+                icon={CalendarX2}
+                title="Aún no tenés reservas"
+                description="Tus reservas de cancha se van a listar en esta sección."
+              />
             </div>
           ) : (
             reservations.map((item) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 truncate text-sm font-semibold capitalize text-slate-900">{formatDate(item.scheduled_date)}</p>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                  <Badge variant="neutral" className="shrink-0">
                     {translateStatus(item.match_status)}
-                  </span>
+                  </Badge>
                 </div>
                 <p className="mt-2 truncate text-sm text-slate-700">Cancha: {item.court_name}</p>
                 <p className="text-sm text-slate-700">
@@ -148,8 +159,12 @@ export default function ActivityTabs({
       ) : null}
 
       {tab === "torneos" ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          Próximamente
+        <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <EmptyState
+            icon={Trophy}
+            title="Torneos próximamente"
+            description="Muy pronto vas a poder seguir tus torneos desde este módulo."
+          />
         </section>
       ) : null}
     </main>

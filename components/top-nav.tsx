@@ -16,6 +16,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { Badge } from "@/components/ui/badge";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 
@@ -201,7 +202,9 @@ export default function TopNav() {
                       )}
                       <div className="min-w-0">
                         <p className="truncate font-bold text-white">{name}</p>
-                        <p className="truncate text-xs text-sky-100">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
+                        <div className="mt-1">
+                          <Badge variant="brand">{category ? `Nivel ${category}` : "Sin nivel asignado"}</Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
