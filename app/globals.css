@@ -25,6 +25,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input,
+select,
+textarea {
+  border-color: #cbd5e1;
+}
+
+button,
+a[role="button"] {
+  color: inherit;
+}
+
+.bg-\[\#0585FC\]\/50 {
+  background-color: #0585fc !important;
+}
+
+.dark .bg-\[\#0585FC\]\/50 {
+  background-color: #0ea5e9 !important;
+}
+
+.bg-white.border-slate-200,
+.bg-white.border-slate-100 {
+  border-color: #e2e8f0 !important;
+}
+
 body::before {
   content: "";
   position: fixed;

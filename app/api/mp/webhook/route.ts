@@ -82,17 +82,21 @@ async function handleNotification(req: Request) {
       .eq("match_id", matchId);
     await admin
       .from(DB_TABLES.matches)
-      .update({ payment_status: "paid" })
+      .update({ payment_status: "paid", match_status: "reserved" })
       .eq("id", matchId);
-  } else if (status === "rejected" || status === "cancelled") {
+  } else if (status === "rejected" || status === "cancelled" || status === "expired") {
     await admin
       .from(DB_TABLES.payments)
       .update({
-        status: status === "cancelled" ? "cancelled" : "rejected",
+        status: status === "cancelled" ? "cancelled" : status === "expired" ? "expired" : "rejected",
         mp_payment_id: paymentId,
         updated_at: now,
       })
       .eq("match_id", matchId);
+    await admin
+      .from(DB_TABLES.matches)
+      .update({ payment_status: status === "cancelled" ? "cancelled" : "rejected", match_status: "cancelled" })
+      .eq("id", matchId);
   } else if (status === "refunded" || status === "charged_back") {
     await admin
       .from(DB_TABLES.payments)

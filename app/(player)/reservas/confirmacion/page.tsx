@@ -31,8 +31,7 @@ function normalizePayState(
   const c = (collectionStatus ?? "").toLowerCase();
   const s = (status ?? "").toLowerCase();
 
-  // Only approved if MP explicitly says so OR db confirms paid
-  if (c === "approved" || s === "approved" || s === "success") return "approved";
+  // Only approved when the database confirms paid via webhook.
   if (dbPaid) return "approved";
 
   // Explicit failure

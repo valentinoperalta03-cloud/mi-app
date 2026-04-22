@@ -126,7 +126,7 @@ export default function ClubesPage() {
       <header className="space-y-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-[#0585FC]">Clubes</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Clubes disponibles</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Clubes disponibles</h1>
         </div>
 
         <button
@@ -141,7 +141,9 @@ export default function ClubesPage() {
           <button
             onClick={() => setViewMode("lista")}
             className={`rounded-2xl py-2.5 text-sm font-semibold transition ${
-              viewMode === "lista" ? "bg-[#0585FC]/50 text-white" : "border border-slate-200 text-slate-600"
+              viewMode === "lista"
+                ? "bg-[#0585FC] text-white dark:bg-sky-500"
+                : "border border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"
             }`}
           >
             Lista
@@ -149,7 +151,9 @@ export default function ClubesPage() {
           <button
             onClick={() => setViewMode("mapa")}
             className={`rounded-2xl py-2.5 text-sm font-semibold transition ${
-              viewMode === "mapa" ? "bg-[#0585FC]/50 text-white" : "border border-slate-200 text-slate-600"
+              viewMode === "mapa"
+                ? "bg-[#0585FC] text-white dark:bg-sky-500"
+                : "border border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"
             }`}
           >
             Mapa

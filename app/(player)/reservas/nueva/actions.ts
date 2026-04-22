@@ -3,7 +3,7 @@
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { createNotification } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -98,13 +98,24 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const { data: conflicts } = await supabase
     .from(DB_TABLES.matches)
-    .select("scheduled_time,duration_minutes")
+    .select("scheduled_time,duration_minutes,match_type,payment_status,match_status")
     .eq("court_id", courtId)
     .eq("scheduled_date", scheduledDate)
     .neq("match_status", "cancelled");
 
   for (const row of conflicts ?? []) {
-    const r = row as { scheduled_time: string | null; duration_minutes: number | null };
+    const r = row as {
+      scheduled_time: string | null;
+      duration_minutes: number | null;
+      match_type: string | null;
+      payment_status: string | null;
+      match_status: string | null;
+    };
+    const isReservation = String(r.match_type ?? "").toLowerCase() === "reservation";
+    const paymentStatus = String(r.payment_status ?? "").toLowerCase();
+    const matchStatus = String(r.match_status ?? "").toLowerCase();
+    const shouldBlockSlot = !isReservation || (matchStatus === "reserved" && paymentStatus === "paid");
+    if (!shouldBlockSlot) continue;
     const otherStart = clockToMinutes(String(r.scheduled_time ?? "").trim());
     const otherDur =
       r.duration_minutes && Number(r.duration_minutes) > 0 ? Number(r.duration_minutes) : 90;
@@ -153,7 +164,7 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       duration_minutes: Number(durationMinutes),
       total_price: baseAmount,
       payment_status: "pending",
-      match_status: "reserved",
+      match_status: "pending",
       match_type: "reservation",
       is_competitive: false,
       visibility: "privado",
@@ -168,16 +179,11 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "No se pudo crear la reserva. Intentá de nuevo." };
   }
 
-  const reservationTpl = NOTIFICATION_TEMPLATES.reservation_confirmed(
-    courtName || "Cancha",
-    scheduledDate,
-    timeNorm
-  );
   await createNotification(supabase, {
     user_id: user.id,
     type: "reservation_confirmed",
-    title: reservationTpl.title,
-    body: reservationTpl.body,
+    title: "Reserva pendiente de pago",
+    body: `Tu turno en ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm} quedó pendiente hasta acreditar el pago.`,
     match_id: data.id,
   });
 

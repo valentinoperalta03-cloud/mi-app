@@ -1,22 +1,22 @@
 // Clean white card — Apple Notes style
 export const PLAYER_CARD =
-  "rounded-2xl bg-white border border-black/[0.06] " +
+  "rounded-2xl bg-white border border-slate-200 " +
   "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] " +
-  "dark:bg-slate-900 dark:border-white/[0.06]";
+  "dark:bg-slate-900 dark:border-slate-800";
 
 // Interactive card with hover — Apple springy feel
 export const PLAYER_CARD_INTERACTIVE =
-  "rounded-2xl bg-white border border-black/[0.06] " +
+  "rounded-2xl bg-white border border-slate-200 " +
   "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] " +
   "transition-all duration-200 ease-out " +
   "hover:shadow-[0_2px_8px_rgba(0,0,0,0.08),0_8px_24px_rgba(0,0,0,0.06)] " +
   "hover:-translate-y-0.5 active:scale-[0.99] active:translate-y-0 " +
-  "dark:bg-slate-900 dark:border-white/[0.06] " +
+  "dark:bg-slate-900 dark:border-slate-800 " +
   "dark:hover:border-[#0585FC]/20";
 
 // Sky blue gradient button — iOS style
 export const PLAYER_PRIMARY_BUTTON =
-  "rounded-2xl px-4 py-2 text-sm font-semibold text-white " +
+  "rounded-2xl bg-[#0585FC] px-4 py-2 text-sm font-semibold text-white dark:bg-sky-500 " +
   "shadow-[0_2px_8px_rgba(5,133,252,0.3)] " +
   "transition-all duration-200 " +
   "hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(5,133,252,0.4)] " +

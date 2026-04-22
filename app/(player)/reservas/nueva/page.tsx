@@ -37,6 +37,9 @@ function normalizeDbTime(t: string | null | undefined): string {
 type MatchRow = {
   scheduled_time: string | null;
   duration_minutes: number | null;
+  match_type: string | null;
+  payment_status: string | null;
+  match_status: string | null;
 };
 
 type BlockRow = {
@@ -97,7 +100,7 @@ function NuevaReservaContent() {
             .eq("day_of_week", dow),
           supabase
             .from(DB_TABLES.matches)
-            .select("scheduled_time,duration_minutes")
+            .select("scheduled_time,duration_minutes,match_type,payment_status,match_status")
             .eq("court_id", courtId)
             .eq("scheduled_date", selectedDate)
             .neq("match_status", "cancelled"),
@@ -128,6 +131,11 @@ function NuevaReservaContent() {
         if (blockStarts.has(normalizeDbTime(slot.time))) return false;
 
         for (const m of matches) {
+          const isReservation = String(m.match_type ?? "").toLowerCase() === "reservation";
+          const paymentStatus = String(m.payment_status ?? "").toLowerCase();
+          const matchStatus = String(m.match_status ?? "").toLowerCase();
+          const shouldBlockSlot = !isReservation || (matchStatus === "reserved" && paymentStatus === "paid");
+          if (!shouldBlockSlot) continue;
           const mStart = clockToMinutes(normalizeDbTime(m.scheduled_time));
           const mDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
           if (overlapsSlot(slotStart, slotDur, mStart, mDur)) return false;
@@ -165,7 +173,7 @@ function NuevaReservaContent() {
           <span
             key={n}
             className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-              active === n ? "bg-[#0585FC]/50 text-white" : "bg-slate-200 text-slate-500"
+              active === n ? "bg-[#0585FC] text-white dark:bg-sky-500" : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
             }`}
           >
             {n}
@@ -180,7 +188,7 @@ function NuevaReservaContent() {
       {step === 1 ? (
         <>
           <StepIndicator active={1} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">¿Cuándo querés jugar?</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">¿Cuándo querés jugar?</h1>
           <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dateChips.map((chip) => {
               const selected = selectedDate === chip.key;
@@ -196,8 +204,8 @@ function NuevaReservaContent() {
                   }}
                   className={`flex min-w-[4.5rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center text-sm font-semibold transition-all ${
                     selected
-                      ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                      ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                   }`}
                 >
                   <span className="text-[11px] font-semibold uppercase leading-tight opacity-90">
@@ -214,8 +222,8 @@ function NuevaReservaContent() {
       {step === 2 ? (
         <>
           <StepIndicator active={2} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">Elegí un horario</h1>
-          <p className="text-sm font-medium text-slate-500">{selectedDateLabel}</p>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Elegí un horario</h1>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{selectedDateLabel}</p>
 
           {loading ? (
             <p className="text-sm text-slate-500">Cargando horarios…</p>
@@ -240,8 +248,8 @@ function NuevaReservaContent() {
                     }}
                     className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center text-xs font-semibold transition-all ${
                       selected
-                        ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                      ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                     }`}
                   >
                     <span>{slot.time}</span>
@@ -268,7 +276,7 @@ function NuevaReservaContent() {
       {step === 3 && selectedDate && selectedSlot ? (
         <>
           <StepIndicator active={3} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950">Confirmá tu reserva</h1>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Confirmá tu reserva</h1>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <dl className="space-y-2 text-sm text-slate-600">

@@ -78,7 +78,10 @@ export async function simulatePaymentApproved(formData: FormData) {
     });
   }
 
-  await supabase.from(DB_TABLES.matches).update({ payment_status: "paid" }).eq("id", matchId);
+  await supabase
+    .from(DB_TABLES.matches)
+    .update({ payment_status: "paid", match_status: "reserved" })
+    .eq("id", matchId);
 
   revalidatePath("/reservas");
   revalidatePath("/reservas/confirmacion");

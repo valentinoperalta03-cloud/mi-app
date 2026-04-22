@@ -62,9 +62,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   if (ctx.clubIds.length === 0) {
     return (
-      <div className={`${adminCard} border-amber-200/80 bg-amber-50/90`}>
+      <div className={`${adminCard} border-amber-200/80 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-950/40`}>
         <AdminBackLink />
-        <p className="mt-4 text-sm font-semibold text-slate-800">Sin club asignado.</p>
+        <p className="mt-4 text-sm font-semibold text-slate-800 dark:text-slate-200">Sin club asignado.</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     .in("court_id", ctx.courtIds)
     .eq("scheduled_date", selectedDate)
     .eq("match_type", "reservation")
-    .neq("match_status", "cancelled")
+    .eq("match_status", "reserved")
     .order("scheduled_time", { ascending: true });
 
   const matches = (matchesRaw ?? []) as unknown as MatchRow[];
@@ -107,7 +107,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       <AdminBackLink />
 
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0585FC]/10/60 blur-2xl" />
+        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0585FC]/10 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className={`${adminKicker} text-[#0585FC]`}>Agenda diaria</p>
@@ -187,9 +187,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                       <Link
                         key={slotKey}
                         href={`/admin/reservas?date=${selectedDate}&selected=${reservation.id}`}
-                        className="block min-h-16 border-r border-slate-100/90 bg-[#0585FC]/5/50 px-2 py-2 transition-all duration-200 hover:bg-[#0585FC]/10/60"
+                        className="block min-h-16 border-r border-slate-100/90 bg-[#0585FC]/5 px-2 py-2 transition-all duration-200 hover:bg-[#0585FC]/10"
                       >
-                        <div className="rounded-xl border border-[#0585FC]/20/80 bg-[#0585FC]/50 px-3 py-2 text-white shadow-sm">
+                        <div className="rounded-xl border border-[#0585FC]/20 bg-[#0585FC] px-3 py-2 text-white shadow-sm dark:bg-sky-500">
                           <p className="truncate text-sm font-semibold">{player}</p>
                           <p className="text-xs opacity-90">{getTimeFromMatch(reservation)}</p>
                         </div>
@@ -204,7 +204,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       )}
 
       {selectedMatch ? (
-        <section className={`${adminCard} border-[#0585FC]/20/80 bg-[#0585FC]/5/40`}>
+        <section className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <PlayerAvatar

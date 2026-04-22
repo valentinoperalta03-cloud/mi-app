@@ -43,6 +43,7 @@ function ReservationCard({
   const precio = row.total_price != null ? `$${Number(row.total_price)}` : "—";
   const status = row.match_status ?? "";
   const badgeReserved = status === "reserved";
+  const badgePending = status === "pending";
   const badgeCancelled = status === "cancelled";
 
   return (
@@ -55,6 +56,10 @@ function ReservationCard({
         {badgeReserved ? (
           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-400 dark:ring-emerald-800/50">
             Confirmada
+          </span>
+        ) : badgePending ? (
+          <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-400 dark:ring-amber-800/50">
+            Pendiente de pago
           </span>
         ) : badgeCancelled ? (
           <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700">
@@ -202,6 +207,10 @@ export default async function ReservasPage({
     const d = r.scheduled_date ?? "";
     return (d >= today && r.match_status === "reserved") || false;
   });
+  const pending = list.filter((r) => {
+    const d = r.scheduled_date ?? "";
+    return (d >= today && r.match_status === "pending") || false;
+  });
 
   const history = list.filter((r) => {
     const d = r.scheduled_date ?? "";
@@ -242,6 +251,17 @@ export default async function ReservasPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Próximas</h2>
           <div className="space-y-3">
             {upcoming.map((r) => (
+              <ReservationCard key={r.id} row={r} showCancel />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {!error && pending.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Pendientes de pago</h2>
+          <div className="space-y-3">
+            {pending.map((r) => (
               <ReservationCard key={r.id} row={r} showCancel />
             ))}
           </div>

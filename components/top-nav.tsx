@@ -201,7 +201,7 @@ export default function TopNav() {
                       )}
                       <div className="min-w-0">
                         <p className="truncate font-bold text-white">{name}</p>
-                        <p className="truncate text-xs text-[#0585FC]">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
+                        <p className="truncate text-xs text-sky-100">{category ? `Nivel ${category}` : "Sin nivel asignado"}</p>
                       </div>
                     </div>
                   </div>

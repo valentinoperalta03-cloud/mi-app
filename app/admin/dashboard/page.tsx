@@ -20,7 +20,7 @@ const modules = [
     description: "Agenda de partidos, estado de pago y bloqueo manual de canchas.",
     icon: Target,
     accent: "from-[#0585FC]/14 to-cyan-500/10 border-[#0585FC]/20/55",
-    iconBg: "bg-[#0585FC]/50/12 text-[#0461C4] ring-1 ring-[#0585FC]/20/40",
+    iconBg: "bg-[#0585FC]/10 text-[#0461C4] ring-1 ring-[#0585FC]/20 dark:bg-[#0585FC]/20 dark:text-sky-300",
   },
   {
     href: "/admin/finanzas",
@@ -90,7 +90,7 @@ export default async function AdminDashboardPage() {
         .in("court_id", courtIds)
         .eq("scheduled_date", today)
         .eq("match_type", "reservation")
-        .neq("match_status", "cancelled")
+        .eq("match_status", "reserved")
     : { data: [] };
 
   const todayRows = (todayMatches ?? []) as Array<{
@@ -137,9 +137,9 @@ export default async function AdminDashboardPage() {
 
   if (!owned) {
     return (
-      <div className={`${adminCard} border-amber-200/80 bg-amber-50/90`}>
-        <h1 className="text-lg font-bold text-slate-900">Sin club asignado</h1>
-        <p className="mt-2 text-sm font-medium text-slate-600">
+      <div className={`${adminCard} border-amber-200/80 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-950/40`}>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Sin club asignado</h1>
+        <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">
           No encontramos un club donde seas titular. Si acabas de configurar tu cuenta, revisa
           permisos en la base o contacta soporte.
         </p>
@@ -150,7 +150,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-12 -top-10 h-40 w-40 rounded-full bg-[#0585FC]/10/50 blur-2xl" />
+        <div className="absolute -right-12 -top-10 h-40 w-40 rounded-full bg-[#0585FC]/10 blur-2xl" />
         <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm">

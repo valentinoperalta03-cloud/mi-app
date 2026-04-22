@@ -65,29 +65,35 @@ export default function ActivityTabs({
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
-        <p className="text-xs uppercase tracking-widest text-[#0585FC]">Perfil</p>
+        <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
         <h1 className="text-2xl font-bold leading-tight tracking-tight">Tu actividad</h1>
       </header>
 
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
         <button
           type="button"
           onClick={() => setTab("partidos")}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${tab === "partidos" ? "bg-[#0585FC]/50 text-white" : "text-slate-600"}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
+            tab === "partidos" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+          }`}
         >
           Partidos
         </button>
         <button
           type="button"
           onClick={() => setTab("reservas")}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${tab === "reservas" ? "bg-[#0585FC]/50 text-white" : "text-slate-600"}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
+            tab === "reservas" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+          }`}
         >
           Reservas
         </button>
         <button
           type="button"
           onClick={() => setTab("torneos")}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${tab === "torneos" ? "bg-[#0585FC]/50 text-white" : "text-slate-600"}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
+            tab === "torneos" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+          }`}
         >
           Torneos
         </button>

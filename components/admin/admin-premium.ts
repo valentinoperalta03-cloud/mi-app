@@ -1,7 +1,7 @@
 export const adminCard =
-  "rounded-2xl bg-white border border-black/[0.06] p-5 " +
+  "rounded-2xl bg-white border border-slate-200 p-5 " +
   "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] " +
-  "dark:bg-slate-900 dark:border-white/[0.06]";
+  "dark:bg-slate-900 dark:border-slate-800";
 
 export const adminKicker =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 " +

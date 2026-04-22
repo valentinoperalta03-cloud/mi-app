@@ -126,7 +126,7 @@ export default function SettingsClient({
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
-        <p className="text-xs uppercase tracking-widest text-[#0585FC]">Ajustes</p>
+        <p className="text-xs uppercase tracking-widest text-sky-100">Ajustes</p>
         <h1 className="text-2xl font-bold">Configuración</h1>
       </header>
 
@@ -136,16 +136,16 @@ export default function SettingsClient({
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-base font-bold text-slate-900">Mi cuenta</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Mi cuenta</h2>
 
-        <div className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
-          <p className="text-sm font-medium text-slate-700">Ubicación (obligatoria)</p>
-          <p className="text-sm text-slate-600">{location}</p>
+        <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Ubicación (obligatoria)</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{location}</p>
           <button
             type="button"
             onClick={detectLocation}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#0585FC]/50 px-3 py-2 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#0585FC] px-3 py-2 text-sm font-semibold text-white dark:bg-sky-500"
           >
             <MapPin size={16} />
             Detectar mi ubicación
@@ -188,9 +188,9 @@ export default function SettingsClient({
         {privacyMsg ? <p className="mt-1 text-xs text-slate-500">{privacyMsg}</p> : null}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">Mi nivel</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Mi nivel</h2>
           <p className="rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">{category || "—"}</p>
         </div>
         <button
@@ -217,8 +217,8 @@ export default function SettingsClient({
         </button>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-base font-bold text-slate-900">Seguridad</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Seguridad</h2>
         <button
           type="button"
           onClick={() => setPwdOpen((v) => !v)}
@@ -242,7 +242,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Nueva contraseña"
-              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0585FC]/20"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <input
               type="password"
@@ -250,9 +250,12 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Confirmar contraseña"
-              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0585FC]/20"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
-            <button type="submit" className="w-full rounded-2xl bg-[#0585FC]/50 py-2 text-sm font-semibold text-white">
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-[#0585FC] py-2 text-sm font-semibold text-white dark:bg-sky-500"
+            >
               Guardar nueva contraseña
             </button>
           </form>
@@ -260,8 +263,8 @@ export default function SettingsClient({
         {pwdMsg ? <p className="mt-2 text-xs text-slate-600">{pwdMsg}</p> : null}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-base font-bold text-slate-900">Cuenta</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Cuenta</h2>
         <div className="mt-3 flex items-center gap-3">
           {avatarUrl?.trim() ? (
             // eslint-disable-next-line @next/next/no-img-element -- avatar externo de usuario
