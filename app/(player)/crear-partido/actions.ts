@@ -136,6 +136,21 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   try {
     const { supabase, user } = await getUser();
 
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("gender")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const userGender = (userProfile as { gender?: string | null } | null)?.gender;
+
+    if (
+      (genderCategory === "femenino" && userGender === "masculino") ||
+      (genderCategory === "masculino" && userGender === "femenino")
+    ) {
+      return { error: "No podés crear un partido de esa categoría con tu género registrado." };
+    }
+
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select("price, name, clubs!inner(name)")

@@ -487,23 +487,47 @@ export default function CrearPartidoForm({
       </section>
 
       <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Categoria</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Categoría
+        </p>
         <div className="grid grid-cols-3 gap-2">
-          {(["masculino", "femenino", "mixto"] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setGenderCategory(option)}
-              className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
-                genderCategory === option
-                  ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                  : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-              }`}
-            >
-              {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
-            </button>
-          ))}
+          {(["masculino", "femenino", "mixto"] as const).map((option) => {
+            const isDisabled =
+              (option === "femenino" && defaultGender === "masculino") ||
+              (option === "masculino" && defaultGender === "femenino");
+
+            return (
+              <button
+                key={option}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => !isDisabled && setGenderCategory(option)}
+                className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
+                  isDisabled
+                    ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-700"
+                    : genderCategory === option
+                    ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 hover:border-[#0585FC]/30"
+                }`}
+              >
+                {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
+                {isDisabled ? (
+                  <span className="block text-[9px] mt-0.5 opacity-60">No disponible</span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
+        {defaultGender === "masculino" && (
+          <p className="text-xs text-slate-400">
+            Solo podés crear partidos masculinos o mixtos.
+          </p>
+        )}
+        {defaultGender === "femenino" && (
+          <p className="text-xs text-slate-400">
+            Solo podés crear partidos femeninos o mixtos.
+          </p>
+        )}
       </section>
 
       <section className="space-y-2">
