@@ -302,7 +302,7 @@ export default function CrearPartidoForm({
                 onClick={() => setSelectedDate(date.key)}
                 className={`flex min-w-[4.75rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center transition ${
                   selected
-                    ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
+                    ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                 }`}
               >
@@ -414,7 +414,7 @@ export default function CrearPartidoForm({
                   onClick={() => setSelectedSlot(slot)}
                   className={`min-h-[4rem] rounded-2xl border px-2 py-2 text-xs font-semibold transition ${
                     selected
-                      ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
+                      ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                       : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
                   }`}
                 >
@@ -438,8 +438,8 @@ export default function CrearPartidoForm({
             onClick={() => setMatchType("amistoso")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               matchType === "amistoso"
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Amistoso
@@ -449,8 +449,8 @@ export default function CrearPartidoForm({
             onClick={() => setMatchType("competitivo")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               matchType === "competitivo"
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Competitivo
@@ -466,8 +466,8 @@ export default function CrearPartidoForm({
             onClick={() => setVisibility("publico")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               visibility === "publico"
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Publico
@@ -477,8 +477,8 @@ export default function CrearPartidoForm({
             onClick={() => setVisibility("privado")}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               visibility === "privado"
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Privado
@@ -496,8 +496,8 @@ export default function CrearPartidoForm({
               onClick={() => setGenderCategory(option)}
               className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
                 genderCategory === option
-                  ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                  : "border-slate-200 bg-white text-slate-700"
+                  ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
               }`}
             >
               {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
@@ -514,8 +514,8 @@ export default function CrearPartidoForm({
             onClick={() => setLevelRestricted(false)}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               !levelRestricted
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Cualquier nivel
@@ -525,8 +525,8 @@ export default function CrearPartidoForm({
             onClick={() => setLevelRestricted(true)}
             className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
               levelRestricted
-                ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             }`}
           >
             Mi nivel ±1

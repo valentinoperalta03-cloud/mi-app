@@ -124,8 +124,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
 
         <div className="relative z-10 flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/50/20 ring-1 ring-[#0585FC]/40/30">
-            <Zap size={20} strokeWidth={2.25} className="text-[#0585FC]" aria-hidden />
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
+            <Zap size={20} strokeWidth={2.25} className="text-white" aria-hidden />
           </span>
           <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
@@ -161,7 +161,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Resultados pendientes</h2>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Resultados pendientes</h2>
           {pendingForMe.slice(0, 2).map((p) => (
             <CompetitiveResultConfirmationCard
               key={p.match_id}
@@ -180,21 +180,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Sugerencias para vos</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Sugerencias para vos</h2>
         <Suspense fallback={<HomeSuggestionsSkeleton />}>
           <HomeSuggestionsSection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Tu resumen</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Mis Reservas</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Mis Reservas</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>
