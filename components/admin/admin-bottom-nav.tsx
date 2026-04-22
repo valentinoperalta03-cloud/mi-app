@@ -24,7 +24,7 @@ function AdminBottomNavInner() {
       aria-label="Modulos del panel"
     >
       <div className="pointer-events-auto mx-auto max-w-lg px-3">
-        <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/85 px-1 py-1.5 shadow-[0_8px_30px_-8px_rgba(15,23,42,0.12),0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+        <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/85 px-1 py-1.5 shadow-[0_8px_30px_-8px_rgba(15,23,42,0.12),0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85">
           {items.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -34,7 +34,7 @@ function AdminBottomNavInner() {
                 href={item.href}
                 prefetch
                 className={`relative flex min-w-0 flex-1 touch-manipulation select-none flex-col items-center gap-0.5 rounded-2xl px-0.5 py-1.5 text-[10px] font-semibold leading-tight sm:text-[11px] ${
-                  active ? "text-[#0461C4]" : "text-slate-500 active:text-slate-800"
+                  active ? "text-[#0461C4] dark:text-sky-400" : "text-slate-500 active:text-slate-800 dark:text-slate-400 dark:active:text-slate-200"
                 }`}
               >
                 {active ? (
@@ -52,7 +52,7 @@ function AdminBottomNavInner() {
                   <Icon
                     size={21}
                     strokeWidth={active ? 2.35 : 2}
-                    className={active ? "text-[#0585FC]" : "text-slate-400"}
+                    className={active ? "text-[#0585FC] dark:text-sky-400" : "text-slate-400 dark:text-slate-500"}
                     aria-hidden
                   />
                   <span className="line-clamp-2 text-center">{item.label}</span>

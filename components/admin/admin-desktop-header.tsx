@@ -19,9 +19,9 @@ function AdminDesktopHeaderInner() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block">
+    <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block dark:border-slate-800 dark:bg-slate-950/85">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <p className="text-sm font-semibold tracking-tight text-slate-900">Panel del club</p>
+        <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Panel del club</p>
         <nav className="flex flex-wrap items-center gap-1" aria-label="Modulos">
           {desktopLinks.map((item) => {
             const Icon = item.icon;
@@ -35,7 +35,7 @@ function AdminDesktopHeaderInner() {
                 href={item.href}
                 prefetch
                 className={`relative inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-semibold touch-manipulation transition-transform duration-150 hover:scale-[1.02] active:scale-[0.96] ${
-                  active ? "text-[#0461C4]" : "text-slate-600 hover:bg-slate-50 hover:text-[#0585FC]"
+                  active ? "text-[#0461C4] dark:text-sky-400" : "text-slate-600 hover:bg-slate-50 hover:text-[#0585FC] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-400"
                 }`}
               >
                 {active ? (
@@ -45,7 +45,7 @@ function AdminDesktopHeaderInner() {
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 ) : null}
-                <Icon size={16} strokeWidth={2} className={active ? "text-[#0585FC]" : "text-slate-400"} />
+                <Icon size={16} strokeWidth={2} className={active ? "text-[#0585FC] dark:text-sky-400" : "text-slate-400 dark:text-slate-500"} />
                 {item.label}
               </Link>
             );

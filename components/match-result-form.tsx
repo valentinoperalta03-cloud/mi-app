@@ -22,7 +22,7 @@ function SubmitRow({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+      className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
     >
       {pending ? "Guardando…" : label}
     </button>
@@ -75,12 +75,12 @@ export function MatchResultForm({
   }
 
   return (
-    <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+    <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
       <div>
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
           ¡Gran partido! ¿Quiénes se llevaron la victoria hoy?
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {fact}
         </p>
       </div>
@@ -92,12 +92,12 @@ export function MatchResultForm({
           <button
             type="submit"
             disabled={lockedByTeammate}
-            className="w-full rounded-2xl bg-[#0461C4] py-3.5 text-base font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="w-full rounded-2xl bg-[#0461C4] py-3.5 text-base font-semibold text-white transition hover:bg-[#0585FC] disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
           >
             Cargar Resultado
           </button>
           {lockedByTeammate ? (
-            <p className="mt-2 text-center text-sm font-medium text-amber-700">
+            <p className="mt-2 text-center text-sm font-medium text-amber-700 dark:text-amber-400">
               Tu pareja ya está cargando el resultado.
             </p>
           ) : null}
@@ -112,46 +112,46 @@ export function MatchResultForm({
 
           <div className="space-y-3">
             {[0, 1].map((idx) => (
-              <div key={idx} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div key={idx} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Set {idx + 1}
                 </p>
                 <div className="mt-2 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-white p-2 text-center">
-                    <p className="text-[11px] font-semibold text-slate-500">Equipo A</p>
+                  <div className="rounded-xl bg-white p-2 text-center dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Equipo A</p>
                     <div className="mt-1 flex items-center justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => adjustSet(idx, "a", -1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700"
+                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
                       >
                         -
                       </button>
-                      <span className="w-6 text-lg font-bold text-slate-900">{sets[idx]!.a}</span>
+                      <span className="w-6 text-lg font-bold text-slate-900 dark:text-slate-100">{sets[idx]!.a}</span>
                       <button
                         type="button"
                         onClick={() => adjustSet(idx, "a", 1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700"
+                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
                       >
                         +
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-xl bg-white p-2 text-center">
-                    <p className="text-[11px] font-semibold text-slate-500">Equipo B</p>
+                  <div className="rounded-xl bg-white p-2 text-center dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Equipo B</p>
                     <div className="mt-1 flex items-center justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => adjustSet(idx, "b", -1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700"
+                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
                       >
                         -
                       </button>
-                      <span className="w-6 text-lg font-bold text-slate-900">{sets[idx]!.b}</span>
+                      <span className="w-6 text-lg font-bold text-slate-900 dark:text-slate-100">{sets[idx]!.b}</span>
                       <button
                         type="button"
                         onClick={() => adjustSet(idx, "b", 1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700"
+                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
                       >
                         +
                       </button>
@@ -162,7 +162,7 @@ export function MatchResultForm({
             ))}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
             <p>{teamALabel}: <span className="font-semibold">{totals.a}</span></p>
             <p>{teamBLabel}: <span className="font-semibold">{totals.b}</span></p>
           </div>

@@ -199,7 +199,7 @@ export default function CrearPartidoForm({
 
   return (
     <form
-      className="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm"
+      className="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
@@ -218,7 +218,7 @@ export default function CrearPartidoForm({
           name="club_id"
           value={selectedClubId}
           onChange={(event) => setSelectedClubId(event.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2"
+          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         >
           {clubs.map((club) => (
             <option key={club.id} value={club.id}>
@@ -237,7 +237,7 @@ export default function CrearPartidoForm({
             setSelectedCourtId(event.target.value);
             setSelectedSlot(null);
           }}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2"
+          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         >
           {availableCourts.map((court) => (
             <option key={court.id} value={court.id}>
@@ -248,11 +248,11 @@ export default function CrearPartidoForm({
         {selectedCourt ? (
           <motion.div
             layout
-            className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60"
+            className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
             <div className="mt-2 flex items-center gap-2 opacity-70">
-              <div className="relative h-5 w-16 overflow-hidden rounded-md border border-slate-200/70 bg-white/90">
+              <div className="relative h-5 w-16 overflow-hidden rounded-md border border-slate-200/70 bg-white/90 dark:border-slate-700 dark:bg-slate-900">
                 <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain p-0.5" />
               </div>
             </div>
@@ -275,8 +275,8 @@ export default function CrearPartidoForm({
                 <span className="shrink-0 font-medium text-slate-700">{resumenPago.jugadoresPagados}</span>
               </div>
             </div>
-            <div className="my-2 border-t border-slate-100" />
-            <div className="flex justify-between gap-3 text-base font-bold text-slate-900">
+            <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
+            <div className="flex justify-between gap-3 text-base font-bold text-slate-900 dark:text-slate-100">
               <span>Total a pagar</span>
               <span>${fmtAr(resumenPago.total)}</span>
             </div>
@@ -303,7 +303,7 @@ export default function CrearPartidoForm({
                 className={`flex min-w-[4.75rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center transition ${
                   selected
                     ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 }`}
               >
                 <span className="text-[11px] font-semibold uppercase leading-tight">{date.top}</span>
@@ -317,11 +317,11 @@ export default function CrearPartidoForm({
       {selectedSlot ? (
         <section className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invitar amigos</p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Seleccioná hasta 3 amigos para completar el partido (4 jugadores contando al creador).
           </p>
           {friends.length === 0 ? (
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
               Todavía no tenés amigos agregados.
             </p>
           ) : (
@@ -342,11 +342,11 @@ export default function CrearPartidoForm({
                       type="button"
                       onClick={() => toggleFriend(friend.userId)}
                       className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
-                        selected ? "border-[#0585FC]/20 bg-[#0585FC]/5" : "border-slate-200 bg-white"
+                        selected ? "border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200">
+                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
                           {friend.avatarUrl ? (
                             <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
                           ) : (
@@ -356,7 +356,7 @@ export default function CrearPartidoForm({
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-900">{friend.name}</p>
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{friend.name}</p>
                           <p className="mt-1 text-xs font-medium text-[#0461C4]">{nivelParts.category || "Sin nivel"}</p>
                         </div>
                       </div>
@@ -371,7 +371,7 @@ export default function CrearPartidoForm({
                 return (
                   <label
                     key={`pay-${friendId}`}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5"
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"
                   >
                     <span className="text-sm font-medium text-slate-700">¿Pagar por esta persona? ({friend.name})</span>
                     <button
@@ -383,7 +383,7 @@ export default function CrearPartidoForm({
                       }`}
                     >
                       <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition dark:bg-slate-100 ${
                           checked ? "translate-x-6" : "translate-x-1"
                         }`}
                       />
@@ -399,7 +399,7 @@ export default function CrearPartidoForm({
       <section className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Horario</p>
         {loadingSlots ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
             Cargando horarios...
           </div>
@@ -415,7 +415,7 @@ export default function CrearPartidoForm({
                   className={`min-h-[4rem] rounded-2xl border px-2 py-2 text-xs font-semibold transition ${
                     selected
                       ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
                   {slot.time} · {slot.duration}min
@@ -424,7 +424,7 @@ export default function CrearPartidoForm({
             })}
           </div>
         ) : (
-          <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+          <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             Seleccioná fecha y cancha para ver disponibilidad.
           </p>
         )}
@@ -532,7 +532,7 @@ export default function CrearPartidoForm({
             Mi nivel ±1
           </button>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Si está activado, jugadores fuera de tu rango deberán solicitar acceso y los jugadores del
           partido votarán.
         </p>
@@ -559,7 +559,7 @@ export default function CrearPartidoForm({
           <p className="font-semibold text-[#0585FC]">💳 Pago inicial del creador</p>
           <p className="mt-2 font-medium leading-relaxed text-slate-700">
             Al crear el partido pagás{" "}
-            <span className="font-bold text-slate-900">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno
+            <span className="font-bold text-slate-900 dark:text-slate-100">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno
             y el servicio de Padelibre). Si marcás "¿Pagar por él/ella?" para un invitado, su parte también se suma a
             este pago.
           </p>

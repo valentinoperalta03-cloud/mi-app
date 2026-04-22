@@ -7,9 +7,9 @@ import { createClient } from "@/utils/supabase/client";
 import { resendOtpCode, signInWithEmail, signUpWithEmail, verifyOtpCode } from "./actions";
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
+  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
 
-const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400";
+const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
 
 export function GoogleAuthForm() {
   const [pending, setPending] = useState(false);
@@ -52,12 +52,12 @@ export function GoogleAuthForm() {
         type="button"
         onClick={() => void handleGoogleSignIn()}
         disabled={pending}
-        className="w-full rounded-2xl border border-slate-200/90 bg-white/80 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+        className="w-full rounded-2xl border border-slate-200/90 bg-white/80 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         {pending ? "Abriendo Google..." : "Continuar con Google"}
       </button>
       {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800">
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
           {error}
         </p>
       ) : null}
@@ -82,7 +82,7 @@ function EmailSubmitButton({
   const primary =
     "bg-gradient-to-b from-[#0585FC] to-[#0461C4] text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
   const ghost =
-    "mt-1 text-[#0585FC] hover:bg-[#0585FC]/5/90 active:scale-[0.99]";
+    "mt-1 text-[#0585FC] hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800";
 
   return (
     <button
@@ -269,8 +269,8 @@ function OtpForm({
       }}
     >
       <div className="space-y-1">
-        <h3 className="text-xl font-semibold tracking-tight text-slate-900">Revisá tu email</h3>
-        <p className="text-sm text-slate-500">Te enviamos un código de 6 dígitos a {email}</p>
+        <h3 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Revisá tu email</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Te enviamos un código de 6 dígitos a {email}</p>
       </div>
 
       <div>
@@ -319,7 +319,7 @@ function OtpForm({
             setCooldown(30);
           });
         }}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:text-sky-400 dark:hover:bg-slate-800"
       >
         {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviar código"}
       </button>
@@ -327,18 +327,18 @@ function OtpForm({
       <button
         type="button"
         onClick={onBack}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99]"
+        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
       >
         Volver
       </button>
 
       {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800">
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
           {error}
         </p>
       ) : null}
       {successMessage ? (
-        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800">
+        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           {successMessage}
         </p>
       ) : null}
@@ -370,7 +370,7 @@ export function EmailAuthForm() {
         <button
           type="button"
           onClick={() => setIsLogin((prev) => !prev)}
-          className="w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99]"
+          className="w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
         >
           {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
         </button>

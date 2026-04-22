@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { resendEmailOtp, verifyEmailOtp } from "./actions";
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200/90 bg-white/60 px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
+  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
 
 export default function VerificarEmailPage() {
   const router = useRouter();
@@ -41,15 +41,15 @@ export default function VerificarEmailPage() {
   }, [cooldown]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md items-center bg-slate-50 px-4 py-10">
-      <section className="w-full space-y-4 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+    <main className="mx-auto flex min-h-screen w-full max-w-md items-center bg-slate-50 px-4 py-10 dark:bg-slate-950">
+      <section className="w-full space-y-4 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="space-y-2 text-center">
           <div className="text-5xl leading-none">📧</div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Verificá tu email</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Verificá tu email</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Te enviamos un código de 6 dígitos. Revisá tu bandeja de entrada.
           </p>
-          {email ? <p className="text-sm font-medium text-slate-700">{email}</p> : null}
+          {email ? <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{email}</p> : null}
         </div>
 
         <form
@@ -103,7 +103,7 @@ export default function VerificarEmailPage() {
               setCooldown(30);
             });
           }}
-          className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+          className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:text-sky-400 dark:hover:bg-slate-800"
         >
           {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviar código"}
         </button>
@@ -118,18 +118,18 @@ export default function VerificarEmailPage() {
               router.replace("/login");
             });
           }}
-          className="mx-auto block rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition-all duration-200 hover:bg-slate-100"
+          className="mx-auto block rounded-2xl px-4 py-2 text-sm font-semibold text-slate-500 transition-all duration-200 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
         >
           {signOutPending ? "Cerrando sesión..." : "Cerrar sesión"}
         </button>
 
         {error ? (
-          <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800">
+          <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
             {error}
           </p>
         ) : null}
         {successMessage ? (
-          <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800">
+          <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
             {successMessage}
           </p>
         ) : null}

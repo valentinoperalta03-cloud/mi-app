@@ -15,12 +15,12 @@ export default function EmptyStateCard({
 }: EmptyStateCardProps) {
   return (
     <section className="flex min-h-[62vh] items-center justify-center">
-      <article className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white px-8 py-12 text-center shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-slate-50">
+      <article className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white px-8 py-12 text-center shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800/60">
           <svg
             viewBox="0 0 24 24"
             aria-hidden="true"
-            className="h-14 w-14 text-slate-300"
+            className="h-14 w-14 text-slate-300 dark:text-slate-500"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
@@ -34,8 +34,8 @@ export default function EmptyStateCard({
           </svg>
         </div>
 
-        <h2 className="mt-8 text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-500">
+        <h2 className="mt-8 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{title}</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           {subtitle}
         </p>
 
