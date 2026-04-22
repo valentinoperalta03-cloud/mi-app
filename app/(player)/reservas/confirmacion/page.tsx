@@ -27,22 +27,27 @@ function normalizePayState(
   collectionStatus: string | undefined,
   status: string | undefined,
   dbPaid: boolean
-): "approved" | "pending" | "failure" | "unknown" {
+): "approved" | "pending" | "failure" {
   const c = (collectionStatus ?? "").toLowerCase();
   const s = (status ?? "").toLowerCase();
+
+  // Only approved if MP explicitly says so OR db confirms paid
   if (c === "approved" || s === "approved" || s === "success") return "approved";
-  if (
-    c === "pending" ||
-    c === "in_process" ||
-    c === "in_mediation" ||
-    s === "pending" ||
-    s === "in_process"
-  ) {
-    return "pending";
-  }
-  if (c === "failure" || c === "rejected" || s === "failure" || s === "rejected") return "failure";
   if (dbPaid) return "approved";
-  return "unknown";
+
+  // Explicit failure
+  if (
+    c === "failure" ||
+    c === "rejected" ||
+    s === "failure" ||
+    s === "rejected" ||
+    s === "cancelled" ||
+    c === "cancelled"
+  )
+    return "failure";
+
+  // Everything else is pending
+  return "pending";
 }
 
 export default async function ConfirmacionReservaPage({ searchParams }: PageProps) {
@@ -94,9 +99,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
   }
 
   const payDb = String(match.payment_status ?? "").toLowerCase() === "paid";
-  const rawState = normalizePayState(params.collection_status, params.status, payDb);
-  const payState: "approved" | "pending" | "failure" =
-    rawState === "unknown" ? (payDb ? "approved" : "pending") : rawState;
+  const payState = normalizePayState(params.collection_status, params.status, payDb);
 
   const courtLabel = params.court ?? "Cancha";
   const clubLabel = params.club ?? "Club";
@@ -136,8 +139,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         </div>
         <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950">Pago en proceso…</h1>
         <p className="text-center text-sm font-medium text-amber-800">
-          Mercado Pago está procesando el cobro. Podés volver en unos minutos o revisar el estado desde{" "}
-          <span className="font-semibold">Mis reservas</span>.
+          Tu pago está siendo procesado por Mercado Pago. Te confirmaremos cuando se acredite.
         </p>
       </div>
     );

@@ -94,10 +94,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-slate-50 px-4 pb-24 pt-6 dark:bg-transparent">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
       <OnboardingSlides />
       {levelingDone ? (
-        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-200">
+        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-100">
           <p className="text-sm font-semibold">Perfil guardado con exito.</p>
           <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
             Tu nivel y preferencias ya se actualizaron correctamente.
