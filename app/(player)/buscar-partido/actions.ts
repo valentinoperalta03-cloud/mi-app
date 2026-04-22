@@ -82,63 +82,28 @@ export async function toggleMatchParticipationAction(
       .eq("match_id", matchId);
     const participantIds = ((participantsBefore ?? []) as Array<{ player_id: string }>).map((p) => p.player_id);
 
-    const { error: deleteError } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .delete()
-      .eq("match_id", matchId)
-      .eq("player_id", playerId);
-    if (deleteError) {
-      return { success: false, message: `No pudimos sacarte del partido: ${deleteError.message}` };
+    const { data: leaveAtomic, error: leaveAtomicErr } = await supabase.rpc("leave_match_atomic", {
+      p_match_id: matchId,
+      p_player_id: playerId,
+    });
+    if (leaveAtomicErr) {
+      return { success: false, message: `No pudimos sacarte del partido: ${leaveAtomicErr.message}` };
     }
+    const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
+    const delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
+    const wasCancelled = Boolean((resultRow as { cancelled?: boolean } | null)?.cancelled);
 
     const remainingIds = participantIds.filter((id) => id !== playerId);
     const isOwnerLeaving = leaveMatch.owner_id === playerId;
-    if (isOwnerLeaving) {
-      if (remainingIds.length === 0) {
-        const { error: cancelErr } = await supabase
-          .from(DB_TABLES.matches)
-          .update({ match_status: "cancelled" })
-          .eq("id", matchId);
-        if (cancelErr) {
-          return { success: false, message: "Saliste, pero no pudimos cerrar el partido automáticamente." };
-        }
-      } else {
-        const newOwnerId = remainingIds[0];
-        const { error: delegateErr } = await supabase
-          .from(DB_TABLES.matches)
-          .update({ owner_id: newOwnerId })
-          .eq("id", matchId);
-        if (delegateErr) {
-          return { success: false, message: "Saliste, pero no pudimos reasignar organizador." };
-        }
-        const tplOwner = NOTIFICATION_TEMPLATES.match_owner_changed(leaveMatch.location_name ?? "el club");
-        await createNotification(supabase, {
-          user_id: newOwnerId,
-          type: "match_owner_changed",
-          title: tplOwner.title,
-          body: tplOwner.body,
-          match_id: matchId,
-        });
-      }
-    }
-
-    // Si la salida libera el turno (partido cancelado), limpiamos bloqueos manuales del horario.
-    const { data: afterMatch } = await supabase
-      .from(DB_TABLES.matches)
-      .select("match_status,court_id,scheduled_date,scheduled_time")
-      .eq("id", matchId)
-      .maybeSingle();
-    const afterStatus = String((afterMatch as { match_status?: string | null } | null)?.match_status ?? "").toLowerCase();
-    const afterCourt = String((afterMatch as { court_id?: string | null } | null)?.court_id ?? "").trim();
-    const afterDate = String((afterMatch as { scheduled_date?: string | null } | null)?.scheduled_date ?? "").trim();
-    const afterTime = String((afterMatch as { scheduled_time?: string | null } | null)?.scheduled_time ?? "").trim().slice(0, 5);
-    if (afterStatus === "cancelled" && afterCourt && afterDate && afterTime) {
-      await supabase
-        .from(DB_TABLES.courtBlocks)
-        .delete()
-        .eq("court_id", afterCourt)
-        .eq("date", afterDate)
-        .eq("start_time", afterTime);
+    if (isOwnerLeaving && delegatedOwner) {
+      const tplOwner = NOTIFICATION_TEMPLATES.match_owner_changed(leaveMatch.location_name ?? "el club");
+      await createNotification(supabase, {
+        user_id: delegatedOwner,
+        type: "match_owner_changed",
+        title: tplOwner.title,
+        body: tplOwner.body,
+        match_id: matchId,
+      });
     }
 
     const notifyIds = remainingIds.filter((id) => id !== playerId);
@@ -149,7 +114,7 @@ export async function toggleMatchParticipationAction(
         type: "match_cancelled",
         title: cancelTpl.title,
         body: isOwnerLeaving
-          ? remainingIds.length === 0
+          ? wasCancelled
             ? cancelTpl.body
             : "El creador salió del partido y se reasignó un nuevo organizador."
           : `${playerName} salió del partido.`,
