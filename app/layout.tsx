@@ -57,7 +57,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -75,7 +78,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+      <body suppressHydrationWarning className="min-h-full">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
