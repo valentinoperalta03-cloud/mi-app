@@ -105,7 +105,7 @@ const faqs = [
 
 export default function ComoFuncionaContent() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl space-y-7 px-4 pb-24 pt-6 md:space-y-10 md:px-6">
+    <main className="mx-auto min-h-screen w-full max-w-md space-y-7 px-4 pb-24 pt-6">
       <motion.section
         variants={fadeInUp}
         initial="hidden"
