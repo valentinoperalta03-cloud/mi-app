@@ -183,7 +183,18 @@ export default async function AdminDashboardPage() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {todayMetrics.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className={`${adminCard} flex flex-col gap-2 p-4`}>
+          <div
+            key={label}
+            className={`${adminCard} flex flex-col gap-2 border-t-2 p-4 ${
+              label.includes("Reservas")
+                ? "border-[#0585FC]"
+                : label.includes("Ingresos")
+                  ? "border-emerald-500"
+                  : label.includes("Ocupación")
+                    ? "border-violet-500"
+                    : "border-amber-500"
+            }`}
+          >
             <Icon size={18} className={color} strokeWidth={2} />
             <p className={adminKicker}>{label}</p>
             <p className={`text-lg font-bold tabular-nums ${color}`}>{value}</p>
@@ -223,6 +234,66 @@ export default async function AdminDashboardPage() {
               <p className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{item.total}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Latest reservations today */}
+      <section className={`${adminCard} p-5`}>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className={adminKicker}>Hoy</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Reservas del día</h2>
+          </div>
+          <Link href="/admin/reservas" className="text-sm font-semibold text-[#0585FC]">
+            Ver todas →
+          </Link>
+        </div>
+
+        {todayRows.length === 0 ? (
+          <p className="py-4 text-center text-sm text-slate-400">No hay reservas para hoy todavía</p>
+        ) : (
+          <ul className="space-y-3">
+            {todayRows.slice(0, 5).map((row) => {
+              const time = String(row.scheduled_time ?? "").slice(0, 5);
+              const isPaid = String(row.payment_status ?? "").toLowerCase() === "paid";
+              return (
+                <li
+                  key={row.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0585FC]/10 text-sm font-bold text-[#0585FC]">
+                      {time}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">Reserva {time}hs</p>
+                      <p className="text-xs text-slate-500">{isPaid ? "Pago confirmado" : "Pago pendiente"}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      isPaid
+                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-400"
+                        : "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-400"
+                    }`}
+                  >
+                    {isPaid ? "Pagado" : "Pendiente"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        <div className={`${adminCard} p-4 text-center`}>
+          <p className="text-2xl font-bold text-[#0585FC]">{courtIds.length}</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Canchas totales</p>
+        </div>
+        <div className={`${adminCard} p-4 text-center`}>
+          <p className="text-2xl font-bold text-emerald-600">{courtIds.length > 0 ? `${ocupacionPct}%` : "—"}</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Ocupación hoy</p>
         </div>
       </section>
 

@@ -23,7 +23,7 @@ const container = {
 
 const item = {
   hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
 
 const playerSteps = [
@@ -133,7 +133,7 @@ export default function ComoFuncionaContent() {
         className="relative overflow-hidden rounded-3xl p-8 text-white"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        transition={{ duration: 0.4 }}
       >
         <PadelBallDecoration />
         <p className="text-sm font-semibold uppercase tracking-widest text-white/70">Padelibre</p>
