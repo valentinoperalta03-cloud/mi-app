@@ -12,6 +12,8 @@ export type PostFeedItem = {
   match_id: string | null;
   created_at: string;
   user_id: string;
+  image_url: string | null;
+  post_type: "text" | "photo" | "result";
   profiles: PostProfile | null;
   scoreLabel: string | null;
 };
@@ -21,7 +23,7 @@ export async function fetchPostsFeed(
 ): Promise<PostFeedItem[]> {
   const { data: posts, error } = await supabase
     .from(DB_TABLES.posts)
-    .select("id, content, match_id, created_at, user_id")
+    .select("id, content, match_id, created_at, user_id, image_url, post_type")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -73,6 +75,8 @@ export async function fetchPostsFeed(
     match_id: p.match_id,
     created_at: p.created_at,
     user_id: p.user_id,
+    image_url: p.image_url ?? null,
+    post_type: (p.post_type ?? "text") as "text" | "photo" | "result",
     profiles: profileMap.get(p.user_id) ?? null,
     scoreLabel: p.match_id ? (scores[p.match_id] ?? null) : null,
   }));

@@ -33,7 +33,32 @@ export async function createPostAction(
     return { ok: false, message: "El texto es demasiado largo." };
   }
 
-  const linkMatch = formData.get("link_match") === "on";
+  const postType = String(formData.get("post_type") ?? "text").trim() as "text" | "photo" | "result";
+  if (!["text", "photo", "result"].includes(postType)) {
+    return { ok: false, message: "Tipo de publicación inválido." };
+  }
+
+  // NOTE: Create a 'post-images' bucket in Supabase Storage
+  // with public access enabled before testing photo posts.
+  let imageUrl: string | null = null;
+  if (postType === "photo") {
+    const imageFile = formData.get("image") as File | null;
+    if (imageFile && imageFile.size > 0) {
+      const fileExt = imageFile.name.split(".").pop() ?? "jpg";
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("post-images")
+        .upload(fileName, imageFile, { upsert: false });
+      if (!uploadError && uploadData) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("post-images").getPublicUrl(uploadData.path);
+        imageUrl = publicUrl;
+      }
+    }
+  }
+
+  const linkMatch = postType === "result" && formData.get("link_match") === "on";
   let matchId: string | null = null;
 
   if (linkMatch) {
@@ -59,6 +84,8 @@ export async function createPostAction(
       user_id: user.id,
       content,
       match_id: matchId,
+      post_type: postType,
+      image_url: imageUrl,
     })
     .select("id")
     .maybeSingle();

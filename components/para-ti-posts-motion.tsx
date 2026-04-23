@@ -26,6 +26,8 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
     <div className="flex flex-col gap-4">
       {posts.map((p, i) => {
         const name = p.profiles?.name?.trim() || "Jugador";
+        const postTypeLabel =
+          p.post_type === "photo" ? "📸 Foto" : p.post_type === "result" ? "🏆 Resultado" : "📝 Texto";
 
         return (
           <motion.article
@@ -57,15 +59,29 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
                     className="text-xs font-medium text-slate-400"
                   />
                 </div>
+                <div className="mt-2">
+                  <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {postTypeLabel}
+                  </span>
+                </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
                   {p.content}
                 </p>
-                {p.match_id ? (
+                {p.image_url && p.post_type === "photo" ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- imagen pública servida desde storage
+                  <img src={p.image_url} alt="Foto del post" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
+                ) : null}
+                {p.post_type === "result" && p.scoreLabel ? (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1.5 dark:bg-amber-950/30">
+                    <span className="text-sm font-bold text-amber-800 dark:text-amber-300">🏆 {p.scoreLabel}</span>
+                  </div>
+                ) : null}
+                {p.post_type === "result" && !p.scoreLabel && p.match_id ? (
                   <Badge variant="brand" className="mt-3 inline-flex items-center">
                     <span className="mr-1.5" aria-hidden>
                       🏆
                     </span>
-                    {p.scoreLabel ?? "Partido vinculado"}
+                    Partido vinculado
                   </Badge>
                 ) : null}
               </div>
