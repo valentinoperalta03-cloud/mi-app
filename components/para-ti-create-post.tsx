@@ -2,11 +2,8 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
-import {
-  createPostAction,
-  initialCreatePostState,
-  type CreatePostState,
-} from "@/app/(player)/comunidad/actions";
+import { createPostAction } from "@/app/(player)/comunidad/actions";
+import { initialCreatePostState, type CreatePostState } from "@/app/(player)/comunidad/post-types";
 
 type LatestMatch = {
   match_id: string;

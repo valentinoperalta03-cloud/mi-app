@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { fetchLatestMatchResultForUser } from "@/lib/para-ti-posts";
 import { createClient } from "@/utils/supabase/server";
-
-export type CreatePostState = { ok: boolean; message: string };
-
-export const initialCreatePostState: CreatePostState = { ok: false, message: "" };
+import type { CreatePostState } from "./post-types";
 
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
