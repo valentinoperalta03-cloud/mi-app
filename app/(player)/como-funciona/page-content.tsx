@@ -112,14 +112,14 @@ export default function ComoFuncionaContent() {
         whileInView="show"
         viewport={{ once: true, amount: 0.25 }}
         style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-        className="relative overflow-hidden rounded-3xl border border-[#0585FC]/20 p-7 text-white md:p-10"
+        className="relative overflow-hidden rounded-3xl border border-[#0585FC]/20 p-7 text-white"
       >
         <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
         <p className="text-sm font-semibold uppercase tracking-widest text-white/70">Padelibre</p>
-        <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight md:text-5xl">
+        <h1 className="mt-3 text-3xl font-bold leading-tight">
           El pádel como siempre quisiste, pero en tu celular.
         </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/85 md:text-base">
+        <p className="mt-4 text-sm leading-relaxed text-white/85">
           Simplificamos la organización para que vos solo te preocupes por el próximo smash. Sin
           vueltas, sin mensajes interminables de WhatsApp.
         </p>
@@ -134,11 +134,11 @@ export default function ComoFuncionaContent() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Para jugadores</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
             Soluciones reales para jugar más y organizar menos
           </h2>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           {playerFeatures.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -164,18 +164,18 @@ export default function ComoFuncionaContent() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.2 }}
-        className="space-y-4 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5 md:p-7"
+        className="space-y-4 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5"
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Para clubes</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
             Tu club en piloto automático. Sin costos fijos.
           </h2>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Unirse a Padelibre no tiene costo mensual ni de alta. Ganamos solo si vos ganás.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           {clubBenefits.map((benefit) => {
             const Icon = benefit.icon;
             return (
@@ -209,11 +209,11 @@ export default function ComoFuncionaContent() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Transparencia y costos</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
             Un modelo justo para todos
           </h2>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <p className="text-sm font-semibold uppercase tracking-wide text-[#0585FC]">Clubes</p>
             <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">$0 costo fijo</p>
@@ -241,7 +241,7 @@ export default function ComoFuncionaContent() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Te damos una mano</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
             Preguntas frecuentes
           </h2>
         </div>
@@ -250,13 +250,13 @@ export default function ComoFuncionaContent() {
           {faqs.map((faq) => (
             <details
               key={faq.question}
-              className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/40"
+              className="group rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"
             >
               <summary className="flex list-none cursor-pointer items-start justify-between gap-3 text-sm font-semibold text-slate-900 dark:text-white">
                 <span>{faq.question}</span>
                 <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
               </summary>
-              <p className="pt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="pt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                 {faq.answer}
               </p>
             </details>
