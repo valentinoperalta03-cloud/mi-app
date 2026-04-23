@@ -1,87 +1,142 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AlertCircle, CheckCircle, CreditCard, ExternalLink } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminPressable, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
-function mpRedirectUri(): string {
-  const explicit = process.env.MP_REDIRECT_URI?.trim();
-  if (explicit) return explicit;
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  return `${base}/api/mp/callback`;
-}
-
-function buildMercadoPagoAuthUrl(clubId: string): string | null {
-  const clientId = process.env.MP_APP_ID?.trim();
-  if (!clientId) return null;
-  const redirectUri = mpRedirectUri();
-  const u = new URL("https://auth.mercadopago.com.ar/authorization");
-  u.searchParams.set("client_id", clientId);
-  u.searchParams.set("response_type", "code");
-  u.searchParams.set("platform_id", "mp");
-  u.searchParams.set("redirect_uri", redirectUri);
-  u.searchParams.set("state", clubId);
-  return u.toString();
-}
-
-export default async function MercadoPagoConnectPage() {
+export default async function MpConnectPage() {
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubs.length) redirect("/admin/config");
 
-  if (ctx.clubIds.length === 0) {
-    return (
-      <div className="flex flex-col gap-6">
-        <AdminBackLink />
-        <p className={adminKicker}>Mercado Pago</p>
-        <h1 className={adminTitle}>Conectar cobros</h1>
-        <p className={adminSubtitle}>No tenés ningún club asignado como dueño.</p>
-      </div>
-    );
-  }
+  const club = ctx.clubs[0];
+
+  const { data: clubData } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("mp_access_token, mp_user_id, name")
+    .eq("id", club.id)
+    .maybeSingle();
+
+  const isConnected = Boolean(
+    (clubData as { mp_access_token?: string | null } | null)?.mp_access_token
+  );
+  const mpUserId = (clubData as { mp_user_id?: string | null } | null)?.mp_user_id;
+
+  const appId = process.env.MP_APP_ID;
+  const redirectUri =
+    process.env.MP_REDIRECT_URI ?? `${process.env.NEXT_PUBLIC_SITE_URL}/api/mp/callback`;
+
+  const oauthUrl = appId
+    ? `https://auth.mercadopago.com.ar/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${club.id}&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}`
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
+
       <header className="space-y-2">
-        <p className={adminKicker}>Mercado Pago</p>
-        <h1 className={adminTitle}>Conectar con Mercado Pago</h1>
+        <p className={adminKicker}>Configuración · Cobros</p>
+        <h1 className={adminTitle}>Mercado Pago</h1>
         <p className={adminSubtitle}>
-          Vinculá tu cuenta de Mercado Pago del club para recibir pagos con comisión automática a Padelibre.
+          Conectá tu cuenta para recibir los pagos de las reservas directamente.
         </p>
       </header>
 
-      <section className={`${adminCard} space-y-4`}>
-        <p className="text-sm font-medium text-slate-600">
-          Elegí el club y hacé clic. Serás redirigido a Mercado Pago para autorizar la aplicación. La URL de retorno
-          configurada es <code className="text-xs text-slate-500">{mpRedirectUri()}</code>.
+      <div className={`${adminCard} flex items-start gap-4`}>
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+            isConnected ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-amber-50 dark:bg-amber-950/30"
+          }`}
+        >
+          {isConnected ? (
+            <CheckCircle size={24} className="text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <AlertCircle size={24} className="text-amber-600 dark:text-amber-400" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-slate-900 dark:text-white">
+            {isConnected ? "Cuenta conectada ✓" : "Sin conectar"}
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {isConnected
+              ? `Tu club recibe pagos directamente. MP User ID: ${mpUserId ?? "—"}`
+              : "Los pagos van a la cuenta de Padelibre hasta que conectes la tuya."}
+          </p>
+        </div>
+      </div>
+
+      <div className={adminCard}>
+        <p className="mb-4 font-bold text-slate-900 dark:text-white">¿Cómo funciona?</p>
+        <div className="space-y-4">
+          {[
+            {
+              n: "1",
+              title: "Jugador paga la reserva",
+              desc: "El jugador abona su parte del turno más el 5% de servicio de Padelibre.",
+            },
+            {
+              n: "2",
+              title: "MP divide automáticamente",
+              desc: "Mercado Pago envía el dinero del turno directamente a tu cuenta y la comisión a Padelibre.",
+            },
+            {
+              n: "3",
+              title: "Recibís el dinero",
+              desc: "El monto del turno aparece en tu cuenta de MP sin intermediarios.",
+            },
+          ].map((step) => (
+            <div key={step.n} className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0585FC] text-xs font-bold text-white">
+                {step.n}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{step.title}</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {oauthUrl ? (
+        <div className="space-y-3">
+          <a
+            href={oauthUrl}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(5,133,252,0.4)] active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          >
+            <CreditCard size={20} />
+            {isConnected ? "Reconectar Mercado Pago" : "Conectar Mercado Pago"}
+            <ExternalLink size={16} className="opacity-70" />
+          </a>
+
+          {isConnected ? (
+            <p className="text-center text-xs text-slate-400">
+              Ya estás conectado. Podés reconectar si cambiaste de cuenta.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className={`${adminCard} border-rose-200/80 bg-rose-50/90 dark:bg-rose-950/20`}>
+          <p className="text-sm font-medium text-rose-800 dark:text-rose-300">
+            Falta configurar MP_APP_ID en las variables de entorno.
+          </p>
+        </div>
+      )}
+
+      <div className={`${adminCard} bg-slate-50/80 dark:bg-slate-800/50`}>
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          💡 Al conectar tu cuenta autorizás a Padelibre a procesar pagos en tu nombre mediante la
+          API de Mercado Pago. Podés desconectar en cualquier momento desde tu panel de MP. La
+          comisión de Padelibre es del 5% por reserva confirmada.
         </p>
-        <ul className="flex flex-col gap-3">
-          {ctx.clubs.map((club) => {
-            const href = buildMercadoPagoAuthUrl(club.id);
-            return (
-              <li key={club.id}>
-                {href ? (
-                  <a
-                    href={href}
-                    className={`inline-flex w-full items-center justify-center rounded-2xl bg-[#0461C4] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#0585FC]/50 ${adminPressable}`}
-                  >
-                    Conectar con Mercado Pago — {club.name ?? "Club"}
-                  </a>
-                ) : (
-                  <p className="text-sm text-rose-700">
-                    Falta la variable <code className="text-xs">MP_APP_ID</code> en el entorno.
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <Link href="/admin/config" className="text-sm font-semibold text-[#0585FC] hover:text-[#0585FC]">
-          Volver a configuración
-        </Link>
-      </section>
+      </div>
     </div>
   );
 }
