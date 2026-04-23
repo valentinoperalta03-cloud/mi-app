@@ -35,7 +35,7 @@ const accountItems: DrawerItem[] = [
 
 const supportItems: DrawerItem[] = [
   { href: "/ayuda", label: "Ayuda", icon: CircleHelp },
-  { href: "#", label: "Cómo funciona", icon: FileText },
+  { href: "/como-funciona", label: "Cómo funciona", icon: FileText },
   { href: "/legal/terminos", label: "Condiciones de uso", icon: Shield },
   { href: "/legal/privacidad", label: "Política de privacidad", icon: FileText },
 ];
