@@ -23,7 +23,10 @@ export default async function CrearPartidoPage() {
     profileGender === "femenino" ? "femenino" : profileGender === "masculino" ? "masculino" : "mixto";
 
   const [{ data: clubsRaw, error: clubsError }, { data: courtsRaw, error: courtsError }] = await Promise.all([
-    supabase.from(DB_TABLES.clubs).select("id, name, location").order("name", { ascending: true }),
+    supabase
+      .from(DB_TABLES.clubs)
+      .select("id, name, location, description, image_url")
+      .order("name", { ascending: true }),
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
   ]);
 
@@ -41,13 +44,19 @@ export default async function CrearPartidoPage() {
         .in("user_id", favoriteIds)
     : { data: [] };
 
-  const clubs: ClubOption[] = ((clubsRaw ?? []) as Array<{ id: string; name: string | null; location: string | null }>).map(
-    (club) => ({
-      id: club.id,
-      name: club.name ?? "Club sin nombre",
-      location: club.location ?? "",
-    })
-  );
+  const clubs: ClubOption[] = ((clubsRaw ?? []) as Array<{
+    id: string;
+    name: string | null;
+    location: string | null;
+    description?: string | null;
+    image_url?: string | null;
+  }>).map((club) => ({
+    id: club.id,
+    name: club.name ?? "Club sin nombre",
+    location: club.location ?? "",
+    description: club.description ?? null,
+    imageUrl: club.image_url ?? null,
+  }));
   const courts: CourtOption[] = ((courtsRaw ?? []) as Array<{
     id: string;
     club_id: string;

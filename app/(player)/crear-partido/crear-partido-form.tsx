@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
-import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/client";
 import { crearPartido } from "./actions";
 
@@ -22,6 +23,8 @@ export type ClubOption = {
   id: string;
   name: string;
   location: string;
+  description?: string | null;
+  imageUrl?: string | null;
 };
 
 export type CourtOption = {
@@ -44,6 +47,7 @@ type MatchRow = {
   scheduled_time: string | null;
   duration_minutes: number | null;
 };
+type Step = "clubs" | "club-detail" | "options" | "payment";
 
 function clockToMinutes(clock: string): number {
   const t = clock.trim().slice(0, 5);
@@ -69,6 +73,9 @@ export default function CrearPartidoForm({
   defaultGender: GenderCategory;
   friends: FriendOption[];
 }) {
+  const [currentStep, setCurrentStep] = useState<Step>("clubs");
+  const [selectedClub, setSelectedClub] = useState<ClubOption | null>(clubs[0] ?? null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedClubId, setSelectedClubId] = useState<string>(clubs[0]?.id ?? "");
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -102,9 +109,15 @@ export default function CrearPartidoForm({
     () => courts.filter((court) => court.clubId === selectedClubId),
     [courts, selectedClubId]
   );
+  const filteredClubs = useMemo(
+    () => clubs.filter((club) => club.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [clubs, searchQuery]
+  );
 
   useEffect(() => {
     if (!selectedClubId) return;
+    const foundClub = clubs.find((club) => club.id === selectedClubId) ?? null;
+    setSelectedClub(foundClub);
     const firstCourt = courts.find((court) => court.clubId === selectedClubId);
     setSelectedCourtId(firstCourt?.id ?? "");
     setSelectedSlot(null);
@@ -205,363 +218,519 @@ export default function CrearPartidoForm({
         setError(null);
         const formData = new FormData(event.currentTarget);
         startSubmit(async () => {
-          const result = await crearPartido(formData);
-          if (result && "error" in result) {
-            setError(result.error);
+          try {
+            const result = (await crearPartido(formData)) as { error?: string } | void;
+            if (result && "error" in result) setError(result.error ?? "No se pudo crear el partido.");
+          } catch {
+            // Si hay redirect del server action, Next resuelve fuera del cliente.
           }
         });
       }}
     >
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Club</p>
-        <select
-          name="club_id"
-          value={selectedClubId}
-          onChange={(event) => setSelectedClubId(event.target.value)}
-          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-        >
-          {clubs.map((club) => (
-            <option key={club.id} value={club.id}>
-              {club.name}
-            </option>
-          ))}
-        </select>
-      </section>
+      {currentStep === "clubs" ? (
+        <div className="space-y-4">
+          <header className="space-y-1">
+            <Link href="/home" className="text-sm font-semibold text-[#0585FC]">
+              ← Volver
+            </Link>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">¿Dónde querés jugar?</h1>
+            <p className="text-sm text-slate-500">Elegí un club para ver sus canchas</p>
+          </header>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cancha</p>
-        <select
-          name="court_id"
-          value={selectedCourtId}
-          onChange={(event) => {
-            setSelectedCourtId(event.target.value);
-            setSelectedSlot(null);
-          }}
-          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none ring-[#0585FC]/20 transition focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-        >
-          {availableCourts.map((court) => (
-            <option key={court.id} value={court.id}>
-              {court.name} · ${court.price}/turno
-            </option>
-          ))}
-        </select>
-        {selectedCourt ? (
-          <motion.div
-            layout
-            className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700"
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
-            <div className="mt-2 flex items-center gap-2 opacity-70">
-              <div className="relative h-5 w-16 overflow-hidden rounded-md border border-slate-200/70 bg-white/90 dark:border-slate-700 dark:bg-slate-900">
-                <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain p-0.5" />
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between gap-3 text-sm text-slate-600">
-                <span>Precio por jugador</span>
-                <span className="shrink-0 font-medium text-slate-700">${fmtAr(resumenPago.precioCanchaJugador)}</span>
-              </div>
-              <div className="flex justify-between gap-3 text-sm text-slate-600">
-                <div className="min-w-0 leading-snug">
-                  <p>Servicio Padelibre</p>
-                  <p>e impuestos incluidos</p>
-                </div>
-                <span className="shrink-0 self-start font-medium text-slate-700">
-                  ${fmtAr(resumenPago.comisionPorJugador)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-3 text-sm text-slate-600">
-                <span>Jugadores que pagás ahora</span>
-                <span className="shrink-0 font-medium text-slate-700">{resumenPago.jugadoresPagados}</span>
-              </div>
-            </div>
-            <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
-            <div className="flex justify-between gap-3 text-base font-bold text-slate-900 dark:text-slate-100">
-              <span>Total a pagar</span>
-              <span>${fmtAr(resumenPago.total)}</span>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-slate-400">
-              <span className="mr-1" aria-hidden>
-                ℹ️
-              </span>
-              El precio ya incluye todos los impuestos y comisiones del servicio de Padelibre.
-            </p>
-          </motion.div>
-        ) : null}
-      </section>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar club..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800"
+            />
+          </div>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Fecha</p>
-        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {dates.map((date) => {
-            const selected = selectedDate === date.key;
-            return (
+          <div className="space-y-3">
+            {filteredClubs.map((club) => (
               <button
-                key={date.key}
+                key={club.id}
                 type="button"
-                onClick={() => setSelectedDate(date.key)}
-                className={`flex min-w-[4.75rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center transition ${
-                  selected
-                    ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                onClick={() => {
+                  setSelectedClub(club);
+                  setSelectedClubId(club.id);
+                  setCurrentStep("club-detail");
+                }}
+                className="w-full rounded-2xl border border-black/[0.06] bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] dark:border-white/[0.06] dark:bg-slate-900"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
+                    {club.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- imagen externa cargada por URL de club
+                      <img src={club.imageUrl} alt={club.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="12" fill="none" stroke="#0585FC" strokeWidth="2" opacity="0.5" />
+                        <path d="M8 13 Q16 11 24 13" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
+                        <path d="M8 16 Q16 14 24 16" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold text-slate-900 dark:text-white">{club.name}</p>
+                    <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
+                      <MapPin size={11} />
+                      {club.location || "Rosario"}
+                    </p>
+                  </div>
+                  <ChevronRight size={18} className="shrink-0 text-slate-400" />
+                </div>
+              </button>
+            ))}
+            {filteredClubs.length === 0 ? (
+              <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                No encontramos clubes con ese nombre.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {currentStep === "club-detail" ? (
+        <div className="space-y-5">
+          <button
+            type="button"
+            onClick={() => setCurrentStep("clubs")}
+            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+          >
+            ← Volver a clubes
+          </button>
+
+          <div className="relative h-48 w-full overflow-hidden rounded-3xl bg-[#0585FC]/10">
+            {selectedClub?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- imagen externa cargada por URL de club
+              <img src={selectedClub.imageUrl} alt={selectedClub.name} className="h-full w-full object-cover" />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              >
+                <svg width="80" height="80" viewBox="0 0 80 80" opacity="0.3">
+                  <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
+                  <path d="M12 32 Q40 28 68 32" stroke="white" strokeWidth="2.5" fill="none" />
+                  <path d="M12 40 Q40 36 68 40" stroke="white" strokeWidth="2.5" fill="none" />
+                  <path d="M12 48 Q40 44 68 48" stroke="white" strokeWidth="2.5" fill="none" />
+                </svg>
+              </div>
+            )}
+            <div
+              className="absolute bottom-0 left-0 right-0 p-4"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }}
+            >
+              <h1 className="text-xl font-bold text-white">{selectedClub?.name}</h1>
+              <p className="flex items-center gap-1 text-sm text-white/80">
+                <MapPin size={12} />
+                {selectedClub?.location}
+              </p>
+            </div>
+          </div>
+
+          {selectedClub?.description ? (
+            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{selectedClub.description}</p>
+          ) : null}
+
+          <div className="space-y-3">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Elegí tu cancha y horario</h2>
+
+            <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {dates.map((date) => (
+                <button
+                  key={date.key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(date.key);
+                    setSelectedSlot(null);
+                  }}
+                  className={`flex min-w-[4rem] shrink-0 flex-col items-center rounded-2xl border px-3 py-2.5 text-center transition-all ${
+                    selectedDate === date.key
+                      ? "border-[#0585FC] bg-[#0585FC] text-white"
+                      : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800"
+                  }`}
+                >
+                  <span className="text-[10px] font-semibold uppercase">{date.top}</span>
+                  <span className="text-lg font-bold leading-tight">{date.bottom}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              {availableCourts.map((court) => (
+                <div
+                  key={court.id}
+                  className="rounded-2xl border border-black/[0.06] bg-white p-4 dark:border-white/[0.06] dark:bg-slate-900"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
+                      <p className="text-sm font-semibold text-[#0585FC]">
+                        ${new Intl.NumberFormat("es-AR").format(court.price)}/turno
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">
+                      90 min
+                    </span>
+                  </div>
+
+                  {selectedDate && selectedCourtId === court.id ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      {loadingSlots ? (
+                        <p className="col-span-3 py-2 text-center text-sm text-slate-400">Cargando horarios...</p>
+                      ) : slots.length === 0 ? (
+                        <p className="col-span-3 py-2 text-center text-sm text-slate-400">Sin horarios disponibles</p>
+                      ) : (
+                        slots.map((slot) => (
+                          <button
+                            key={`${slot.time}-${slot.duration}`}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSlot(slot);
+                              setCurrentStep("options");
+                            }}
+                            className={`rounded-xl border py-2.5 text-center text-xs font-semibold transition-all ${
+                              selectedSlot?.time === slot.time
+                                ? "border-[#0585FC] bg-[#0585FC] text-white"
+                                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800"
+                            }`}
+                          >
+                            <span className="block">{slot.time}</span>
+                            <span className="block opacity-60">{slot.duration}min</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+
+                  {selectedCourtId !== court.id ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCourtId(court.id);
+                        setSelectedSlot(null);
+                      }}
+                      className="mt-2 w-full rounded-xl border border-[#0585FC]/20 bg-[#0585FC]/5 py-2 text-sm font-semibold text-[#0585FC] transition-colors hover:bg-[#0585FC]/10"
+                    >
+                      Ver horarios disponibles
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {currentStep === "options" ? (
+        <div className="space-y-5">
+          <button
+            type="button"
+            onClick={() => setCurrentStep("club-detail")}
+            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+          >
+            ← Volver a la cancha
+          </button>
+
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Opciones del partido</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {selectedClub?.name} · {selectedDate} · {selectedSlot?.time}
+            </p>
+          </div>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tipo de partido</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMatchType("amistoso")}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  matchType === "amistoso"
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
-                <span className="text-[11px] font-semibold uppercase leading-tight">{date.top}</span>
-                <span className="text-lg font-semibold leading-tight">{date.bottom}</span>
+                Amistoso
               </button>
-            );
-          })}
-        </div>
-      </section>
+              <button
+                type="button"
+                onClick={() => setMatchType("competitivo")}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  matchType === "competitivo"
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                Competitivo
+              </button>
+            </div>
+          </section>
 
-      {selectedSlot ? (
-        <section className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invitar amigos</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Seleccioná hasta 3 amigos para completar el partido (4 jugadores contando al creador).
-          </p>
-          {friends.length === 0 ? (
-            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-              Todavía no tenés amigos agregados.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {friends.map((friend) => {
-                  const selected = selectedFriendIds.includes(friend.userId);
-                  const nivelParts = splitOfficialCategoryLine(
-                    formatProfileNivelFromRow({
-                      level: friend.level,
-                      level_of_play: friend.levelOfPlay,
-                      technical_score: friend.technicalScore,
-                    })
-                  );
-                  return (
-                    <button
-                      key={friend.userId}
-                      type="button"
-                      onClick={() => toggleFriend(friend.userId)}
-                      className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
-                        selected ? "border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
-                          {friend.avatarUrl ? (
-                            <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center bg-[#0585FC]/10 text-xs font-semibold text-[#0461C4]">
-                              {friend.name.slice(0, 1).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{friend.name}</p>
-                          <p className="mt-1 text-xs font-medium text-[#0461C4]">{nivelParts.category || "Sin nivel"}</p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedFriendIds.map((friendId) => {
-                const friend = friends.find((f) => f.userId === friendId);
-                if (!friend) return null;
-                const checked = paidForFriendIds.includes(friendId);
+          <section className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visibilidad</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibility("publico")}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  visibility === "publico"
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                Público
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibility("privado")}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  visibility === "privado"
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                Privado
+              </button>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Categoría</p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["masculino", "femenino", "mixto"] as const).map((option) => {
+                const isDisabled =
+                  (option === "femenino" && defaultGender === "masculino") ||
+                  (option === "masculino" && defaultGender === "femenino");
                 return (
-                  <label
-                    key={`pay-${friendId}`}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => !isDisabled && setGenderCategory(option)}
+                    className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
+                      isDisabled
+                        ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-700"
+                        : genderCategory === option
+                          ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    }`}
                   >
-                    <span className="text-sm font-medium text-slate-700">¿Pagar por esta persona? ({friend.name})</span>
-                    <button
-                      type="button"
-                      aria-pressed={checked}
-                      onClick={() => togglePaidFor(friendId)}
-                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
-                        checked ? "bg-[#0585FC]/50" : "bg-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition dark:bg-slate-100 ${
-                          checked ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </label>
+                    {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
+                    {isDisabled ? <span className="mt-0.5 block text-[9px] opacity-60">No disponible</span> : null}
+                  </button>
                 );
               })}
             </div>
-          )}
-        </section>
-      ) : null}
+            {defaultGender === "masculino" ? (
+              <p className="text-xs text-slate-400">Solo podés crear partidos masculinos o mixtos.</p>
+            ) : null}
+            {defaultGender === "femenino" ? (
+              <p className="text-xs text-slate-400">Solo podés crear partidos femeninos o mixtos.</p>
+            ) : null}
+          </section>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Horario</p>
-        {loadingSlots ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
-            Cargando horarios...
-          </div>
-        ) : slots.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {slots.map((slot) => {
-              const selected = selectedSlot?.time === slot.time && selectedSlot.duration === slot.duration;
-              return (
-                <button
-                  key={`${slot.time}-${slot.duration}`}
-                  type="button"
-                  onClick={() => setSelectedSlot(slot)}
-                  className={`min-h-[4rem] rounded-2xl border px-2 py-2 text-xs font-semibold transition ${
-                    selected
-                      ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                  }`}
-                >
-                  {slot.time} · {slot.duration}min
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-            Seleccioná fecha y cancha para ver disponibilidad.
-          </p>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tipo de partido</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMatchType("amistoso")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              matchType === "amistoso"
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
-          >
-            Amistoso
-          </button>
-          <button
-            type="button"
-            onClick={() => setMatchType("competitivo")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              matchType === "competitivo"
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
-          >
-            Competitivo
-          </button>
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visibilidad</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setVisibility("publico")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              visibility === "publico"
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
-          >
-            Publico
-          </button>
-          <button
-            type="button"
-            onClick={() => setVisibility("privado")}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              visibility === "privado"
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
-          >
-            Privado
-          </button>
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Categoría
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {(["masculino", "femenino", "mixto"] as const).map((option) => {
-            const isDisabled =
-              (option === "femenino" && defaultGender === "masculino") ||
-              (option === "masculino" && defaultGender === "femenino");
-
-            return (
+          <section className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">¿Quién puede unirse?</p>
+            <div className="grid grid-cols-2 gap-2">
               <button
-                key={option}
                 type="button"
-                disabled={isDisabled}
-                onClick={() => !isDisabled && setGenderCategory(option)}
-                className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
-                  isDisabled
-                    ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-700"
-                    : genderCategory === option
-                    ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                    : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 hover:border-[#0585FC]/30"
+                onClick={() => setLevelRestricted(false)}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  !levelRestricted
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
-                {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
-                {isDisabled ? (
-                  <span className="block text-[9px] mt-0.5 opacity-60">No disponible</span>
-                ) : null}
+                Cualquier nivel
               </button>
-            );
-          })}
-        </div>
-        {defaultGender === "masculino" && (
-          <p className="text-xs text-slate-400">
-            Solo podés crear partidos masculinos o mixtos.
-          </p>
-        )}
-        {defaultGender === "femenino" && (
-          <p className="text-xs text-slate-400">
-            Solo podés crear partidos femeninos o mixtos.
-          </p>
-        )}
-      </section>
+              <button
+                type="button"
+                onClick={() => setLevelRestricted(true)}
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  levelRestricted
+                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                }`}
+              >
+                Mi nivel ±1
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Si está activado, jugadores fuera de tu rango deberán solicitar acceso y los jugadores del partido votarán.
+            </p>
+          </section>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">¿Quién puede unirse?</p>
-        <div className="grid grid-cols-2 gap-2">
+          <section className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invitar amigos</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Seleccioná hasta 3 amigos para completar el partido (4 jugadores contando al creador).
+            </p>
+            {friends.length === 0 ? (
+              <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                Todavía no tenés amigos agregados.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {friends.map((friend) => {
+                    const selected = selectedFriendIds.includes(friend.userId);
+                    const nivelParts = splitOfficialCategoryLine(
+                      formatProfileNivelFromRow({
+                        level: friend.level,
+                        level_of_play: friend.levelOfPlay,
+                        technical_score: friend.technicalScore,
+                      })
+                    );
+                    return (
+                      <button
+                        key={friend.userId}
+                        type="button"
+                        onClick={() => toggleFriend(friend.userId)}
+                        className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
+                          selected
+                            ? "border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10"
+                            : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
+                            {friend.avatarUrl ? (
+                              <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center bg-[#0585FC]/10 text-xs font-semibold text-[#0461C4]">
+                                {friend.name.slice(0, 1).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{friend.name}</p>
+                            <p className="mt-1 text-xs font-medium text-[#0461C4]">{nivelParts.category || "Sin nivel"}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedFriendIds.map((friendId) => {
+                  const friend = friends.find((f) => f.userId === friendId);
+                  if (!friend) return null;
+                  const checked = paidForFriendIds.includes(friendId);
+                  return (
+                    <label
+                      key={`pay-${friendId}`}
+                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <span className="text-sm font-medium text-slate-700">¿Pagar por esta persona? ({friend.name})</span>
+                      <button
+                        type="button"
+                        aria-pressed={checked}
+                        onClick={() => togglePaidFor(friendId)}
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
+                          checked ? "bg-[#0585FC]/50" : "bg-slate-300"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition dark:bg-slate-100 ${
+                            checked ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           <button
             type="button"
-            onClick={() => setLevelRestricted(false)}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              !levelRestricted
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
+            onClick={() => setCurrentStep("payment")}
+            disabled={!canSubmit}
+            className="w-full rounded-2xl bg-[#0585FC] py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition-all hover:bg-[#0461C4] disabled:opacity-50"
           >
-            Cualquier nivel
-          </button>
-          <button
-            type="button"
-            onClick={() => setLevelRestricted(true)}
-            className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-              levelRestricted
-                ? "bg-[#0585FC] border-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                : "border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
-            }`}
-          >
-            Mi nivel ±1
+            Continuar al pago →
           </button>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Si está activado, jugadores fuera de tu rango deberán solicitar acceso y los jugadores del
-          partido votarán.
-        </p>
-      </section>
+      ) : null}
 
+      {currentStep === "payment" ? (
+        <div className="space-y-5">
+          <button
+            type="button"
+            onClick={() => setCurrentStep("options")}
+            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+          >
+            ← Volver a opciones
+          </button>
+
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Confirmá tu partido</h1>
+
+          <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-slate-900">
+            <div
+              className="flex h-20 w-full items-center gap-3 bg-[#0585FC]/10 px-5"
+              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            >
+              <div>
+                <p className="font-bold text-white">{selectedClub?.name}</p>
+                <p className="text-sm text-white/70">{selectedClub?.location}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-5">
+              {[
+                { label: "Cancha", value: availableCourts.find((c) => c.id === selectedCourtId)?.name },
+                { label: "Fecha", value: selectedDate },
+                { label: "Hora", value: selectedSlot?.time },
+                { label: "Duración", value: `${selectedSlot?.duration ?? "—"} minutos` },
+                { label: "Tipo", value: matchType === "competitivo" ? "Competitivo" : "Amistoso" },
+                { label: "Categoría", value: genderCategory },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-slate-500">{label}</span>
+                  <span className="capitalize font-semibold text-slate-900 dark:text-white">{value ?? "—"}</span>
+                </div>
+              ))}
+
+              <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Precio de cancha</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.precioCanchaJugador)}</span>
+                </div>
+                <div className="mt-1.5 flex justify-between">
+                  <span className="text-sm text-slate-500">Servicio Padelibre</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.comisionPorJugador)}</span>
+                </div>
+                <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+                  <span className="font-bold text-slate-900 dark:text-white">Total a pagar</span>
+                  <span className="text-lg font-bold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-xs text-slate-400">💳 Los otros jugadores pagarán su parte al unirse</p>
+
+          {error ? (
+            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{error}</p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={isSubmitting || !canSubmit}
+            className="w-full rounded-2xl bg-[#0585FC] py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:bg-[#0461C4] active:scale-[0.98] disabled:opacity-60"
+          >
+            {isSubmitting ? "Procesando..." : "Confirmar y pagar 🎾"}
+          </button>
+        </div>
+      ) : null}
+
+      <input type="hidden" name="club_id" value={selectedClubId} />
+      <input type="hidden" name="court_id" value={selectedCourtId} />
       <input type="hidden" name="scheduled_date" value={selectedDate} />
       <input type="hidden" name="scheduled_time" value={selectedSlot?.time ?? ""} />
       <input type="hidden" name="duration_minutes" value={String(selectedSlot?.duration ?? "")} />
@@ -571,32 +740,6 @@ export default function CrearPartidoForm({
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
       <input type="hidden" name="invited_friend_ids" value={selectedFriendIds.join(",")} />
       <input type="hidden" name="paid_friend_ids" value={paidForFriendIds.join(",")} />
-
-      {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
-          {error}
-        </p>
-      ) : null}
-
-      {selectedCourt ? (
-        <div className="rounded-2xl border border-[#0585FC]/20/70 bg-[#0585FC]/5/80 px-4 py-3 text-sm text-slate-800">
-          <p className="font-semibold text-[#0585FC]">💳 Pago inicial del creador</p>
-          <p className="mt-2 font-medium leading-relaxed text-slate-700">
-            Al crear el partido pagás{" "}
-            <span className="font-bold text-slate-900 dark:text-slate-100">${fmtAr(resumenPago.total)}</span> (incluye tu parte del turno
-            y el servicio de Padelibre). Si marcás "¿Pagar por él/ella?" para un invitado, su parte también se suma a
-            este pago.
-          </p>
-        </div>
-      ) : null}
-
-      <button
-        type="submit"
-        disabled={!canSubmit || isSubmitting}
-        className={`w-full ${PLAYER_PRIMARY_BUTTON} py-3.5 text-base disabled:opacity-60`}
-      >
-        {isSubmitting ? "Creando..." : "Crear partido"}
-      </button>
     </form>
   );
 }

@@ -264,7 +264,7 @@ export default function AyudaPage() {
               </summary>
               <p className="pt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                 {faq.answer}
-              </div>
+              </p>
             </details>
           ))}
         </div>
