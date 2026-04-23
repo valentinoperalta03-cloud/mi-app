@@ -95,8 +95,9 @@ async function requestMercadoPagoPreference(payload: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(cookieStr ? { Cookie: cookieStr } : {}),
+      Cookie: cookieStr,
     },
+    credentials: "include",
     body: JSON.stringify(payload),
   });
   const data = (await res.json().catch(() => ({}))) as { init_point?: string; error?: string };
