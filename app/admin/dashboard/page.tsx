@@ -132,10 +132,34 @@ export default async function AdminDashboardPage() {
   const maxHourly = Math.max(1, ...chartData.map((b) => b.total));
 
   const todayMetrics = [
-    { label: "Reservas de Hoy", value: String(reservasHoy), icon: Target, color: "text-[#0461C4]" },
-    { label: "Ingresos Estimados", value: money.format(ingresosEstimados), icon: DollarSign, color: "text-emerald-700" },
-    { label: "Ocupación de Canchas (%)", value: `${ocupacionPct}%`, icon: Activity, color: "text-violet-700" },
-    { label: "Jugadores Activos", value: String(jugadoresActivos), icon: Users, color: "text-amber-700" },
+    {
+      label: "Reservas de Hoy",
+      value: String(reservasHoy),
+      icon: Target,
+      color: "text-[#0461C4]",
+      topBorder: "#0585FC",
+    },
+    {
+      label: "Ingresos Estimados",
+      value: money.format(ingresosEstimados),
+      icon: DollarSign,
+      color: "text-emerald-700",
+      topBorder: "#22c55e",
+    },
+    {
+      label: "Ocupación de Canchas (%)",
+      value: `${ocupacionPct}%`,
+      icon: Activity,
+      color: "text-violet-700",
+      topBorder: "#8b5cf6",
+    },
+    {
+      label: "Jugadores Activos",
+      value: String(jugadoresActivos),
+      icon: Users,
+      color: "text-amber-700",
+      topBorder: "#f59e0b",
+    },
   ] as const;
 
   if (!owned) {
@@ -182,18 +206,11 @@ export default async function AdminDashboardPage() {
       </header>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {todayMetrics.map(({ label, value, icon: Icon, color }) => (
+        {todayMetrics.map(({ label, value, icon: Icon, color, topBorder }) => (
           <div
             key={label}
-            className={`${adminCard} flex flex-col gap-2 border-t-2 p-4 ${
-              label.includes("Reservas")
-                ? "border-[#0585FC]"
-                : label.includes("Ingresos")
-                  ? "border-emerald-500"
-                  : label.includes("Ocupación")
-                    ? "border-violet-500"
-                    : "border-amber-500"
-            }`}
+            className={`${adminCard} flex flex-col gap-2 border-t-2 p-4`}
+            style={{ borderTopColor: topBorder }}
           >
             <Icon size={18} className={color} strokeWidth={2} />
             <p className={adminKicker}>{label}</p>
