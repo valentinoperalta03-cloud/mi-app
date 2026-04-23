@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { MessageSquare, Share2, UserPlus, UserX } from "lucide-react";
+import { MessageSquare, Share2, UserCheck, UserPlus } from "lucide-react";
 import { AppleToast } from "@/components/apple-toast";
-import { setUserFavorite } from "./actions";
+import { followUser, unfollowUser } from "./actions";
 
 type ProfileSocialActionsProps = {
   userId: string;
@@ -12,7 +12,7 @@ type ProfileSocialActionsProps = {
 };
 
 export default function ProfileSocialActions({ userId, initialFavorited }: ProfileSocialActionsProps) {
-  const [favorited, setFavorited] = useState(initialFavorited);
+  const [following, setFollowing] = useState(initialFavorited);
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<string | null>(null);
 
@@ -21,16 +21,16 @@ export default function ProfileSocialActions({ userId, initialFavorited }: Profi
     window.setTimeout(() => setToast(null), 2300);
   }
 
-  function handleToggleFavorite() {
+  function handleToggleFollow() {
     startTransition(async () => {
-      const next = !favorited;
-      const res = await setUserFavorite(userId, next);
+      const next = !following;
+      const res = next ? await followUser(userId) : await unfollowUser(userId);
       if (!res.ok) {
         showToast(res.message);
         return;
       }
-      setFavorited(next);
-      showToast(next ? "Jugador agregado a tus amigos." : "Jugador eliminado de tus amigos.");
+      setFollowing(next);
+      showToast(next ? "Ahora seguís a este jugador." : "Dejaste de seguir a este jugador.");
     });
   }
 
@@ -50,15 +50,15 @@ export default function ProfileSocialActions({ userId, initialFavorited }: Profi
         <button
           type="button"
           disabled={pending}
-          onClick={handleToggleFavorite}
+          onClick={handleToggleFollow}
           className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition hover:opacity-95 active:scale-[0.98] disabled:opacity-60 ${
-            favorited
-              ? "border border-rose-200 bg-rose-50 text-rose-700"
+            following
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
               : "bg-[color:var(--color-brand-mid)] text-white"
           }`}
         >
-          {favorited ? <UserX size={16} /> : <UserPlus size={16} />}
-          {favorited ? "Eliminar amigo" : "Agregar amigo"}
+          {following ? <UserCheck size={16} /> : <UserPlus size={16} />}
+          {following ? "Siguiendo" : "Seguir"}
         </button>
         <Link
           href={`/comunidad/mensajes/${userId}`}

@@ -22,7 +22,9 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
 
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, gender, level, level_of_play, technical_score, age, bio, avatar_url")
+    .select(
+      "user_id, name, gender, level, level_of_play, technical_score, age, bio, avatar_url, preferred_hand, court_position, preferred_schedule"
+    )
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -39,6 +41,9 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     age: number | null;
     bio: string | null;
     avatar_url: string | null;
+    preferred_hand?: string | null;
+    court_position?: string | null;
+    preferred_schedule?: string | null;
   };
 
   const displayName = row.name?.trim() || "Jugador";
@@ -57,6 +62,17 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   }
   const nivelLine = formatProfileNivelFromRow(row);
   const nivelParts = splitOfficialCategoryLine(nivelLine);
+
+  const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("favorite_user_id", { count: "exact", head: true })
+      .eq("favorite_user_id", userId),
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("favorite_user_id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
 
   const { data: participantRows } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -126,6 +142,8 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   }>;
 
   const victoriasTotales = normalizedResults.filter((r) => r.resultado === "Victoria").length;
+  const derrotasTotales = normalizedResults.filter((r) => r.resultado === "Derrota").length;
+  const empatesTotales = normalizedResults.filter((r) => r.resultado === "Empate").length;
   const eloLabel =
     row.technical_score != null && Number.isFinite(Number(row.technical_score))
       ? Number(row.technical_score).toFixed(2)
@@ -133,6 +151,66 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const ultimosCinco = normalizedResults
     .sort((a, b) => new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime())
     .slice(0, 5);
+  const chartValues = ultimosCinco
+    .map((m) => (m.resultado === "Victoria" ? 3 : m.resultado === "Empate" ? 1 : 0))
+    .reverse();
+
+  const { data: participantsInMyMatches } = matchIds.length
+    ? await supabase
+        .from(DB_TABLES.matchParticipants)
+        .select("player_id, match_id")
+        .in("match_id", matchIds.slice(0, 300))
+    : { data: [] };
+
+  const coPlayerCounter = new Map<string, number>();
+  for (const row of (participantsInMyMatches ?? []) as Array<{ player_id: string; match_id: string }>) {
+    if (row.player_id === userId) continue;
+    coPlayerCounter.set(row.player_id, (coPlayerCounter.get(row.player_id) ?? 0) + 1);
+  }
+  const topCoPlayerIds = [...coPlayerCounter.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => id);
+
+  const { data: topCoPlayers } = topCoPlayerIds.length
+    ? await supabase
+        .from(DB_TABLES.profiles)
+        .select("user_id, name")
+        .in("user_id", topCoPlayerIds)
+    : { data: [] };
+  const topCoPlayerMap = new Map(
+    (topCoPlayers ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name?.trim() || "Jugador"])
+  );
+  const topCoPlayersWithCount = topCoPlayerIds.map((id) => ({
+    id,
+    name: topCoPlayerMap.get(id) ?? "Jugador",
+    count: coPlayerCounter.get(id) ?? 0,
+  }));
+
+  const { data: matchesRows } = matchIds.length
+    ? await supabase
+        .from(DB_TABLES.matches)
+        .select("id, court_id")
+        .in("id", matchIds.slice(0, 300))
+    : { data: [] };
+  const courtIds = [...new Set((matchesRows ?? []).map((m: { court_id: string | null }) => m.court_id).filter(Boolean))] as string[];
+  const { data: courtsRows } = courtIds.length
+    ? await supabase.from(DB_TABLES.courts).select("id, club_id").in("id", courtIds)
+    : { data: [] };
+  const clubIds = [...new Set((courtsRows ?? []).map((c: { club_id: string | null }) => c.club_id).filter(Boolean))] as string[];
+  const { data: clubsRows } = clubIds.length
+    ? await supabase.from(DB_TABLES.clubs).select("id, name").in("id", clubIds)
+    : { data: [] };
+  const clubMap = new Map((clubsRows ?? []).map((c: { id: string; name: string | null }) => [c.id, c.name?.trim() || "Club"]));
+  const clubCounter = new Map<string, number>();
+  for (const court of (courtsRows ?? []) as Array<{ id: string; club_id: string | null }>) {
+    if (!court.club_id) continue;
+    clubCounter.set(court.club_id, (clubCounter.get(court.club_id) ?? 0) + 1);
+  }
+  const topClubs = [...clubCounter.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([clubId, count]) => ({ clubId, count, name: clubMap.get(clubId) ?? "Club" }));
 
   return (
     <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
@@ -155,6 +233,9 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           </div>
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
+        {row.bio?.trim() ? (
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
+        ) : null}
         <p className="mt-2 text-sm text-[#0461C4]">
           <span className="font-bold">{nivelParts.category || "—"}</span>
           {nivelParts.description ? (
@@ -162,6 +243,20 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           ) : null}
         </p>
         <p className="mt-1 text-xs font-medium text-slate-500">Categoría: {categoriaLabel}</p>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Partidos</p>
+            <p className="text-sm font-bold text-slate-900">{partidosJugados}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Seguidores</p>
+            <p className="text-sm font-bold text-slate-900">{followersCount ?? 0}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">Seguidos</p>
+            <p className="text-sm font-bold text-slate-900">{followingCount ?? 0}</p>
+          </div>
+        </div>
       </section>
 
       <ProfileStatsPanel
@@ -171,24 +266,49 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
         eloRanking={eloLabel}
       />
 
-      {(row.age != null && row.age > 0) || row.bio?.trim() ? (
-        <section className="mt-6 space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">Sobre el jugador</h2>
-          {row.age != null && row.age > 0 ? (
-            <p className="rounded-3xl border border-slate-200/80 bg-white px-4 py-3 text-sm text-slate-700 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-              <span className="font-semibold text-slate-900">Edad:</span> {row.age} años
-            </p>
-          ) : null}
-          {row.bio?.trim() ? (
-            <p className="rounded-3xl border border-slate-200/80 bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-              {row.bio.trim()}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+      <section className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Nivel y evolución</h2>
+        <div className="rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+          <p className="text-xs uppercase tracking-wide text-slate-400">Últimos 5 partidos</p>
+          {chartValues.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-500">Sin resultados suficientes para mostrar el gráfico.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {chartValues.map((v, idx) => (
+                <div key={`bar-${idx}`} className="flex flex-col items-center gap-1">
+                  <div className="flex h-20 w-full items-end rounded-xl bg-slate-100 p-1">
+                    <div
+                      className={`w-full rounded-md ${
+                        v === 3 ? "bg-emerald-500" : v === 1 ? "bg-amber-400" : "bg-rose-400"
+                      }`}
+                      style={{ height: `${Math.max(18, (v / 3) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-400">P{idx + 1}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Últimos partidos</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Preferencias del jugador</h2>
+        <div className="space-y-2 rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">Mano hábil:</span> {row.preferred_hand || "No definida"}
+          </p>
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">Posición en cancha:</span> {row.court_position || "No definida"}
+          </p>
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">Horario favorito:</span> {row.preferred_schedule || "No definido"}
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Partidos que jugó</h2>
         {ultimosCinco.length === 0 ? (
           <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
             Todavía no hay partidos con resultado para mostrar.
@@ -217,6 +337,67 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
                 >
                   {item.resultado}
                 </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Estadísticas</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Victorias</p>
+            <p className="text-lg font-bold text-emerald-600">{victoriasTotales}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Derrotas</p>
+            <p className="text-lg font-bold text-rose-500">{derrotasTotales}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Empates</p>
+            <p className="text-lg font-bold text-amber-500">{empatesTotales}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Efectividad</p>
+            <p className="text-lg font-bold text-[#0461C4]">
+              {partidosJugados > 0 ? `${Math.round((victoriasTotales / partidosJugados) * 100)}%` : "—"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">
+          Jugadores con quien más juega
+        </h2>
+        {topCoPlayersWithCount.length === 0 ? (
+          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+            {displayName} todavía no tiene suficientes partidos para calcular compañeros frecuentes.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {topCoPlayersWithCount.map((p) => (
+              <li key={p.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <span className="font-semibold text-slate-900">{displayName}</span> suele jugar con{" "}
+                <span className="font-semibold text-[#0461C4]">{p.name}</span> ({p.count} partidos)
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-6 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Clubes donde juega {displayName}</h2>
+        {topClubs.length === 0 ? (
+          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+            Todavía no hay clubes suficientes para mostrar.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {topClubs.map((club) => (
+              <li key={club.clubId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <span className="font-semibold text-slate-900">{club.name}</span> · {club.count} canchas jugadas
               </li>
             ))}
           </ul>

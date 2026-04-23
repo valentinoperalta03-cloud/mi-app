@@ -6,10 +6,10 @@ import { MessageCircle, Sparkles, Users } from "lucide-react";
 
 const sections = [
   {
-    title: "Mis Amigos",
-    description: "Buscá y agregá nuevos compañeros",
+    title: "Encontrar amigos",
+    description: "Buscá perfiles y conectate con jugadores de tu nivel",
     href: "/comunidad/buscar",
-    cta: "Buscar jugadores",
+    cta: "Encontrar jugadores",
     Icon: Users,
     iconClass:
       "bg-gradient-to-br from-[#0585FC] via-[#0585FC] to-indigo-500 text-white shadow-inner shadow-white/20",

@@ -154,6 +154,56 @@ export async function removeFriend(targetUserId: string): Promise<{ ok: boolean;
   return { ok: true, message: "Amigo eliminado." };
 }
 
+export async function followUser(targetUserId: string): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "No autenticado." };
+  if (targetUserId === user.id) return { ok: false, message: "No podés seguirte a vos mismo." };
+
+  const { error } = await supabase.from(DB_TABLES.userFavorites).insert({
+    user_id: user.id,
+    favorite_user_id: targetUserId,
+  });
+
+  if (error && error.code !== "23505") return { ok: false, message: error.message };
+
+  const { data: senderProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const senderName = (senderProfile as { name?: string | null } | null)?.name ?? "Alguien";
+  await createNotification(supabase, {
+    user_id: targetUserId,
+    type: "player_joined",
+    title: "Nuevo seguidor",
+    body: `${senderName} empezó a seguirte.`,
+  });
+
+  revalidatePath(`/jugador/${targetUserId}`);
+  return { ok: true, message: "Ahora seguís a este jugador." };
+}
+
+export async function unfollowUser(targetUserId: string): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "No autenticado." };
+
+  const { error } = await supabase
+    .from(DB_TABLES.userFavorites)
+    .delete()
+    .eq("user_id", user.id)
+    .eq("favorite_user_id", targetUserId);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath(`/jugador/${targetUserId}`);
+  return { ok: true, message: "Dejaste de seguir a este jugador." };
+}
+
 // Deprecated: kept for backward compatibility in existing call sites.
 export async function setUserFavorite(favoriteUserId: string, shouldFavorite: boolean) {
   if (shouldFavorite) return sendFriendRequest(favoriteUserId);
