@@ -94,6 +94,7 @@ export async function POST(req: Request) {
 
     let preference: { id?: string; init_point?: string; sandbox_init_point?: string };
     try {
+      console.log("[mp] attempting to create preference, accessToken exists:", !!accessToken);
       preference = await getPreferenceClient().create({
         body: {
           items: [
@@ -116,6 +117,7 @@ export async function POST(req: Request) {
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
         },
       });
+      console.log("[mp] preference response:", JSON.stringify(preference));
     } catch (e) {
       console.error("[mp] create preference", e);
       return NextResponse.json(
