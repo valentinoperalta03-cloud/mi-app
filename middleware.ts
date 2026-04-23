@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user) {
-    if (isPublicAuthPath(pathname)) {
+    if (isPublicAuthPath(pathname) || pathname.startsWith("/api/")) {
       return response;
     }
     const loginUrl = new URL("/login", request.url);
