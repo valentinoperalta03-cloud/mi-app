@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
+import { FriendRequestsSection } from "@/components/friend-requests-section";
 import HomeJoinRequestsSection from "@/components/home-join-requests-section";
 import { HomeReservationsSection } from "@/components/home-reservations-section";
 import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
@@ -186,6 +187,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ) : null}
 
       <section className="space-y-4">
+        <Suspense fallback={null}>
+          <FriendRequestsSection userId={user.id} />
+        </Suspense>
         <Suspense fallback={null}>
           <HomeJoinRequestsSection userId={user.id} />
         </Suspense>

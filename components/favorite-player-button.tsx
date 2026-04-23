@@ -1,20 +1,22 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Clock, UserCheck, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { setUserFavorite } from "@/app/(player)/jugador/[userId]/actions";
+import { removeFriend, sendFriendRequest } from "@/app/(player)/jugador/[userId]/actions";
 import { AppleToast } from "@/components/apple-toast";
+
+type FriendStatus = "none" | "pending_sent" | "pending_received" | "friends";
 
 export function FavoritePlayerButton({
   targetUserId,
-  initialFavorited,
+  initialStatus,
 }: {
   targetUserId: string;
-  initialFavorited: boolean;
+  initialStatus: FriendStatus;
 }) {
   const router = useRouter();
-  const [favorited, setFavorited] = useState(initialFavorited);
+  const [status, setStatus] = useState<FriendStatus>(initialStatus);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -25,40 +27,58 @@ export function FavoritePlayerButton({
 
   function handleClick() {
     startTransition(async () => {
-      const next = !favorited;
-      const res = await setUserFavorite(targetUserId, next);
-      if (!res.ok) {
-        showToast(res.message);
-        return;
-      }
-      if (next) {
-        setFavorited(true);
-        if (res.added) showToast("Añadido a tus favoritos");
-        else showToast("Ya estaba en favoritos");
-      } else {
-        setFavorited(false);
-        showToast("Quitado de favoritos");
+      if (status === "none") {
+        const res = await sendFriendRequest(targetUserId);
+        if (res.ok) {
+          setStatus("pending_sent");
+          showToast("Solicitud enviada");
+        } else showToast(res.message);
+      } else if (status === "friends") {
+        const res = await removeFriend(targetUserId);
+        if (res.ok) {
+          setStatus("none");
+          showToast("Amigo eliminado");
+        } else showToast(res.message);
       }
       router.refresh();
     });
   }
 
+  const config = {
+    none: {
+      icon: UserPlus,
+      label: "Agregar amigo",
+      className: "bg-[#0585FC] text-white border-[#0585FC]",
+    },
+    pending_sent: {
+      icon: Clock,
+      label: "Solicitud enviada",
+      className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800",
+    },
+    pending_received: {
+      icon: UserCheck,
+      label: "Responder solicitud",
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800",
+    },
+    friends: {
+      icon: UserCheck,
+      label: "Amigos",
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800",
+    },
+  }[status];
+
+  const Icon = config.icon;
+
   return (
     <>
       <button
         type="button"
-        disabled={pending}
-        onClick={() => handleClick()}
-        aria-pressed={favorited}
-        aria-label={favorited ? "Quitar de favoritos" : "Añadir a favoritos"}
-        className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 text-slate-500 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.15)] backdrop-blur-sm transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100"
+        disabled={pending || status === "pending_sent"}
+        onClick={handleClick}
+        className={`flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all hover:opacity-80 disabled:opacity-60 ${config.className}`}
       >
-        <Star
-          size={22}
-          strokeWidth={2}
-          className={favorited ? "fill-amber-400 text-amber-500" : ""}
-          aria-hidden
-        />
+        <Icon size={16} />
+        {config.label}
       </button>
       <AppleToast message={toast} />
     </>
