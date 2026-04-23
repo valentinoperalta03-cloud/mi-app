@@ -1,9 +1,9 @@
 "use server";
 
-import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createMPPreference } from "@/lib/mp-preference";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchType = "amistoso" | "competitivo";
@@ -67,47 +67,6 @@ async function getUser() {
     redirect("/login");
   }
   return { supabase, user };
-}
-
-async function getServerOrigin(): Promise<string> {
-  const h = await headers();
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    (() => {
-      const host = h.get("x-forwarded-host") ?? h.get("host");
-      const proto = h.get("x-forwarded-proto") ?? "http";
-      return host ? `${proto}://${host}` : "http://localhost:3000";
-    })()
-  );
-}
-
-async function requestMercadoPagoPreference(payload: {
-  match_id: string;
-  amount: number;
-  club_name: string;
-  court_name: string;
-  date: string;
-}): Promise<{ init_point?: string; error?: string }> {
-  const origin = await getServerOrigin();
-  const jar = await cookies();
-  const cookieStr = jar.getAll().map((c) => `${c.name}=${encodeURIComponent(c.value)}`).join("; ");
-  const res = await fetch(`${origin}/api/mp/create-preference`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: cookieStr,
-    },
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-  const data = (await res.json().catch(() => ({}))) as { init_point?: string; error?: string };
-  if (!res.ok) {
-    return { error: typeof data.error === "string" ? data.error : "No se pudo iniciar el pago con Mercado Pago." };
-  }
-  if (!data.init_point) {
-    return { error: "Mercado Pago no devolvió un enlace de pago." };
-  }
-  return { init_point: data.init_point };
 }
 
 export async function crearPartido(formData: FormData): Promise<{ error: string } | void> {
@@ -260,25 +219,38 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       await supabase.from(DB_TABLES.payments).insert(invitedPaymentRows);
     }
 
-    const mp = await requestMercadoPagoPreference({
-      match_id: data.id,
+    const mp = await createMPPreference({
+      matchId: data.id,
       amount: Math.round(perPlayerTotal * (1 + paidFriendIds.length) * 100) / 100,
-      club_name: clubName,
-      court_name: courtName,
+      clubName,
+      courtName,
       date: scheduledDate,
+      userId: user.id,
     });
 
-    if (mp.error || !mp.init_point) {
+    if ("error" in mp) {
       await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
       await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
-      return {
-        error:
-          mp.error ??
-          "No pudimos conectar con Mercado Pago. Revisá la configuración o intentá más tarde.",
-      };
+      return { error: mp.error };
     }
 
-    redirect(mp.init_point);
+    const { error: ownerPayErr } = await supabase.from(DB_TABLES.payments).insert({
+      match_id: data.id,
+      user_id: user.id,
+      mp_preference_id: mp.prefId,
+      status: "pending",
+      amount: mp.total,
+      marketplace_fee: mp.marketplaceFee,
+    });
+
+    if (ownerPayErr) {
+      console.error("[mp] insert payment", ownerPayErr);
+      await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
+      await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+      return { error: "No se pudo registrar el pago. Intentá de nuevo." };
+    }
+
+    redirect(mp.initPoint);
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { error: "No se pudo crear el partido." };
