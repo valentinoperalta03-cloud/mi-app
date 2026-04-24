@@ -50,6 +50,11 @@ export async function middleware(request: NextRequest) {
     return redirectPreservingSupabaseCookies(request, `${loginUrl.pathname}${loginUrl.search}`, response);
   }
 
+  // Never redirect API routes
+  if (pathname.startsWith("/api/")) {
+    return response;
+  }
+
   const homePath = await resolveHomePath(supabase, user.id);
   const isAdmin = homePath === "/admin/dashboard";
 
@@ -81,6 +86,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
