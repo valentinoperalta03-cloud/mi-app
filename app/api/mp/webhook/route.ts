@@ -40,18 +40,31 @@ export async function GET(req: Request) {
 }
 
 async function handleNotification(req: Request) {
+  let body: unknown = null;
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    body = await req.json().catch(() => null);
+  }
+
+  console.log("[mp webhook] called, url:", req.url);
+  console.log("[mp webhook] method:", req.method);
+  console.log("[mp webhook] body:", JSON.stringify(body));
+
   const admin = getSupabaseAdmin();
   if (!admin) {
     console.warn("[mp] webhook: sin SUPABASE_SERVICE_ROLE_KEY");
     return NextResponse.json({ ok: true });
   }
 
-  let body: unknown = null;
-  if (req.headers.get("content-type")?.includes("application/json")) {
-    body = await req.json().catch(() => null);
+  const url = new URL(req.url);
+  let { paymentId } = extractPaymentId(req, body);
+  if (!paymentId) {
+    // Try IPN format
+    const qPaymentId =
+      url.searchParams.get("data.id") ?? url.searchParams.get("id");
+    if (qPaymentId) {
+      paymentId = qPaymentId;
+    }
   }
-
-  const { paymentId } = extractPaymentId(req, body);
   if (!paymentId) {
     return NextResponse.json({ ok: true });
   }
