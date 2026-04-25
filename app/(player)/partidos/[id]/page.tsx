@@ -676,6 +676,16 @@ Link del partido: ${partyUrl}`;
         </div>
       ) : null}
 
+      {isParticipant ? (
+        <Link
+          href={`/partidos/${id}/chat`}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
+        >
+          <MessageCircle size={16} />
+          Chat del partido
+        </Link>
+      ) : null}
+
       <Link
         href="/buscar-partido"
         className="block w-full rounded-2xl bg-[#0461C4] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#0585FC]/50"

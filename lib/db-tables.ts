@@ -19,6 +19,7 @@ export const DB_TABLES = {
   matchJoinVotes: "match_join_votes",
   matchResults: "match_results",
   matchResultConfirmations: "match_result_confirmations",
+  matchMessages: "match_messages",
   playerRatings: "player_ratings",
   userFavorites: "user_favorites",
   friendRequests: "friend_requests",
