@@ -32,7 +32,7 @@ export default async function ComunidadBuscarPage() {
   }[];
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-32 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-32 pt-6">
       <Link
         href="/comunidad"
         className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]"

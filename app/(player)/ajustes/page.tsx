@@ -155,7 +155,7 @@ export default async function AjustesPage({
   return (
     <>
       <section className="mx-auto w-full max-w-md space-y-3 px-4 pt-6">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
           Apariencia
         </h2>
         <ThemeToggleButton />

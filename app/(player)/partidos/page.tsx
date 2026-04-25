@@ -23,13 +23,13 @@ export default async function PartidosPage() {
   const matches = (rawMatches ?? []) as unknown as UpcomingMatchRow[];
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Inicio</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Matches</h1>
-        <p className="text-sm font-light text-slate-500">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Matches</h1>
+        <p className="text-sm font-light text-[var(--text-tertiary)]">
           Partidos abiertos y proximos en la tabla{" "}
-          <code className="rounded bg-slate-100 px-1 text-xs">matches</code>.
+          <code className="rounded bg-[var(--bg-subtle)] px-1 text-xs">matches</code>.
         </p>
       </header>
 
@@ -62,13 +62,13 @@ export default async function PartidosPage() {
                   <h2 className="truncate text-xl font-bold leading-tight tracking-tight text-slate-950">
                     {matchCourtName(item)}
                   </h2>
-                  <p className="truncate text-sm font-light text-slate-500">{clubName}</p>
+                  <p className="truncate text-sm font-light text-[var(--text-tertiary)]">{clubName}</p>
                 </div>
                 <Badge variant="brand" className="shrink-0">
                   {n} jug.
                 </Badge>
               </div>
-              <p className="mt-2 text-sm font-light text-slate-500">{when}</p>
+              <p className="mt-2 text-sm font-light text-[var(--text-tertiary)]">{when}</p>
               <div className="mt-2 flex items-center justify-between">
                 <p className="shrink-0 text-lg font-bold tracking-tight text-slate-950">
                   {courtPrice != null ? `$${courtPrice}` : "Consultar"}

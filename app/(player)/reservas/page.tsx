@@ -52,7 +52,7 @@ function ReservationCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">{club}</h2>
-          <p className="truncate text-sm font-medium text-slate-600">{court}</p>
+          <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{court}</p>
         </div>
         {badgeReserved ? (
           <Badge variant="success" className="shrink-0">
@@ -98,21 +98,21 @@ function ReservationCard({
           })()
         )}
       </div>
-      <dl className="mt-3 grid gap-2 text-sm text-slate-600">
+      <dl className="mt-3 grid gap-2 text-sm text-[var(--text-tertiary)]">
         <div className="flex justify-between">
-          <dt className="text-slate-500">Fecha</dt>
-          <dd className="font-semibold capitalize text-slate-900">{fecha}</dd>
+          <dt className="text-[var(--text-tertiary)]">Fecha</dt>
+          <dd className="font-semibold capitalize text-[var(--text-primary)]">{fecha}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-slate-500">Hora</dt>
-          <dd className="font-semibold text-slate-900">{hora || "—"}</dd>
+          <dt className="text-[var(--text-tertiary)]">Hora</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">{hora || "—"}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-slate-500">Duración</dt>
-          <dd className="font-semibold text-slate-900">{dur} min</dd>
+          <dt className="text-[var(--text-tertiary)]">Duración</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">{dur} min</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-slate-500">Precio</dt>
+          <dt className="text-[var(--text-tertiary)]">Precio</dt>
           <dd className="shrink-0 font-bold text-[#0585FC]">{precio}</dd>
         </div>
       </dl>
@@ -216,11 +216,11 @@ export default async function ReservasPage({
   });
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Reservas</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">Mis reservas</h1>
-        <p className="text-sm font-light text-slate-500">Canchas que reservaste con FaltaUno.</p>
+        <p className="text-sm font-light text-[var(--text-tertiary)]">Canchas que reservaste con FaltaUno.</p>
       </header>
 
       {error ? (
@@ -247,7 +247,7 @@ export default async function ReservasPage({
 
       {!error && upcoming.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Próximas</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Próximas</h2>
           <div className="space-y-3">
             {upcoming.map((r) => (
               <ReservationCard key={r.id} row={r} showCancel />
@@ -258,7 +258,7 @@ export default async function ReservasPage({
 
       {!error && pending.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Pendientes de pago</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pendientes de pago</h2>
           <div className="space-y-3">
             {pending.map((r) => (
               <ReservationCard key={r.id} row={r} showCancel />
@@ -269,7 +269,7 @@ export default async function ReservasPage({
 
       {!error && history.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Historial</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Historial</h2>
           <div className="space-y-3">
             {history.map((r) => (
               <ReservationCard key={r.id} row={r} showCancel={false} />
