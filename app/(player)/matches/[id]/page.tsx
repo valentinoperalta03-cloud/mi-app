@@ -80,6 +80,11 @@ export default async function MatchDetailPage({ params }: PageProps) {
     rr.status === "pending_confirmation";
   const isDisputed = rr?.status === "disputed";
 
+  const { count: confirmCount } = await supabase
+    .from(DB_TABLES.matchResultConfirmations)
+    .select("id", { count: "exact", head: true })
+    .eq("match_id", id);
+
   const { data: matchState } = await supabase
     .from(DB_TABLES.matches)
     .select("result_locked_by, result_locked_team, result_lock_expires_at, result_status")
@@ -225,6 +230,8 @@ export default async function MatchDetailPage({ params }: PageProps) {
           matchId={id}
           label={teamALabel.includes(" / ") ? "la dupla rival" : "el rival"}
           scoreLabel={`${rr.team_a_score}-${rr.team_b_score}`}
+          confirmCount={confirmCount ?? 0}
+          totalPlayers={4}
         />
       ) : null}
 

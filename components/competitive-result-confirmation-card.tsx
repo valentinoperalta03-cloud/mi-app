@@ -12,8 +12,10 @@ export function CompetitiveResultConfirmationCard(props: {
   matchId: string;
   label: string;
   scoreLabel: string;
+  confirmCount?: number;
+  totalPlayers?: number;
 }) {
-  const { matchId, label, scoreLabel } = props;
+  const { matchId, label, scoreLabel, confirmCount, totalPlayers } = props;
   const [state, formAction] = useActionState(recordMatchResultAction, initial);
 
   return (
@@ -50,6 +52,24 @@ export function CompetitiveResultConfirmationCard(props: {
             Disputar
           </button>
         </form>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <p className="text-xs text-slate-500 text-center mb-2">
+          Confirmaciones: {confirmCount ?? 0}/4
+        </p>
+        <div className="flex justify-center gap-2">
+          {Array.from({ length: totalPlayers ?? 4 }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-2 w-8 rounded-full ${
+                i < (confirmCount ?? 0)
+                  ? "bg-emerald-500"
+                  : "bg-slate-200 dark:bg-slate-700"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {state.message ? (

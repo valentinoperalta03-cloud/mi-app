@@ -6,6 +6,7 @@ import { es } from "date-fns/locale";
 import { MessageCircle, Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
+import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -136,7 +137,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,courts(name,clubs(name,location))"
+      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,result_available_at,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,courts(name,clubs(name,location))"
     )
     .eq("id", id)
     .maybeSingle();
@@ -152,6 +153,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     scheduled_date: string | null;
     scheduled_time: string | null;
     payment_status: string | null;
+    match_status: string | null;
+    result_available_at?: string | null;
     court_id: string;
     match_type: string | null;
     visibility: "publico" | "privado" | null;
@@ -175,6 +178,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   if (!match.court_id?.trim()) {
     redirect("/buscar-partido");
   }
+
+  // Check if result screen should be shown
+  const now = new Date();
+  const resultAvailableAt = match.result_available_at
+    ? new Date(match.result_available_at)
+    : null;
+  const isResultAvailable = resultAvailableAt ? now >= resultAvailableAt : false;
+  const isMatchFinished = match.match_status === "reserved" && isResultAvailable;
 
   const detail: MatchDetailRow = {
     id: match.id,
@@ -221,6 +232,22 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
+
+  // Check if current user already submitted result
+  const { data: myResult } = await supabase
+    .from(DB_TABLES.matchResults)
+    .select("id, status")
+    .eq("match_id", id)
+    .eq("proposed_by", user.id)
+    .maybeSingle();
+
+  const alreadySubmitted = Boolean(myResult);
+
+  // Check how many of 4 players confirmed
+  const { count: confirmCount } = await supabase
+    .from(DB_TABLES.matchResultConfirmations)
+    .select("id", { count: "exact", head: true })
+    .eq("match_id", id);
 
   const { data: favoritesRows } = await supabase
     .from(DB_TABLES.userFavorites)
@@ -585,6 +612,68 @@ Link del partido: ${partyUrl}`;
         >
           Ver solicitudes ({pendingRequestsCount})
         </Link>
+      ) : null}
+
+      {isMatchFinished && isParticipant ? (
+        <section className="space-y-3">
+          <div
+            className="rounded-2xl p-4 text-center"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          >
+            <p className="text-white font-bold text-lg">🏆 ¡El partido terminó!</p>
+            <p className="text-white/80 text-sm mt-1">
+              {alreadySubmitted
+                ? `Esperando que los otros jugadores confirmen (${confirmCount ?? 0}/4)`
+                : "Es hora de cargar el resultado"}
+            </p>
+          </div>
+
+          {!alreadySubmitted ? (
+            <MatchResultForm
+              matchId={id}
+              teamALabel="Tu dupla"
+              teamBLabel="Dupla rival"
+              lockedByTeammate={false}
+              alreadyStarted={false}
+            />
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 p-4">
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 text-center">
+                ✓ Resultado enviado — esperando confirmaciones
+              </p>
+              <div className="mt-3 flex justify-center gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-3 w-3 rounded-full ${
+                      i < (confirmCount ?? 0)
+                        ? "bg-emerald-500"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-center text-emerald-700 dark:text-emerald-400 mt-2">
+                {confirmCount ?? 0} de 4 jugadores confirmaron
+              </p>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {!isMatchFinished && isParticipant && resultAvailableAt && now < resultAvailableAt ? (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-center">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            ⏱ El resultado estará disponible después del partido
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {resultAvailableAt.toLocaleTimeString("es-AR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            hs
+          </p>
+        </div>
       ) : null}
 
       <Link
