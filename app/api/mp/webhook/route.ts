@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getPaymentClient } from "@/lib/mercadopago";
-import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { createNotification } from "@/lib/notifications";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -106,14 +106,11 @@ async function handleNotification(req: Request) {
     const ownerId = String((matchRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
     if (ownerId) {
       const amount = Number((matchRow as { total_price?: number | null } | null)?.total_price ?? 0);
-      const tpl = NOTIFICATION_TEMPLATES.payment_approved(
-        Number.isFinite(amount) ? String(Math.round(amount)) : "0"
-      );
       await createNotification(admin, {
         user_id: ownerId,
         type: "payment_approved",
-        title: tpl.title,
-        body: tpl.body,
+        title: "¡Pago confirmado!",
+        body: `Tu reserva fue confirmada por $${Number.isFinite(amount) ? Math.round(amount) : 0}.`,
         match_id: matchId,
       });
     }
@@ -137,12 +134,11 @@ async function handleNotification(req: Request) {
       .maybeSingle();
     const ownerId = String((ownerRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
     if (ownerId) {
-      const tpl = NOTIFICATION_TEMPLATES.payment_rejected();
       await createNotification(admin, {
         user_id: ownerId,
         type: "payment_rejected",
-        title: tpl.title,
-        body: tpl.body,
+        title: "Pago rechazado",
+        body: "No se pudo procesar el pago de tu reserva.",
         match_id: matchId,
       });
     }
