@@ -26,13 +26,18 @@ function redirectPreservingSupabaseCookies(
 }
 
 export async function proxy(request: NextRequest) {
+  const pathname = new URL(request.url).pathname;
+  
+  // Never intercept API routes
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   const { supabase, response } = createMiddlewareClient(request);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   if (user && !user.email_confirmed_at) {
     if (pathname === "/verificar-email" || pathname.startsWith("/auth/")) {
