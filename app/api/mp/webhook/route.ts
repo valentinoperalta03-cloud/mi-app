@@ -39,6 +39,10 @@ export async function GET(req: Request) {
   return handleNotification(req);
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200 });
+}
+
 async function handleNotification(req: Request) {
   let body: unknown = null;
   if (req.headers.get("content-type")?.includes("application/json")) {
