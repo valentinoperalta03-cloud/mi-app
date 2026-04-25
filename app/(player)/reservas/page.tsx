@@ -1,11 +1,10 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarX2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -164,9 +163,6 @@ export default async function ReservasPage({
 
   const today = todayKey();
 
-  const { data: clubsData } = await supabase.from(DB_TABLES.clubs).select("id").limit(1);
-  const hasClubs = (clubsData?.length ?? 0) > 0;
-
   const { data: rows, error } = await supabase
     .from(DB_TABLES.matches)
     .select("id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, match_type")
@@ -240,18 +236,13 @@ export default async function ReservasPage({
       ) : null}
 
       {!error && list.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <EmptyState
-            icon={CalendarX2}
-            title="Todavía no hiciste reservas"
-            description="Elegí un club y un horario para asegurar tu cancha."
-          />
-          <div className="px-6 pb-6">
-            <Link href={hasClubs ? "/clubes" : "/home"} className={`inline-flex w-full justify-center ${PLAYER_PRIMARY_BUTTON} py-3`}>
-              {hasClubs ? "Reservar cancha" : "Volver al inicio"}
-            </Link>
-          </div>
-        </div>
+        <EmptyStateCard
+          icon="calendar"
+          title="Sin reservas todavía"
+          subtitle="Reservá una cancha y aparecerá acá"
+          ctaHref="/reservas/nueva"
+          ctaLabel="Hacer una reserva"
+        />
       ) : null}
 
       {!error && upcoming.length > 0 ? (

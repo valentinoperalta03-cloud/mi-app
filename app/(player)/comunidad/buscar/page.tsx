@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -39,7 +40,15 @@ export default async function ComunidadBuscarPage() {
         ← Comunidad
       </Link>
 
-      <FriendsSearchClient currentUserId={user.id} players={list} />
+      {list.length === 0 ? (
+        <EmptyStateCard
+          icon="users"
+          title="No encontramos jugadores"
+          subtitle="Probá con otro nombre o esperá que más jugadores se sumen"
+        />
+      ) : (
+        <FriendsSearchClient currentUserId={user.id} players={list} />
+      )}
     </MotionPage>
   );
 }

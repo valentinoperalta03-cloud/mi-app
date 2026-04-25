@@ -1,11 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarX2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import {
   fetchUpcomingMatches,
@@ -87,10 +86,12 @@ export default async function PartidosPage() {
       </section>
 
       {!error && matches.length === 0 ? (
-        <EmptyState
-          icon={CalendarX2}
-          title="Nadie armó partidos todavía"
-          description="Convocá jugadores cerca tuyo y creá el primer encuentro del día en segundos."
+        <EmptyStateCard
+          icon="padel"
+          title="Sin partidos todavía"
+          subtitle="Creá tu primer partido o unite a uno existente"
+          ctaHref="/crear-partido"
+          ctaLabel="Crear partido"
         />
       ) : null}
     </MotionPage>

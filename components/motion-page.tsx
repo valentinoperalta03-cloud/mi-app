@@ -3,22 +3,25 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
-type MotionPageProps = {
+export default function MotionPage({
+  children,
+  className,
+}: {
   children: ReactNode;
   className?: string;
-};
-
-export default function MotionPage({ children, className }: MotionPageProps) {
+}) {
   return (
-    <motion.main
-      suppressHydrationWarning
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
+    <motion.div
       className={className}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{
+        duration: 0.25,
+        ease: [0.25, 0.1, 0.25, 1],
+      }}
     >
       {children}
-    </motion.main>
+    </motion.div>
   );
 }
-
