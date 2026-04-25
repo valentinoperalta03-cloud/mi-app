@@ -32,6 +32,11 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
+  
+  // Public landing page
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
 
   const { supabase, response } = createMiddlewareClient(request);
 
