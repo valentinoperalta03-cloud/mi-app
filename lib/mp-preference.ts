@@ -1,3 +1,4 @@
+import { MercadoPagoConfig, Preference } from "mercadopago";
 import { getPreferenceClient } from "@/lib/mercadopago";
 
 function parseFeeRate(): number {
@@ -24,6 +25,8 @@ export async function createMPPreference(params: {
   payerEmail?: string;
   payerFirstName?: string;
   payerLastName?: string;
+  clubAccessToken?: string | null;
+  clubMpUserId?: string | null;
 }): Promise<
   | { error: string }
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
@@ -34,7 +37,7 @@ export async function createMPPreference(params: {
   const failureUrl = process.env.MP_FAILURE_URL;
   const pendingUrl = process.env.MP_PENDING_URL;
 
-  if (!accessToken || !successUrl || !failureUrl || !pendingUrl) {
+  if ((!accessToken && !params.clubAccessToken) || !successUrl || !failureUrl || !pendingUrl) {
     return { error: "Falta configuración de Mercado Pago en el servidor." };
   }
 
@@ -49,9 +52,12 @@ export async function createMPPreference(params: {
 
   const base = getPublicBaseUrl();
   const notificationUrl = base ? `${base}/api/mp/webhook` : undefined;
+  const preferenceClient = params.clubAccessToken
+    ? new Preference(new MercadoPagoConfig({ accessToken: params.clubAccessToken }))
+    : getPreferenceClient();
 
   try {
-    const preference = await getPreferenceClient().create({
+    const preference = await preferenceClient.create({
       body: {
         items: [
           {

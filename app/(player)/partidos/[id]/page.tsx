@@ -230,6 +230,17 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     } satisfies ParticipantRow;
   });
 
+  // Check if current user has paid
+  const { data: myPayment } = await supabase
+    .from(DB_TABLES.payments)
+    .select("status")
+    .eq("match_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const myPaymentStatus = (myPayment as { status?: string | null } | null)?.status ?? "none";
+  const hasPaid = myPaymentStatus === "approved";
+
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
 
@@ -676,7 +687,26 @@ Link del partido: ${partyUrl}`;
         </div>
       ) : null}
 
-      {isParticipant ? (
+      {isParticipant && !hasPaid && !isOwner ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
+            <p className="font-semibold text-amber-800 dark:text-amber-300">Pago pendiente</p>
+          </div>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Completá el pago para confirmar tu lugar en el partido.
+          </p>
+          <Link
+            href={`/reservas/confirmacion?id=${id}`}
+            className="block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          >
+            Completar pago
+          </Link>
+        </div>
+      ) : null}
+
+      {isParticipant && hasPaid ? (
         <Link
           href={`/partidos/${id}/chat`}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
