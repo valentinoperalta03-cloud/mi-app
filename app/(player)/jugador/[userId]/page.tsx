@@ -245,6 +245,17 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           </div>
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
+        {!isMe && user ? (
+          <div className="mt-4">
+            <ProfileSocialActions
+              targetUserId={userId}
+              initialFollowing={favorited}
+              followsBack={followsBack}
+              isMutual={isMutual}
+              isMe={isMe}
+            />
+          </div>
+        ) : null}
         {row.bio?.trim() ? (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
         ) : null}
@@ -255,22 +266,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           ) : null}
         </p>
         <p className="mt-1 text-xs font-medium text-slate-500">Categoría: {categoriaLabel}</p>
-        <div className="mt-4 flex justify-center gap-8 border-y border-[var(--border-subtle)] py-4">
-          <div className="text-center">
-            <p className="text-xl font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xl font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
-          </div>
-          {isMutual ? (
-            <div className="text-center">
-              <p className="text-xl font-bold text-emerald-600">✓</p>
-              <p className="text-xs text-emerald-600">Amigos</p>
-            </div>
-          ) : null}
-        </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Partidos</p>
@@ -441,15 +436,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
             >
               Editar mi perfil
             </Link>
-          ) : (
-            <ProfileSocialActions
-              targetUserId={userId}
-              initialFollowing={favorited}
-              followsBack={followsBack}
-              isMutual={isMutual}
-              isMe={isMe}
-            />
-          )}
+          ) : null}
         </div>
       ) : null}
     </MotionPage>
