@@ -27,11 +27,13 @@ export function MatchChat({
   currentUserId,
   participants,
   initialMessages,
+  canWrite = true,
 }: {
   matchId: string;
   currentUserId: string;
   participants: Participant[];
   initialMessages: Message[];
+  canWrite?: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -81,6 +83,7 @@ export function MatchChat({
   }, [matchId, profileMap, supabase]);
 
   async function handleSend() {
+    if (!canWrite) return;
     if (!input.trim() || sending) return;
     setSending(true);
     const content = input.trim();
@@ -181,14 +184,15 @@ export function MatchChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Escribí un mensaje..."
+          placeholder={canWrite ? "Escribí un mensaje..." : "Solo lectura para este partido"}
           maxLength={500}
+          disabled={!canWrite}
           className="flex-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20"
         />
         <button
           type="button"
           onClick={() => void handleSend()}
-          disabled={!input.trim() || sending}
+          disabled={!canWrite || !input.trim() || sending}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white transition-all disabled:opacity-50 hover:shadow-[0_4px_12px_rgba(5,133,252,0.4)]"
           style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
         >

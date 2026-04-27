@@ -140,6 +140,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
 
 export async function requestToJoin(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
+  const levelOverride = getField(formData, "level_override") === "true";
   if (!matchId) {
     redirect("/buscar-partido");
   }
@@ -154,7 +155,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,visibility,match_status")
+    .select("id,owner_id,visibility,match_status,level_restricted,level")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -166,15 +167,15 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     owner_id: string | null;
     visibility: string | null;
     match_status: string | null;
+    level_restricted: boolean | null;
   };
 
-  if (String(m.match_status ?? "").toLowerCase() === "cancelled") {
+  const matchStatus = String(m.match_status ?? "").toLowerCase();
+  if (matchStatus === "cancelled" || matchStatus === "full") {
     redirect("/buscar-partido");
   }
-
-  if (String(m.visibility ?? "").toLowerCase() !== "privado") {
-    redirect(`/partidos/${matchId}`);
-  }
+  const isPrivate = String(m.visibility ?? "").toLowerCase() === "privado";
+  const isLevelRestricted = Boolean(m.level_restricted);
 
   if (m.owner_id === user.id) {
     redirect(`/partidos/${matchId}`);
@@ -202,28 +203,115 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
   }
 
-  const { error: insErr } = await supabase.from(DB_TABLES.matchJoinRequests).insert({
-    match_id: matchId,
-    player_id: user.id,
-    status: "pending",
-  });
+  let levelDiff = 0;
+  if (isLevelRestricted) {
+    const { data: ownerProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("level, category")
+      .eq("user_id", m.owner_id ?? "")
+      .maybeSingle();
 
-  if (insErr) {
-    console.error("[requestToJoin]", insErr);
-    redirect(`/partidos/${matchId}?invite=true&join_error=error`);
+    const { data: userProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("level, category")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const ownerLevel = Number((ownerProfile as { level?: number | null } | null)?.level ?? 0);
+    const userLevel = Number((userProfile as { level?: number | null } | null)?.level ?? 0);
+    levelDiff = Math.abs(ownerLevel - userLevel);
+
+    if (levelDiff > 1 && !levelOverride) {
+      redirect(`/partidos/${matchId}?join_error=nivel`);
+    }
   }
 
-  if (m.owner_id) {
+  const needsVotingRequest = isPrivate || (isLevelRestricted && levelDiff > 1 && levelOverride);
+  if (needsVotingRequest) {
+    const { error: insErr } = await supabase.from(DB_TABLES.matchJoinRequests).insert({
+      match_id: matchId,
+      player_id: user.id,
+      status: "pending",
+    });
+
+    if (insErr) {
+      console.error("[requestToJoin]", insErr);
+      redirect(`/partidos/${matchId}?invite=true&join_error=error`);
+    }
+
+    if (m.owner_id) {
+      const { data: reqProfile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const requesterName = (reqProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+      const tpl = NOTIFICATION_TEMPLATES.join_request(requesterName);
+      await createNotification(supabase, {
+        user_id: m.owner_id,
+        type: "join_request",
+        title: tpl.title,
+        body: tpl.body,
+        match_id: matchId,
+      });
+    }
+
+    revalidatePath(`/partidos/${matchId}`);
+    revalidatePath("/home");
+    revalidatePath("/buscar-partido");
+    redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
+  }
+
+  const { count, error: cErr } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  if (cErr || (count ?? 0) >= 4) {
+    redirect(`/partidos/${matchId}?join_error=cupos`);
+  }
+
+  const { error: pErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: matchId,
+    player_id: user.id,
+  });
+
+  if (pErr && pErr.code !== "23505") {
+    console.error("[requestToJoin] participant", pErr);
+    redirect(`/partidos/${matchId}?join_error=db`);
+  }
+
+  const ownerId = m.owner_id;
+  const { count: newCount } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+
+  if ((newCount ?? 0) >= 4) {
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: "full" })
+      .eq("id", matchId);
+
+    if (ownerId) {
+      await createNotification(supabase, {
+        user_id: ownerId,
+        type: "player_joined",
+        title: "¡Partido completo! 🎾",
+        body: "Los 4 jugadores están confirmados. ¡Que empiece el partido!",
+        match_id: matchId,
+      });
+    }
+  } else if (ownerId) {
     const { data: reqProfile } = await supabase
       .from(DB_TABLES.profiles)
       .select("name")
       .eq("user_id", user.id)
       .maybeSingle();
-    const requesterName = (reqProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
-    const tpl = NOTIFICATION_TEMPLATES.join_request(requesterName);
+    const playerName = (reqProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+    const tpl = NOTIFICATION_TEMPLATES.player_joined(playerName, "tu partido");
     await createNotification(supabase, {
-      user_id: m.owner_id,
-      type: "join_request",
+      user_id: ownerId,
+      type: "player_joined",
       title: tpl.title,
       body: tpl.body,
       match_id: matchId,
@@ -233,7 +321,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
-  redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
+  redirect(`/partidos/${matchId}`);
 }
 
 export async function acceptJoinRequest(formData: FormData): Promise<void> {

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -68,24 +69,53 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
     supabase.from(DB_TABLES.matchParticipants).select("player_id", { count: "exact", head: true }).eq("match_id", matchId),
   ]);
 
-  const totalParticipants = participantsCount ?? 0;
-  const yesVotes = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === true).length;
-  const noVotes = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === false).length;
+  const currentParticipants = participantsCount ?? 0;
+  const approvals = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === true).length;
+  const rejections = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === false).length;
+  const participantsNeeded = Math.ceil(currentParticipants / 2) + 1;
+  const requesterId = (requestRow as { player_id: string }).player_id;
 
-  if (yesVotes > totalParticipants / 2) {
+  if (rejections > 0) {
+    await supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .update({ status: "rejected" })
+      .eq("id", requestId);
+
+    await createNotification(supabase, {
+      user_id: requesterId,
+      type: "join_rejected",
+      title: "Solicitud rechazada",
+      body: "Tu solicitud para unirte a este partido fue rechazada por votación.",
+      match_id: matchId,
+    });
+  } else if (approvals >= participantsNeeded) {
     await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "approved" }).eq("id", requestId);
-    await supabase.from(DB_TABLES.matchParticipants).upsert(
+    await supabase.from(DB_TABLES.matchParticipants).insert(
       {
         match_id: matchId,
-        player_id: (requestRow as { player_id: string }).player_id,
-      },
-      { onConflict: "match_id,player_id" }
+        player_id: requesterId,
+      }
     );
-  } else if (noVotes >= Math.floor(totalParticipants / 2) + 1) {
-    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "rejected" }).eq("id", requestId);
+
+    const { count: newCount } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id", { count: "exact", head: true })
+      .eq("match_id", matchId);
+    if ((newCount ?? 0) >= 4) {
+      await supabase.from(DB_TABLES.matches).update({ match_status: "full" }).eq("id", matchId);
+    }
+
+    await createNotification(supabase, {
+      user_id: requesterId,
+      type: "join_approved",
+      title: "¡Solicitud aprobada!",
+      body: "La mayoría del partido aprobó tu ingreso.",
+      match_id: matchId,
+    });
   }
 
   revalidatePath(`/partidos/${matchId}/solicitudes`);
+  revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
   redirect(`/partidos/${matchId}/solicitudes`);

@@ -32,6 +32,13 @@ export default async function MatchChatPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id, owner_id, level_restricted")
+    .eq("id", id)
+    .maybeSingle();
+  if (!matchRow) redirect("/buscar-partido");
+
   const { data: participation } = await supabase
     .from(DB_TABLES.matchParticipants)
     .select("player_id")
@@ -39,7 +46,8 @@ export default async function MatchChatPage({
     .eq("player_id", user.id)
     .maybeSingle();
 
-  if (!participation) redirect(`/partidos/${id}`);
+  const levelRestricted = Boolean((matchRow as { level_restricted?: boolean | null } | null)?.level_restricted);
+  if (!participation && !levelRestricted) redirect(`/partidos/${id}`);
 
   const { data: participantsRaw } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -89,6 +97,7 @@ export default async function MatchChatPage({
         currentUserId={user.id}
         participants={participants}
         initialMessages={messages}
+        canWrite={Boolean(participation)}
       />
     </MotionPage>
   );

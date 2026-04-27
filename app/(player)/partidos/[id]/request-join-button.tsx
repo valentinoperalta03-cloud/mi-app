@@ -17,10 +17,17 @@ function SubmitInner() {
   );
 }
 
-export default function RequestJoinButton({ matchId }: { matchId: string }) {
+export default function RequestJoinButton({
+  matchId,
+  levelOverride = false,
+}: {
+  matchId: string;
+  levelOverride?: boolean;
+}) {
   return (
     <form action={requestToJoin} className="w-full">
       <input type="hidden" name="match_id" value={matchId} />
+      <input type="hidden" name="level_override" value={levelOverride ? "true" : "false"} />
       <SubmitInner />
     </form>
   );

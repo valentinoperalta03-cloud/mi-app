@@ -91,6 +91,7 @@ const JOIN_FLASH_MESSAGES: Record<string, string> = {
   error: "No se pudo enviar la solicitud. Intentá de nuevo.",
   permiso: "No tenés permiso para esa acción.",
   cupos: "El partido ya está completo.",
+  nivel: "Tu nivel no es compatible con este partido.",
   db: "Ocurrió un error al guardar. Intentá de nuevo.",
 };
 
@@ -448,6 +449,18 @@ Link del partido: ${partyUrl}`;
         </p>
       ) : null}
 
+      {joinErrorKey === "nivel" ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
+          <p className="font-semibold text-amber-800 dark:text-amber-300">
+            Tu nivel no es compatible con este partido
+          </p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Podés enviar una solicitud especial. Los jugadores del partido votarán si te aceptan.
+          </p>
+          <RequestJoinButton matchId={id} levelOverride={true} />
+        </div>
+      ) : null}
+
       {isOwner && isPrivate ? <PrivateInviteBlock inviteUrl={inviteUrl} /> : null}
 
       {isPrivate && !isOwner && !isParticipant && inviteOpen ? (
@@ -714,6 +727,18 @@ Link del partido: ${partyUrl}`;
           <MessageCircle size={16} />
           Chat del partido
         </Link>
+      ) : null}
+
+      {!isParticipant && match.level_restricted && !isOwner ? (
+        <div className="space-y-2">
+          <Link
+            href={`/partidos/${id}/chat`}
+            className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0585FC]"
+          >
+            Ver chat del partido
+          </Link>
+          <RequestJoinButton matchId={id} />
+        </div>
       ) : null}
 
       <Link
