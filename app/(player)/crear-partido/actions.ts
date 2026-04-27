@@ -96,6 +96,17 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   try {
     const { supabase, user } = await getUser();
 
+    const { data: payerProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+    const nameParts = payerName.split(" ");
+    const payerFirstName = nameParts[0] ?? "";
+    const payerLastName = nameParts.slice(1).join(" ") ?? "";
+
     const { data: userProfile } = await supabase
       .from("profiles")
       .select("gender")
@@ -226,6 +237,9 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       courtName,
       date: scheduledDate,
       userId: user.id,
+      payerEmail: user.email ?? "",
+      payerFirstName,
+      payerLastName,
     });
 
     if ("error" in mp) {

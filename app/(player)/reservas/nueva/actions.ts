@@ -49,6 +49,17 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     redirect("/login");
   }
 
+  const { data: payerProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+  const nameParts = payerName.split(" ");
+  const payerFirstName = nameParts[0] ?? "";
+  const payerLastName = nameParts.slice(1).join(" ") ?? "";
+
   const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
   const slotStart = clockToMinutes(timeNorm);
   const slotDur = Number(durationMinutes);
@@ -154,6 +165,9 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     courtName: courtName || "Cancha",
     date: scheduledDate,
     userId: user.id,
+    payerEmail: user.email ?? "",
+    payerFirstName,
+    payerLastName,
   });
 
   if ("error" in mp) {

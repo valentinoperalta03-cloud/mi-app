@@ -21,11 +21,14 @@ export async function createMPPreference(params: {
   courtName: string;
   date: string;
   userId: string;
+  payerEmail?: string;
+  payerFirstName?: string;
+  payerLastName?: string;
 }): Promise<
   | { error: string }
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
 > {
-  const { matchId, amount: rawAmount, clubName, courtName, date } = params;
+  const { amount: rawAmount } = params;
   const accessToken = process.env.MP_ACCESS_TOKEN;
   const successUrl = process.env.MP_SUCCESS_URL;
   const failureUrl = process.env.MP_FAILURE_URL;
@@ -47,21 +50,26 @@ export async function createMPPreference(params: {
   const base = getPublicBaseUrl();
   const notificationUrl = base ? `${base}/api/mp/webhook` : undefined;
 
-  const dateLabel = String(date ?? "").trim();
-  const title = `Reserva ${courtName} - ${clubName}${dateLabel ? ` (${dateLabel})` : ""}`;
-
   try {
     const preference = await getPreferenceClient().create({
       body: {
         items: [
           {
-            id: matchId,
-            title,
+            id: params.matchId,
+            title: `Reserva de pádel - ${params.courtName}`,
+            description: `Reserva en ${params.clubName} el ${params.date}`,
             quantity: 1,
             unit_price: total,
             currency_id: "ARS",
+            category_id: "sports",
           },
         ],
+        payer: {
+          email: params.payerEmail,
+          first_name: params.payerFirstName ?? "",
+          last_name: params.payerLastName ?? "",
+        },
+        statement_descriptor: "PADELIBRE",
         marketplace_fee: marketplaceFee,
         back_urls: {
           success: successUrl,
@@ -69,9 +77,10 @@ export async function createMPPreference(params: {
           pending: pendingUrl,
         },
         auto_return: "approved",
-        external_reference: matchId,
+        external_reference: params.matchId,
+        binary_mode: false,
         ...(notificationUrl ? { notification_url: notificationUrl } : {}),
-      },
+      } as any,
     });
 
     const initPoint = preference.init_point ?? preference.sandbox_init_point;
