@@ -206,6 +206,6 @@ export async function unfollowUser(targetUserId: string): Promise<{ ok: boolean;
 
 // Deprecated: kept for backward compatibility in existing call sites.
 export async function setUserFavorite(favoriteUserId: string, shouldFavorite: boolean) {
-  if (shouldFavorite) return sendFriendRequest(favoriteUserId);
-  return removeFriend(favoriteUserId);
+  if (shouldFavorite) return followUser(favoriteUserId);
+  return unfollowUser(favoriteUserId);
 }

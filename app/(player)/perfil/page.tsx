@@ -145,6 +145,16 @@ export default async function PerfilPage() {
     fetchTopCoplayers(supabase, user.id, 5),
     fetchTopClubsByReservations(supabase, user.id, 5),
   ]);
+  const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("user_id", { count: "exact", head: true })
+      .eq("favorite_user_id", userId),
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
 
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-slate-50 px-4 pb-24 pt-6 dark:bg-slate-950">
@@ -177,6 +187,16 @@ export default async function PerfilPage() {
               {nivelParts.description ? ` — ${nivelParts.description}` : ""}
             </p>
             <p className="mt-1 break-words text-xs text-white">{email}</p>
+            <div className="mt-4 flex justify-center gap-8">
+              <div className="text-center">
+                <p className="text-xl font-bold">{followersCount ?? 0}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold">{followingCount ?? 0}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
+              </div>
+            </div>
           {row?.bio?.trim() ? (
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white">{row.bio.trim()}</p>
           ) : null}

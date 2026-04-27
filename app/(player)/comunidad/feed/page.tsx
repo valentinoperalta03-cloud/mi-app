@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { FriendRequestsSection } from "@/components/friend-requests-section";
 import MotionPage from "@/components/motion-page";
 import { ParaTiCreatePost } from "@/components/para-ti-create-post";
 import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
@@ -40,10 +38,6 @@ export default async function ParaTiFeedPage() {
           Novedades y resultados de quienes juegan con vos.
         </p>
       </header>
-
-      <Suspense fallback={null}>
-        <FriendRequestsSection userId={user.id} />
-      </Suspense>
 
       <ParaTiPostsMotion posts={posts} />
       <ParaTiCreatePost latestMatch={latestMatch} />
