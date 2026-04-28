@@ -9,6 +9,8 @@ import {
   CheckCircle,
   Clock,
   CreditCard,
+  MessageCircle,
+  MessageSquare,
   TrendingUp,
   UserPlus,
   Users,
@@ -41,6 +43,11 @@ const TYPE_UI: Record<string, { Icon: typeof UserPlus; className: string }> = {
   payment_approved: { Icon: CreditCard, className: "text-emerald-600" },
   payment_rejected: { Icon: CreditCard, className: "text-rose-600" },
   level_up: { Icon: TrendingUp, className: "text-[#0585FC]" },
+  new_follower: { Icon: UserPlus, className: "text-[#0585FC]" },
+  now_friends: { Icon: Users, className: "text-emerald-600" },
+  new_message: { Icon: MessageCircle, className: "text-[#0585FC]" },
+  group_message: { Icon: MessageSquare, className: "text-[#0585FC]" },
+  added_to_group: { Icon: UserPlus, className: "text-emerald-600" },
 };
 
 export async function markAllAsRead() {

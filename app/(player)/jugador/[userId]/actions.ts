@@ -177,10 +177,40 @@ export async function followUser(targetUserId: string): Promise<{ ok: boolean; m
   const senderName = (senderProfile as { name?: string | null } | null)?.name ?? "Alguien";
   await createNotification(supabase, {
     user_id: targetUserId,
-    type: "player_joined",
+    type: "new_follower",
     title: "Nuevo seguidor",
     body: `${senderName} empezó a seguirte.`,
   });
+
+  const { data: reverseFollow } = await supabase
+    .from(DB_TABLES.userFavorites)
+    .select("id")
+    .eq("user_id", targetUserId)
+    .eq("favorite_user_id", user.id)
+    .maybeSingle();
+
+  if (reverseFollow) {
+    await createNotification(supabase, {
+      user_id: targetUserId,
+      type: "now_friends",
+      title: "¡Son amigos!",
+      body: `${senderName} y vos se siguen mutuamente.`,
+    });
+
+    const { data: targetProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name")
+      .eq("user_id", targetUserId)
+      .maybeSingle();
+    const targetName = (targetProfile as { name?: string | null } | null)?.name ?? "Esta persona";
+
+    await createNotification(supabase, {
+      user_id: user.id,
+      type: "now_friends",
+      title: "¡Son amigos!",
+      body: `${targetName} y vos se siguen mutuamente.`,
+    });
+  }
 
   revalidatePath(`/jugador/${targetUserId}`);
   return { ok: true, message: "Ahora seguís a este jugador." };

@@ -13,7 +13,12 @@ type NotificationType =
   | "payment_rejected"
   | "level_up"
   | "match_cancelled"
-  | "match_owner_changed";
+  | "match_owner_changed"
+  | "new_follower"
+  | "now_friends"
+  | "new_message"
+  | "group_message"
+  | "added_to_group";
 
 export async function createNotification(
   supabase: SupabaseClient,

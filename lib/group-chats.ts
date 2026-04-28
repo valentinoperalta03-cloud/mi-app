@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification } from "@/lib/notifications";
 
 export type GroupPreview = {
   id: string;
@@ -115,6 +116,16 @@ export async function createGroupChat(
   const { error: mErr } = await supabase.from(DB_TABLES.groupChatMembers).insert(rows);
   if (mErr) return { ok: false, message: mErr.message };
 
+  for (const memberId of uniqueMembers) {
+    if (memberId === userId) continue;
+    await createNotification(supabase, {
+      user_id: memberId,
+      type: "added_to_group",
+      title: "Te agregaron a un grupo",
+      body: `Fuiste agregado al grupo "${cleanTitle}"`,
+    });
+  }
+
   return { ok: true, groupId: group.id };
 }
 
@@ -130,7 +141,7 @@ export async function addMemberToGroup(
 
   const { data: group } = await supabase
     .from(DB_TABLES.groupChats)
-    .select("created_by")
+    .select("created_by, title")
     .eq("id", groupId)
     .maybeSingle();
 
@@ -142,6 +153,16 @@ export async function addMemberToGroup(
     .from(DB_TABLES.groupChatMembers)
     .insert({ group_id: groupId, user_id: userId, role: "member" });
   if (error && error.code !== "23505") return { ok: false, message: error.message };
+
+  const groupTitle = (group as { title?: string; created_by?: string } | null)?.title ?? "tu grupo";
+  if (userId !== user.id) {
+    await createNotification(supabase, {
+      user_id: userId,
+      type: "added_to_group",
+      title: "Te agregaron a un grupo",
+      body: `Fuiste agregado al grupo "${groupTitle}"`,
+    });
+  }
   return { ok: true };
 }
 
@@ -196,5 +217,31 @@ export async function sendGroupMessage(
     .select("id, group_id, sender_id, content, created_at")
     .single();
   if (error || !data) return { ok: false, message: error?.message ?? "No se pudo enviar." };
+
+  const [{ data: memberRows }, { data: groupRow }, { data: senderProfile }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.groupChatMembers)
+      .select("user_id")
+      .eq("group_id", groupId),
+    supabase.from(DB_TABLES.groupChats).select("title").eq("id", groupId).maybeSingle(),
+    supabase.from(DB_TABLES.profiles).select("name").eq("user_id", senderId).maybeSingle(),
+  ]);
+
+  const title = ((groupRow as { title?: string } | null)?.title ?? "Grupo").trim() || "Grupo";
+  const senderName = ((senderProfile as { name?: string | null } | null)?.name ?? "Alguien").trim() || "Alguien";
+  const preview = text.length > 60 ? `${text.slice(0, 60)}...` : text;
+  const recipientIds = ((memberRows ?? []) as Array<{ user_id: string }>)
+    .map((m) => m.user_id)
+    .filter((id) => id !== senderId);
+
+  for (const recipientId of recipientIds) {
+    await createNotification(supabase, {
+      user_id: recipientId,
+      type: "group_message",
+      title,
+      body: `${senderName}: ${preview}`,
+    });
+  }
+
   return { ok: true, row: data as GroupMessageRow };
 }

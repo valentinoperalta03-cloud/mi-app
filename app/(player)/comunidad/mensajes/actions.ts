@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { addMemberToGroup, createGroupChat, sendGroupMessage } from "@/lib/group-chats";
 import { canOpenChatWithPeer } from "@/lib/chat-partners";
+import { createNotification } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
 export type SendMessageState = { ok: boolean; message: string; row?: ChatMessageRow };
@@ -64,6 +65,21 @@ export async function sendChatMessage(
   }
 
   const row = data as ChatMessageRow;
+  if (user.id !== peerId) {
+    const { data: senderProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const senderName = (senderProfile as { name?: string | null } | null)?.name?.trim() || "Alguien";
+    const preview = text.length > 60 ? `${text.slice(0, 60)}...` : text;
+    await createNotification(supabase, {
+      user_id: peerId,
+      type: "new_message",
+      title: "Nuevo mensaje",
+      body: `${senderName}: ${preview}`,
+    });
+  }
   revalidatePath("/comunidad/mensajes");
   revalidatePath(`/comunidad/mensajes/${peerId}`);
   return { ok: true, message: "", row };
