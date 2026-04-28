@@ -1,10 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   recordMatchResultAction,
   type RecordMatchResultState,
 } from "@/app/(player)/matches/[id]/actions";
+import { DB_TABLES } from "@/lib/db-tables";
+import { createClient } from "@/utils/supabase/client";
 
 const initial: RecordMatchResultState = { ok: false, message: "" };
 
@@ -17,6 +20,68 @@ export function CompetitiveResultConfirmationCard(props: {
 }) {
   const { matchId, label, scoreLabel, confirmCount, totalPlayers } = props;
   const [state, formAction] = useActionState(recordMatchResultAction, initial);
+  const [levelChange, setLevelChange] = useState<number | null>(null);
+  const [latestLevel, setLatestLevel] = useState<number | null>(null);
+  const [baselineLevel, setBaselineLevel] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+
+    async function fetchBaselineLevel() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("level")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const level = Number((profile as { level?: number | null } | null)?.level ?? NaN);
+      if (!active || !Number.isFinite(level)) return;
+      setBaselineLevel(level);
+      setLatestLevel(level);
+    }
+
+    void fetchBaselineLevel();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!state.ok || !state.message?.includes("confirmado")) return;
+
+    const supabase = createClient();
+    let active = true;
+    async function fetchUpdatedLevel() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("level")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const updated = Number((profile as { level?: number | null } | null)?.level ?? NaN);
+      if (!active || !Number.isFinite(updated)) return;
+      setLatestLevel(updated);
+      if (baselineLevel != null) {
+        setLevelChange(Number((updated - baselineLevel).toFixed(3)));
+      }
+    }
+
+    void fetchUpdatedLevel();
+    return () => {
+      active = false;
+    };
+  }, [baselineLevel, state.ok, state.message]);
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -53,6 +118,38 @@ export function CompetitiveResultConfirmationCard(props: {
           </button>
         </form>
       </div>
+
+      {state.ok ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 rounded-2xl p-4 text-center"
+          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        >
+          <p className="text-lg font-bold text-white">🏆 ¡Resultado confirmado!</p>
+          <p className="mt-1 text-sm text-white/80">
+            Tu nivel fue actualizado. Revisá tu perfil para ver la evolución.
+          </p>
+          {latestLevel != null ? (
+            <p className="mt-2 text-sm font-semibold text-white">
+              ELO actual: {latestLevel.toFixed(3)}
+              {levelChange != null ? (
+                <span className={levelChange >= 0 ? "text-emerald-200" : "text-rose-200"}>
+                  {" "}
+                  ({levelChange >= 0 ? "+" : ""}
+                  {levelChange.toFixed(3)})
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+          <a
+            href="/perfil"
+            className="mt-3 inline-block rounded-xl bg-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/30"
+          >
+            Ver mi evolución →
+          </a>
+        </motion.div>
+      ) : null}
 
       <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
         <p className="text-xs text-slate-500 text-center mb-2">

@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { motion } from "framer-motion";
 import { MessageCircle, Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
@@ -661,26 +662,45 @@ Link del partido: ${partyUrl}`;
               alreadyStarted={false}
             />
           ) : (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30 p-4">
-              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 text-center">
-                ✓ Resultado enviado — esperando confirmaciones
-              </p>
-              <div className="mt-3 flex justify-center gap-2">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/30"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <p className="font-bold text-emerald-800 dark:text-emerald-300">
+                    Resultado enviado
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    Esperando que los {4 - (confirmCount ?? 0)} jugadores restantes confirmen
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div
+                  <motion.div
                     key={i}
-                    className={`h-3 w-3 rounded-full ${
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
                       i < (confirmCount ?? 0)
-                        ? "bg-emerald-500"
-                        : "bg-slate-200 dark:bg-slate-700"
+                        ? "bg-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)]"
+                        : "bg-emerald-100 text-emerald-300 dark:bg-emerald-900/30"
                     }`}
-                  />
+                  >
+                    {i < (confirmCount ?? 0) ? "✓" : i + 1}
+                  </motion.div>
                 ))}
               </div>
-              <p className="text-xs text-center text-emerald-700 dark:text-emerald-400 mt-2">
+
+              <p className="text-center text-xs text-emerald-600 dark:text-emerald-500">
                 {confirmCount ?? 0} de 4 jugadores confirmaron
               </p>
-            </div>
+            </motion.div>
           )}
         </section>
       ) : null}

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   recordMatchResultAction,
   type RecordMatchResultState,
@@ -10,10 +11,13 @@ import {
 
 const initial: RecordMatchResultState = { ok: false, message: "" };
 
-const FUN_FACTS = [
-  "El padel nacio en Mexico en 1969, ya sos parte de la historia.",
-  "Un set profesional de padel suele durar alrededor de 45 minutos.",
-  "La comunicacion en dupla mejora mas rapido que cualquier golpe aislado.",
+const PADEL_FACTS = [
+  "🎾 El pádel nació en México en 1969. ¡Ya sos parte de la historia!",
+  "💪 Cada partido mejora tu reacción, coordinación y trabajo en equipo.",
+  "🏆 Los mejores jugadores del mundo perdieron miles de partidos antes de ganar.",
+  "🤝 En el pádel, la dupla que mejor se comunica gana más que la que mejor golpea.",
+  "⚡ Un partido de pádel quema entre 400 y 600 calorías. ¡Bien ganado!",
+  "🧠 El pádel desarrolla la inteligencia táctica más que cualquier otro deporte de raqueta.",
 ];
 
 function SubmitRow({ label }: { label: string }) {
@@ -22,9 +26,10 @@ function SubmitRow({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+      className="w-full rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(5,133,252,0.4)] active:scale-[0.98] disabled:opacity-60"
+      style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
     >
-      {pending ? "Guardando…" : label}
+      {pending ? "Guardando..." : label}
     </button>
   );
 }
@@ -49,6 +54,7 @@ export function MatchResultForm({
     { a: 6, b: 4 },
     { a: 6, b: 2 },
   ]);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const totals = useMemo(
     () => ({
@@ -57,11 +63,15 @@ export function MatchResultForm({
     }),
     [sets]
   );
-  const fact = FUN_FACTS[Math.abs(matchId.length) % FUN_FACTS.length]!;
+
+  const fact = PADEL_FACTS[Math.abs(matchId.length) % PADEL_FACTS.length]!;
+  const winner = totals.a > totals.b ? teamALabel : totals.b > totals.a ? teamBLabel : null;
 
   useEffect(() => {
     if (state.ok) {
       if (!started) setStarted(true);
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 3000);
       router.refresh();
     }
   }, [router, started, state.ok]);
@@ -75,111 +85,201 @@ export function MatchResultForm({
   }
 
   return (
-    <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
-      <div>
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          ¡Gran partido! ¿Quiénes se llevaron la victoria hoy?
-        </h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          {fact}
-        </p>
-      </div>
+    <div className="space-y-4">
+      <AnimatePresence>
+        {showCelebration ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          >
+            <div className="space-y-4 px-8 text-center">
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-6xl"
+              >
+                🏆
+              </motion.p>
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-2xl font-bold text-white"
+              >
+                ¡Resultado enviado!
+              </motion.p>
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-sm text-white/80"
+              >
+                Esperando que los otros jugadores confirmen
+              </motion.p>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-3xl p-6 text-center text-white"
+        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+      >
+        <div className="absolute right-3 top-3 opacity-10">
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="28" stroke="white" strokeWidth="2" />
+            <path d="M8 22 Q30 18 52 22" stroke="white" strokeWidth="2" fill="none" />
+            <path d="M8 30 Q30 26 52 30" stroke="white" strokeWidth="2" fill="none" />
+            <path d="M8 38 Q30 34 52 38" stroke="white" strokeWidth="2" fill="none" />
+          </svg>
+        </div>
+        <p className="mb-2 text-3xl">🎾</p>
+        <h2 className="text-xl font-bold">¡Gran partido!</h2>
+        <p className="mt-1 text-sm text-white/70">¿Quiénes se llevaron la victoria hoy?</p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-3"
+      >
+        <p className="text-center text-sm leading-relaxed text-[var(--text-secondary)]">{fact}</p>
+      </motion.div>
 
       {!started ? (
-        <form action={formAction}>
-          <input type="hidden" name="match_id" value={matchId} />
-          <input type="hidden" name="intent" value="start" />
-          <button
-            type="submit"
-            disabled={lockedByTeammate}
-            className="w-full rounded-2xl bg-[#0461C4] py-3.5 text-base font-semibold text-white transition hover:bg-[#0585FC] disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
-          >
-            Cargar Resultado
-          </button>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-3"
+        >
+          <form action={formAction}>
+            <input type="hidden" name="match_id" value={matchId} />
+            <input type="hidden" name="intent" value="start" />
+            <button
+              type="submit"
+              disabled={lockedByTeammate}
+              className="w-full rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            >
+              📊 Cargar resultado
+            </button>
+          </form>
           {lockedByTeammate ? (
-            <p className="mt-2 text-center text-sm font-medium text-amber-700 dark:text-amber-400">
+            <p className="rounded-2xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
               Tu pareja ya está cargando el resultado.
             </p>
           ) : null}
-        </form>
+        </motion.div>
       ) : (
-        <form action={formAction} className="space-y-4">
+        <motion.form
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          action={formAction}
+          className="space-y-4"
+        >
           <input type="hidden" name="match_id" value={matchId} />
           <input type="hidden" name="intent" value="propose" />
           <input type="hidden" name="team_a_score" value={totals.a} />
           <input type="hidden" name="team_b_score" value={totals.b} />
           <input type="hidden" name="sets_json" value={JSON.stringify(sets)} />
 
-          <div className="space-y-3">
-            {[0, 1].map((idx) => (
-              <div key={idx} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Set {idx + 1}
-                </p>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-white p-2 text-center dark:bg-slate-900">
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Equipo A</p>
-                    <div className="mt-1 flex items-center justify-center gap-2">
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-3 dark:bg-[#0585FC]/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#0585FC]">Equipo A</p>
+              <p className="mt-1 truncate text-sm font-bold text-[var(--text-primary)]">{teamALabel}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-slate-100 p-3 dark:bg-slate-800">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                Equipo B
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-[var(--text-primary)]">{teamBLabel}</p>
+            </div>
+          </div>
+
+          {[0, 1].map((idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4"
+            >
+              <p className="mb-3 text-center text-xs font-bold uppercase tracking-widest text-[var(--text-tertiary)]">
+                Set {idx + 1}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {(["a", "b"] as const).map((side) => (
+                  <div key={side} className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => adjustSet(idx, "a", -1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                        onClick={() => adjustSet(idx, side, -1)}
+                        className="h-9 w-9 rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-primary)] transition hover:border-[#0585FC] hover:text-[#0585FC]"
                       >
-                        -
+                        −
                       </button>
-                      <span className="w-6 text-lg font-bold text-slate-900 dark:text-slate-100">{sets[idx]!.a}</span>
+                      <span className="w-8 text-center text-2xl font-bold text-[var(--text-primary)]">
+                        {sets[idx]![side]}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => adjustSet(idx, "a", 1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                        onClick={() => adjustSet(idx, side, 1)}
+                        className="h-9 w-9 rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-primary)] transition hover:border-[#0585FC] hover:text-[#0585FC]"
                       >
                         +
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-xl bg-white p-2 text-center dark:bg-slate-900">
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Equipo B</p>
-                    <div className="mt-1 flex items-center justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => adjustSet(idx, "b", -1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-lg font-bold text-slate-900 dark:text-slate-100">{sets[idx]!.b}</span>
-                      <button
-                        type="button"
-                        onClick={() => adjustSet(idx, "b", 1)}
-                        className="h-7 w-7 rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </motion.div>
+          ))}
+
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
+            <div className="grid grid-cols-3 items-center gap-2 text-center">
+              <div>
+                <p className="text-3xl font-bold text-[#0585FC]">{totals.a}</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">Equipo A</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--text-tertiary)]">vs</p>
+                {winner ? (
+                  <p className="mt-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-950/30">
+                    🏆 {winner}
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{totals.b}</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">Equipo B</p>
+              </div>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
-            <p>{teamALabel}: <span className="font-semibold">{totals.a}</span></p>
-            <p>{teamBLabel}: <span className="font-semibold">{totals.b}</span></p>
-          </div>
-
-          <SubmitRow label="Enviar para confirmación" />
-        </form>
+          <SubmitRow label="Enviar para confirmación 🎾" />
+        </motion.form>
       )}
 
       {state.message ? (
-        <p
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           role={state.ok ? "status" : "alert"}
-          className={`text-center text-xs font-medium ${
-            state.ok ? "text-emerald-700" : "text-rose-600"
+          className={`rounded-2xl px-4 py-3 text-center text-sm font-medium ${
+            state.ok
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+              : "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
           }`}
         >
           {state.message}
-        </p>
+        </motion.p>
       ) : null}
     </div>
   );
