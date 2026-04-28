@@ -4,7 +4,7 @@ import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { fetchConversationPreviews } from "@/lib/chat-partners";
 import { fetchGroupPreviews } from "@/lib/group-chats";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { MensajesClient } from "./mensajes-client";
 
 export default async function MensajesPage() {
@@ -13,16 +13,17 @@ export default async function MensajesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const service = createServiceClient();
 
-  const conversations = await fetchConversationPreviews(supabase, user.id);
-  const groups = await fetchGroupPreviews(supabase, user.id);
+  const conversations = await fetchConversationPreviews(service, user.id);
+  const groups = await fetchGroupPreviews(service, user.id);
   const mutualIds = new Set<string>();
   const [{ data: following }, { data: followers }] = await Promise.all([
-    supabase
+    service
       .from(DB_TABLES.userFavorites)
       .select("favorite_user_id")
       .eq("user_id", user.id),
-    supabase
+    service
       .from(DB_TABLES.userFavorites)
       .select("user_id")
       .eq("favorite_user_id", user.id),
@@ -35,7 +36,7 @@ export default async function MensajesPage() {
 
   const mutualFriendIds = [...mutualIds];
   const { data: mutualFriendProfiles } = mutualFriendIds.length
-    ? await supabase
+    ? await service
         .from(DB_TABLES.profiles)
         .select("user_id, name, avatar_url")
         .in("user_id", mutualFriendIds)
