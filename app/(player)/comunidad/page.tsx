@@ -1,15 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { UserPlus } from "lucide-react";
-import MotionPage from "@/components/motion-page";
-import { ParaTiCreatePost } from "@/components/para-ti-create-post";
-import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
-import { FriendRequestsSection } from "@/components/friend-requests-section";
+import { DB_TABLES } from "@/lib/db-tables";
 import {
   fetchLatestMatchResultForUser,
   fetchPostsFeed,
 } from "@/lib/para-ti-posts";
 import { createClient } from "@/utils/supabase/server";
+import { ComunidadClient } from "./comunidad-client";
 
 export default async function ComunidadPage() {
   const supabase = await createClient();
@@ -22,56 +18,57 @@ export default async function ComunidadPage() {
     fetchPostsFeed(supabase),
     fetchLatestMatchResultForUser(supabase, user.id),
   ]);
+  const { data: rows } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("user_id, name, avatar_url, bio, category, level, level_of_play, technical_score")
+    .neq("user_id", user.id)
+    .order("name", { ascending: true })
+    .limit(300);
+
+  const players = (rows ?? []) as {
+    user_id: string;
+    name: string | null;
+    avatar_url: string | null;
+    bio?: string | null;
+    category?: string | null;
+    level?: number | null;
+    level_of_play?: string | null;
+    technical_score?: number | null;
+  }[];
+  const playerIds = players.map((p) => p.user_id);
+
+  const [myFollowingRes, followsMeRes] = await Promise.all([
+    playerIds.length
+      ? supabase
+          .from(DB_TABLES.userFavorites)
+          .select("favorite_id")
+          .eq("user_id", user.id)
+          .in("favorite_id", playerIds)
+      : Promise.resolve({ data: [] as { favorite_id: string }[] }),
+    playerIds.length
+      ? supabase
+          .from(DB_TABLES.userFavorites)
+          .select("user_id")
+          .eq("favorite_id", user.id)
+          .in("user_id", playerIds)
+      : Promise.resolve({ data: [] as { user_id: string }[] }),
+  ]);
+
+  const initialFollowingIds = ((myFollowingRes.data ?? []) as { favorite_id: string }[]).map(
+    (row) => row.favorite_id
+  );
+  const followsMeIds = ((followsMeRes.data ?? []) as { user_id: string }[]).map(
+    (row) => row.user_id
+  );
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-transparent pb-32 pt-6">
-      <header className="mb-4 flex items-center justify-between gap-3 px-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-            Comunidad
-          </h1>
-          <p className="text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/comunidad/buscar"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-secondary)] shadow-sm transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"
-          >
-            <UserPlus size={18} />
-          </Link>
-          <Link
-            href="/comunidad/mensajes"
-            className="flex h-10 items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 text-sm font-semibold text-[var(--text-secondary)] shadow-sm transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"
-          >
-            Mensajes
-          </Link>
-        </div>
-      </header>
-
-      <div className="mb-4 flex gap-0 border-b border-[var(--border-subtle)] px-4">
-        <button
-          type="button"
-          className="flex-1 border-b-2 border-[#0585FC] pb-3 text-sm font-bold text-[#0585FC]"
-        >
-          Para ti
-        </button>
-        <Link
-          href="/comunidad/buscar"
-          className="flex-1 pb-3 text-center text-sm font-semibold text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]"
-        >
-          Jugadores
-        </Link>
-      </div>
-
-      <div className="px-4">
-        <FriendRequestsSection userId={user.id} />
-      </div>
-
-      <div className="mt-4 px-4">
-        <ParaTiPostsMotion posts={posts} />
-      </div>
-
-      <ParaTiCreatePost latestMatch={latestMatch} />
-    </MotionPage>
+    <ComunidadClient
+      posts={posts}
+      latestMatch={latestMatch}
+      players={players}
+      initialFollowingIds={initialFollowingIds}
+      followsMeIds={followsMeIds}
+      userId={user.id}
+    />
   );
 }

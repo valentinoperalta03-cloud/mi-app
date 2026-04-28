@@ -55,12 +55,7 @@ export default function FriendsSearchClient({
   return (
     <div className="space-y-6">
       <header className="mb-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">Jugadores</h1>
-          <Link href="/comunidad" className="text-sm font-semibold text-[#0585FC]">
-            ← Volver
-          </Link>
-        </div>
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">Jugadores</h1>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-3.5 text-[var(--text-tertiary)]" />
           <input
