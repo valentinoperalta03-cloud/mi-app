@@ -65,7 +65,6 @@ export function MatchResultForm({
   );
 
   const fact = PADEL_FACTS[Math.abs(matchId.length) % PADEL_FACTS.length]!;
-  const winner = totals.a > totals.b ? teamALabel : totals.b > totals.a ? teamBLabel : null;
 
   useEffect(() => {
     if (state.ok) {
@@ -250,11 +249,6 @@ export function MatchResultForm({
               </div>
               <div>
                 <p className="text-lg font-bold text-[var(--text-tertiary)]">vs</p>
-                {winner ? (
-                  <p className="mt-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:bg-emerald-950/30">
-                    🏆 {winner}
-                  </p>
-                ) : null}
               </div>
               <div>
                 <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{totals.b}</p>
