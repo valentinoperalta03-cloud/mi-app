@@ -6,6 +6,26 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
+async function addPlayerToMatchGroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string,
+  playerId: string
+) {
+  const { data: group } = await supabase
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (!groupId) return;
+  const { error } = await supabase
+    .from(DB_TABLES.groupChatMembers)
+    .insert({ group_id: groupId, user_id: playerId, role: "member" });
+  if (error && error.code !== "23505") {
+    console.error("[group-chats] add member", error.message);
+  }
+}
+
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -96,6 +116,7 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
         player_id: requesterId,
       }
     );
+    await addPlayerToMatchGroup(supabase, matchId, requesterId);
 
     const { count: newCount } = await supabase
       .from(DB_TABLES.matchParticipants)

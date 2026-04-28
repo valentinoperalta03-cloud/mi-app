@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ParaTiCreatePost } from "@/components/para-ti-create-post";
 import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
@@ -50,13 +49,6 @@ export function ComunidadClient({
           <p className="text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("jugadores")}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-secondary)] shadow-sm transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"
-          >
-            <UserPlus size={18} />
-          </button>
           <Link
             href="/comunidad/mensajes"
             className="flex h-10 items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 text-sm font-semibold text-[var(--text-secondary)] shadow-sm transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"

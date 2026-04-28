@@ -14,6 +14,26 @@ export type ToggleJoinState = {
 const initialState: ToggleJoinState = { success: false, message: "" };
 const TOTAL_SLOTS = 4;
 
+async function addPlayerToMatchGroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string,
+  playerId: string
+) {
+  const { data: group } = await supabase
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (!groupId) return;
+  const { error } = await supabase
+    .from(DB_TABLES.groupChatMembers)
+    .insert({ group_id: groupId, user_id: playerId, role: "member" });
+  if (error && error.code !== "23505") {
+    console.error("[group-chats] add member", error.message);
+  }
+}
+
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
@@ -272,6 +292,7 @@ export async function toggleMatchParticipationAction(
       message: `No se pudo completar la inscripcion: ${insertError.message}`,
     };
   }
+  await addPlayerToMatchGroup(supabase, matchId, playerId);
 
   if (matchData.owner_id && matchData.owner_id !== playerId) {
     const tpl = NOTIFICATION_TEMPLATES.player_joined(playerName, "tu partido");

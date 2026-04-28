@@ -4,6 +4,26 @@ import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
+async function addPlayerToMatchGroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string,
+  playerId: string
+) {
+  const { data: group } = await supabase
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (!groupId) return;
+  const { error } = await supabase
+    .from(DB_TABLES.groupChatMembers)
+    .insert({ group_id: groupId, user_id: playerId, role: "member" });
+  if (error && error.code !== "23505") {
+    console.error("[group-chats] add member", error.message);
+  }
+}
+
 export type JoinMatchActionState = {
   success: boolean;
   message: string;
@@ -118,6 +138,7 @@ export async function joinMatchAction(
       message: `No se pudo completar la inscripcion: ${insertError.message}`,
     };
   }
+  await addPlayerToMatchGroup(supabase, matchId, userId);
 
   revalidatePath("/buscar-partido");
   revalidatePath("/comunidad/feed");

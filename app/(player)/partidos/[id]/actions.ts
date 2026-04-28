@@ -23,6 +23,26 @@ function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
   return aStart < bEnd && bStart < aEnd;
 }
 
+async function addPlayerToMatchGroup(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string,
+  playerId: string
+) {
+  const { data: group } = await supabase
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (!groupId) return;
+  const { error } = await supabase
+    .from(DB_TABLES.groupChatMembers)
+    .insert({ group_id: groupId, user_id: playerId, role: "member" });
+  if (error && error.code !== "23505") {
+    console.error("[group-chats] add member", error.message);
+  }
+}
+
 export async function updateMatch(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
   const scheduledTimeRaw = getField(formData, "scheduled_time");
@@ -279,6 +299,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     console.error("[requestToJoin] participant", pErr);
     redirect(`/partidos/${matchId}?join_error=db`);
   }
+  await addPlayerToMatchGroup(supabase, matchId, user.id);
 
   const ownerId = m.owner_id;
   const { count: newCount } = await supabase
@@ -382,6 +403,7 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
       redirect(`/partidos/${matchId}?join_error=db`);
     }
   }
+  await addPlayerToMatchGroup(supabase, matchId, playerId);
 
   const { error: uErr } = await supabase
     .from(DB_TABLES.matchJoinRequests)

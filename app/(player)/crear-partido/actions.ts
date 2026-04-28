@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
 import { createClient } from "@/utils/supabase/server";
 
@@ -262,6 +263,26 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
       await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
       return { error: "No se pudo registrar el pago. Intentá de nuevo." };
+    }
+
+    const friendlyDate = scheduledDate.split("-").reverse().join("/");
+    const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
+    const genderLabel =
+      genderCategory === "femenino"
+        ? "Partido femenino"
+        : genderCategory === "mixto"
+          ? "Partido mixto"
+          : "Partido masculino";
+    const groupRes = await createGroupChat(
+      supabase,
+      user.id,
+      `Partido en ${clubName} el ${friendlyDate}`,
+      `• ${competitiveLabel}\n• ${genderLabel}`,
+      [],
+      data.id
+    );
+    if (!groupRes.ok) {
+      console.error("[crearPartido] group chat", groupRes.message);
     }
 
     redirect(mp.initPoint);
