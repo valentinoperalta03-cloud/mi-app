@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { MessageSquare, UserCheck, UserMinus, UserPlus } from "lucide-react";
+import { MessageSquare, UserCheck, UserMinus, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { setUserFavorite } from "@/app/(player)/jugador/[userId]/actions";
 import { AppleToast } from "@/components/apple-toast";
@@ -11,17 +11,18 @@ export default function ProfileSocialActions({
   targetUserId,
   initialFollowing,
   followsBack,
-  isMutual,
+  initialIsMutual,
   isMe,
 }: {
   targetUserId: string;
   initialFollowing: boolean;
   followsBack: boolean;
-  isMutual: boolean;
+  initialIsMutual: boolean;
   isMe: boolean;
 }) {
   const router = useRouter();
   const [following, setFollowing] = useState(initialFollowing);
+  const [mutual, setMutual] = useState(initialFollowing && followsBack ? true : initialIsMutual);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -38,6 +39,8 @@ export default function ProfileSocialActions({
       const res = await setUserFavorite(targetUserId, next);
       if (res.ok) {
         setFollowing(next);
+        if (next && followsBack) setMutual(true);
+        if (!next) setMutual(false);
         showToast(next ? "¡Ahora seguís a este jugador!" : "Dejaste de seguir");
         router.refresh();
       } else {
@@ -63,7 +66,7 @@ export default function ProfileSocialActions({
           {following ? (
             <>
               <UserCheck size={16} />
-              {isMutual ? "Amigos" : "Siguiendo"}
+              {mutual ? "Amigos" : "Siguiendo"}
             </>
           ) : (
             <>
@@ -73,7 +76,7 @@ export default function ProfileSocialActions({
           )}
         </button>
 
-        {following && !isMutual ? (
+        {following && !mutual ? (
           <button
             type="button"
             onClick={handleFollow}
@@ -84,6 +87,12 @@ export default function ProfileSocialActions({
           </button>
         ) : null}
       </div>
+      {mutual ? (
+        <p className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <Users size={12} />
+          ¡Son amigos!
+        </p>
+      ) : null}
 
       <Link
         href={`/comunidad/mensajes/${targetUserId}`}

@@ -17,30 +17,20 @@ export default async function MensajesPage() {
   const conversations = await fetchConversationPreviews(supabase, user.id);
   const groups = await fetchGroupPreviews(supabase, user.id);
   const mutualIds = new Set<string>();
-  if (conversations.length > 0) {
-    const peerIds = conversations.map((c) => c.peerId);
-
-    const [{ data: following }, { data: followers }] = await Promise.all([
-      supabase
-        .from(DB_TABLES.userFavorites)
-        .select("favorite_user_id")
-        .eq("user_id", user.id)
-        .in("favorite_user_id", peerIds),
-      supabase
-        .from(DB_TABLES.userFavorites)
-        .select("user_id")
-        .eq("favorite_user_id", user.id)
-        .in("user_id", peerIds),
-    ]);
-
-    const followingSet = new Set((following ?? []).map((f: { favorite_user_id: string }) => f.favorite_user_id));
-    const followersSet = new Set((followers ?? []).map((f: { user_id: string }) => f.user_id));
-
-    for (const id of peerIds) {
-      if (followingSet.has(id) && followersSet.has(id)) {
-        mutualIds.add(id);
-      }
-    }
+  const [{ data: following }, { data: followers }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("favorite_user_id")
+      .eq("user_id", user.id),
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("user_id")
+      .eq("favorite_user_id", user.id),
+  ]);
+  const followingSet = new Set((following ?? []).map((f: { favorite_user_id: string }) => f.favorite_user_id));
+  const followersSet = new Set((followers ?? []).map((f: { user_id: string }) => f.user_id));
+  for (const id of followingSet) {
+    if (followersSet.has(id)) mutualIds.add(id);
   }
 
   const mutualFriendIds = [...mutualIds];

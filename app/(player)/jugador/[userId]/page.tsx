@@ -245,13 +245,18 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           </div>
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
+        {!isMe && isMutual ? (
+          <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            Amigos ✓
+          </span>
+        ) : null}
         {!isMe && user ? (
           <div className="mt-4">
             <ProfileSocialActions
               targetUserId={userId}
               initialFollowing={favorited}
               followsBack={followsBack}
-              isMutual={isMutual}
+              initialIsMutual={isMutual}
               isMe={isMe}
             />
           </div>
