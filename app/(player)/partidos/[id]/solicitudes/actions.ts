@@ -4,21 +4,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 async function addPlayerToMatchGroup(
   supabase: Awaited<ReturnType<typeof createClient>>,
   matchId: string,
   playerId: string
 ) {
-  const { data: group } = await supabase
+  void supabase;
+  const service = createServiceClient();
+  const { data: group } = await service
     .from(DB_TABLES.groupChats)
     .select("id")
     .eq("match_id", matchId)
     .maybeSingle();
   const groupId = (group as { id?: string } | null)?.id;
   if (!groupId) return;
-  const { error } = await supabase
+  const { error } = await service
     .from(DB_TABLES.groupChatMembers)
     .insert({ group_id: groupId, user_id: playerId, role: "member" });
   if (error && error.code !== "23505") {

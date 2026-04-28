@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
+import { createServiceClient } from "@/utils/supabase/server";
 
 export type GroupPreview = {
   id: string;
@@ -25,7 +26,9 @@ export async function fetchGroupPreviews(
   supabase: SupabaseClient,
   userId: string
 ): Promise<GroupPreview[]> {
-  const { data: memberRows } = await supabase
+  void supabase;
+  const service = createServiceClient();
+  const { data: memberRows } = await service
     .from(DB_TABLES.groupChatMembers)
     .select("group_id")
     .eq("user_id", userId);
@@ -34,16 +37,16 @@ export async function fetchGroupPreviews(
   if (groupIds.length === 0) return [];
 
   const [{ data: groups }, { data: messages }, { data: countRows }] = await Promise.all([
-    supabase
+    service
       .from(DB_TABLES.groupChats)
       .select("id, title, description, created_by, created_at")
       .in("id", groupIds),
-    supabase
+    service
       .from(DB_TABLES.groupChatMessages)
       .select("group_id, content, created_at")
       .in("group_id", groupIds)
       .order("created_at", { ascending: false }),
-    supabase
+    service
       .from(DB_TABLES.groupChatMembers)
       .select("group_id")
       .in("group_id", groupIds),
@@ -92,11 +95,13 @@ export async function createGroupChat(
   memberIds: string[],
   matchId?: string | null
 ): Promise<{ ok: boolean; groupId?: string; message?: string }> {
+  void supabase;
+  const service = createServiceClient();
   const cleanTitle = title.trim();
   if (!cleanTitle) return { ok: false, message: "El título es obligatorio." };
 
   const uniqueMembers = [...new Set(memberIds.filter((id) => id && id !== userId))];
-  const { data: group, error: gErr } = await supabase
+  const { data: group, error: gErr } = await service
     .from(DB_TABLES.groupChats)
     .insert({
       title: cleanTitle,
@@ -113,12 +118,12 @@ export async function createGroupChat(
     { group_id: group.id, user_id: userId, role: "admin" },
     ...uniqueMembers.map((id) => ({ group_id: group.id, user_id: id, role: "member" })),
   ];
-  const { error: mErr } = await supabase.from(DB_TABLES.groupChatMembers).insert(rows);
+  const { error: mErr } = await service.from(DB_TABLES.groupChatMembers).insert(rows);
   if (mErr) return { ok: false, message: mErr.message };
 
   for (const memberId of uniqueMembers) {
     if (memberId === userId) continue;
-    await createNotification(supabase, {
+    await createNotification(service, {
       user_id: memberId,
       type: "added_to_group",
       title: "Te agregaron a un grupo",
@@ -138,8 +143,9 @@ export async function addMemberToGroup(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
+  const service = createServiceClient();
 
-  const { data: group } = await supabase
+  const { data: group } = await service
     .from(DB_TABLES.groupChats)
     .select("created_by, title")
     .eq("id", groupId)
@@ -149,14 +155,14 @@ export async function addMemberToGroup(
     return { ok: false, message: "Solo el admin puede agregar miembros." };
   }
 
-  const { error } = await supabase
+  const { error } = await service
     .from(DB_TABLES.groupChatMembers)
     .insert({ group_id: groupId, user_id: userId, role: "member" });
   if (error && error.code !== "23505") return { ok: false, message: error.message };
 
   const groupTitle = (group as { title?: string; created_by?: string } | null)?.title ?? "tu grupo";
   if (userId !== user.id) {
-    await createNotification(supabase, {
+    await createNotification(service, {
       user_id: userId,
       type: "added_to_group",
       title: "Te agregaron a un grupo",
@@ -170,7 +176,9 @@ export async function fetchGroupMessages(
   supabase: SupabaseClient,
   groupId: string
 ): Promise<GroupMessageRow[]> {
-  const { data: messages } = await supabase
+  void supabase;
+  const service = createServiceClient();
+  const { data: messages } = await service
     .from(DB_TABLES.groupChatMessages)
     .select("id, group_id, sender_id, content, created_at")
     .eq("group_id", groupId)
@@ -180,7 +188,7 @@ export async function fetchGroupMessages(
   const senderIds = [...new Set(typed.map((m) => m.sender_id))];
   if (senderIds.length === 0) return typed;
 
-  const { data: profiles } = await supabase
+  const { data: profiles } = await service
     .from(DB_TABLES.profiles)
     .select("user_id, name, avatar_url")
     .in("user_id", senderIds);
@@ -200,10 +208,12 @@ export async function sendGroupMessage(
   senderId: string,
   content: string
 ): Promise<{ ok: boolean; row?: GroupMessageRow; message?: string }> {
+  void supabase;
+  const service = createServiceClient();
   const text = content.trim();
   if (!text) return { ok: false, message: "Mensaje vacío." };
 
-  const { data: membership } = await supabase
+  const { data: membership } = await service
     .from(DB_TABLES.groupChatMembers)
     .select("id")
     .eq("group_id", groupId)
@@ -211,7 +221,7 @@ export async function sendGroupMessage(
     .maybeSingle();
   if (!membership) return { ok: false, message: "No pertenecés a este grupo." };
 
-  const { data, error } = await supabase
+  const { data, error } = await service
     .from(DB_TABLES.groupChatMessages)
     .insert({ group_id: groupId, sender_id: senderId, content: text })
     .select("id, group_id, sender_id, content, created_at")
@@ -219,12 +229,12 @@ export async function sendGroupMessage(
   if (error || !data) return { ok: false, message: error?.message ?? "No se pudo enviar." };
 
   const [{ data: memberRows }, { data: groupRow }, { data: senderProfile }] = await Promise.all([
-    supabase
+    service
       .from(DB_TABLES.groupChatMembers)
       .select("user_id")
       .eq("group_id", groupId),
-    supabase.from(DB_TABLES.groupChats).select("title").eq("id", groupId).maybeSingle(),
-    supabase.from(DB_TABLES.profiles).select("name").eq("user_id", senderId).maybeSingle(),
+    service.from(DB_TABLES.groupChats).select("title").eq("id", groupId).maybeSingle(),
+    service.from(DB_TABLES.profiles).select("name").eq("user_id", senderId).maybeSingle(),
   ]);
 
   const title = ((groupRow as { title?: string } | null)?.title ?? "Grupo").trim() || "Grupo";
@@ -235,7 +245,7 @@ export async function sendGroupMessage(
     .filter((id) => id !== senderId);
 
   for (const recipientId of recipientIds) {
-    await createNotification(supabase, {
+    await createNotification(service, {
       user_id: recipientId,
       type: "group_message",
       title,
