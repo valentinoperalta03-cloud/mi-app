@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import { setUserFavorite } from "@/app/(player)/jugador/[userId]/actions";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { AppleToast } from "@/components/apple-toast";
 
 type PlayerCard = {
   user_id: string;
@@ -19,14 +20,21 @@ type PlayerCard = {
 };
 
 type FriendsSearchClientProps = {
-  currentUserId: string;
   players: PlayerCard[];
+  initialFollowingIds: string[];
+  followsMeIds: string[];
 };
 
 export default function FriendsSearchClient({
   players,
+  initialFollowingIds,
+  followsMeIds,
 }: FriendsSearchClientProps) {
   const [query, setQuery] = useState("");
+  const [followingIds, setFollowingIds] = useState(() => new Set(initialFollowingIds));
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,32 +54,24 @@ export default function FriendsSearchClient({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-3">
-        <div className="relative h-7 w-24 overflow-hidden opacity-75">
-          <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain" />
+      <header className="mb-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">Jugadores</h1>
+          <Link href="/comunidad" className="text-sm font-semibold text-[#0585FC]">
+            ← Volver
+          </Link>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Encontrar amigos</h1>
-        <p className="text-sm text-[var(--text-tertiary)]">Buscá jugadores por nombre o nivel y conectá en segundos.</p>
-      </header>
-
-      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-sm">
-        <label htmlFor="buscar-amigos" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
-          Buscar jugador
-        </label>
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2.5">
-          <Search size={16} className="text-[var(--text-tertiary)]" />
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-3.5 text-[var(--text-tertiary)]" />
           <input
-            id="buscar-amigos"
+            type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ej: Juan, 4ta, 5ta..."
-            className="w-full bg-transparent text-sm text-[var(--text-secondary)] outline-none placeholder:text-[var(--text-tertiary)]"
+            placeholder="Buscar jugadores..."
+            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 pl-9 pr-4 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20"
           />
         </div>
-        <p className="mt-2 text-xs text-[var(--text-tertiary)]">
-          Escribí al menos 2 caracteres para filtrar resultados.
-        </p>
-      </section>
+      </header>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
@@ -94,12 +94,53 @@ export default function FriendsSearchClient({
                       <p className="mt-1 line-clamp-2 text-xs text-[var(--text-tertiary)]">{player.bio.trim()}</p>
                     ) : null}
                   </div>
-                  <Link
-                    href={`/jugador/${player.user_id}`}
-                    className="rounded-xl bg-[#0585FC] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0461C4]"
-                  >
-                    Ver perfil
-                  </Link>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      disabled={isPending && pendingId === player.user_id}
+                      onClick={() => {
+                        startTransition(async () => {
+                          setPendingId(player.user_id);
+                          const isFollowing = followingIds.has(player.user_id);
+                          const next = !isFollowing;
+                          const res = await setUserFavorite(player.user_id, next);
+                          if (res.ok) {
+                            setFollowingIds((prev) => {
+                              const updated = new Set(prev);
+                              if (next) {
+                                updated.add(player.user_id);
+                              } else {
+                                updated.delete(player.user_id);
+                              }
+                              return updated;
+                            });
+                            setToast(next ? "¡Ahora seguís a este jugador!" : "Dejaste de seguir");
+                          } else {
+                            setToast(res.message);
+                          }
+                          setTimeout(() => setToast(null), 2400);
+                          setPendingId(null);
+                        });
+                      }}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                        followingIds.has(player.user_id)
+                          ? "border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
+                          : "bg-[#0585FC] text-white hover:bg-[#0461C4]"
+                      }`}
+                    >
+                      {followingIds.has(player.user_id)
+                        ? "Siguiendo"
+                        : followsMeIds.includes(player.user_id)
+                          ? "Seguir de vuelta"
+                          : "Seguir"}
+                    </button>
+                    <Link
+                      href={`/jugador/${player.user_id}`}
+                      className="rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"
+                    >
+                      Ver perfil
+                    </Link>
+                  </div>
                 </div>
               </li>
             );
@@ -111,7 +152,7 @@ export default function FriendsSearchClient({
           </p>
         ) : null}
       </section>
-
+      <AppleToast message={toast} />
     </div>
   );
 }

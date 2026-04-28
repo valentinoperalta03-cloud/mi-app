@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
@@ -30,16 +29,34 @@ export default async function ComunidadBuscarPage() {
     level_of_play?: string | null;
     technical_score?: number | null;
   }[];
+  const playerIds = list.map((p) => p.user_id);
+
+  const [myFollowingRes, followsMeRes] = await Promise.all([
+    playerIds.length
+      ? supabase
+          .from(DB_TABLES.userFavorites)
+          .select("favorite_id")
+          .eq("user_id", user.id)
+          .in("favorite_id", playerIds)
+      : Promise.resolve({ data: [] as { favorite_id: string }[] }),
+    playerIds.length
+      ? supabase
+          .from(DB_TABLES.userFavorites)
+          .select("user_id")
+          .eq("favorite_id", user.id)
+          .in("user_id", playerIds)
+      : Promise.resolve({ data: [] as { user_id: string }[] }),
+  ]);
+
+  const initialFollowingIds = new Set(
+    ((myFollowingRes.data ?? []) as { favorite_id: string }[]).map((row) => row.favorite_id)
+  );
+  const followsMeIds = new Set(
+    ((followsMeRes.data ?? []) as { user_id: string }[]).map((row) => row.user_id)
+  );
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-32 pt-6">
-      <Link
-        href="/comunidad"
-        className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]"
-      >
-        ← Comunidad
-      </Link>
-
       {list.length === 0 ? (
         <EmptyStateCard
           icon="users"
@@ -47,7 +64,11 @@ export default async function ComunidadBuscarPage() {
           subtitle="Probá con otro nombre o esperá que más jugadores se sumen"
         />
       ) : (
-        <FriendsSearchClient currentUserId={user.id} players={list} />
+        <FriendsSearchClient
+          players={list}
+          initialFollowingIds={[...initialFollowingIds]}
+          followsMeIds={[...followsMeIds]}
+        />
       )}
     </MotionPage>
   );
