@@ -5,7 +5,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { addMemberToGroup, createGroupChat, sendGroupMessage } from "@/lib/group-chats";
 import { canOpenChatWithPeer } from "@/lib/chat-partners";
 import { createNotification } from "@/lib/notifications";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type SendMessageState = { ok: boolean; message: string; row?: ChatMessageRow };
 
@@ -95,9 +95,10 @@ export async function createGroupChatAction(params: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
+  const service = createServiceClient();
 
   const res = await createGroupChat(
-    supabase,
+    service,
     user.id,
     params.title,
     params.description,
@@ -118,8 +119,9 @@ export async function sendGroupChatMessageAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
+  const service = createServiceClient();
 
-  const res = await sendGroupMessage(supabase, groupId, user.id, content);
+  const res = await sendGroupMessage(service, groupId, user.id, content);
   if (!res.ok || !res.row) return { ok: false, message: res.message ?? "No se pudo enviar." };
   revalidatePath(`/comunidad/mensajes/grupo/${groupId}`);
   revalidatePath("/comunidad/mensajes");
