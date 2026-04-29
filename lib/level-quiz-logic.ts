@@ -108,13 +108,13 @@ export function computeLevelFromAnswers(answers: number[]): LevelComputation {
   return { average, total };
 }
 
-export function classifyCategory(score: number): string {
-  if (score >= 4.5) return "1ra/2da (Elite)";
-  if (score >= 4.0) return "3ra (Avanzado+)";
-  if (score >= 3.5) return "4ta (Avanzado)";
-  if (score >= 3.0) return "5ta (Intermedio+)";
-  if (score >= 2.5) return "6ta (Intermedio)";
-  if (score >= 2.0) return "7ma (Iniciacion+)";
+export function classifyCategory(level: number): string {
+  if (level >= 4.5) return "1ra/2da (Elite)";
+  if (level >= 4.0) return "3ra (Avanzado+)";
+  if (level >= 3.5) return "4ta (Avanzado)";
+  if (level >= 3.0) return "5ta (Intermedio+)";
+  if (level >= 2.5) return "6ta (Intermedio)";
+  if (level >= 2.0) return "7ma (Iniciacion+)";
   return "8va (Principiante)";
 }
 

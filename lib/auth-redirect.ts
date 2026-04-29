@@ -15,6 +15,15 @@ export async function resolveHomePath(
   if (ownedClub) {
     return "/admin/dashboard";
   }
+  const { data: profile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("onboarding_completed,is_leveled")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const row = profile as { onboarding_completed?: boolean | null; is_leveled?: boolean | null } | null;
+  if (!row?.onboarding_completed || !row?.is_leveled) {
+    return "/onboarding";
+  }
   return "/home";
 }
 
