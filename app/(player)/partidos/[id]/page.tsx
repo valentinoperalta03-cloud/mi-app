@@ -13,9 +13,11 @@ import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
+import InviteFriendsSection from "./invite-friends-section";
 import PartidoEditSection from "./partido-edit-section";
 import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
+import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
 import { acceptJoinRequest, rejectJoinRequest } from "./actions";
 
@@ -124,6 +126,7 @@ type ParticipantRow = {
   name: string | null;
   avatar_url: string | null;
   category: string | null;
+  technical_score: number | null;
 };
 
 export default async function PartidoDetailPage({ params, searchParams }: PageProps) {
@@ -225,11 +228,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           name: string | null;
           avatar_url: string | null;
           category: string | null;
+          technical_score: number | null;
         }
       | {
           name: string | null;
           avatar_url: string | null;
           category: string | null;
+          technical_score: number | null;
         }[]
       | null;
   }>).map((row) => {
@@ -239,6 +244,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       name: profile?.name ?? null,
       avatar_url: profile?.avatar_url ?? null,
       category: profile?.category ?? null,
+      technical_score: profile?.technical_score ?? null,
     } satisfies ParticipantRow;
   });
 
@@ -280,9 +286,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const { data: favoritesRows } = await supabase
     .from(DB_TABLES.userFavorites)
-    .select("favorite_id")
+    .select("favorite_user_id")
     .eq("user_id", user.id);
-  const favoriteIds = ((favoritesRows ?? []) as { favorite_id: string }[]).map((f) => f.favorite_id);
+  const favoriteIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
 
   const isPrivate = String(match.visibility ?? "").toLowerCase() === "privado";
   const inviteOpen = sp.invite === "true";
@@ -393,7 +399,64 @@ Link del partido: ${partyUrl}`;
   const ownerWhatsHref = `https://wa.me/?text=${encodeURIComponent(ownerWhatsMessage)}`;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
   const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
-  const shareWhatsText = `🎾 ¡Sumate! Jugamos en ${detail.club_name ?? "el club"} el ${longDateAr} a las ${hourAr}. Te esperamos.`;
+  const playerLines = Array.from({ length: 4 }, (_, i) => {
+    const player = participants[i];
+    if (!player) return "⚪ Falta 1 jugador";
+    const name = player.name?.trim() || "Jugador";
+    const tech =
+      player.technical_score != null && Number.isFinite(Number(player.technical_score))
+        ? Number(player.technical_score).toFixed(2)
+        : "s/d";
+    return `✅ ${name} (${tech})`;
+  });
+  const shareGender =
+    detail.gender_category === "femenino"
+      ? "Femenino"
+      : detail.gender_category === "masculino"
+        ? "Masculino"
+        : "Mixto";
+  const shareLevel = detail.level_restricted ? "restringido" : "abierto a todos";
+  const shareWhatsTextFull = [
+    `🎾 ¡Quién se anima? PARTIDO EN ${(detail.club_name ?? "CLUB").toUpperCase()}`,
+    `📅 ${longDateAr} a las ${hourAr} · 90 min`,
+    `⚧️ ${shareGender}`,
+    `📊 Nivel ${shareLevel}`,
+    "Jugadores:",
+    ...playerLines,
+    `🔗 ${sharePath}`,
+    "¡Sumate antes de que se llene! 🔥",
+  ].join("\n");
+
+  const participantIds = new Set(participants.map((p) => p.player_id));
+  const pendingRequestIds = new Set(accessRequesterIds);
+  const followingIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
+  const { data: followedByRows } =
+    isOwner && followingIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.userFavorites)
+          .select("user_id")
+          .eq("favorite_user_id", user.id)
+          .in("user_id", followingIds)
+      : { data: [] };
+  const mutualIds = ((followedByRows ?? []) as Array<{ user_id: string }>)
+    .map((r) => r.user_id)
+    .filter((friendId) => !participantIds.has(friendId) && !pendingRequestIds.has(friendId));
+  const { data: mutualProfiles } =
+    isOwner && mutualIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.profiles)
+          .select("user_id,name,technical_score")
+          .in("user_id", mutualIds)
+      : { data: [] };
+  const inviteCandidates = ((mutualProfiles ?? []) as Array<{
+    user_id: string;
+    name: string | null;
+    technical_score: number | null;
+  }>).map((row) => ({
+    user_id: row.user_id,
+    name: row.name?.trim() || "Jugador",
+    technical_score: row.technical_score ?? null,
+  }));
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
@@ -415,6 +478,9 @@ Link del partido: ${partyUrl}`;
         </div>
         <p className="text-sm text-slate-500">{detail.club_location ?? "Ubicación pendiente"}</p>
         <p className="mt-1 text-sm text-slate-600">Cancha: {detail.court_name ?? "Cancha"}</p>
+        {isOwner ? (
+          <VisibilityToggle matchId={id} initialVisibility={detail.visibility === "privado" ? "privado" : "publico"} />
+        ) : null}
 
         <dl className="mt-4 space-y-2 text-sm text-slate-600">
           <div className="flex justify-between gap-2">
@@ -626,7 +692,7 @@ Link del partido: ${partyUrl}`;
               </div>
               <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
             </div>
-            <WhatsappShareButton fallbackPath={sharePath} shareText={shareWhatsText} />
+            <WhatsappShareButton fallbackPath={sharePath} sharePath={sharePath} shareText={shareWhatsTextFull} />
           </div>
         ) : null}
 
@@ -651,6 +717,8 @@ Link del partido: ${partyUrl}`;
           </ul>
         )}
       </section>
+
+      {isOwner && freeSlots > 0 ? <InviteFriendsSection matchId={id} friends={inviteCandidates} /> : null}
 
       {isParticipant && (pendingRequestsCount ?? 0) > 0 ? (
         <Link

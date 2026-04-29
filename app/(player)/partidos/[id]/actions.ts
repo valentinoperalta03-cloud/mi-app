@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
@@ -677,5 +678,104 @@ export async function rejectJoinRequest(formData: FormData): Promise<void> {
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   redirect(`/partidos/${matchId}`);
+}
+
+export async function toggleMatchVisibility(
+  matchId: string,
+  newVisibility: "publico" | "privado"
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Iniciá sesión." };
+  if (!matchId) return { ok: false, message: "Partido inválido." };
+
+  const { error } = await supabase
+    .from(DB_TABLES.matches)
+    .update({ visibility: newVisibility })
+    .eq("id", matchId)
+    .eq("owner_id", user.id);
+
+  if (error) return { ok: false, message: "No se pudo actualizar la visibilidad." };
+
+  revalidatePath(`/partidos/${matchId}`);
+  revalidatePath("/buscar-partido");
+  return { ok: true, message: newVisibility === "privado" ? "Partido privado" : "Partido público" };
+}
+
+export async function invitePlayerToMatch(
+  matchId: string,
+  targetUserId: string
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Iniciá sesión." };
+  if (!matchId || !targetUserId) return { ok: false, message: "Datos inválidos." };
+
+  const { data: matchRow, error: matchErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,owner_id,scheduled_date,scheduled_time,date,courts(name,clubs(name))")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (matchErr || !matchRow) return { ok: false, message: "Partido no encontrado." };
+
+  const match = matchRow as {
+    owner_id: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    date: string;
+    courts:
+      | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }
+      | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }[]
+      | null;
+  };
+  if (match.owner_id !== user.id) return { ok: false, message: "No tenés permiso." };
+  if (targetUserId === user.id) return { ok: false, message: "No podés invitarte." };
+
+  const [{ data: alreadyIn }, { data: pendingReq }, { data: ownerProfile }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("match_id")
+      .eq("match_id", matchId)
+      .eq("player_id", targetUserId)
+      .maybeSingle(),
+    supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .select("id")
+      .eq("match_id", matchId)
+      .eq("player_id", targetUserId)
+      .eq("status", "pending")
+      .maybeSingle(),
+    supabase.from(DB_TABLES.profiles).select("name").eq("user_id", user.id).maybeSingle(),
+  ]);
+  if (alreadyIn || pendingReq) return { ok: false, message: "El jugador ya está invitado." };
+
+  const courtRel = Array.isArray(match.courts) ? match.courts[0] ?? null : match.courts;
+  const clubRel = courtRel?.clubs;
+  const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+  const clubName = (clubObj?.name ?? "el club").trim();
+  const ownerName = (ownerProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+  const when = formatDateInArgentina(match.date, {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  await createNotification(supabase, {
+    user_id: targetUserId,
+    type: "join_request",
+    title: "¡Te invitaron a un partido!",
+    body: `${ownerName} te invitó al partido en ${clubName} el ${when}`,
+    match_id: matchId,
+  });
+
+  revalidatePath(`/partidos/${matchId}`);
+  return { ok: true, message: "Invitación enviada" };
 }
 
