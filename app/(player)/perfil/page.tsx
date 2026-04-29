@@ -126,8 +126,10 @@ export default async function PerfilPage() {
     court_position?: string | null;
     preferred_schedule?: string | null;
   };
+  const metadata = user.user_metadata as { full_name?: string | null } | null;
+  const defaultOnboardingName = row.name?.trim() || String(metadata?.full_name ?? "").trim() || "";
   if (row.onboarding_completed !== true) {
-    return <OnboardingPage />;
+    return <OnboardingPage defaultName={defaultOnboardingName} />;
   }
   const hasTechnical =
     row.technical_score != null && Number.isFinite(Number(row.technical_score));

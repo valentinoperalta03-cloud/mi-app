@@ -26,11 +26,11 @@ function categoryDescription(categoryLine: string): string {
   return "Etapa inicial para construir técnica y táctica.";
 }
 
-export default function OnboardingPage() {
+export default function OnboardingPage({ defaultName = "" }: { defaultName?: string }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [quizIndex, setQuizIndex] = useState(0);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName);
   const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
   const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
   const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
