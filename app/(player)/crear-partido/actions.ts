@@ -238,6 +238,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       courtName,
       date: scheduledDate,
       userId: user.id,
+      externalReference: `${data.id}__${user.id}`,
       payerEmail: user.email ?? "",
       payerFirstName,
       payerLastName,

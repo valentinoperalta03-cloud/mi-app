@@ -24,6 +24,8 @@ export async function createMPPreference(params: {
   courtName: string;
   date: string;
   userId: string;
+  /** Mercado Pago external_reference; default `{matchId}` for reservas legacy. */
+  externalReference?: string;
   payerEmail?: string;
   payerFirstName?: string;
   payerLastName?: string;
@@ -107,7 +109,7 @@ export async function createMPPreference(params: {
           pending: pendingUrl,
         },
         auto_return: "approved",
-        external_reference: params.matchId,
+        external_reference: params.externalReference ?? params.matchId,
         binary_mode: false,
         ...(notificationUrl ? { notification_url: notificationUrl } : {}),
       },

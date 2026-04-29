@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -21,6 +22,120 @@ function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
   const aEnd = aStart + aLen;
   const bEnd = bStart + bLen;
   return aStart < bEnd && bStart < aEnd;
+}
+
+async function loadMatchForMercadoPago(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string
+): Promise<{ totalPrice: number; scheduledDate: string; clubName: string; courtName: string } | null> {
+  const { data: row, error } = await supabase
+    .from(DB_TABLES.matches)
+    .select("total_price,scheduled_date,date,courts(name,clubs(name))")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (error || !row) return null;
+  const m = row as {
+    total_price: number | null;
+    scheduled_date: string | null;
+    date: string;
+    courts:
+      | {
+          name: string | null;
+          clubs: { name: string | null } | { name: string | null }[] | null;
+        }
+      | {
+          name: string | null;
+          clubs: { name: string | null } | { name: string | null }[] | null;
+        }[]
+      | null;
+  };
+  const courtRel = Array.isArray(m.courts) ? m.courts[0] ?? null : m.courts;
+  const clubRel = courtRel?.clubs;
+  const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+  const totalPrice = Number(m.total_price ?? 0);
+  let scheduledDate = String(m.scheduled_date ?? "").trim();
+  if (!scheduledDate && m.date) {
+    scheduledDate = m.date.slice(0, 10);
+  }
+  const courtName = courtRel?.name ?? "Cancha";
+  const clubName = clubObj?.name ?? "Club";
+  return { totalPrice, scheduledDate, clubName, courtName };
+}
+
+async function getPayerIdentityForMp(payerUserId: string): Promise<{
+  email: string;
+  firstName: string;
+  lastName: string;
+}> {
+  const service = createServiceClient();
+  const { data: profile } = await service
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", payerUserId)
+    .maybeSingle();
+  const name = String((profile as { name?: string | null } | null)?.name ?? "").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  let email = "";
+  try {
+    const { data: authUser, error } = await service.auth.admin.getUserById(payerUserId);
+    if (!error && authUser?.user?.email) {
+      email = authUser.user.email;
+    }
+  } catch {
+    /* sin admin o usuario inexistente */
+  }
+  return {
+    email,
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" ") ?? "",
+  };
+}
+
+async function createParticipantMercadoPagoCheckout(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  matchId: string;
+  payerUserId: string;
+}): Promise<
+  | { ok: true; initPoint: string; prefId: string; total: number; marketplaceFee: number }
+  | { ok: false; message: string }
+> {
+  const meta = await loadMatchForMercadoPago(params.supabase, params.matchId);
+  if (!meta || !meta.scheduledDate) {
+    return { ok: false, message: "No se pudo cargar el partido." };
+  }
+  const perPlayerBase = Math.round(meta.totalPrice / 4);
+  if (!Number.isFinite(perPlayerBase) || perPlayerBase <= 0) {
+    return { ok: false, message: "Precio del partido inválido." };
+  }
+  const payer = await getPayerIdentityForMp(params.payerUserId);
+  const mp = await createMPPreference({
+    matchId: params.matchId,
+    amount: perPlayerBase,
+    clubName: meta.clubName,
+    courtName: meta.courtName,
+    date: meta.scheduledDate,
+    userId: params.payerUserId,
+    externalReference: `${params.matchId}__${params.payerUserId}`,
+    payerEmail: payer.email,
+    payerFirstName: payer.firstName,
+    payerLastName: payer.lastName,
+  });
+  if ("error" in mp) {
+    return { ok: false, message: mp.error };
+  }
+  const { error: payErr } = await params.supabase.from(DB_TABLES.payments).insert({
+    match_id: params.matchId,
+    user_id: params.payerUserId,
+    mp_preference_id: mp.prefId,
+    status: "pending",
+    amount: mp.total,
+    marketplace_fee: mp.marketplaceFee,
+  });
+  if (payErr) {
+    console.error("[createParticipantMercadoPagoCheckout] payment insert", payErr);
+    return { ok: false, message: "No se pudo registrar el pago." };
+  }
+  return { ok: true, initPoint: mp.initPoint, prefId: mp.prefId, total: mp.total, marketplaceFee: mp.marketplaceFee };
 }
 
 async function addPlayerToMatchGroup(
@@ -284,11 +399,11 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
   }
 
-  const { count, error: cErr } = await supabase
+  const { count: countBefore, error: cErr } = await supabase
     .from(DB_TABLES.matchParticipants)
     .select("player_id", { count: "exact", head: true })
     .eq("match_id", matchId);
-  if (cErr || (count ?? 0) >= 4) {
+  if (cErr || (countBefore ?? 0) >= 4) {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
@@ -341,10 +456,26 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     });
   }
 
+  const mpRes = await createParticipantMercadoPagoCheckout({
+    supabase,
+    matchId,
+    payerUserId: user.id,
+  });
+  if (!mpRes.ok) {
+    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).eq("player_id", user.id);
+    if ((newCount ?? 0) >= 4) {
+      await supabase.from(DB_TABLES.matches).update({ match_status: "scheduled" }).eq("id", matchId);
+    }
+    revalidatePath(`/partidos/${matchId}`);
+    revalidatePath("/home");
+    revalidatePath("/buscar-partido");
+    redirect(`/partidos/${matchId}?join_error=pago`);
+  }
+
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
-  redirect(`/partidos/${matchId}`);
+  redirect(mpRes.initPoint);
 }
 
 export async function acceptJoinRequest(formData: FormData): Promise<void> {
@@ -418,19 +549,34 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=db`);
   }
 
-  const approvedTpl = NOTIFICATION_TEMPLATES.join_approved("tu partido");
+  const mpRes = await createParticipantMercadoPagoCheckout({
+    supabase,
+    matchId,
+    payerUserId: playerId,
+  });
+  if (!mpRes.ok) {
+    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).eq("player_id", playerId);
+    await supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .update({ status: "pending" })
+      .eq("id", requestId)
+      .eq("match_id", matchId);
+    revalidatePath(`/partidos/${matchId}`);
+    redirect(`/partidos/${matchId}?join_error=pago`);
+  }
+
   await createNotification(supabase, {
     user_id: playerId,
-    type: "join_approved",
-    title: approvedTpl.title,
-    body: approvedTpl.body,
+    type: "payment_approved",
+    title: "Solicitud aceptada",
+    body: `Tu solicitud fue aceptada. Completá el pago para confirmar tu lugar: ${mpRes.initPoint}`,
     match_id: matchId,
   });
 
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
-  redirect(`/partidos/${matchId}`);
+  redirect(`/partidos/${matchId}?join_accepted=1`);
 }
 
 export async function rejectJoinRequest(formData: FormData): Promise<void> {

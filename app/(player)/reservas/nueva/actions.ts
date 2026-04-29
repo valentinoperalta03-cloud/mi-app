@@ -165,6 +165,7 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     courtName: courtName || "Cancha",
     date: scheduledDate,
     userId: user.id,
+    externalReference: `${data.id}__${user.id}`,
     payerEmail: user.email ?? "",
     payerFirstName,
     payerLastName,

@@ -21,7 +21,13 @@ import { acceptJoinRequest, rejectJoinRequest } from "./actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ edit_error?: string; invite?: string; join_sent?: string; join_error?: string }>;
+  searchParams?: Promise<{
+    edit_error?: string;
+    invite?: string;
+    join_sent?: string;
+    join_error?: string;
+    join_accepted?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -94,6 +100,7 @@ const JOIN_FLASH_MESSAGES: Record<string, string> = {
   cupos: "El partido ya está completo.",
   nivel: "Tu nivel no es compatible con este partido.",
   db: "Ocurrió un error al guardar. Intentá de nuevo.",
+  pago: "No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo o contactá soporte.",
 };
 
 type MatchDetailRow = {
@@ -123,6 +130,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const editErrorKey = sp.edit_error?.trim() ?? "";
   const editErrorMessage = editErrorKey ? EDIT_ERROR_MESSAGES[editErrorKey] ?? "No se pudo guardar la edición." : null;
   const joinSent = sp.join_sent === "1";
+  const joinAccepted = sp.join_accepted === "1";
   const joinErrorKey = sp.join_error?.trim() ?? "";
   const joinFlashMessage = joinSent
     ? JOIN_FLASH_MESSAGES.sent
@@ -235,13 +243,19 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   // Check if current user has paid
   const { data: myPayment } = await supabase
     .from(DB_TABLES.payments)
-    .select("status")
+    .select("status,mp_preference_id")
     .eq("match_id", id)
     .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  const myPaymentStatus = (myPayment as { status?: string | null } | null)?.status ?? "none";
+  const myPaymentStatus = (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? "none";
+  const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved";
+  const hasPendingPayment =
+    String(myPaymentStatus).toLowerCase() === "pending" && myPrefId.length > 0;
+  const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
 
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
@@ -447,6 +461,12 @@ Link del partido: ${partyUrl}`;
           }`}
         >
           {joinFlashMessage}
+        </p>
+      ) : null}
+
+      {joinAccepted && isOwner ? (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+          El jugador será redirigido al pago para confirmar su lugar (recibirá un aviso con el link).
         </p>
       ) : null}
 
@@ -720,22 +740,21 @@ Link del partido: ${partyUrl}`;
         </div>
       ) : null}
 
-      {isParticipant && !hasPaid && !isOwner ? (
+      {hasPendingPayment ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
-            <p className="font-semibold text-amber-800 dark:text-amber-300">Pago pendiente</p>
+            <p className="font-semibold text-amber-800 dark:text-amber-300">Tenés un pago pendiente para confirmar tu lugar</p>
           </div>
-          <p className="text-sm text-amber-700 dark:text-amber-400">
-            Completá el pago para confirmar tu lugar en el partido.
-          </p>
-          <Link
-            href={`/reservas/confirmacion?id=${id}`}
+          <a
+            href={mercadoPagoPayHref}
+            target="_blank"
+            rel="noopener noreferrer"
             className="block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
             style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
           >
-            Completar pago
-          </Link>
+            Pagar ahora
+          </a>
         </div>
       ) : null}
 
