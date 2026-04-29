@@ -340,10 +340,10 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     .toLowerCase();
   const matchGenderCategory = String(m.gender_category ?? "").trim().toLowerCase();
   if (matchGenderCategory === "femenino" && userGender === "masculino") {
-    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Este partido es solo femenino.")}`);
+    redirect(`/partidos/${matchId}?join_error=genero_femenino`);
   }
   if (matchGenderCategory === "masculino" && userGender === "femenino") {
-    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Este partido es solo masculino.")}`);
+    redirect(`/partidos/${matchId}?join_error=genero_masculino`);
   }
 
   const { data: alreadyIn } = await supabase

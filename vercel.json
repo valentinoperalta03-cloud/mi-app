@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/expire-unpaid-matches",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

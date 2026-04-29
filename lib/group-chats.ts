@@ -212,7 +212,8 @@ export async function sendGroupMessage(
 ): Promise<{ ok: boolean; row?: GroupMessageRow; message?: string }> {
   void supabase;
   const service = createServiceClient();
-  const text = sanitizeText(content, 2000);
+  if (content.length > 1000) return { ok: false, message: "El mensaje supera el máximo de 1000 caracteres." };
+  const text = sanitizeText(content, 1000);
   if (!text) return { ok: false, message: "Mensaje vacío." };
 
   const { data: membership } = await service

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification } from "@/lib/notifications";
@@ -26,6 +27,15 @@ function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
   const aEnd = aStart + aLen;
   const bEnd = bStart + bLen;
   return aStart < bEnd && bStart < aEnd;
+}
+
+function getCurrentClockInArgentina(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: AR_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
 }
 
 export type CreateReservationResult = { error: string } | void;
@@ -71,6 +81,17 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const slotDur = Number(durationMinutes);
   if (!Number.isFinite(slotDur) || slotDur <= 0) {
     return { error: "Duración inválida." };
+  }
+
+  const todayAr = getTodayYmdInArgentina();
+  if (scheduledDate < todayAr) {
+    return { error: "La fecha debe ser futura." };
+  }
+  if (scheduledDate === todayAr) {
+    const nowMinutesAr = clockToMinutes(getCurrentClockInArgentina());
+    if (slotStart < nowMinutesAr + 60) {
+      return { error: "La fecha debe ser futura." };
+    }
   }
 
   const { data: duplicatedReservation } = await supabase

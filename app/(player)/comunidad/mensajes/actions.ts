@@ -5,6 +5,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { addMemberToGroup, createGroupChat, sendGroupMessage } from "@/lib/group-chats";
 import { canOpenChatWithPeer } from "@/lib/chat-partners";
 import { createNotification } from "@/lib/notifications";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -44,6 +45,10 @@ export async function sendChatMessage(
   } = await supabase.auth.getUser();
   if (!user) {
     return { ok: false, message: "Iniciá sesión." };
+  }
+  const chatRateAllowed = await checkRateLimit(`chat:${user.id}`, 30, 60);
+  if (!chatRateAllowed) {
+    return { ok: false, message: "Enviás mensajes muy rápido. Esperá un momento." };
   }
 
   const allowed = await canOpenChatWithPeer(supabase, user.id, peerId);
@@ -121,6 +126,10 @@ export async function sendGroupChatMessageAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
   const service = createServiceClient();
+  const chatRateAllowed = await checkRateLimit(`group_chat:${user.id}`, 30, 60);
+  if (!chatRateAllowed) {
+    return { ok: false, message: "Enviás mensajes muy rápido. Esperá un momento." };
+  }
 
   const res = await sendGroupMessage(service, groupId, user.id, content);
   if (!res.ok || !res.row) return { ok: false, message: res.message ?? "No se pudo enviar." };

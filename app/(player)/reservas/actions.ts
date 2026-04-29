@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getPaymentRefundClient } from "@/lib/mercadopago";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
@@ -122,6 +123,11 @@ export async function cancelReservation(formData: FormData) {
 
   if (fetchErr || !match || (match as { owner_id: string }).owner_id !== user.id) {
     redirect("/reservas?error=cancel");
+  }
+
+  const cancellationGuard = await checkCancellationLimit(supabase, user.id);
+  if (!cancellationGuard.allowed) {
+    redirect(`/reservas?error=${encodeURIComponent(cancellationGuard.message)}`);
   }
 
   const payStatus = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();

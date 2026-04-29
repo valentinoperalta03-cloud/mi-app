@@ -99,6 +99,8 @@ const JOIN_FLASH_MESSAGES: Record<string, string> = {
   permiso: "No tenés permiso para esa acción.",
   cupos: "El partido ya está completo.",
   nivel: "Tu nivel no es compatible con este partido.",
+  genero_femenino: "Este partido es solo femenino.",
+  genero_masculino: "Este partido es solo masculino.",
   db: "Ocurrió un error al guardar. Intentá de nuevo.",
   pago: "No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo o contactá soporte.",
 };

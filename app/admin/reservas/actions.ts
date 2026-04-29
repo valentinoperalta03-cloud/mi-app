@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -38,6 +39,13 @@ export async function adminCancelReservation(formData: FormData): Promise<void> 
   const typed = row as { court_id: string; match_type: string | null; owner_id: string | null };
   if (!ctx.courtIds.includes(typed.court_id) || typed.match_type !== "reservation") {
     redirect("/admin/reservas");
+  }
+
+  if (typed.owner_id) {
+    const cancellationGuard = await checkCancellationLimit(supabase, typed.owner_id);
+    if (!cancellationGuard.allowed) {
+      redirect(`/admin/reservas?error=${encodeURIComponent("cancel_limit")}`);
+    }
   }
 
   const { error } = await supabase

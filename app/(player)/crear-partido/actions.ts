@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
@@ -58,6 +59,15 @@ function overlapsSlot(slotStartMin: number, slotDur: number, otherStartMin: numb
   const slotEnd = slotStartMin + slotDur;
   const otherEnd = otherStartMin + otherDur;
   return slotStartMin < otherEnd && otherStartMin < slotEnd;
+}
+
+function getCurrentClockInArgentina(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: AR_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
 }
 
 async function getUser() {
@@ -165,6 +175,17 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const slotStart = clockToMinutes(scheduledTime);
     const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+    const todayAr = getTodayYmdInArgentina();
+    if (scheduledDate < todayAr) {
+      return { error: "La fecha debe ser futura." };
+    }
+    if (scheduledDate === todayAr) {
+      const nowMinutesAr = clockToMinutes(getCurrentClockInArgentina());
+      if (slotStart < nowMinutesAr + 60) {
+        return { error: "La fecha debe ser futura." };
+      }
+    }
+
     const { data: duplicatedMatch } = await supabase
       .from(DB_TABLES.matches)
       .select("id")
