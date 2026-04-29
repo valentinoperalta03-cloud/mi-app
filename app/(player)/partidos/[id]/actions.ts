@@ -292,7 +292,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,visibility,match_status,level_restricted,level")
+    .select("id,owner_id,visibility,match_status,level_restricted,level,gender_category")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -305,6 +305,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     visibility: string | null;
     match_status: string | null;
     level_restricted: boolean | null;
+    gender_category: string | null;
   };
 
   const matchStatus = String(m.match_status ?? "").toLowerCase();
@@ -316,6 +317,33 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   if (m.owner_id === user.id) {
     redirect(`/partidos/${matchId}`);
+  }
+
+  const { data: alreadyApprovedPayment } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id")
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+  if (alreadyApprovedPayment) {
+    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Ya pagaste este partido.")}`);
+  }
+
+  const { data: userProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("gender")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const userGender = String((userProfile as { gender?: string | null } | null)?.gender ?? "")
+    .trim()
+    .toLowerCase();
+  const matchGenderCategory = String(m.gender_category ?? "").trim().toLowerCase();
+  if (matchGenderCategory === "femenino" && userGender === "masculino") {
+    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Este partido es solo femenino.")}`);
+  }
+  if (matchGenderCategory === "masculino" && userGender === "femenino") {
+    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Este partido es solo masculino.")}`);
   }
 
   const { data: alreadyIn } = await supabase
@@ -515,6 +543,17 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
   }
 
   const playerId = String((reqRow as { player_id: string }).player_id);
+
+  const { data: alreadyApprovedPayment } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id")
+    .eq("match_id", matchId)
+    .eq("user_id", playerId)
+    .eq("status", "approved")
+    .maybeSingle();
+  if (alreadyApprovedPayment) {
+    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Ya pagaste este partido.")}`);
+  }
 
   const { count, error: cErr } = await supabase
     .from(DB_TABLES.matchParticipants)

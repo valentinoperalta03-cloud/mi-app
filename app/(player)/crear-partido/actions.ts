@@ -5,6 +5,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchType = "amistoso" | "competitivo";
@@ -96,6 +97,10 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
   try {
     const { supabase, user } = await getUser();
+    const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
+    if (!allowedByRateLimit) {
+      return { error: "Límite de partidos creados por hora alcanzado." };
+    }
 
     const { data: payerProfile } = await supabase
       .from(DB_TABLES.profiles)
@@ -159,6 +164,30 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
 
     const slotStart = clockToMinutes(scheduledTime);
+    const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+    const { data: duplicatedMatch } = await supabase
+      .from(DB_TABLES.matches)
+      .select("id")
+      .eq("owner_id", user.id)
+      .eq("court_id", courtId)
+      .eq("scheduled_date", scheduledDate)
+      .eq("scheduled_time", timeNorm)
+      .neq("match_status", "cancelled")
+      .maybeSingle();
+    if (duplicatedMatch) {
+      return { error: "Ya tenés una reserva en ese horario." };
+    }
+
+    const { count: activeMatchesCount } = await supabase
+      .from(DB_TABLES.matches)
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", user.id)
+      .in("match_status", ["scheduled", "reserved", "full"])
+      .eq("payment_status", "paid");
+    if ((activeMatchesCount ?? 0) >= 3) {
+      return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
+    }
+
     const { data: conflicts, error: conflictsError } = await supabase
       .from(DB_TABLES.matches)
       .select("scheduled_time,duration_minutes")
@@ -184,7 +213,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
         court_id: courtId,
         owner_id: user.id,
         scheduled_date: scheduledDate,
-        scheduled_time: scheduledTime.slice(0, 5),
+        scheduled_time: timeNorm,
         duration_minutes: Number(durationMinutes),
         total_price: totalPrice,
         payment_status: "pending",

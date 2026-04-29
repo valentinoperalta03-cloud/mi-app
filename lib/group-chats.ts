@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
+import { sanitizeText } from "@/lib/sanitize";
 import { createServiceClient } from "@/utils/supabase/server";
 
 export type GroupPreview = {
@@ -97,7 +98,8 @@ export async function createGroupChat(
 ): Promise<{ ok: boolean; groupId?: string; message?: string }> {
   void supabase;
   const service = createServiceClient();
-  const cleanTitle = title.trim();
+  const cleanTitle = sanitizeText(title, 120);
+  const cleanDescription = sanitizeText(description, 1000);
   if (!cleanTitle) return { ok: false, message: "El título es obligatorio." };
 
   const uniqueMembers = [...new Set(memberIds.filter((id) => id && id !== userId))];
@@ -105,7 +107,7 @@ export async function createGroupChat(
     .from(DB_TABLES.groupChats)
     .insert({
       title: cleanTitle,
-      description: description.trim() || null,
+      description: cleanDescription || null,
       created_by: userId,
       match_id: matchId ?? null,
     })
@@ -210,7 +212,7 @@ export async function sendGroupMessage(
 ): Promise<{ ok: boolean; row?: GroupMessageRow; message?: string }> {
   void supabase;
   const service = createServiceClient();
-  const text = content.trim();
+  const text = sanitizeText(content, 2000);
   if (!text) return { ok: false, message: "Mensaje vacío." };
 
   const { data: membership } = await service

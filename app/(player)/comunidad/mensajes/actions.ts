@@ -5,6 +5,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { addMemberToGroup, createGroupChat, sendGroupMessage } from "@/lib/group-chats";
 import { canOpenChatWithPeer } from "@/lib/chat-partners";
 import { createNotification } from "@/lib/notifications";
+import { sanitizeText } from "@/lib/sanitize";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type SendMessageState = { ok: boolean; message: string; row?: ChatMessageRow };
@@ -29,7 +30,7 @@ export async function sendChatMessage(
   peerId: string,
   content: string
 ): Promise<SendMessageState> {
-  const text = content.trim();
+  const text = sanitizeText(content, 2000);
   if (!text) {
     return { ok: false, message: "El mensaje está vacío." };
   }

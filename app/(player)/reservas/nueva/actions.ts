@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification } from "@/lib/notifications";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -49,6 +50,11 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     redirect("/login");
   }
 
+  const allowedByRateLimit = await checkRateLimit(`create_reservation:${user.id}`, 5, 3600);
+  if (!allowedByRateLimit) {
+    return { error: "Límite de partidos creados por hora alcanzado." };
+  }
+
   const { data: payerProfile } = await supabase
     .from(DB_TABLES.profiles)
     .select("name")
@@ -65,6 +71,30 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const slotDur = Number(durationMinutes);
   if (!Number.isFinite(slotDur) || slotDur <= 0) {
     return { error: "Duración inválida." };
+  }
+
+  const { data: duplicatedReservation } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("match_type", "reservation")
+    .eq("payment_status", "paid")
+    .eq("scheduled_date", scheduledDate)
+    .eq("scheduled_time", timeNorm)
+    .neq("match_status", "cancelled")
+    .maybeSingle();
+  if (duplicatedReservation) {
+    return { error: "Ya tenés una reserva en ese horario." };
+  }
+
+  const { count: activeMatchesCount } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
+    .in("match_status", ["scheduled", "reserved", "full"])
+    .eq("payment_status", "paid");
+  if ((activeMatchesCount ?? 0) >= 3) {
+    return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
   }
 
   const { data: conflicts } = await supabase

@@ -31,4 +31,5 @@ export const DB_TABLES = {
   levelEvolution: "level_evolution",
   payments: "payments",
   notifications: "notifications",
+  rateLimits: "rate_limits",
 } as const;

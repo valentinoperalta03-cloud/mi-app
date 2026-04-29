@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { sanitizeText } from "@/lib/sanitize";
 import { createClient } from "@/utils/supabase/server";
 
 export type EditProfileState = { ok: boolean; message: string };
@@ -19,7 +20,7 @@ export async function updateMyProfile(
     return { ok: false, message: "No hay sesión." };
   }
 
-  const name = String(formData.get("name") ?? "").trim();
+  const name = sanitizeText(String(formData.get("name") ?? ""), 120);
   if (!name) {
     return { ok: false, message: "Ingresá tu nombre." };
   }
@@ -37,7 +38,7 @@ export async function updateMyProfile(
     age = n;
   }
 
-  const bio = String(formData.get("bio") ?? "").trim();
+  const bio = sanitizeText(String(formData.get("bio") ?? ""), 2000);
   if (bio.length > 2000) {
     return { ok: false, message: "La descripción no puede superar los 2000 caracteres." };
   }

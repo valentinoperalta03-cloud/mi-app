@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { sanitizeText } from "@/lib/sanitize";
 import { createClient } from "@/utils/supabase/server";
 
 function getStringField(formData: FormData, key: string) {
@@ -27,11 +29,16 @@ function loginRedirect(message: string, isError = true): never {
 }
 
 export async function signInWithEmail(formData: FormData) {
-  const email = getStringField(formData, "email");
+  const email = sanitizeText(getStringField(formData, "email"), 320).toLowerCase();
   const password = getStringField(formData, "password");
 
   if (!email || !password) {
     loginRedirect("Completa email y contrasena.");
+  }
+
+  const allowed = await checkRateLimit(`login:${email}`, 10, 300);
+  if (!allowed) {
+    loginRedirect("Demasiados intentos. Esperá 5 minutos.");
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -61,8 +68,8 @@ export type OtpActionResult = {
 };
 
 export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEmailResult> {
-  const fullName = getStringField(formData, "full_name");
-  const email = getStringField(formData, "email");
+  const fullName = sanitizeText(getStringField(formData, "full_name"), 120);
+  const email = sanitizeText(getStringField(formData, "email"), 320).toLowerCase();
   const password = getStringField(formData, "password");
 
   if (!fullName || !email || !password) {
