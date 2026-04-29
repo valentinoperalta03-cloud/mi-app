@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function PrivacidadPage() {
   return (
     <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-6">
-      <Link href="/perfil" className="text-sm font-semibold text-[#0585FC]">
+      <Link href="/" className="text-sm font-semibold text-[#0585FC]">
         Volver
       </Link>
 
