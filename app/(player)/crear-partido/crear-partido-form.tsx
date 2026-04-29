@@ -582,8 +582,6 @@ export default function CrearPartidoForm({
                     const nivelParts = splitOfficialCategoryLine(
                       formatProfileNivelFromRow({
                         level: friend.level,
-                        level_of_play: friend.levelOfPlay,
-                        technical_score: friend.technicalScore,
                       })
                     );
                     return (
