@@ -139,7 +139,7 @@ export default function OnboardingPage() {
         showToast(res.message);
         return;
       }
-      window.location.href = "/perfil";
+      window.location.replace("/perfil");
     });
   }
 
