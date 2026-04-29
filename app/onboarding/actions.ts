@@ -64,7 +64,13 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<{ 
   if (!profileRes.ok) return { ok: false, message: profileRes.message };
 
   const levelRes = await completeLevelingProfile({ answers });
-  if (!levelRes.ok) return { ok: false, message: levelRes.message };
+  if (!levelRes.ok) {
+    const msg = String(levelRes.message ?? "").toLowerCase();
+    const canIgnoreLevelingError = msg.includes("nivelación") || msg.includes("leveled");
+    if (!canIgnoreLevelingError) {
+      return { ok: false, message: levelRes.message };
+    }
+  }
 
   const supabase = await createClient({ allowCookieWrites: true });
   const {

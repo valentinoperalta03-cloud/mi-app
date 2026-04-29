@@ -12,7 +12,6 @@ import { ProfileMatchCardsPremium } from "@/components/profile/profile-match-car
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
-import OnboardingPage from "@/app/onboarding/page";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -126,10 +125,8 @@ export default async function PerfilPage() {
     court_position?: string | null;
     preferred_schedule?: string | null;
   };
-  const metadata = user.user_metadata as { full_name?: string | null } | null;
-  const defaultOnboardingName = row.name?.trim() || String(metadata?.full_name ?? "").trim() || "";
   if (row.onboarding_completed !== true) {
-    return <OnboardingPage defaultName={defaultOnboardingName} />;
+    redirect("/onboarding");
   }
   const hasTechnical =
     row.technical_score != null && Number.isFinite(Number(row.technical_score));

@@ -136,8 +136,12 @@ export default function OnboardingPage({ defaultName = "" }: { defaultName?: str
         answers: answers as number[],
       });
       if (!res.ok) {
-        showToast(res.message);
-        return;
+        const msg = String(res.message ?? "").toLowerCase();
+        const canIgnoreLevelingError = msg.includes("nivelación") || msg.includes("leveled");
+        if (!canIgnoreLevelingError) {
+          showToast(res.message);
+          return;
+        }
       }
       window.location.replace("/perfil");
     });
