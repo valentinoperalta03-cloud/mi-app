@@ -32,6 +32,9 @@ export default function OnboardingPage() {
   const [quizIndex, setQuizIndex] = useState(0);
   const [name, setName] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
+  const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
+  const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
+  const [preferredSchedule, setPreferredSchedule] = useState<"manana" | "tarde" | "noche" | "cualquiera" | "">("");
   const [age, setAge] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -127,13 +130,16 @@ export default function OnboardingPage() {
         gender: gender as "masculino" | "femenino",
         age: ageNum,
         avatarUrl: avatarUrl || null,
+        preferred_hand: preferredHand as "derecha" | "izquierda" | "ambas",
+        court_position: courtPosition as "drive" | "reves" | "ambas",
+        preferred_schedule: preferredSchedule as "manana" | "tarde" | "noche" | "cualquiera",
         answers: answers as number[],
       });
       if (!res.ok) {
         showToast(res.message);
         return;
       }
-      window.location.href = "/home";
+      window.location.href = "/perfil";
     });
   }
 
@@ -238,11 +244,89 @@ export default function OnboardingPage() {
                 />
               </label>
 
+              <div className="mb-3">
+                <p className="mb-2 text-sm font-medium text-slate-700">Mano hábil</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "derecha", label: "Derecha" },
+                    { id: "izquierda", label: "Izquierda" },
+                    { id: "ambas", label: "Ambas" },
+                  ].map((opt) => {
+                    const selected = preferredHand === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setPreferredHand(opt.id as "derecha" | "izquierda" | "ambas")}
+                        className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+                          selected ? "border-[#0585FC] bg-[#0585FC]/10 text-[#0461C4]" : "border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <p className="mb-2 text-sm font-medium text-slate-700">Posición en cancha</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "drive", label: "Drive" },
+                    { id: "reves", label: "Revés" },
+                    { id: "ambas", label: "Ambas" },
+                  ].map((opt) => {
+                    const selected = courtPosition === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setCourtPosition(opt.id as "drive" | "reves" | "ambas")}
+                        className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+                          selected ? "border-[#0585FC] bg-[#0585FC]/10 text-[#0461C4]" : "border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-medium text-slate-700">Horario favorito</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "manana", label: "Mañana" },
+                    { id: "tarde", label: "Tarde" },
+                    { id: "noche", label: "Noche" },
+                    { id: "cualquiera", label: "Cualquiera" },
+                  ].map((opt) => {
+                    const selected = preferredSchedule === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() =>
+                          setPreferredSchedule(opt.id as "manana" | "tarde" | "noche" | "cualquiera")
+                        }
+                        className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+                          selected ? "border-[#0585FC] bg-[#0585FC]/10 text-[#0461C4]" : "border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
-                  if (!name.trim() || !gender) {
-                    showToast("Completá nombre y género.");
+                  if (!name.trim() || !gender || !preferredHand || !courtPosition || !preferredSchedule) {
+                    showToast("Completá todos los datos del paso 1.");
                     return;
                   }
                   setStep(2);

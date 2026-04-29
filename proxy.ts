@@ -67,21 +67,13 @@ export async function proxy(request: NextRequest) {
 
   const homePath = await resolveHomePath(supabase, user.id);
   const isAdmin = homePath === "/admin/dashboard";
-  const needsOnboarding = homePath === "/onboarding";
-
-  if (needsOnboarding && pathname !== "/onboarding") {
-    return redirectPreservingSupabaseCookies(request, "/onboarding", response);
-  }
-  if (needsOnboarding && pathname === "/onboarding") {
-    return response;
-  }
 
   if (pathname === "/") {
     return redirectPreservingSupabaseCookies(request, homePath, response);
   }
 
   if (pathname === "/onboarding") {
-    return redirectPreservingSupabaseCookies(request, "/home", response);
+    return response;
   }
 
   if (isPublicAuthPath(pathname)) {

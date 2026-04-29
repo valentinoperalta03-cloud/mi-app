@@ -12,6 +12,7 @@ import { ProfileMatchCardsPremium } from "@/components/profile/profile-match-car
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
+import OnboardingPage from "@/app/onboarding/page";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -27,7 +28,8 @@ import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const PROFILE_SELECT = "name, bio, level, level_of_play, technical_score, age, avatar_url, category, is_leveled" as const;
+const PROFILE_SELECT =
+  "name, bio, level, level_of_play, technical_score, age, avatar_url, category, is_leveled, onboarding_completed, preferred_hand, court_position, preferred_schedule" as const;
 
 const USER_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -116,7 +118,17 @@ export default async function PerfilPage() {
     }
   }
 
-  const row = profile as ProfileRow & { category?: string | null; is_leveled?: boolean | null };
+  const row = profile as ProfileRow & {
+    category?: string | null;
+    is_leveled?: boolean | null;
+    onboarding_completed?: boolean | null;
+    preferred_hand?: string | null;
+    court_position?: string | null;
+    preferred_schedule?: string | null;
+  };
+  if (row.onboarding_completed !== true) {
+    return <OnboardingPage />;
+  }
   const hasTechnical =
     row.technical_score != null && Number.isFinite(Number(row.technical_score));
   const isLeveled =
