@@ -1,5 +1,7 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
+import { DB_TABLES } from "@/lib/db-tables";
 import { getPreferenceClient } from "@/lib/mercadopago";
+import { createServiceClient } from "@/utils/supabase/server";
 
 function parseFeeRate(): number {
   const raw = process.env.MP_MARKETPLACE_FEE ?? "0.05";
@@ -31,7 +33,7 @@ export async function createMPPreference(params: {
   | { error: string }
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
 > {
-  const { amount: rawAmount } = params;
+  let rawAmount = params.amount;
   const accessToken = process.env.MP_ACCESS_TOKEN;
   const successUrl = process.env.MP_SUCCESS_URL;
   const failureUrl = process.env.MP_FAILURE_URL;
@@ -39,6 +41,28 @@ export async function createMPPreference(params: {
 
   if ((!accessToken && !params.clubAccessToken) || !successUrl || !failureUrl || !pendingUrl) {
     return { error: "Falta configuración de Mercado Pago en el servidor." };
+  }
+
+  const service = createServiceClient();
+  const { data: match } = await service
+    .from(DB_TABLES.matches)
+    .select("court_id,scheduled_time")
+    .eq("id", params.matchId)
+    .maybeSingle();
+  const matchTyped = match as { court_id: string | null; scheduled_time: string | null } | null;
+  const hour = String(matchTyped?.scheduled_time ?? "").trim().slice(0, 5);
+  if (matchTyped?.court_id && hour) {
+    const { data: schedule } = await service
+      .from(DB_TABLES.courtSchedules)
+      .select("price_override")
+      .eq("court_id", matchTyped.court_id)
+      .eq("start_time", hour)
+      .not("price_override", "is", null)
+      .maybeSingle();
+    const override = Number((schedule as { price_override: number | null } | null)?.price_override ?? 0);
+    if (Number.isFinite(override) && override > 0) {
+      rawAmount = override;
+    }
   }
 
   const amount = Number(rawAmount);
@@ -86,7 +110,7 @@ export async function createMPPreference(params: {
         external_reference: params.matchId,
         binary_mode: false,
         ...(notificationUrl ? { notification_url: notificationUrl } : {}),
-      } as any,
+      },
     });
 
     const initPoint = preference.init_point ?? preference.sandbox_init_point;

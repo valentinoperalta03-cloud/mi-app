@@ -10,6 +10,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
+import { blockCourtSlotAction, requestReservationRefundAction } from "./actions";
 
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
@@ -25,6 +26,14 @@ type MatchRow = {
   match_status: string | null;
   location_name: string | null;
   courts: CourtEmbed | null;
+};
+type BlockRow = {
+  court_id: string;
+  blocked_date?: string | null;
+  blocked_time?: string | null;
+  date?: string | null;
+  start_time?: string | null;
+  reason?: string | null;
 };
 
 type PageProps = {
@@ -84,6 +93,20 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     .order("scheduled_time", { ascending: true });
 
   const matches = (matchesRaw ?? []) as unknown as MatchRow[];
+  const blocksModern = await supabase
+    .from(DB_TABLES.courtBlocks)
+    .select("court_id,blocked_date,blocked_time,reason")
+    .in("court_id", ctx.courtIds)
+    .eq("blocked_date", selectedDate);
+  const blocksFallback =
+    blocksModern.error != null
+      ? await supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("court_id,date,start_time,reason")
+          .in("court_id", ctx.courtIds)
+          .eq("date", selectedDate)
+      : null;
+  const blocks = ((blocksModern.error ? blocksFallback?.data : blocksModern.data) ?? []) as BlockRow[];
   const creatorIds = Array.from(new Set(matches.map((m) => m.owner_id).filter(Boolean))) as string[];
   const { data: profilesData } = creatorIds.length
     ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
@@ -96,6 +119,13 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   for (const m of matches) {
     const key = `${m.court_id}__${getHourBucket(m)}`;
     if (!slotMap.has(key)) slotMap.set(key, m);
+  }
+  const blockMap = new Map<string, BlockRow>();
+  for (const block of blocks) {
+    const hour = String(block.blocked_time ?? block.start_time ?? "").trim().slice(0, 5);
+    if (!hour) continue;
+    const key = `${block.court_id}__${hour}`;
+    blockMap.set(key, block);
   }
 
   const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
@@ -175,10 +205,44 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   {ctx.courts.map((court) => {
                     const slotKey = `${court.id}__${hour}`;
                     const reservation = slotMap.get(slotKey);
+                    const blocked = blockMap.get(slotKey);
                     if (!reservation) {
                       return (
                         <div key={slotKey} className="min-h-16 border-r border-slate-100/90 bg-slate-50/70 px-2 py-2">
-                          <div className="h-full rounded-xl border border-dashed border-slate-200/80 bg-slate-100/60" />
+                          {blocked ? (
+                            <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-200 bg-rose-100/90 p-2">
+                              <input type="hidden" name="court_id" value={court.id} />
+                              <input type="hidden" name="date" value={selectedDate} />
+                              <input type="hidden" name="time" value={hour} />
+                              <button type="submit" className="w-full rounded-lg bg-rose-600 px-2 py-2 text-xs font-semibold text-white">
+                                Bloqueado
+                              </button>
+                              <p className="mt-1 text-[11px] text-rose-700">{blocked.reason ? blocked.reason : "Toque para desbloquear"}</p>
+                            </form>
+                          ) : (
+                            <details className="h-full rounded-xl border border-dashed border-slate-200/80 bg-slate-100/60 p-2">
+                              <summary className="cursor-pointer list-none text-center text-[11px] font-semibold text-slate-600 [&::-webkit-details-marker]:hidden">
+                                Bloquear horario
+                              </summary>
+                              <form action={blockCourtSlotAction} className="mt-2 space-y-2">
+                                <input type="hidden" name="court_id" value={court.id} />
+                                <input type="hidden" name="date" value={selectedDate} />
+                                <input type="hidden" name="time" value={hour} />
+                                <input
+                                  type="text"
+                                  name="reason"
+                                  placeholder="Motivo (opcional)"
+                                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700"
+                                />
+                                <button
+                                  type="submit"
+                                  className="w-full rounded-lg bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white"
+                                >
+                                  Confirmar
+                                </button>
+                              </form>
+                            </details>
+                          )}
                         </div>
                       );
                     }
@@ -244,12 +308,26 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           </dl>
 
           <div className="mt-4">
-            <Link
-              href={`/admin/reservas?date=${selectedDate}`}
-              className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cerrar detalle
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {String(selectedMatch.payment_status ?? "").toLowerCase() === "paid" ? (
+                <form action={requestReservationRefundAction}>
+                  <input type="hidden" name="match_id" value={selectedMatch.id} />
+                  <input type="hidden" name="date" value={selectedDate} />
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Solicitar reembolso
+                  </button>
+                </form>
+              ) : null}
+              <Link
+                href={`/admin/reservas?date=${selectedDate}`}
+                className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cerrar detalle
+              </Link>
+            </div>
           </div>
         </section>
       ) : null}

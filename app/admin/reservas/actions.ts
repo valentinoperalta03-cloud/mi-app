@@ -99,3 +99,140 @@ export async function createManualCourtBlockAction(
   revalidatePath("/club/gestion");
   return { success: true, message: "Bloqueo creado." };
 }
+
+function normalizeHour(value: string) {
+  const v = value.trim();
+  return v.length >= 5 ? v.slice(0, 5) : v;
+}
+
+async function toggleCourtBlockRow(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  courtId: string;
+  date: string;
+  time: string;
+  reason: string;
+  userId: string;
+}) {
+  const { supabase, courtId, date, time, reason, userId } = params;
+
+  const modernFilter = supabase
+    .from(DB_TABLES.courtBlocks)
+    .select("id")
+    .eq("court_id", courtId)
+    .eq("blocked_date", date)
+    .eq("blocked_time", time)
+    .maybeSingle();
+  const modernExisting = await modernFilter;
+
+  if (!modernExisting.error) {
+    if (modernExisting.data?.id) {
+      const { error } = await supabase.from(DB_TABLES.courtBlocks).delete().eq("id", modernExisting.data.id);
+      return { blocked: false, error };
+    }
+    const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
+      court_id: courtId,
+      blocked_date: date,
+      blocked_time: time,
+      reason: reason || null,
+      created_by: userId,
+    });
+    return { blocked: true, error };
+  }
+
+  const legacyExisting = await supabase
+    .from(DB_TABLES.courtBlocks)
+    .select("id")
+    .eq("court_id", courtId)
+    .eq("date", date)
+    .eq("start_time", time)
+    .maybeSingle();
+  if (legacyExisting.data?.id) {
+    const { error } = await supabase.from(DB_TABLES.courtBlocks).delete().eq("id", legacyExisting.data.id);
+    return { blocked: false, error };
+  }
+  const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
+    court_id: courtId,
+    date,
+    start_time: time,
+    reason: reason || null,
+    created_by: userId,
+  });
+  return { blocked: true, error };
+}
+
+export async function blockCourtSlot(courtId: string, date: string, time: string, reason?: string) {
+  if (!courtId || !date || !time) {
+    return { success: false, message: "Datos incompletos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    return { success: false, message: "Sesion invalida." };
+  }
+  if (!ctx.courtIds.includes(courtId)) {
+    return { success: false, message: "La cancha no pertenece a tu club." };
+  }
+
+  const toggled = await toggleCourtBlockRow({
+    supabase,
+    courtId,
+    date,
+    time: normalizeHour(time),
+    reason: String(reason ?? "").trim(),
+    userId: ctx.userId,
+  });
+  if (toggled.error) {
+    return { success: false, message: toggled.error.message };
+  }
+
+  revalidatePath("/admin/reservas");
+  revalidatePath("/club/gestion");
+  return { success: true, message: toggled.blocked ? "Horario bloqueado." : "Bloqueo removido." };
+}
+
+export async function blockCourtSlotAction(formData: FormData): Promise<void> {
+  const courtId = getField(formData, "court_id");
+  const date = getField(formData, "date");
+  const time = getField(formData, "time");
+  const reason = getField(formData, "reason");
+  await blockCourtSlot(courtId, date, time, reason);
+  redirect(`/admin/reservas?date=${encodeURIComponent(date)}`);
+}
+
+export async function requestReservationRefundAction(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  const date = getField(formData, "date");
+  if (!matchId) {
+    redirect("/admin/reservas");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    redirect("/login");
+  }
+
+  const { data: row } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,court_id,match_type,payment_status")
+    .eq("id", matchId)
+    .maybeSingle();
+  const typed = row as { id: string; court_id: string; match_type: string | null; payment_status: string | null } | null;
+  if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
+    redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+  }
+  if (String(typed.payment_status ?? "").toLowerCase() !== "paid") {
+    redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+  }
+
+  await supabase
+    .from(DB_TABLES.matches)
+    .update({ payment_status: "refund_requested" })
+    .eq("id", matchId);
+  await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
+
+  revalidatePath("/admin/reservas");
+  revalidatePath("/admin/finanzas/reembolsos");
+  redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}`);
+}

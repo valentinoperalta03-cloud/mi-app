@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -22,6 +23,12 @@ export default async function AdminFinanzasPage() {
           <code className="text-xs text-slate-400">payment_status = paid</code>.
         </p>
       </header>
+      <Link
+        href="/admin/finanzas/reembolsos"
+        className="inline-flex w-fit rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+      >
+        Reembolsos
+      </Link>
       <FinanceModule courtIds={ctx.courtIds} courts={ctx.courts} />
     </div>
   );

@@ -18,6 +18,9 @@ export async function createCourt(formData: FormData): Promise<void> {
   const name = getField(formData, "name");
   const priceRaw = getField(formData, "price");
   const clubId = getField(formData, "club_id");
+  const surface = getField(formData, "surface");
+  const indoor = formData.get("indoor") === "on";
+  const imageUrl = getField(formData, "image_url");
 
   if (!name || !clubId) {
     redirectCanchasError("Completá nombre y club.");
@@ -40,12 +43,49 @@ export async function createCourt(formData: FormData): Promise<void> {
     club_id: clubId,
     name,
     price,
+    surface: surface || null,
+    indoor,
+    image_url: imageUrl || null,
   });
 
   if (error) {
     redirectCanchasError(error.message);
   }
 
+  revalidatePath("/admin/canchas");
+  redirect("/admin/canchas");
+}
+
+export async function updateCourt(formData: FormData): Promise<void> {
+  const courtId = getField(formData, "court_id");
+  const name = getField(formData, "name");
+  const priceRaw = getField(formData, "price");
+  const surface = getField(formData, "surface");
+  const indoor = formData.get("indoor") === "on";
+
+  if (!courtId || !name) {
+    redirectCanchasError("Completá los datos de la cancha.");
+  }
+  const price = Number.parseInt(priceRaw, 10);
+  if (!Number.isFinite(price) || price < 0) {
+    redirectCanchasError("Precio inválido.");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.courtIds.includes(courtId)) {
+    redirectCanchasError("Cancha no autorizada.");
+  }
+
+  const { error } = await supabase
+    .from(DB_TABLES.courts)
+    .update({ name, price, surface: surface || null, indoor })
+    .eq("id", courtId);
+
+  if (error) {
+    redirectCanchasError(error.message);
+  }
   revalidatePath("/admin/canchas");
   redirect("/admin/canchas");
 }
