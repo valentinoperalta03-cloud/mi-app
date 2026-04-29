@@ -18,15 +18,8 @@ type PaymentRefundRow = {
   user_id: string;
   amount: number | null;
   status: string | null;
-  matches: MatchEmbed | null;
+  matches: MatchEmbed[] | null;
 };
-
-function embedMatch(
-  m: MatchEmbed | MatchEmbed[] | null | undefined
-): MatchEmbed | null {
-  if (m == null) return null;
-  return Array.isArray(m) ? m[0] ?? null : m;
-}
 
 export default async function AdminReembolsosPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -56,14 +49,14 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
       user_id: string;
       amount: number | null;
       status: string | null;
-      matches: MatchEmbed | MatchEmbed[] | null;
+      matches: MatchEmbed[] | null;
     };
     return {
       id: r.id,
       user_id: r.user_id,
       amount: r.amount,
       status: r.status,
-      matches: embedMatch(r.matches),
+      matches: r.matches,
     };
   });
 
@@ -105,7 +98,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
                   <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">{row.status ?? "—"}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
-                  {courtNameById.get(row.matches?.court_id ?? "") ?? "Cancha"} · {row.matches?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
+                  {courtNameById.get(row.matches?.[0]?.court_id ?? "") ?? "Cancha"} · {row.matches?.[0]?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
                 </p>
               </li>
             ))}
