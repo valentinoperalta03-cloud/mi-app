@@ -83,36 +83,37 @@ export async function createMPPreference(params: {
     : getPreferenceClient();
 
   try {
-    const preference = await preferenceClient.create({
-      body: {
-        items: [
-          {
-            id: params.matchId,
-            title: `Reserva de pádel - ${params.courtName}`,
-            description: `Reserva en ${params.clubName} el ${params.date}`,
-            quantity: 1,
-            unit_price: total,
-            currency_id: "ARS",
-            category_id: "sports",
-          },
-        ],
-        payer: {
-          email: params.payerEmail,
-          first_name: params.payerFirstName ?? "",
-          last_name: params.payerLastName ?? "",
+    const preferenceBody = {
+      items: [
+        {
+          id: params.matchId,
+          title: `Reserva de pádel - ${params.courtName}`,
+          description: `Reserva en ${params.clubName} el ${params.date}`,
+          quantity: 1,
+          unit_price: total,
+          currency_id: "ARS",
+          category_id: "sports",
         },
-        statement_descriptor: "PADELIBRE",
-        marketplace_fee: marketplaceFee,
-        back_urls: {
-          success: successUrl,
-          failure: failureUrl,
-          pending: pendingUrl,
-        },
-        auto_return: "approved",
-        external_reference: params.externalReference ?? params.matchId,
-        binary_mode: false,
-        ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+      ],
+      payer: {
+        email: params.payerEmail,
+        first_name: params.payerFirstName ?? "",
+        last_name: params.payerLastName ?? "",
       },
+      statement_descriptor: "PADELIBRE",
+      marketplace_fee: marketplaceFee,
+      back_urls: {
+        success: successUrl,
+        failure: failureUrl,
+        pending: pendingUrl,
+      },
+      auto_return: "approved" as const,
+      external_reference: params.externalReference ?? params.matchId,
+      binary_mode: false,
+      ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+    };
+    const preference = await preferenceClient.create({
+      body: preferenceBody as Parameters<typeof preferenceClient.create>[0]["body"],
     });
 
     const initPoint = preference.init_point ?? preference.sandbox_init_point;

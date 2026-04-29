@@ -11,6 +11,23 @@ type PageProps = {
   searchParams: Promise<{ month?: string }>;
 };
 
+type MatchEmbed = { id: string; court_id: string; scheduled_date: string | null };
+
+type PaymentRefundRow = {
+  id: string;
+  user_id: string;
+  amount: number | null;
+  status: string | null;
+  matches: MatchEmbed | null;
+};
+
+function embedMatch(
+  m: MatchEmbed | MatchEmbed[] | null | undefined
+): MatchEmbed | null {
+  if (m == null) return null;
+  return Array.isArray(m) ? m[0] ?? null : m;
+}
+
 export default async function AdminReembolsosPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const supabase = await createClient();
@@ -33,13 +50,22 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
           .order("created_at", { ascending: false })
       : { data: [] };
 
-  const rows = (payments ?? []) as Array<{
-    id: string;
-    user_id: string;
-    amount: number | null;
-    status: string | null;
-    matches: { id: string; court_id: string; scheduled_date: string | null } | null;
-  }>;
+  const rows: PaymentRefundRow[] = ((payments ?? []) as unknown[]).map((raw) => {
+    const r = raw as {
+      id: string;
+      user_id: string;
+      amount: number | null;
+      status: string | null;
+      matches: MatchEmbed | MatchEmbed[] | null;
+    };
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      amount: r.amount,
+      status: r.status,
+      matches: embedMatch(r.matches),
+    };
+  });
 
   const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
   const { data: profiles } = userIds.length
