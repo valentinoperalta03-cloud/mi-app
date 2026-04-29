@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createServiceClient } from "@/utils/supabase/server";
 
 export async function resolveHomePath(
   supabase: SupabaseClient,
@@ -21,7 +22,18 @@ export async function resolveHomePath(
     .eq("user_id", userId)
     .maybeSingle();
   const row = profile as { onboarding_completed?: boolean | null; is_leveled?: boolean | null } | null;
-  if (!row?.onboarding_completed || !row?.is_leveled) {
+  if (row?.onboarding_completed === true) {
+    return "/home";
+  }
+  if ((row?.onboarding_completed === false || row?.onboarding_completed == null) && row?.is_leveled === true) {
+    const service = createServiceClient();
+    await service
+      .from(DB_TABLES.profiles)
+      .update({ onboarding_completed: true })
+      .eq("user_id", userId);
+    return "/home";
+  }
+  if (!row?.onboarding_completed && !row?.is_leveled) {
     return "/onboarding";
   }
   return "/home";
@@ -44,6 +56,7 @@ export function isJugadorAppPath(pathname: string): boolean {
     "/perfil",
     "/jugador",
     "/matches",
+    "/onboarding",
     "/clases",
     "/torneos",
     "/test",
