@@ -22,6 +22,9 @@ export function EditProfileForm({
   defaultBio,
   defaultAvatarUrl,
   defaultGender,
+  defaultPreferredHand,
+  defaultCourtPosition,
+  defaultPreferredSchedule,
   competitiveLevelLine,
 }: {
   userId: string;
@@ -30,6 +33,9 @@ export function EditProfileForm({
   defaultBio: string | null;
   defaultAvatarUrl: string | null;
   defaultGender: "masculino" | "femenino" | null;
+  defaultPreferredHand: string | null;
+  defaultCourtPosition: string | null;
+  defaultPreferredSchedule: string | null;
   /** Solo lectura: nivel competitivo (no editable acá). */
   competitiveLevelLine: string;
 }) {
@@ -38,6 +44,9 @@ export function EditProfileForm({
   const [previewUrl, setPreviewUrl] = useState(defaultAvatarUrl);
   const [avatarUrl, setAvatarUrl] = useState(defaultAvatarUrl ?? "");
   const [gender, setGender] = useState<"masculino" | "femenino">(defaultGender ?? "masculino");
+  const [preferredHand, setPreferredHand] = useState<string>(defaultPreferredHand ?? "derecha");
+  const [courtPosition, setCourtPosition] = useState<string>(defaultCourtPosition ?? "drive");
+  const [preferredSchedule, setPreferredSchedule] = useState<string>(defaultPreferredSchedule ?? "cualquiera");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,6 +272,85 @@ export function EditProfileForm({
             className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
           />
         </label>
+
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Mano hábil</span>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: "derecha", label: "Derecha" },
+              { value: "izquierda", label: "Izquierda" },
+              { value: "ambas", label: "Ambas" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setPreferredHand(option.value)}
+                aria-pressed={preferredHand === option.value}
+                className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
+                  preferredHand === option.value
+                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="preferred_hand" value={preferredHand} />
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Posición en cancha</span>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { value: "drive", label: "Drive" },
+              { value: "reves", label: "Revés" },
+              { value: "ambas", label: "Ambas" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setCourtPosition(option.value)}
+                aria-pressed={courtPosition === option.value}
+                className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
+                  courtPosition === option.value
+                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="court_position" value={courtPosition} />
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Horario favorito</span>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: "manana", label: "Mañana" },
+              { value: "tarde", label: "Tarde" },
+              { value: "noche", label: "Noche" },
+              { value: "cualquiera", label: "Cualquiera" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setPreferredSchedule(option.value)}
+                aria-pressed={preferredSchedule === option.value}
+                className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
+                  preferredSchedule === option.value
+                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="preferred_schedule" value={preferredSchedule} />
+        </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <button

@@ -58,11 +58,18 @@ export async function updateMyProfile(
     return { ok: false, message: "La URL del avatar es inválida." };
   }
 
+  const preferredHandRaw = String(formData.get("preferred_hand") ?? "").trim().toLowerCase();
+  const courtPositionRaw = String(formData.get("court_position") ?? "").trim().toLowerCase();
+  const preferredScheduleRaw = String(formData.get("preferred_schedule") ?? "").trim().toLowerCase();
+
   const payload: Record<string, unknown> = {
     name,
     age,
     bio: bio === "" ? null : bio,
     gender: genderRaw,
+    preferred_hand: preferredHandRaw || null,
+    court_position: courtPositionRaw || null,
+    preferred_schedule: preferredScheduleRaw || null,
   };
 
   payload.avatar_url = avatarUrlRaw === "" ? null : avatarUrlRaw;
