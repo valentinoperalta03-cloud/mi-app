@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function LandingPage() {
@@ -10,12 +11,7 @@ export default function LandingPage() {
         {/* Logo */}
         <div className="space-y-3">
           <div className="flex justify-center">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-              <circle cx="32" cy="32" r="30" fill="none" stroke="white" strokeWidth="3" />
-              <path d="M10 24 Q32 20 54 24" stroke="white" strokeWidth="2.5" fill="none" />
-              <path d="M10 32 Q32 28 54 32" stroke="white" strokeWidth="2.5" fill="none" />
-              <path d="M10 40 Q32 36 54 40" stroke="white" strokeWidth="2.5" fill="none" />
-            </svg>
+            <Image src="/logo.png" alt="PadeLibre" width={64} height={64} className="rounded-2xl" />
           </div>
           <h1 className="text-4xl font-bold text-white tracking-tight">Padelibre</h1>
           <p className="text-white/80 text-lg">La app de pádel de Argentina</p>

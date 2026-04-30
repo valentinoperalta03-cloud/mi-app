@@ -47,11 +47,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+      { url: "/logo.png", type: "image/png" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: ["/icon.svg"],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+    shortcut: ["/logo.png"],
   },
   robots: { index: true, follow: true },
 };

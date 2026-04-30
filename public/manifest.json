@@ -1,10 +1,17 @@
 {
-  "name": "FaltaUno",
-  "short_name": "FaltaUno",
+  "name": "Padelibre",
+  "short_name": "Padelibre",
   "description": "Reserva canchas y gestiona tus partidos de padel",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#0585FC",
+  "theme_color": "#0585FC",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
   "lang": "es"
 }
