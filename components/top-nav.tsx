@@ -85,6 +85,15 @@ export default function TopNav() {
     };
   }, []);
 
+  useEffect(() => {
+    document.body.classList.toggle("player-drawer-open", open);
+    window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open } }));
+    return () => {
+      document.body.classList.remove("player-drawer-open");
+      window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open: false } }));
+    };
+  }, [open]);
+
   const initial = useMemo(() => (name.trim()[0] ?? "J").toUpperCase(), [name]);
 
   function closeDrawer() {
@@ -105,7 +114,7 @@ export default function TopNav() {
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center">
         <div className="w-full max-w-md">
           <div
-            className="flex h-14 items-center justify-between border-b border-[rgba(5,133,252,0.12)] bg-[rgba(255,255,255,0.92)] px-4 backdrop-blur-[20px] dark:border-[rgba(5,133,252,0.15)] dark:bg-[rgba(0,0,0,0.92)]"
+            className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 bg-[#090d14]/95 px-4 backdrop-blur-[20px]"
           >
             <div className="flex items-center gap-2">
               <span
@@ -120,7 +129,7 @@ export default function TopNav() {
             <div className="flex items-center gap-1">
               <Link
                 href="/notificaciones"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
                 aria-label="Ir a notificaciones"
               >
                 <Bell size={20} className="text-[#0585FC]" />
@@ -132,7 +141,7 @@ export default function TopNav() {
               </Link>
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
                 onClick={() => setOpen(true)}
                 aria-label="Abrir menú lateral"
               >

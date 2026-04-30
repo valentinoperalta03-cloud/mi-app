@@ -19,6 +19,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
   const [myName, setMyName] = useState<string>("Perfil");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -41,9 +42,21 @@ export default function BottomNav() {
     };
   }, []);
 
+  useEffect(() => {
+    const onDrawerToggle = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      setDrawerOpen(Boolean(custom.detail?.open));
+    };
+    setDrawerOpen(document.body.classList.contains("player-drawer-open"));
+    window.addEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+    return () => window.removeEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+  }, []);
+
   return (
     <nav
-      className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4"
+      className={`pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 transition-all duration-200 ${
+        drawerOpen ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+      }`}
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navegación principal"
     >
