@@ -78,7 +78,7 @@ export function GroupChatClient({
   }, [groupId]);
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-slate-50 px-4 pb-4 pt-6">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[var(--bg-app)] px-4 pb-4 pt-6">
       <header className="mb-3 shrink-0 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Link href="/comunidad/mensajes" className="text-sm font-semibold text-[#0585FC]">

@@ -85,7 +85,7 @@ export default async function CrearPartidoPage() {
   }));
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-slate-50 px-4 pb-24 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-2">
         <Link href="/home" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver al inicio

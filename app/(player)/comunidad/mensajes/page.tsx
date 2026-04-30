@@ -43,7 +43,7 @@ export default async function MensajesPage() {
     : { data: [] };
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-slate-50 px-4 pb-32 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-32 pt-6">
       <header className="mb-6 space-y-2">
         <Link
           href="/comunidad"

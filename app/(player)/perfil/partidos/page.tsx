@@ -19,7 +19,7 @@ export default async function PerfilPartidosPage() {
   const cards = await fetchProfileMatchCards(supabase, user.id, 80);
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-slate-50 px-4 pb-28 pt-6">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 bg-[var(--bg-app)] px-4 pb-28 pt-6">
       <div className="flex items-center gap-3">
         <Link
           href="/perfil"

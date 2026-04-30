@@ -3,7 +3,7 @@ import Image from "next/image";
 export default function ComunidadLoading() {
   return (
     <div
-      className="mx-auto min-h-screen w-full max-w-md space-y-8 bg-slate-50 px-4 pb-24 pt-6"
+      className="mx-auto min-h-screen w-full max-w-md space-y-8 bg-[var(--bg-app)] px-4 pb-24 pt-6"
       aria-busy
       aria-label="Cargando comunidad"
     >
