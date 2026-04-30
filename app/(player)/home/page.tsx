@@ -22,24 +22,39 @@ type HomePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const primaryActions = [
+const quickActions = [
   {
     title: "Crear Partido",
     href: "/crear-partido",
     Icon: CirclePlus,
     desc: "Organizá un partido en segundos",
+    gradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+    shadow: "0 4px 16px rgba(5,133,252,0.35)",
   },
   {
     title: "Buscar partido",
     desc: "Sumate a partidos abiertos",
     href: "/buscar-partido",
     Icon: Search,
+    gradient: "linear-gradient(135deg, #38bdf8 0%, #0585FC 100%)",
+    shadow: "0 4px 16px rgba(56,189,248,0.35)",
   },
-] as const;
-
-const secondaryActions = [
-  { title: "Aprender", href: "/clases", Icon: GraduationCap },
-  { title: "Competir", href: "/torneos", Icon: Trophy },
+  {
+    title: "Aprender",
+    href: "/clases",
+    Icon: GraduationCap,
+    desc: "Clases y entrenamientos",
+    gradient: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
+    shadow: "0 4px 16px rgba(168,85,247,0.35)",
+  },
+  {
+    title: "Competir",
+    href: "/torneos",
+    Icon: Trophy,
+    desc: "Torneos y competencias",
+    gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    shadow: "0 4px 16px rgba(245,158,11,0.35)",
+  },
 ] as const;
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -100,48 +115,37 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ) : null}
 
       <section
-        className="relative overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-[var(--shadow-card)]"
+        className="relative overflow-hidden rounded-3xl p-6 text-white"
+        style={{
+          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          boxShadow: "0 4px 20px rgba(5,133,252,0.3)",
+        }}
       >
         <div className="relative z-10 flex items-start gap-3">
-          <span
-            className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-          >
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
             <Zap size={20} strokeWidth={2.25} aria-hidden />
           </span>
-          <h1 className="text-xl font-bold leading-tight tracking-tight text-[var(--text-primary)] md:text-[1.35rem]">
+          <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
           </h1>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
-        {primaryActions.map(({ title, desc, href, Icon }) => (
-          <Link
-            key={title}
-            href={href}
-            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)] transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
-          >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 ring-1 ring-sky-100">
-              <Icon size={22} className="text-[#0585FC]" aria-hidden />
-            </span>
-            <div className="mt-3">
-              <h2 className="text-[15px] font-bold leading-tight text-[var(--text-primary)]">{title}</h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-tertiary)]">{desc}</p>
-            </div>
-          </Link>
-        ))}
-      </section>
-
       <section className="grid grid-cols-2 gap-3">
-        {secondaryActions.map(({ title, href, Icon }) => (
+        {quickActions.map(({ title, desc, href, Icon, gradient, shadow }) => (
           <Link
             key={title}
             href={href}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-card)]"
+            className="group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-white transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
+            style={{ background: gradient, boxShadow: shadow }}
           >
-            <Icon size={16} className="text-[#0585FC]" />
-            {title}
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <Icon size={20} className="text-white" aria-hidden />
+            </span>
+            <div className="mt-2">
+              <h2 className="text-base font-bold leading-tight">{title}</h2>
+              <p className="mt-0.5 text-xs leading-snug text-white/80">{desc}</p>
+            </div>
           </Link>
         ))}
       </section>

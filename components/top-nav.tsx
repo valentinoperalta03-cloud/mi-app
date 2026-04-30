@@ -116,7 +116,7 @@ export default function TopNav() {
                 <path d="M4 11 Q11 9 18 11" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
                 <path d="M4 14 Q11 12 18 14" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
               </svg>
-              <span className="text-lg font-bold tracking-tight text-[#0f172a] dark:text-white" style={{ letterSpacing: "-0.02em" }}>
+              <span className="text-lg font-bold tracking-tight text-[#0585FC] dark:text-[#38bdf8]" style={{ letterSpacing: "-0.02em" }}>
                 Padelibre
               </span>
             </div>
@@ -144,6 +144,10 @@ export default function TopNav() {
               </button>
             </div>
           </div>
+          <div
+            className="h-0.5 w-full"
+            style={{ background: "linear-gradient(90deg, #0585FC, #38bdf8, #0585FC)" }}
+          />
         </div>
       </header>
 
