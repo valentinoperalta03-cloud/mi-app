@@ -115,6 +115,7 @@ export default function TopNav() {
         <div className="w-full max-w-md">
           <div
             className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 bg-[#090d14]/95 px-4 backdrop-blur-[20px]"
+            style={{ background: "linear-gradient(135deg, #080d16 0%, #101826 100%)" }}
           >
             <div className="flex items-center gap-2">
               <span

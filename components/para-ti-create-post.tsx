@@ -175,6 +175,17 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
 export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) {
   const [open, setOpen] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const onDrawerToggle = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      setDrawerOpen(Boolean(custom.detail?.open));
+    };
+    setDrawerOpen(document.body.classList.contains("player-drawer-open"));
+    window.addEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+    return () => window.removeEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+  }, []);
 
   const handleOpen = useCallback(() => {
     setSessionKey((k) => k + 1);
@@ -188,7 +199,11 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
 
   return (
     <>
-      <div className="pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2">
+      <div
+        className={`pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 transition-all duration-200 ${
+          drawerOpen ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+        }`}
+      >
         <div className="pointer-events-auto relative h-full w-full">
           <div className="absolute bottom-28 right-4">
             <button
