@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle, LogOut, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import ThemeToggleButton from "@/components/theme-toggle-button";
 import {
   adminCard,
   adminKicker,
@@ -76,11 +77,12 @@ export default async function AdminConfigPage() {
       </header>
 
       <section className="flex flex-col gap-4 md:grid md:grid-cols-2">
-        <div
-          className={`flex h-full flex-col rounded-2xl border p-6 ${
+        <Link
+          href="/admin/config/mp-connect"
+          className={`group flex h-full flex-col rounded-2xl border p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.1)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:shadow-lg ${
             isMpConnected
-              ? "border-emerald-200/70 bg-emerald-50/70"
-              : "border-amber-200/70 bg-amber-50/70"
+              ? "border-emerald-200/70 bg-gradient-to-br from-emerald-500/10 to-teal-500/8 hover:border-emerald-300/80"
+              : "border-amber-200/70 bg-gradient-to-br from-amber-500/10 to-yellow-500/8 hover:border-amber-300/80"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -93,20 +95,13 @@ export default async function AdminConfigPage() {
               {isMpConnected ? "Mercado Pago conectado ✓" : "Sin conectar"}
             </p>
           </div>
-          <p className="mt-2 text-sm text-slate-700">
-            {isMpConnected ? `MP User ID: ${mpUserId}` : "Conectá tu cuenta para cobrar reservas del club."}
-          </p>
-        </div>
-        <Link
-          href="/admin/config/mp-connect"
-          className={`group flex h-full flex-col rounded-2xl border border-emerald-200/55 bg-gradient-to-br from-emerald-500/10 to-teal-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.1)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-emerald-300/80 hover:shadow-lg`}
-        >
-          <p className="text-sm font-semibold text-emerald-700">Cobros</p>
           <p className="mt-2 text-base font-bold text-slate-900">Mercado Pago</p>
           <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Conectá la cuenta del club para cobrar reservas con split de comisión.
+            {isMpConnected
+              ? `Cuenta activa. MP User ID: ${mpUserId}`
+              : "Conectá la cuenta del club para cobrar reservas con split de comisión."}
           </p>
-          <span className="mt-5 text-sm font-semibold text-emerald-600 group-hover:text-emerald-500">
+          <span className={`mt-5 text-sm font-semibold ${isMpConnected ? "text-emerald-600 group-hover:text-emerald-500" : "text-amber-600 group-hover:text-amber-500"}`}>
             {isMpConnected ? "Reconectar" : "Conectar"}
           </span>
         </Link>
@@ -133,7 +128,7 @@ export default async function AdminConfigPage() {
           <span className="mt-5 text-sm font-semibold text-emerald-600">Abrir</span>
         </Link>
         <Link
-          href="/club/horarios"
+          href="/admin/canchas"
           className={`group flex h-full flex-col rounded-2xl border border-[#0585FC]/20/55 bg-gradient-to-br from-[#0585FC]/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-[#0585FC]/30/80 hover:shadow-lg`}
         >
           <p className="text-sm font-semibold text-[#0461C4]">Horarios</p>
@@ -147,7 +142,7 @@ export default async function AdminConfigPage() {
           </span>
         </Link>
         <Link
-          href="/club/gestion"
+          href="/admin/reservas"
           className={`group flex h-full flex-col rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-500/8 to-slate-400/6 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.08)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-lg`}
         >
           <p className="text-sm font-semibold text-slate-600">Turnos</p>
@@ -159,6 +154,13 @@ export default async function AdminConfigPage() {
             Abrir
           </span>
         </Link>
+      </section>
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900">Apariencia</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500">Personalizá el modo claro/oscuro del panel.</p>
+        <div className="mt-4">
+          <ThemeToggleButton />
+        </div>
       </section>
       <section className={adminCard}>
         <h2 className="text-base font-bold tracking-tight text-slate-900">Sesión</h2>
