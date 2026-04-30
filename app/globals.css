@@ -10,7 +10,7 @@
 
 /* CSS Variables for theming */
 :root {
-  --bg-app: #f8fafc;
+  --bg-app: #f2f2f7;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
   --bg-subtle: #f1f5f9;
@@ -19,22 +19,24 @@
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
   --border-default: rgba(0,0,0,0.06);
-  --border-subtle: #e2e8f0;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  --border-subtle: rgba(0,0,0,0.08);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  --glass-bg: rgba(255,255,255,0.85);
 }
 
 .dark {
-  --bg-app: #0a0f1a;
-  --bg-card: #111827;
+  --bg-app: #000000;
+  --bg-card: #1c1c1e;
   --bg-card-hover: #1f2937;
-  --bg-subtle: #1f2937;
+  --bg-subtle: #2c2c2e;
   --bg-input: #1f2937;
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
   --text-tertiary: #6b7280;
   --border-default: rgba(255,255,255,0.06);
-  --border-subtle: #1f2937;
+  --border-subtle: rgba(255,255,255,0.08);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+  --glass-bg: rgba(28,28,30,0.85);
 }
 
 /* Base */
@@ -73,6 +75,9 @@ body::before {
 .text-slate-500, .text-slate-600 { color: var(--text-tertiary) !important; }
 .border-slate-200, .border-slate-100 { border-color: var(--border-subtle) !important; }
 .border-black\/\[0\.06\] { border-color: var(--border-default) !important; }
+.shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: var(--shadow-card) !important; }
+.rounded-\[2\.5rem\] { border-radius: 1.5rem !important; }
+.rounded-\[2rem\] { border-radius: 1rem !important; }
 
 /* Inputs */
 input, select, textarea {

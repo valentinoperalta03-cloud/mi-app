@@ -106,11 +106,7 @@ export default function TopNav() {
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center">
         <div className="w-full max-w-md">
           <div
-            className="flex h-14 items-center justify-between px-4"
-            style={{
-              background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-              boxShadow: "0 2px 12px rgba(5,133,252,0.3)",
-            }}
+            className="flex h-14 items-center justify-between border-b border-black/10 bg-white/85 px-4 backdrop-blur-[20px] dark:border-white/10 dark:bg-[#1c1c1ed9]"
           >
             <div className="flex items-center gap-2">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -120,7 +116,7 @@ export default function TopNav() {
                 <path d="M4 11 Q11 9 18 11" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
                 <path d="M4 14 Q11 12 18 14" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
               </svg>
-              <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
+              <span className="text-lg font-bold tracking-tight text-[#0f172a] dark:text-white" style={{ letterSpacing: "-0.02em" }}>
                 Padelibre
               </span>
             </div>
@@ -128,10 +124,10 @@ export default function TopNav() {
             <div className="flex items-center gap-1">
               <Link
                 href="/notificaciones"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10"
                 aria-label="Ir a notificaciones"
               >
-                <Bell size={20} className="text-white/90" />
+                <Bell size={20} className="text-[#0f172a] dark:text-white/90" />
                 {unreadCount > 0 ? (
                   <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -140,19 +136,14 @@ export default function TopNav() {
               </Link>
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10"
                 onClick={() => setOpen(true)}
                 aria-label="Abrir menú lateral"
               >
-                <Menu size={20} className="text-white/90" />
+                <Menu size={20} className="text-[#0f172a] dark:text-white/90" />
               </button>
             </div>
           </div>
-
-          <div
-            className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
-          />
         </div>
       </header>
 
@@ -176,15 +167,15 @@ export default function TopNav() {
                 <motion.aside
                   className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl"
                   style={{
-                    background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-                    boxShadow: "-8px 0 32px rgba(5,133,252,0.25)",
+                    background: "var(--bg-card)",
+                    boxShadow: "var(--shadow-card)",
                   }}
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "100%" }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
-                  <div className="border-b border-white/10 p-5">
+                  <div className="border-b border-[var(--border-subtle)] p-5">
                     <div className="flex items-center gap-3">
                       {avatarUrl?.trim() ? (
                         // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
@@ -193,15 +184,15 @@ export default function TopNav() {
                           alt=""
                           width={44}
                           height={44}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-white/40"
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-[var(--border-subtle)]"
                         />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/40">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-sm font-bold text-[var(--text-primary)] ring-2 ring-[var(--border-subtle)]">
                           {initial}
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="truncate font-bold text-white">{name}</p>
+                        <p className="truncate font-bold text-[var(--text-primary)]">{name}</p>
                         <div className="mt-1">
                           <Badge variant="brand">{category ? `Nivel ${category}` : "Sin nivel asignado"}</Badge>
                         </div>
@@ -209,7 +200,7 @@ export default function TopNav() {
                     </div>
                   </div>
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-blue-200/60">TU CUENTA</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">TU CUENTA</p>
                   {accountItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -217,9 +208,9 @@ export default function TopNav() {
                         key={item.href}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
+                        className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-white">
+                        <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -227,7 +218,7 @@ export default function TopNav() {
                     );
                   })}
 
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-blue-200/60">SOPORTE</p>
+                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">SOPORTE</p>
                   {supportItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -235,9 +226,9 @@ export default function TopNav() {
                         key={item.label}
                         href={item.href}
                         onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
+                        className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
                       >
-                        <span className="rounded-full bg-white/5 p-2 text-white">
+                        <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
                           <Icon size={16} />
                         </span>
                         <span>{item.label}</span>
@@ -249,9 +240,9 @@ export default function TopNav() {
                     type="button"
                     onClick={() => void handleSignOut()}
                     disabled={busy}
-                    className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-400/25 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-900/30"
                   >
-                    <span className="rounded-full bg-red-500/10 p-2 text-red-300">
+                    <span className="rounded-full bg-red-100 p-2 text-red-500 dark:bg-red-950/30 dark:text-red-300">
                       <LogOut size={16} />
                     </span>
                     <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>

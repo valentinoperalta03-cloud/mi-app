@@ -50,9 +50,9 @@ export default function BottomNav() {
       <div
         className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl px-2 py-2 backdrop-blur-[20px]"
         style={{
-          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-          boxShadow: "0 -2px 20px rgba(5,133,252,0.25)",
-          border: "1px solid rgba(255,255,255,0.15)",
+          background: "var(--glass-bg)",
+          boxShadow: "0 -1px 0 rgba(0,0,0,0.05)",
+          border: "1px solid rgba(0,0,0,0.08)",
         }}
       >
         {items.map((item) => {
@@ -69,13 +69,13 @@ export default function BottomNav() {
               aria-label={`Ir a ${item.label}`}
               aria-current={active ? "page" : undefined}
               className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition-colors ${
-                active ? "text-white" : "text-white/50"
+                active ? "text-[#0585FC]" : "text-[#8E8E93]"
               }`}
             >
               {active ? (
                 <motion.span
-                  layoutId="player-bottom-nav-glow"
-                  className="absolute inset-x-1 inset-y-1 -z-10 rounded-full bg-white/15"
+                  layoutId="player-bottom-nav-indicator"
+                  className="absolute -bottom-0.5 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-[#0585FC]"
                   transition={{ type: "spring", stiffness: 420, damping: 32 }}
                 />
               ) : null}
@@ -90,14 +90,11 @@ export default function BottomNav() {
                       avatarUrl={myAvatarUrl}
                       name={myName}
                       size={24}
-                      ringClassName={active ? "ring-1 ring-white/70" : "ring-1 ring-white/40"}
+                      ringClassName={active ? "ring-1 ring-[#0585FC]/35" : "ring-1 ring-black/10"}
                     />
                   ) : (
                     <Icon size={22} strokeWidth={active ? 2.35 : 2} aria-hidden />
                   )}
-                  {active ? (
-                    <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" />
-                  ) : null}
                 </span>
                 <span>{item.label}</span>
               </motion.span>

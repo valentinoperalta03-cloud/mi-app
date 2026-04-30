@@ -22,43 +22,24 @@ type HomePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const quickActions = [
+const primaryActions = [
   {
     title: "Crear Partido",
-    desc: "Organizá un partido y encontrá rivales",
     href: "/crear-partido",
     Icon: CirclePlus,
-    gradient: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-    shadow: "0 2px 8px rgba(22,163,74,0.25)",
-    hoverShadow: "hover:shadow-[0_8px_24px_rgba(22,163,74,0.28)]",
-  },
-  {
-    title: "Aprender",
-    desc: "Clases y entrenamientos",
-    href: "/clases",
-    Icon: GraduationCap,
-    gradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-    shadow: "0 2px 8px rgba(5,133,252,0.2)",
-    hoverShadow: "hover:shadow-[0_8px_24px_rgba(5,133,252,0.25)]",
-  },
-  {
-    title: "Competir",
-    desc: "Torneos y competencias",
-    href: "/torneos",
-    Icon: Trophy,
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-    shadow: "0 2px 8px rgba(245,158,11,0.25)",
-    hoverShadow: "hover:shadow-[0_8px_24px_rgba(245,158,11,0.3)]",
+    desc: "Organizá un partido en segundos",
   },
   {
     title: "Buscar partido",
-    desc: "Unite a partidos abiertos",
+    desc: "Sumate a partidos abiertos",
     href: "/buscar-partido",
     Icon: Search,
-    gradient: "linear-gradient(135deg, #facc15 0%, #eab308 100%)",
-    shadow: "0 2px 8px rgba(234,179,8,0.24)",
-    hoverShadow: "hover:shadow-[0_8px_24px_rgba(234,179,8,0.28)]",
   },
+] as const;
+
+const secondaryActions = [
+  { title: "Aprender", href: "/clases", Icon: GraduationCap },
+  { title: "Competir", href: "/torneos", Icon: Trophy },
 ] as const;
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -119,62 +100,55 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ) : null}
 
       <section
-        className="relative overflow-hidden rounded-3xl p-6 text-white"
-        style={{
-          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-          boxShadow: "0 8px 32px rgba(5,133,252,0.25)",
-        }}
+        className="relative overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-[var(--shadow-card)]"
       >
-        <div className="absolute right-4 top-4 opacity-[0.07]">
-          <svg width="80" height="80" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
-            <circle cx="40" cy="40" r="24" fill="none" stroke="white" strokeWidth="2" />
-            <circle cx="40" cy="40" r="12" fill="none" stroke="white" strokeWidth="1.5" />
-            <path d="M10 30 Q40 25 70 30" stroke="white" strokeWidth="2" fill="none" />
-            <path d="M10 40 Q40 35 70 40" stroke="white" strokeWidth="2" fill="none" />
-            <path d="M10 50 Q40 45 70 50" stroke="white" strokeWidth="2" fill="none" />
-          </svg>
-        </div>
-
         <div className="relative z-10 flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30">
-            <Zap size={20} strokeWidth={2.25} className="text-white" aria-hidden />
+          <span
+            className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          >
+            <Zap size={20} strokeWidth={2.25} aria-hidden />
           </span>
-          <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
+          <h1 className="text-xl font-bold leading-tight tracking-tight text-[var(--text-primary)] md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.
           </h1>
         </div>
-        <div
-          className="mt-4 h-px w-full"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.4), transparent)" }}
-        />
       </section>
 
       <section className="grid grid-cols-2 gap-4">
-        {quickActions.map(({ title, desc, href, Icon, gradient, shadow, hoverShadow }) => (
+        {primaryActions.map(({ title, desc, href, Icon }) => (
           <Link
             key={title}
             href={href}
-            className={`group flex min-h-[7.5rem] flex-col justify-between rounded-2xl p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 ${hoverShadow} active:scale-[0.98] active:translate-y-0`}
-            style={{
-              background: gradient,
-              boxShadow: shadow,
-            }}
+            className="group flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)] transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-              <Icon size={22} className="text-white" aria-hidden />
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 ring-1 ring-sky-100">
+              <Icon size={22} className="text-[#0585FC]" aria-hidden />
             </span>
             <div className="mt-3">
-              <h2 className="text-[15px] font-semibold leading-tight text-white">{title}</h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-white/60">{desc}</p>
+              <h2 className="text-[15px] font-bold leading-tight text-[var(--text-primary)]">{title}</h2>
+              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-tertiary)]">{desc}</p>
             </div>
+          </Link>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        {secondaryActions.map(({ title, href, Icon }) => (
+          <Link
+            key={title}
+            href={href}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-card)]"
+          >
+            <Icon size={16} className="text-[#0585FC]" />
+            {title}
           </Link>
         ))}
       </section>
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Resultados pendientes</h2>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Resultados pendientes</h2>
           {pendingForMe.slice(0, 2).map((p) => (
             <CompetitiveResultConfirmationCard
               key={p.match_id}
@@ -196,21 +170,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Sugerencias para vos</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Sugerencias para vos</h2>
         <Suspense fallback={<HomeSuggestionsSkeleton />}>
           <HomeSuggestionsSection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Tu resumen</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Mis Reservas</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Mis Reservas</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>

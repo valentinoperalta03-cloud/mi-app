@@ -34,11 +34,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
   return (
-    <main className="relative isolate min-h-dvh bg-slate-50 px-4 py-10 sm:py-14">
+    <main className="relative isolate min-h-dvh bg-[#F2F2F7] px-4 py-10 sm:py-14 dark:bg-black">
       <div className="mx-auto w-full max-w-[26rem]">
-        <div
-          className="rounded-[2.5rem] border border-white/70 bg-white/65 p-8 shadow-[0_2px_20px_-4px_rgba(15,23,42,0.06),0_12px_48px_-16px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-10"
-        >
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
           <div className="mb-8 flex flex-col items-center text-center">
             <LoginMark />
             <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
@@ -66,7 +64,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <GoogleAuthForm />
             <button
               type="button"
-              className="w-full cursor-not-allowed rounded-2xl border border-slate-200/60 bg-slate-50/80 py-3.5 text-sm font-semibold text-slate-400"
+              className="w-full rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
               disabled
             >
               Continuar con Apple

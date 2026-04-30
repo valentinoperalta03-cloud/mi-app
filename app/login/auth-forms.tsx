@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { resendOtpCode, signInWithEmail, signUpWithEmail, verifyOtpCode } from "./actions";
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
+  "w-full rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-[#1c1c1e]";
 
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
 
@@ -52,7 +52,7 @@ export function GoogleAuthForm() {
         type="button"
         onClick={() => void handleGoogleSignIn()}
         disabled={pending}
-        className="w-full rounded-2xl border border-slate-200/90 bg-white/80 py-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="w-full rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]"
       >
         {pending ? "Abriendo Google..." : "Continuar con Google"}
       </button>
@@ -80,7 +80,7 @@ function EmailSubmitButton({
   const base =
     "w-full rounded-2xl py-4 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55";
   const primary =
-    "bg-gradient-to-b from-[#0585FC] to-[#0461C4] text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
+    "rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
   const ghost =
     "mt-1 text-[#0585FC] hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800";
 

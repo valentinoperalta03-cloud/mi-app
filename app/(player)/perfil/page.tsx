@@ -170,54 +170,40 @@ export default async function PerfilPage() {
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6 dark:bg-slate-950">
       <ProfileMotionSurface animateOnMount>
-        <div
-          className="relative overflow-hidden rounded-3xl p-6 text-center"
-          style={{
-            background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
-            boxShadow: "0 8px 32px rgba(5,133,252,0.2)",
-          }}
-        >
-          <div className="absolute bottom-0 left-4 opacity-5">
-            <svg width="60" height="120" viewBox="0 0 60 120">
-              <ellipse cx="30" cy="35" rx="28" ry="32" fill="white" />
-              <rect x="26" y="65" width="8" height="50" rx="4" fill="white" />
-            </svg>
-          </div>
-          <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center shadow-[var(--shadow-card)]">
           <div className="mx-auto w-fit">
             <ProfileAvatar
               avatarUrl={row?.avatar_url ?? null}
               name={displayName}
-              size={96}
-              ringClassName="ring-4 ring-white/30 ring-offset-2 ring-offset-blue-700"
+              size={104}
+              ringClassName="ring-4 ring-[var(--bg-subtle)]"
             />
           </div>
-            <h1 className="mt-4 text-2xl font-bold text-white">{displayName}</h1>
-            <p className="mt-1 text-sm text-blue-100">
-              {nivelParts.category || "—"}
-              {nivelParts.description ? ` — ${nivelParts.description}` : ""}
-            </p>
-            <p className="mt-1 break-words text-xs text-white">{email}</p>
-            <div className="mt-4 flex justify-center gap-8">
-              <div className="text-center">
-                <p className="text-xl font-bold">{followersCount ?? 0}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold">{followingCount ?? 0}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
-              </div>
+          <h1 className="mt-4 text-2xl font-bold text-[var(--text-primary)]">{displayName}</h1>
+          <p className="mt-1 text-sm font-semibold text-[#0585FC]">
+            {nivelParts.category || "—"}
+            {nivelParts.description ? ` — ${nivelParts.description}` : ""}
+          </p>
+          <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">{email}</p>
+          <div className="mt-4 flex justify-center gap-3">
+            <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
+              <p className="text-sm font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Seguidores</p>
             </div>
+            <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
+              <p className="text-sm font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Siguiendo</p>
+            </div>
+          </div>
           {row?.bio?.trim() ? (
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-white">{row.bio.trim()}</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
           ) : null}
           <Link
             href="/perfil/editar"
-              className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-white/15 py-3.5 text-sm font-semibold text-white transition hover:bg-white/25 active:scale-[0.99]"
+            className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-[#0585FC] py-3.5 text-sm font-semibold text-white transition hover:bg-[#0461C4] active:scale-[0.99]"
           >
             Editar perfil
           </Link>
-          </div>
         </div>
       </ProfileMotionSurface>
 
