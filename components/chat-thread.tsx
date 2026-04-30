@@ -32,7 +32,7 @@ function ChatInputBar({
   return (
     <div
       className="pointer-events-none fixed left-0 right-0 z-40 flex justify-center px-3"
-      style={{ bottom: "max(5.25rem, calc(env(safe-area-inset-bottom) + 4.5rem))" }}
+      style={{ bottom: "max(6rem, calc(env(safe-area-inset-bottom) + 5.25rem))" }}
     >
       <div className="pointer-events-auto w-full max-w-md border-t border-white/35 bg-white/70 px-3 py-3 shadow-[0_-8px_32px_-12px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150">
         {err ? (

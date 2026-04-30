@@ -174,7 +174,7 @@ export default function TopNav() {
             <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
               <div className="pointer-events-none relative w-full max-w-md">
                 <motion.aside
-                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto shadow-2xl"
+                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl"
                   style={{
                     background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
                     boxShadow: "-8px 0 32px rgba(5,133,252,0.25)",
@@ -249,7 +249,7 @@ export default function TopNav() {
                     type="button"
                     onClick={() => void handleSignOut()}
                     disabled={busy}
-                    className="mx-4 mb-4 mt-auto flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     <span className="rounded-full bg-red-500/10 p-2 text-red-300">
                       <LogOut size={16} />

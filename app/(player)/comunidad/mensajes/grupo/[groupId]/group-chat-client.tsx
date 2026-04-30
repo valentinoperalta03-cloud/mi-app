@@ -128,7 +128,7 @@ export function GroupChatClient({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 pb-24">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 pb-44">
         {items.map((m) => {
           const mine = m.sender_id === myId;
           const profile = profileMap.get(m.sender_id);
@@ -154,33 +154,40 @@ export function GroupChatClient({
         <div ref={bottomRef} />
       </div>
 
-      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Mensaje al grupo"
-          className="flex-1 px-2 py-2 text-sm outline-none"
-        />
-        <button
-          type="button"
-          disabled={pendingSend || !input.trim()}
-          onClick={() => {
-            startSend(async () => {
-              const res = await sendGroupChatMessageAction(groupId, input);
-              if (!res.ok || !res.row) {
-                setMsgError(res.message);
-                return;
-              }
-              setInput("");
-              setItems((prev) => (prev.some((m) => m.id === res.row!.id) ? prev : [...prev, res.row!]));
-            });
-          }}
-          className="rounded-xl bg-[#0461C4] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-        >
-          Enviar
-        </button>
+      <div
+        className="pointer-events-none fixed left-0 right-0 z-40 flex justify-center px-3"
+        style={{ bottom: "max(6rem, calc(env(safe-area-inset-bottom) + 5.25rem))" }}
+      >
+        <div className="pointer-events-auto w-full max-w-md border-t border-white/35 bg-white/70 px-3 py-3 shadow-[0_-8px_32px_-12px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150">
+          {msgError ? <p className="mb-2 rounded-2xl bg-rose-50 px-3 py-1.5 text-xs text-rose-700">{msgError}</p> : null}
+          <div className="flex items-center gap-2 rounded-[2rem] border border-slate-200/80 bg-white/95 px-1 py-1 shadow-inner shadow-slate-200/30">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Mensaje al grupo"
+              className="min-h-[44px] flex-1 rounded-[2rem] bg-transparent px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            />
+            <button
+              type="button"
+              disabled={pendingSend || !input.trim()}
+              onClick={() => {
+                startSend(async () => {
+                  const res = await sendGroupChatMessageAction(groupId, input);
+                  if (!res.ok || !res.row) {
+                    setMsgError(res.message);
+                    return;
+                  }
+                  setInput("");
+                  setItems((prev) => (prev.some((m) => m.id === res.row!.id) ? prev : [...prev, res.row!]));
+                });
+              }}
+              className="mb-0.5 shrink-0 rounded-full bg-[#0461C4] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:opacity-40"
+            >
+              Enviar
+            </button>
+          </div>
+        </div>
       </div>
-      {msgError ? <p className="mt-1 text-xs text-rose-600">{msgError}</p> : null}
     </div>
   );
 }
