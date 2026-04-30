@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
@@ -16,14 +17,8 @@ function displayMessage(raw: string | undefined) {
 
 function LoginMark() {
   return (
-    <div
-      className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] via-[#0585FC] to-indigo-600 shadow-[0_4px_14px_-2px_rgba(2,132,199,0.35)] ring-4 ring-white/90"
-      aria-hidden
-    >
-      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" className="text-white">
-        <rect x="4" y="6" width="24" height="20" rx="3" stroke="currentColor" strokeWidth="2" />
-        <path d="M16 6v20M4 16h24" stroke="currentColor" strokeWidth="1.5" opacity="0.9" />
-      </svg>
+    <div className="mx-auto" aria-hidden>
+      <Image src="/logo.png" alt="PadeLibre" width={56} height={56} className="rounded-2xl" />
     </div>
   );
 }

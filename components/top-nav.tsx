@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -118,19 +119,7 @@ export default function TopNav() {
             style={{ background: "linear-gradient(135deg, #080d16 0%, #101826 100%)" }}
           >
             <div className="flex items-center gap-2">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="10" cy="9" r="5.5" stroke="#0585FC" strokeWidth="1.8" />
-                <path d="M13.7 12.7L18.9 17.9" stroke="#0585FC" strokeWidth="1.8" strokeLinecap="round" />
-                <rect
-                  x="18.2"
-                  y="17.2"
-                  width="2.6"
-                  height="5.2"
-                  rx="1.1"
-                  transform="rotate(-45 18.2 17.2)"
-                  fill="#0585FC"
-                />
-              </svg>
+              <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
               <span className="text-lg font-bold tracking-tight text-[#0585FC]" style={{ letterSpacing: "-0.02em" }}>
                 Padelibre
               </span>
