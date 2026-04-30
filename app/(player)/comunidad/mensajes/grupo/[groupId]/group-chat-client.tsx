@@ -181,7 +181,7 @@ export function GroupChatClient({
                   setItems((prev) => (prev.some((m) => m.id === res.row!.id) ? prev : [...prev, res.row!]));
                 });
               }}
-              className="mb-0.5 shrink-0 rounded-full bg-[#0461C4] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:opacity-40"
+              className="btn-primary-gradient mb-0.5 shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition hover:brightness-95 disabled:opacity-40"
             >
               Enviar
             </button>

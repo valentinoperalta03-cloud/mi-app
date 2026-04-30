@@ -85,7 +85,7 @@ export default async function PerfilPage() {
     const ensured = await ensureProfileRowExists(supabase, user);
     if (ensured.error) {
       return (
-        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-[var(--bg-app)] px-4 pb-24 pt-6 dark:bg-slate-950">
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-[var(--bg-app)] px-4 pb-24 pt-6">
           <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
             <p className="font-medium">No hay fila en perfiles para tu cuenta.</p>
             <p className="mt-2 text-xs text-rose-800/90">{ensured.error}</p>
@@ -102,7 +102,7 @@ export default async function PerfilPage() {
     profileError = retry.error;
     if (profileError || profile === null) {
       return (
-        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-[var(--bg-app)] px-4 pb-24 pt-6 dark:bg-slate-950">
+        <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-4 bg-[var(--bg-app)] px-4 pb-24 pt-6">
           <div className="rounded-[2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
             <p className="font-medium">No se pudo leer el perfil después de crearlo.</p>
             {profileError ? (
@@ -142,7 +142,7 @@ export default async function PerfilPage() {
 
   if (!isLeveled) {
     return (
-      <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-2 bg-[var(--bg-app)] px-4 pb-24 pt-6 dark:bg-slate-950">
+      <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-2 bg-[var(--bg-app)] px-4 pb-24 pt-6">
         <ProfileLevelingWizard />
         <ProfileSessionFooter />
       </MotionPage>
@@ -168,7 +168,7 @@ export default async function PerfilPage() {
   ]);
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6 dark:bg-slate-950">
+    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
         <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center shadow-[var(--shadow-card)]">
           <div className="mx-auto w-fit">
@@ -200,7 +200,7 @@ export default async function PerfilPage() {
           ) : null}
           <Link
             href="/perfil/editar"
-            className="mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl bg-[#0585FC] py-3.5 text-sm font-semibold text-white transition hover:bg-[#0461C4] active:scale-[0.99]"
+            className="btn-primary-gradient mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl py-3.5 text-sm font-semibold transition hover:brightness-95 active:scale-[0.99]"
           >
             Editar perfil
           </Link>
@@ -208,7 +208,7 @@ export default async function PerfilPage() {
       </ProfileMotionSurface>
 
       {isAdmin ? (
-        <section className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900">
+        <section className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)] dark:border-slate-800">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Modo desarrollador</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Si sos <code className="text-xs">owner_id</code> de un club, el inicio te lleva al panel
@@ -217,7 +217,7 @@ export default async function PerfilPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/home"
-              className="rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0585FC]/50"
+              className="btn-primary-gradient rounded-2xl px-4 py-2.5 text-sm font-medium transition hover:brightness-95"
             >
               Ir a vista Jugador
             </Link>
@@ -243,7 +243,7 @@ export default async function PerfilPage() {
       </ProfileMotionSection>
 
       <ProfileMotionSection title="Datos" description="Información de tu perfil.">
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 px-4 py-4 dark:border-slate-800">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 dark:border-slate-800">
           <User className="h-5 w-5 shrink-0 text-[#0585FC]" strokeWidth={1.6} aria-hidden />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Edad</p>
@@ -266,7 +266,7 @@ export default async function PerfilPage() {
               <li key={p.user_id}>
                 <Link
                   href={`/jugador/${p.user_id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 px-3 py-2.5 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
                 >
                   <ProfileAvatar avatarUrl={p.avatar_url} name={p.name} size={44} ringClassName="ring-2 ring-white dark:ring-slate-700" />
                   <div className="min-w-0 flex-1">
@@ -291,13 +291,13 @@ export default async function PerfilPage() {
               <li key={c.club_id}>
                 <Link
                   href={`/clubes/${c.club_id}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 px-4 py-3 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Building2 className="h-4 w-4 shrink-0 text-[#0585FC]" strokeWidth={1.6} />
                     <span className="truncate text-sm font-medium text-slate-900 dark:text-white">{c.name}</span>
                   </span>
-                  <span className="shrink-0 rounded-full bg-white dark:bg-slate-900 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-100 dark:ring-slate-700">
+                  <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-100 dark:ring-slate-700">
                     {c.count}
                   </span>
                 </Link>

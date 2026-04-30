@@ -36,8 +36,8 @@ const quickActions = [
     desc: "Sumate a partidos abiertos",
     href: "/buscar-partido",
     Icon: Search,
-    gradient: "linear-gradient(135deg, #38bdf8 0%, #0585FC 100%)",
-    shadow: "0 4px 16px rgba(56,189,248,0.35)",
+    gradient: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+    shadow: "0 4px 16px rgba(22,163,74,0.35)",
   },
   {
     title: "Aprender",

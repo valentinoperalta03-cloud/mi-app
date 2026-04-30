@@ -18,7 +18,7 @@ export default function TorneosPage() {
         </p>
         <Link
           href="/home"
-          className="mt-7 inline-flex w-full items-center justify-center rounded-2xl bg-[#0585FC] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0461C4]"
+          className="btn-primary-gradient mt-7 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition hover:brightness-95"
         >
           Volver al inicio
         </Link>

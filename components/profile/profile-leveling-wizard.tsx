@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -173,7 +174,7 @@ export function ProfileLevelingWizard() {
                 type="button"
                 disabled={!selectedAnswer || autoAdvancing || busy}
                 onClick={() => goToNextQuestion()}
-                className={`flex-1 rounded-3xl py-4 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-40 ${ACCENT_BLUE} hover:bg-[#0585FC]/50`}
+                className={`btn-primary-gradient flex-1 rounded-3xl py-4 text-sm font-bold transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 {busy
                   ? "Guardando..."
@@ -219,7 +220,7 @@ export function ProfileLevelingWizard() {
                 router.push("/home?nivelacion=ok");
                 router.refresh();
               }}
-              className={`mt-6 w-full rounded-3xl py-4 text-base font-semibold text-white transition hover:bg-[#0585FC]/50 ${ACCENT_BLUE}`}
+              className="btn-primary-gradient mt-6 w-full rounded-3xl py-4 text-base font-semibold transition hover:brightness-95"
             >
               Guardar y Empezar
             </button>

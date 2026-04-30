@@ -212,7 +212,7 @@ export default function CrearPartidoForm({
 
   return (
     <form
-      className="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
@@ -258,7 +258,7 @@ export default function CrearPartidoForm({
                   setSelectedClubId(club.id);
                   setCurrentStep("club-detail");
                 }}
-                className="w-full rounded-2xl border border-black/[0.06] bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] dark:border-white/[0.06] dark:bg-slate-900"
+                className="w-full rounded-2xl border border-black/[0.06] bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] dark:border-white/[0.06]"
               >
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
@@ -364,7 +364,7 @@ export default function CrearPartidoForm({
               {availableCourts.map((court) => (
                 <div
                   key={court.id}
-                  className="rounded-2xl border border-black/[0.06] bg-white p-4 dark:border-white/[0.06] dark:bg-slate-900"
+                  className="rounded-2xl border border-black/[0.06] bg-white p-4 dark:border-white/[0.06]"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <div>
@@ -514,7 +514,7 @@ export default function CrearPartidoForm({
                     onClick={() => !isDisabled && setGenderCategory(option)}
                     className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
                       isDisabled
-                        ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-700"
+                        ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:text-slate-700"
                         : genderCategory === option
                           ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                           : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
@@ -668,7 +668,7 @@ export default function CrearPartidoForm({
 
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Confirmá tu partido</h1>
 
-          <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06] dark:bg-slate-900">
+          <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06]">
             <div
               className="flex h-20 w-full items-center gap-3 bg-[#0585FC]/10 px-5"
               style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}

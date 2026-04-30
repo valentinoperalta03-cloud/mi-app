@@ -261,7 +261,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
       <Link
         href="/buscar-partido"
-        className="flex w-full items-center justify-center rounded-2xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50"
+        className="btn-primary-gradient flex w-full items-center justify-center rounded-2xl py-3.5 text-sm font-semibold transition hover:brightness-95"
       >
         Ver en feed y unirme
       </Link>

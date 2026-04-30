@@ -56,7 +56,7 @@ function ChatInputBar({
             type="button"
             disabled={pending || !value.trim()}
             onClick={() => void submit()}
-            className="mb-0.5 shrink-0 rounded-full bg-[#0461C4] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 disabled:opacity-40"
+            className="btn-primary-gradient mb-0.5 shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition hover:brightness-95 disabled:opacity-40"
           >
             Enviar
           </button>

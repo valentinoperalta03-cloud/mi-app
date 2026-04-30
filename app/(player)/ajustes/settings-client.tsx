@@ -145,7 +145,7 @@ export default function SettingsClient({
           <button
             type="button"
             onClick={detectLocation}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#0585FC] px-3 py-2 text-sm font-semibold text-white dark:bg-sky-500"
+            className="btn-primary-gradient inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold"
           >
             <MapPin size={16} />
             Detectar mi ubicación
@@ -254,7 +254,7 @@ export default function SettingsClient({
             />
             <button
               type="submit"
-              className="w-full rounded-2xl bg-[#0585FC] py-2 text-sm font-semibold text-white dark:bg-sky-500"
+              className="btn-primary-gradient w-full rounded-2xl py-2 text-sm font-semibold"
             >
               Guardar nueva contraseña
             </button>
@@ -332,7 +332,7 @@ export default function SettingsClient({
                     await deleteAccountAction();
                   })
                 }
-                className="flex-1 rounded-2xl bg-red-600 py-2 text-sm font-semibold text-white"
+                className="btn-danger flex-1 rounded-2xl py-2 text-sm font-semibold"
               >
                 Confirmar
               </button>

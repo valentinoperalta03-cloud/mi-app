@@ -16,7 +16,6 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
-import { Badge } from "@/components/ui/badge";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 
@@ -106,17 +105,14 @@ export default function TopNav() {
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center">
         <div className="w-full max-w-md">
           <div
-            className="flex h-14 items-center justify-between border-b border-black/10 bg-white/85 px-4 backdrop-blur-[20px] dark:border-white/10 dark:bg-[#1c1c1ed9]"
+            className="flex h-14 items-center justify-between border-b border-[rgba(5,133,252,0.12)] bg-[rgba(255,255,255,0.92)] px-4 backdrop-blur-[20px] dark:border-[rgba(5,133,252,0.15)] dark:bg-[rgba(0,0,0,0.92)]"
           >
             <div className="flex items-center gap-2">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="11" cy="11" r="10" fill="#0585FC" opacity="0.9" />
-                <circle cx="11" cy="11" r="10" fill="none" stroke="#38bdf8" strokeWidth="1" />
-                <path d="M4 8 Q11 6 18 8" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
-                <path d="M4 11 Q11 9 18 11" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
-                <path d="M4 14 Q11 12 18 14" stroke="white" strokeWidth="1.2" fill="none" opacity="0.6" />
-              </svg>
-              <span className="text-lg font-bold tracking-tight text-[#0585FC] dark:text-[#38bdf8]" style={{ letterSpacing: "-0.02em" }}>
+              <span
+                className="inline-flex h-2.5 w-2.5 rounded-full"
+                style={{ background: "linear-gradient(135deg, #0585FC 0%, #38bdf8 100%)" }}
+              />
+              <span className="text-lg font-bold tracking-tight text-[#0585FC]" style={{ letterSpacing: "-0.02em" }}>
                 Padelibre
               </span>
             </div>
@@ -124,10 +120,10 @@ export default function TopNav() {
             <div className="flex items-center gap-1">
               <Link
                 href="/notificaciones"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10"
                 aria-label="Ir a notificaciones"
               >
-                <Bell size={20} className="text-[#0f172a] dark:text-white/90" />
+                <Bell size={20} className="text-[#0585FC]" />
                 {unreadCount > 0 ? (
                   <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -136,11 +132,11 @@ export default function TopNav() {
               </Link>
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10"
                 onClick={() => setOpen(true)}
                 aria-label="Abrir menú lateral"
               >
-                <Menu size={20} className="text-[#0f172a] dark:text-white/90" />
+                <Menu size={20} className="text-[#0585FC]" />
               </button>
             </div>
           </div>
@@ -169,9 +165,8 @@ export default function TopNav() {
             <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
               <div className="pointer-events-none relative w-full max-w-md">
                 <motion.aside
-                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl"
+                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
                   style={{
-                    background: "var(--bg-card)",
                     boxShadow: "var(--shadow-card)",
                   }}
                   initial={{ x: "100%" }}
@@ -179,7 +174,10 @@ export default function TopNav() {
                   exit={{ x: "100%" }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
-                  <div className="border-b border-[var(--border-subtle)] p-5">
+                  <div
+                    className="border-b border-white/15 p-5"
+                    style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                  >
                     <div className="flex items-center gap-3">
                       {avatarUrl?.trim() ? (
                         // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
@@ -188,17 +186,19 @@ export default function TopNav() {
                           alt=""
                           width={44}
                           height={44}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-[var(--border-subtle)]"
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-white/50"
                         />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-sm font-bold text-[var(--text-primary)] ring-2 ring-[var(--border-subtle)]">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/50">
                           {initial}
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="truncate font-bold text-[var(--text-primary)]">{name}</p>
+                        <p className="truncate font-bold text-white">{name}</p>
                         <div className="mt-1">
-                          <Badge variant="brand">{category ? `Nivel ${category}` : "Sin nivel asignado"}</Badge>
+                          <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">
+                            {category ? `Nivel ${category}` : "Sin nivel asignado"}
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -214,7 +214,7 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
           }}
         >
           <div
-            className="w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.25)]"
+            className="w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.25)]"
             onClick={(e) => e.stopPropagation()}
           >
             <CreatePostForm

@@ -42,7 +42,7 @@ export async function FriendRequestsSection({ userId }: { userId: string }) {
         return (
           <div
             key={typedReq.id}
-            className="flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/[0.06] dark:bg-slate-900"
+            className="flex items-center gap-3 rounded-2xl border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/[0.06]"
           >
             <ProfileAvatar avatarUrl={avatarUrl} name={name} size={44} />
             <div className="min-w-0 flex-1">
@@ -56,7 +56,7 @@ export async function FriendRequestsSection({ userId }: { userId: string }) {
                   await acceptFriendRequest(typedReq.id, typedReq.sender_id);
                 }}
               >
-                <button type="submit" className="rounded-xl bg-[#0585FC] px-3 py-2 text-xs font-semibold text-white">
+                <button type="submit" className="btn-primary-gradient rounded-xl px-3 py-2 text-xs font-semibold">
                   Aceptar
                 </button>
               </form>
@@ -68,7 +68,7 @@ export async function FriendRequestsSection({ userId }: { userId: string }) {
               >
                 <button
                   type="submit"
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-400"
+                  className="btn-danger rounded-xl px-3 py-2 text-xs font-semibold"
                 >
                   Rechazar
                 </button>

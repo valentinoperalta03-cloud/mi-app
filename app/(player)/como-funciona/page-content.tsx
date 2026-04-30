@@ -144,7 +144,7 @@ export default function ComoFuncionaContent() {
             return (
               <article
                 key={feature.title}
-                className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800"
               >
                 <span className="inline-flex rounded-xl bg-[#0585FC]/10 p-2.5 text-[#0585FC]">
                   <Icon size={20} />
@@ -181,7 +181,7 @@ export default function ComoFuncionaContent() {
             return (
               <article
                 key={benefit.title}
-                className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800"
               >
                 <div className="flex items-start gap-3">
                   <span className="inline-flex shrink-0 rounded-xl bg-[#0585FC]/10 p-2.5 text-[#0585FC]">
@@ -214,14 +214,14 @@ export default function ComoFuncionaContent() {
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-3">
-          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800">
             <p className="text-sm font-semibold uppercase tracking-wide text-[#0585FC]">Clubes</p>
             <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">$0 costo fijo</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
               Gestión, visibilidad y herramientas profesionales gratis.
             </p>
           </article>
-          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800">
             <p className="text-sm font-semibold uppercase tracking-wide text-[#0585FC]">Jugadores</p>
             <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">+5% servicio</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
@@ -237,7 +237,7 @@ export default function ComoFuncionaContent() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.2 }}
-        className="space-y-4 rounded-3xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        className="space-y-4 rounded-3xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800"
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Te damos una mano</p>
@@ -250,7 +250,7 @@ export default function ComoFuncionaContent() {
           {faqs.map((faq) => (
             <details
               key={faq.question}
-              className="group rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"
+              className="group rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700"
             >
               <summary className="flex list-none cursor-pointer items-start justify-between gap-3 text-sm font-semibold text-slate-900 dark:text-white">
                 <span>{faq.question}</span>

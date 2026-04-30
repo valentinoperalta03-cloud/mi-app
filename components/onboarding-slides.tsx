@@ -138,7 +138,7 @@ export default function OnboardingSlides() {
                 <button
                   type="button"
                   onClick={nextSlide}
-                  className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  className="btn-primary-gradient rounded-2xl px-4 py-3 text-sm font-semibold transition hover:brightness-95"
                 >
                   {isLast ? "Empezar!" : "Siguiente"}
                 </button>

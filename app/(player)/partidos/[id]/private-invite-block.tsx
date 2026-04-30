@@ -31,7 +31,7 @@ export default function PrivateInviteBlock({ inviteUrl }: Props) {
       <button
         type="button"
         onClick={() => void onCopy()}
-        className="mt-3 w-full rounded-2xl bg-[#0461C4] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50"
+        className="btn-primary-gradient mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold transition hover:brightness-95"
       >
         {copied ? "¡Copiado!" : "Copiar link"}
       </button>

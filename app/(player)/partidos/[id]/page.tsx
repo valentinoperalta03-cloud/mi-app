@@ -598,7 +598,7 @@ Link del partido: ${partyUrl}`;
                       <input type="hidden" name="match_id" value={id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0585FC]/50 sm:w-auto"
+                        className="btn-primary-gradient w-full rounded-2xl px-4 py-2.5 text-sm font-semibold transition hover:brightness-95 sm:w-auto"
                       >
                         Aceptar
                       </button>
@@ -852,7 +852,7 @@ Link del partido: ${partyUrl}`;
 
       <Link
         href="/buscar-partido"
-        className="block w-full rounded-2xl bg-[#0461C4] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#0585FC]/50"
+        className="btn-primary-gradient block w-full rounded-2xl px-4 py-3 text-center text-sm font-semibold transition hover:brightness-95"
       >
         Volver
       </Link>

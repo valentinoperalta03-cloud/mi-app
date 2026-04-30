@@ -52,7 +52,7 @@ export default function BottomNav() {
         style={{
           background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
           boxShadow: "0 -4px 20px rgba(5,133,252,0.3)",
-          border: "1px solid rgba(255,255,255,0.16)",
+          border: "none",
         }}
       >
         {items.map((item) => {
@@ -69,7 +69,7 @@ export default function BottomNav() {
               aria-label={`Ir a ${item.label}`}
               aria-current={active ? "page" : undefined}
               className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition-colors ${
-                active ? "text-white" : "text-white/60"
+                active ? "text-white" : "text-white/55"
               }`}
             >
               {active ? (

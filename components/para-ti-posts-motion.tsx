@@ -12,7 +12,7 @@ import type { PostFeedItem } from "@/lib/para-ti-posts";
 export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
   if (posts.length === 0) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800">
         <EmptyState
           icon={MessageSquareDashed}
           title="Todavía no hay publicaciones"

@@ -72,7 +72,7 @@ export default function ActivityTabs({
         <h1 className="text-2xl font-bold leading-tight tracking-tight">Tu actividad</h1>
       </header>
 
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800">
         <button
           type="button"
           onClick={() => setTab("partidos")}
@@ -105,7 +105,7 @@ export default function ActivityTabs({
       {tab === "partidos" ? (
         <section className="space-y-2">
           {matches.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800">
               <EmptyState
                 icon={CalendarX2}
                 title="Aún no tenés partidos"
@@ -132,7 +132,7 @@ export default function ActivityTabs({
       {tab === "reservas" ? (
         <section className="space-y-2">
           {reservations.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800">
               <EmptyState
                 icon={CalendarX2}
                 title="Aún no tenés reservas"
@@ -159,7 +159,7 @@ export default function ActivityTabs({
       ) : null}
 
       {tab === "torneos" ? (
-        <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800">
           <EmptyState
             icon={Trophy}
             title="Torneos próximamente"
