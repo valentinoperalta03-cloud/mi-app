@@ -32,16 +32,24 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
           .lt("created_at", nextMonthStart)
       : { data: [] };
 
-  const payments = (paymentsRaw ?? []) as Array<{
+  const payments = (paymentsRaw ?? []) as unknown as Array<{
     id: string;
     user_id: string;
     amount: number | null;
     status: string | null;
     created_at: string;
-    matches: { court_id: string; scheduled_date: string | null; courts: { name: string | null } | null } | null;
+    match_id: string;
+    matches: {
+      court_id: string;
+      scheduled_date: string | null;
+      courts: { name: string | null }[] | null;
+    }[] | null;
   }>;
 
-  const rows = payments.filter((p) => p.matches && ctx.courtIds.includes(p.matches.court_id));
+  const rows = payments.filter((payment) => {
+    const courtId = payment.matches?.[0]?.court_id;
+    return Boolean(courtId && ctx.courtIds.includes(courtId));
+  });
   const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
   const { data: profiles } = userIds.length
     ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", userIds)
@@ -72,13 +80,19 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-200/70">
-                <td className="py-2">{nameById.get(r.user_id) ?? "Jugador"}</td>
-                <td className="py-2">{r.matches?.courts?.name ?? "Cancha"}</td>
-                <td className="py-2">{r.matches?.scheduled_date ? format(parseISO(`${r.matches.scheduled_date}T12:00:00`), "d MMM yyyy", { locale: es }) : "—"}</td>
-                <td className="py-2">${Number(r.amount ?? 0).toFixed(2)}</td>
-                <td className="py-2">{String(r.status ?? "pending")}</td>
+            {rows.map((payment) => (
+              <tr key={payment.id} className="border-t border-slate-200/70">
+                <td className="py-2">{nameById.get(payment.user_id) ?? "Jugador"}</td>
+                <td className="py-2">{payment.matches?.[0]?.courts?.[0]?.name ?? "Cancha"}</td>
+                <td className="py-2">
+                  {payment.matches?.[0]?.scheduled_date
+                    ? format(parseISO(`${payment.matches[0].scheduled_date}T12:00:00`), "d MMM yyyy", {
+                        locale: es,
+                      })
+                    : "—"}
+                </td>
+                <td className="py-2">${Number(payment.amount ?? 0).toFixed(2)}</td>
+                <td className="py-2">{String(payment.status ?? "pending")}</td>
               </tr>
             ))}
           </tbody>
