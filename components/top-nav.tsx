@@ -115,12 +115,12 @@ export default function TopNav() {
       <header className="fixed left-0 right-0 top-0 z-50 flex justify-center">
         <div className="w-full max-w-md">
           <div
-            className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 bg-[#090d14]/95 px-4 backdrop-blur-[20px]"
-            style={{ background: "linear-gradient(135deg, #080d16 0%, #101826 100%)" }}
+            className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
           >
             <div className="flex items-center gap-2">
               <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
-              <span className="text-lg font-bold tracking-tight text-[#0585FC]" style={{ letterSpacing: "-0.02em" }}>
+              <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
                 Padelibre
               </span>
             </div>
@@ -131,7 +131,7 @@ export default function TopNav() {
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
                 aria-label="Ir a notificaciones"
               >
-                <Bell size={20} className="text-[#0585FC]" />
+                <Bell size={20} className="text-white" />
                 {unreadCount > 0 ? (
                   <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -144,7 +144,7 @@ export default function TopNav() {
                 onClick={() => setOpen(true)}
                 aria-label="Abrir menú lateral"
               >
-                <Menu size={20} className="text-[#0585FC]" />
+                <Menu size={20} className="text-white" />
               </button>
             </div>
           </div>
