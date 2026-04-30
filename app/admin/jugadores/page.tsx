@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -20,13 +21,14 @@ export default async function AdminJugadoresPage() {
     ctx.courtIds.length > 0
       ? await supabase
           .from(DB_TABLES.matches)
-          .select("owner_id,date")
+          .select("owner_id,date,match_type")
           .in("court_id", ctx.courtIds)
           .not("owner_id", "is", null)
+          .eq("match_type", "reservation")
           .order("date", { ascending: false })
       : { data: [] };
 
-  const rows = (matchesRaw ?? []) as { owner_id: string | null; date: string }[];
+  const rows = (matchesRaw ?? []) as { owner_id: string | null; date: string; match_type: string | null }[];
 
   const byUser = new Map<string, { count: number; last: string; first: string }>();
   for (const r of rows) {
@@ -74,6 +76,32 @@ export default async function AdminJugadoresPage() {
     })
     .sort((a, b) => b.count - a.count);
 
+  const { data: blockedRaw } = ctx.clubIds.length
+    ? await supabase
+        .from(DB_TABLES.blockedUsers)
+        .select("user_id")
+        .eq("club_id", ctx.clubIds[0])
+    : { data: [] };
+  const blockedSet = new Set(
+    (blockedRaw ?? []).map((r: { user_id: string }) => r.user_id)
+  );
+
+  async function blockPlayerAction(formData: FormData) {
+    "use server";
+    const userId = String(formData.get("user_id") ?? "").trim();
+    const reason = String(formData.get("reason") ?? "").trim();
+    if (!userId) return;
+    const supabaseAction = await createClient({ allowCookieWrites: true });
+    const actionCtx = await getOwnerAdminContext(supabaseAction);
+    if (!actionCtx?.userId || !actionCtx.clubIds.length) return;
+    await supabaseAction.from(DB_TABLES.blockedUsers).upsert({
+      club_id: actionCtx.clubIds[0],
+      user_id: userId,
+      reason: reason || "Bloqueado desde panel admin",
+    });
+    revalidatePath("/admin/jugadores");
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
@@ -113,12 +141,34 @@ export default async function AdminJugadoresPage() {
                         <dd className="mt-1 font-semibold text-slate-800">{row.count}</dd>
                       </div>
                       <div>
-                        <dt className={adminKicker}>Última actividad</dt>
+                        <dt className={adminKicker}>Última reserva</dt>
                         <dd className="mt-1 font-semibold text-slate-800">
                           {format(parseISO(row.last), "d MMM yyyy HH:mm", { locale: es })}
                         </dd>
                       </div>
+                      <div>
+                        <dt className={adminKicker}>Estado</dt>
+                        <dd className="mt-1 font-semibold text-slate-800">
+                          {blockedSet.has(row.uid) ? "Bloqueado" : "Activo"}
+                        </dd>
+                      </div>
                     </dl>
+                    {!blockedSet.has(row.uid) ? (
+                      <form action={blockPlayerAction} className="flex items-center gap-2">
+                        <input type="hidden" name="user_id" value={row.uid} />
+                        <input
+                          name="reason"
+                          placeholder="Motivo (opcional)"
+                          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
+                        >
+                          Bloquear
+                        </button>
+                      </form>
+                    ) : null}
                   </div>
                 </div>
               </AdminPressableSurface>

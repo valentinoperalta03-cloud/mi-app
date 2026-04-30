@@ -164,7 +164,7 @@ async function handleNotification(req: Request) {
         .eq("id", matchId);
       const { data: matchRow } = await admin
         .from(DB_TABLES.matches)
-        .select("owner_id,total_price")
+        .select("owner_id,total_price,scheduled_date,court_id,courts(name,club_id)")
         .eq("id", matchId)
         .maybeSingle();
       const ownerId = String((matchRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
@@ -177,6 +177,32 @@ async function handleNotification(req: Request) {
           body: `Tu reserva fue confirmada por $${Number.isFinite(amount) ? Math.round(amount) : 0}.`,
           match_id: matchId,
         });
+      }
+      const matchTyped = (matchRow as {
+        total_price?: number | null;
+        scheduled_date?: string | null;
+        courts?: { name?: string | null; club_id?: string | null } | null;
+      } | null);
+      const clubId = String(matchTyped?.courts?.club_id ?? "").trim();
+      if (clubId) {
+        const { data: clubRow } = await admin
+          .from(DB_TABLES.clubs)
+          .select("owner_id")
+          .eq("id", clubId)
+          .maybeSingle();
+        const clubOwnerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+        if (clubOwnerId) {
+          const amount = Number(matchTyped?.total_price ?? 0);
+          const courtName = String(matchTyped?.courts?.name ?? "Cancha");
+          const date = String(matchTyped?.scheduled_date ?? "");
+          await createNotification(admin, {
+            user_id: clubOwnerId,
+            type: "payment_approved",
+            title: "Nueva reserva confirmada",
+            body: `Reserva pagada por $${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}. Cancha ${courtName} el ${date}.`,
+            match_id: matchId,
+          });
+        }
       }
     }
   } else if (status === "rejected" || status === "cancelled" || status === "expired") {

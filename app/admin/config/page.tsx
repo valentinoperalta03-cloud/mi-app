@@ -2,7 +2,7 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
-import { Settings2 } from "lucide-react";
+import { AlertCircle, CheckCircle, LogOut, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import {
   adminCard,
@@ -14,6 +14,13 @@ import {
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
+
+async function signOutAction() {
+  "use server";
+  const supabase = await createClient({ allowCookieWrites: true });
+  await supabase.auth.signOut();
+  redirect("/login");
+}
 
 export default async function AdminConfigPage() {
   const supabase = await createClient();
@@ -42,6 +49,15 @@ export default async function AdminConfigPage() {
     count: byMonth.get(k) ?? 0,
   }));
   const maxG = growth.reduce((m, x) => Math.max(m, x.count), 0);
+  const { data: clubData } = ctx.clubIds.length
+    ? await supabase
+        .from(DB_TABLES.clubs)
+        .select("mp_access_token,mp_user_id")
+        .eq("id", ctx.clubIds[0])
+        .maybeSingle()
+    : { data: null };
+  const isMpConnected = Boolean((clubData as { mp_access_token?: string | null } | null)?.mp_access_token);
+  const mpUserId = (clubData as { mp_user_id?: string | null } | null)?.mp_user_id ?? "—";
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,6 +76,27 @@ export default async function AdminConfigPage() {
       </header>
 
       <section className="flex flex-col gap-4 md:grid md:grid-cols-2">
+        <div
+          className={`flex h-full flex-col rounded-2xl border p-6 ${
+            isMpConnected
+              ? "border-emerald-200/70 bg-emerald-50/70"
+              : "border-amber-200/70 bg-amber-50/70"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {isMpConnected ? (
+              <CheckCircle size={18} className="text-emerald-600" />
+            ) : (
+              <AlertCircle size={18} className="text-amber-600" />
+            )}
+            <p className={`text-sm font-semibold ${isMpConnected ? "text-emerald-700" : "text-amber-700"}`}>
+              {isMpConnected ? "Mercado Pago conectado ✓" : "Sin conectar"}
+            </p>
+          </div>
+          <p className="mt-2 text-sm text-slate-700">
+            {isMpConnected ? `MP User ID: ${mpUserId}` : "Conectá tu cuenta para cobrar reservas del club."}
+          </p>
+        </div>
         <Link
           href="/admin/config/mp-connect"
           className={`group flex h-full flex-col rounded-2xl border border-emerald-200/55 bg-gradient-to-br from-emerald-500/10 to-teal-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.1)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-emerald-300/80 hover:shadow-lg`}
@@ -70,8 +107,30 @@ export default async function AdminConfigPage() {
             Conectá la cuenta del club para cobrar reservas con split de comisión.
           </p>
           <span className="mt-5 text-sm font-semibold text-emerald-600 group-hover:text-emerald-500">
-            Conectar
+            {isMpConnected ? "Reconectar" : "Conectar"}
           </span>
+        </Link>
+        <Link
+          href="/admin/club"
+          className={`group flex h-full flex-col rounded-2xl border border-indigo-200/60 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(59,130,246,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-indigo-300/80 hover:shadow-lg`}
+        >
+          <p className="text-sm font-semibold text-indigo-700">Club</p>
+          <p className="mt-2 text-base font-bold text-slate-900">Información del club</p>
+          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
+            Editá nombre, contacto, imágenes y horarios de atención.
+          </p>
+          <span className="mt-5 text-sm font-semibold text-indigo-600">Abrir</span>
+        </Link>
+        <Link
+          href="/admin/pagos"
+          className={`group flex h-full flex-col rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-500/10 to-lime-500/10 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-emerald-300/80 hover:shadow-lg`}
+        >
+          <p className="text-sm font-semibold text-emerald-700">Tesorería</p>
+          <p className="mt-2 text-base font-bold text-slate-900">Historial de pagos</p>
+          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
+            Revisá pagos aprobados, pendientes y reembolsos por mes.
+          </p>
+          <span className="mt-5 text-sm font-semibold text-emerald-600">Abrir</span>
         </Link>
         <Link
           href="/club/horarios"
@@ -100,6 +159,19 @@ export default async function AdminConfigPage() {
             Abrir
           </span>
         </Link>
+      </section>
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900">Sesión</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500">Podés cerrar sesión del panel admin.</p>
+        <form action={signOutAction} className="mt-4">
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+          >
+            <LogOut size={16} />
+            Cerrar sesión
+          </button>
+        </form>
       </section>
 
       <section className={adminCard}>

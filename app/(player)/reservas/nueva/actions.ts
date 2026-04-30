@@ -118,6 +118,24 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
   }
 
+  const { data: courtClub } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id")
+    .eq("id", courtId)
+    .maybeSingle();
+  const clubId = String((courtClub as { club_id?: string | null } | null)?.club_id ?? "").trim();
+  if (clubId) {
+    const { data: blocked } = await supabase
+      .from(DB_TABLES.blockedUsers)
+      .select("id")
+      .eq("club_id", clubId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (blocked) {
+      return { error: "No podés reservar en este club. Contactá al administrador." };
+    }
+  }
+
   const { data: conflicts } = await supabase
     .from(DB_TABLES.matches)
     .select("scheduled_time,duration_minutes,match_type,payment_status,match_status")

@@ -10,7 +10,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { blockCourtSlotAction, requestReservationRefundAction } from "./actions";
+import { blockCourtSlotAction, cancelReservationAdmin, requestReservationRefundAction } from "./actions";
 
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
@@ -309,6 +309,18 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2">
+              {String(selectedMatch.payment_status ?? "").toLowerCase() === "paid" ? (
+                <form action={cancelReservationAdmin}>
+                  <input type="hidden" name="match_id" value={selectedMatch.id} />
+                  <input type="hidden" name="date" value={selectedDate} />
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
+                  >
+                    Cancelar reserva
+                  </button>
+                </form>
+              ) : null}
               {String(selectedMatch.payment_status ?? "").toLowerCase() === "paid" ? (
                 <form action={requestReservationRefundAction}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />

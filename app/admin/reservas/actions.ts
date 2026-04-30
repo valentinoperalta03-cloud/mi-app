@@ -244,3 +244,50 @@ export async function requestReservationRefundAction(formData: FormData): Promis
   revalidatePath("/admin/finanzas/reembolsos");
   redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}`);
 }
+
+export async function cancelReservationAdmin(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  const date = getField(formData, "date");
+  if (!matchId) redirect("/admin/reservas");
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: row } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,court_id,owner_id,match_type")
+    .eq("id", matchId)
+    .maybeSingle();
+  const typed = row as { id: string; court_id: string; owner_id: string | null; match_type: string | null } | null;
+  if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
+    redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+  }
+
+  await supabase
+    .from(DB_TABLES.matches)
+    .update({ match_status: "cancelled", payment_status: "refund_requested" })
+    .eq("id", matchId);
+  await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
+
+  if (typed.owner_id) {
+    await createNotification(supabase, {
+      user_id: typed.owner_id,
+      type: "reservation_cancelled",
+      title: "Reserva cancelada por el club",
+      body: "Tu reserva fue cancelada por el club. El reembolso se procesará en 48hs.",
+      match_id: matchId,
+    });
+  }
+  await createNotification(supabase, {
+    user_id: ctx.userId,
+    type: "reservation_cancelled",
+    title: "Reserva cancelada",
+    body: "La reserva fue cancelada desde el panel admin y quedó en refund_requested.",
+    match_id: matchId,
+  });
+
+  revalidatePath("/admin/reservas");
+  revalidatePath("/admin/finanzas/reembolsos");
+  redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+}

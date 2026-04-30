@@ -30,6 +30,7 @@ export const DB_TABLES = {
   groupChatMessages: "group_chat_messages",
   levelEvolution: "level_evolution",
   payments: "payments",
+  blockedUsers: "blocked_users",
   notifications: "notifications",
   rateLimits: "rate_limits",
 } as const;

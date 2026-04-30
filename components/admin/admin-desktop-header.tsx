@@ -2,21 +2,33 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Activity, DollarSign, House, Settings, Target, Users } from "lucide-react";
+import { Activity, DollarSign, House, LogOut, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import ThemeToggleButton from "@/components/theme-toggle-button";
+import { createClient } from "@/utils/supabase/client";
 
 const desktopLinks = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
   { href: "/admin/reservas", label: "Partidos", icon: Target },
   { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
   { href: "/admin/analytics", label: "Ocupación", icon: Activity },
+  { href: "/admin/pagos", label: "Pagos", icon: DollarSign },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
+  { href: "/admin/club", label: "Club", icon: House },
   { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;
 
 function AdminDesktopHeaderInner() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block dark:border-slate-800 dark:bg-slate-950/85">
@@ -51,6 +63,19 @@ function AdminDesktopHeaderInner() {
             );
           })}
         </nav>
+        <div className="flex items-center gap-2">
+          <div className="w-56">
+            <ThemeToggleButton />
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <LogOut size={16} />
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     </header>
   );
