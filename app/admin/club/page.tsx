@@ -1,4 +1,3 @@
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -6,10 +5,6 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import ClubForm from "./club-form";
-
-function getField(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
 
 export default async function AdminClubPage() {
   const supabase = await createClient({ allowCookieWrites: true });
@@ -39,47 +34,6 @@ export default async function AdminClubPage() {
     club = (minimalRaw ?? {}) as Record<string, string | null>;
   }
 
-  async function updateClubInfo(formData: FormData) {
-    "use server";
-    try {
-      const supabaseAction = await createClient({ allowCookieWrites: true });
-      const actionCtx = await getOwnerAdminContext(supabaseAction);
-      if (!actionCtx?.userId || !actionCtx.clubIds.length) redirect("/login");
-      const ownClubId = actionCtx.clubIds[0];
-
-      const payload = {
-        name: getField(formData, "name") || null,
-        description: getField(formData, "description") || null,
-        address: getField(formData, "address") || null,
-        contact_phone: getField(formData, "contact_phone") || null,
-        business_hours: getField(formData, "business_hours") || null,
-        logo_url: getField(formData, "logo_url") || null,
-        cover_image_url: getField(formData, "cover_image_url") || null,
-        gallery_image_1: getField(formData, "gallery_image_1") || null,
-        gallery_image_2: getField(formData, "gallery_image_2") || null,
-        gallery_image_3: getField(formData, "gallery_image_3") || null,
-      };
-
-      const { error } = await supabaseAction
-        .from(DB_TABLES.clubs)
-        .update(payload)
-        .eq("id", ownClubId)
-        .eq("owner_id", actionCtx.userId);
-      if (error) {
-        await supabaseAction
-          .from(DB_TABLES.clubs)
-          .update({ name: payload.name })
-          .eq("id", ownClubId)
-          .eq("owner_id", actionCtx.userId);
-      }
-    } catch (error) {
-      console.error("[admin/club] update error", error);
-    }
-
-    revalidatePath("/admin/club");
-    redirect("/admin/club?saved=1");
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
@@ -94,7 +48,6 @@ export default async function AdminClubPage() {
         </div>
       ) : null}
       <ClubForm
-        action={updateClubInfo}
         initial={{
           name: club.name ?? "",
           description: club.description ?? "",

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { updateClubInfo } from "./actions";
 
 type Props = {
-  action: (formData: FormData) => Promise<void>;
   initial: {
     name: string;
     description: string;
@@ -18,12 +18,12 @@ type Props = {
   };
 };
 
-export default function ClubForm({ action, initial }: Props) {
+export default function ClubForm({ initial }: Props) {
   const [logo, setLogo] = useState(initial.logo_url);
   const [cover, setCover] = useState(initial.cover_image_url);
 
   return (
-    <form action={action} className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <form action={updateClubInfo} className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
       <label className="block space-y-1">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nombre del club</span>
         <input name="name" defaultValue={initial.name} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
