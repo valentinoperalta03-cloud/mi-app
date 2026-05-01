@@ -113,6 +113,7 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
           </div>
         ) : null}
         <ClubForm
+          clubId={clubId}
           initial={{
             name: club.name ?? "",
             description: club.description ?? "",
