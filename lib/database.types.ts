@@ -43,7 +43,19 @@ export type ClubRow = {
   id: Uuid;
   name: string | null;
   location: string | null;
-  owner_id: Uuid | null;
+  owner_id?: Uuid | null;
+  description?: string | null;
+  cover_image_url?: string | null;
+  logo_url?: string | null;
+  contact_phone?: string | null;
+  whatsapp?: string | null;
+  instagram?: string | null;
+  business_hours?: string | null;
+  cancellation_policy?: string | null;
+  gallery_image_1?: string | null;
+  gallery_image_2?: string | null;
+  gallery_image_3?: string | null;
+  gallery_image_4?: string | null;
 };
 
 export type CourtRow = {
@@ -51,6 +63,8 @@ export type CourtRow = {
   club_id: Uuid;
   name: string | null;
   price?: number | null;
+  surface?: string | null;
+  indoor?: boolean | null;
 };
 
 export type CourtScheduleRow = {

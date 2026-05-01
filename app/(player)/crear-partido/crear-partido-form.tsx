@@ -62,21 +62,31 @@ function overlapsSlot(slotStartMin: number, slotDur: number, otherStartMin: numb
   return slotStartMin < otherEnd && otherStartMin < slotEnd;
 }
 
+function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): string {
+  if (defaultClubId && clubs.some((c) => c.id === defaultClubId)) return defaultClubId;
+  return clubs[0]?.id ?? "";
+}
+
 export default function CrearPartidoForm({
   clubs,
   courts,
   defaultGender,
   friends,
+  defaultClubId,
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
   defaultGender: GenderCategory;
   friends: FriendOption[];
+  defaultClubId?: string;
 }) {
+  const initialClubId = resolveInitialClubId(clubs, defaultClubId);
   const [currentStep, setCurrentStep] = useState<Step>("clubs");
-  const [selectedClub, setSelectedClub] = useState<ClubOption | null>(clubs[0] ?? null);
+  const [selectedClub, setSelectedClub] = useState<ClubOption | null>(
+    () => clubs.find((c) => c.id === initialClubId) ?? clubs[0] ?? null
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClubId, setSelectedClubId] = useState<string>(clubs[0]?.id ?? "");
+  const [selectedClubId, setSelectedClubId] = useState<string>(initialClubId);
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<GeneratedSlot | null>(null);

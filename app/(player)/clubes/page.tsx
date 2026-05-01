@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -19,7 +18,30 @@ type ClubRow = {
   latitude?: number | null;
   longitude?: number | null;
   distance?: number | null;
+  cover_image_url?: string | null;
+  logo_url?: string | null;
+  description?: string | null;
+  business_hours?: string | null;
 };
+
+function clubThumbUrl(club: ClubRow): string | null {
+  const cover = club.cover_image_url?.trim();
+  const logo = club.logo_url?.trim();
+  return cover || logo || null;
+}
+
+function clubInitials(name: string | null): string {
+  const n = (name ?? "Club").trim();
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase();
+  return n.slice(0, 2).toUpperCase() || "CL";
+}
+
+function shortDescription(desc: string | null | undefined, max = 120): string | null {
+  const t = (desc ?? "").trim();
+  if (!t) return null;
+  return t.length <= max ? t : `${t.slice(0, max).trim()}…`;
+}
 
 export default function ClubesPage() {
   const router = useRouter();
@@ -67,7 +89,7 @@ export default function ClubesPage() {
     setErrorMessage(null);
     const { data, error } = await supabase
       .from(DB_TABLES.clubs)
-      .select("id,name,location,latitude,longitude");
+      .select("id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours");
 
     if (error) {
       setClubs([]);
@@ -182,30 +204,52 @@ export default function ClubesPage() {
         </div>
       ) : (
         <motion.section variants={listVariants} initial="hidden" animate="show" className="space-y-3">
-          {clubsToShow.map((club) => (
-            <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
-              <Link href={`/clubes/${club.id}`} className={`block p-5 ${PLAYER_CARD_INTERACTIVE}`}>
-                <div className="flex items-center gap-4">
-                  <Image
-                    src="/club-thumb.svg"
-                    alt="Vista previa del club"
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 rounded-2xl object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">
-                      {club.name ?? "Club sin nombre"}
-                    </h2>
-                    <p className="truncate text-sm font-light text-slate-500">{club.location ?? "Sin ubicacion"}</p>
-                    {club.distance != null ? (
-                      <p className="mt-1 text-xs font-medium text-[#0585FC]">📍 {club.distance.toFixed(1)} km</p>
-                    ) : null}
+          {clubsToShow.map((club) => {
+            const thumb = clubThumbUrl(club);
+            const descShort = shortDescription(club.description);
+            return (
+              <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
+                <Link href={`/clubes/${club.id}`} className={`block p-5 ${PLAYER_CARD_INTERACTIVE}`}>
+                  <div className="flex items-start gap-4">
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={thumb}
+                        alt=""
+                        className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200/80 dark:ring-slate-700"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-cyan-500 text-sm font-bold text-white ring-1 ring-[#0585FC]/30">
+                        {clubInitials(club.name)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-lg font-bold tracking-tight text-slate-950 dark:text-slate-100">
+                        {club.name ?? "Club sin nombre"}
+                      </h2>
+                      <p className="truncate text-sm font-light text-slate-500 dark:text-slate-400">
+                        {club.location ?? "Sin ubicación"}
+                      </p>
+                      {descShort ? (
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                          {descShort}
+                        </p>
+                      ) : null}
+                      {club.business_hours?.trim() ? (
+                        <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-[#0461C4] dark:text-sky-400">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{club.business_hours.trim()}</span>
+                        </p>
+                      ) : null}
+                      {club.distance != null ? (
+                        <p className="mt-1 text-xs font-medium text-[#0585FC]">📍 {club.distance.toFixed(1)} km</p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            </motion.article>
-          ))}
+                </Link>
+              </motion.article>
+            );
+          })}
         </motion.section>
       )}
     </MotionPage>

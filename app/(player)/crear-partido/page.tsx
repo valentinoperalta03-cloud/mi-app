@@ -9,7 +9,13 @@ import CrearPartidoForm, {
   type GenderCategory,
 } from "./crear-partido-form";
 
-export default async function CrearPartidoPage() {
+type PageProps = {
+  searchParams?: Promise<{ clubId?: string }>;
+};
+
+export default async function CrearPartidoPage({ searchParams }: PageProps) {
+  const sp = searchParams ? await searchParams : {};
+  const defaultClubId = sp.clubId?.trim() || undefined;
   const supabase = await createClient();
   const {
     data: { user },
@@ -101,7 +107,13 @@ export default async function CrearPartidoPage() {
           No se pudo cargar la disponibilidad de clubes y canchas.
         </section>
       ) : (
-        <CrearPartidoForm clubs={clubs} courts={courts} defaultGender={defaultGender} friends={friends} />
+        <CrearPartidoForm
+          clubs={clubs}
+          courts={courts}
+          defaultGender={defaultGender}
+          friends={friends}
+          defaultClubId={defaultClubId}
+        />
       )}
     </MotionPage>
   );
