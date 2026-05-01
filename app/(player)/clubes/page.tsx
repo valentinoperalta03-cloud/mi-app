@@ -8,8 +8,8 @@ import { motion } from "framer-motion";
 import ClubsMap from "@/components/clubs-map";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD, PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
-import { supabase } from "@/lib/supabase";
 import MotionPage from "@/components/motion-page";
+import { createClient } from "@/utils/supabase/client";
 
 type ClubRow = {
   id: string | number;
@@ -87,6 +87,7 @@ export default function ClubesPage() {
   async function loadClubs(showLoading = false) {
     if (showLoading) setLoading(true);
     setErrorMessage(null);
+    const supabase = createClient();
     const { data, error } = await supabase
       .from(DB_TABLES.clubs)
       .select("id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours");
