@@ -43,6 +43,8 @@ function shortDescription(desc: string | null | undefined, max = 120): string | 
   return t.length <= max ? t : `${t.slice(0, max).trim()}…`;
 }
 
+const CLUBS_LIST_SELECT = "id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours";
+
 export default function ClubesPage() {
   const router = useRouter();
   const [clubs, setClubs] = useState<ClubRow[]>([]);
@@ -88,7 +90,7 @@ export default function ClubesPage() {
     if (showLoading) setLoading(true);
     setErrorMessage(null);
     const supabase = createClient();
-    const { data, error } = await supabase.from(DB_TABLES.clubs).select("id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours");
+    const { data, error } = await supabase.from(DB_TABLES.clubs).select(CLUBS_LIST_SELECT);
 
     if (error) {
       setClubs([]);
