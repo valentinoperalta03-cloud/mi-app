@@ -145,7 +145,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
           </div>
           <div className="relative h-14 w-40 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90">
-            <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-2 opacity-85" />
+            <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-2 opacity-85" />
           </div>
         </div>
       </header>

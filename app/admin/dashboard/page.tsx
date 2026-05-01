@@ -64,7 +64,7 @@ const modules = [
   },
 ] as const;
 
-const BRAND_LOGO_SRC = "/logo-marca.png";
+const BRAND_LOGO_SRC = "/logo.png";
 const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 export default async function AdminDashboardPage() {

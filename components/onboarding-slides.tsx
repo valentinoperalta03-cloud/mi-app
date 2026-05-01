@@ -93,7 +93,7 @@ export default function OnboardingSlides() {
             <div className="relative z-10 flex min-h-[72vh] flex-col px-6 pb-6 pt-7">
               <div className="mx-auto mb-6">
                 <div className="relative h-14 w-40 overflow-hidden rounded-2xl border border-white/80 bg-white/80 shadow-sm">
-                  <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-2" />
+                  <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-2" />
                 </div>
               </div>
 

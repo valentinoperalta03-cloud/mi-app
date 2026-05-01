@@ -4,7 +4,7 @@ export default function JugadorPerfilLoading() {
   return (
     <div className="mx-auto min-h-screen w-full max-w-md space-y-5 px-4 pb-28 pt-6" aria-busy aria-label="Cargando perfil">
       <div className="relative h-6 w-20 overflow-hidden opacity-50">
-        <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain" />
+        <Image src="/logo.png" alt="Padelibre" fill className="object-contain" />
       </div>
 
       <section className="rounded-3xl border border-slate-200/80 bg-white p-6 text-center shadow-sm">

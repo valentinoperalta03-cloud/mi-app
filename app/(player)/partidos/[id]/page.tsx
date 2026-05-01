@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const faltan = Math.max(0, 4 - (participantsCount ?? 0));
   const title = `🎾 ¡Sumate al partido en ${clubName}!`;
   const description = `${day} a las ${hour} - Faltan ${faltan} jugadores.`;
-  const imageUrl = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://padelibre.app"}/logo-marca.png`;
+  const imageUrl = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://padelibre.app"}/logo.png`;
   return {
     title,
     description,
@@ -625,7 +625,7 @@ Link del partido: ${partyUrl}`;
         <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-emerald-200/70 bg-white p-4 shadow-sm`}>
           <div className="mb-3 flex items-center gap-2">
             <div className="relative h-5 w-16 overflow-hidden opacity-60">
-              <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain" />
+              <Image src="/logo.png" alt="Padelibre" fill className="object-contain" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones por WhatsApp</p>
           </div>
@@ -688,7 +688,7 @@ Link del partido: ${partyUrl}`;
           <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#0585FC]/20/70 bg-[#0585FC]/5/70 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="relative h-7 w-20 overflow-hidden rounded-xl border border-slate-200/70 bg-white/90">
-                <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-1" />
+                <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-1" />
               </div>
               <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
             </div>

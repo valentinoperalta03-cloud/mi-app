@@ -9,7 +9,7 @@ export default function ComunidadLoading() {
     >
       <header className="space-y-2">
         <div className="relative h-6 w-20 overflow-hidden opacity-50">
-          <Image src="/logo-marca.png" alt="Padelibre" fill className="object-contain" />
+          <Image src="/logo.png" alt="Padelibre" fill className="object-contain" />
         </div>
         <div className="shimmer h-5 w-28 rounded-full" />
         <div className="shimmer h-8 w-48 rounded-2xl" />

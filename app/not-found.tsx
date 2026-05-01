@@ -12,7 +12,7 @@ export default function NotFound() {
       <section className="relative w-full max-w-md overflow-hidden rounded-[32px] border border-slate-200/70 bg-white/90 p-8 text-center shadow-[0_20px_60px_-28px_rgba(15,23,42,0.28)] backdrop-blur-[2px] sm:p-10">
         <div className="mx-auto mb-6">
           <div className="relative h-14 w-40 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90">
-            <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain p-2" />
+            <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-2" />
           </div>
         </div>
 

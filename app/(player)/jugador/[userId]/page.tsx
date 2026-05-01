@@ -236,7 +236,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       <section className="rounded-3xl border border-slate-200/80 bg-white p-6 text-center shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
         <div className="mx-auto mb-4 w-fit rounded-xl border border-slate-200/70 bg-white/90 p-1.5">
           <div className="relative h-7 w-20 overflow-hidden">
-            <Image src="/logo-marca.png" alt="Logo de Padelibre" fill className="object-contain" />
+            <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain" />
           </div>
         </div>
         <div className="mx-auto w-fit">

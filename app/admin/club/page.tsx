@@ -6,11 +6,28 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import ClubForm from "./club-form";
 
+function logSupabaseError(prefix: string, err: unknown) {
+  if (err && typeof err === "object" && "message" in err) {
+    const e = err as { message?: string; code?: string; details?: string; hint?: string };
+    console.error(prefix, { message: e.message, code: e.code, details: e.details, hint: e.hint });
+    return;
+  }
+  console.error(prefix, err);
+}
+
 export default async function AdminClubPage() {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/config");
+  console.log("[admin/club] getOwnerAdminContext", JSON.stringify(ctx));
+
+  if (!ctx?.userId) {
+    console.log("[admin/club] sin ctx.userId, redirect /login");
+    redirect("/login");
+  }
+  if (!ctx.clubIds.length) {
+    console.log("[admin/club] sin clubIds, redirect /admin/config", { userId: ctx.userId, clubs: ctx.clubs });
+    redirect("/admin/config");
+  }
 
   const clubId = ctx.clubIds[0];
   let club = {} as Record<string, string | null>;
@@ -21,16 +38,33 @@ export default async function AdminClubPage() {
       .select("*")
       .eq("id", clubId)
       .maybeSingle();
-    if (error) throw error;
+    console.log("[admin/club] clubs query (full row)", {
+      clubId,
+      table: DB_TABLES.clubs,
+      hasData: clubRaw != null,
+      dataKeys: clubRaw && typeof clubRaw === "object" ? Object.keys(clubRaw as object) : [],
+      data: clubRaw,
+    });
+    if (error) {
+      logSupabaseError("[admin/club] clubs query error", error);
+      throw error;
+    }
     club = (clubRaw ?? {}) as Record<string, string | null>;
   } catch (error) {
-    console.error("[admin/club] load error", error);
+    console.error("[admin/club] load error (catch)", error);
+    logSupabaseError("[admin/club] load error (parsed)", error);
     loadError = "No se pudieron cargar todos los campos del club. Verificá migraciones pendientes.";
-    const { data: minimalRaw } = await supabase
+    const { data: minimalRaw, error: minimalError } = await supabase
       .from(DB_TABLES.clubs)
       .select("name")
       .eq("id", clubId)
       .maybeSingle();
+    console.log("[admin/club] clubs fallback query (name only)", {
+      clubId,
+      hasData: minimalRaw != null,
+      name: minimalRaw?.name ?? null,
+    });
+    if (minimalError) logSupabaseError("[admin/club] clubs fallback query error", minimalError);
     club = (minimalRaw ?? {}) as Record<string, string | null>;
   }
 
