@@ -18,7 +18,7 @@ export default async function AdminClubPage() {
   try {
     const { data: clubRaw, error } = await supabase
       .from(DB_TABLES.clubs)
-      .select("name,description,address,contact_phone,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3")
+      .select("*")
       .eq("id", clubId)
       .maybeSingle();
     if (error) throw error;
