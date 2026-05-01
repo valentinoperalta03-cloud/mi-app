@@ -12,7 +12,7 @@ const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vierne
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; saved?: string }>;
 };
 
 function normalizeTime(t: string | null | undefined, fallback: string) {
@@ -21,10 +21,16 @@ function normalizeTime(t: string | null | undefined, fallback: string) {
   return s.length >= 5 ? s.slice(0, 5) : fallback;
 }
 
+function formatPriceOverride(v: CourtScheduleRow["price_override"]): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
 export default async function AdminCanchaHorariosPage({ params, searchParams }: PageProps) {
   const { id: courtId } = await params;
   const sp = searchParams ? await searchParams : {};
   const errorFlash = sp.error?.trim() ?? "";
+  const savedFlash = sp.saved === "1";
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -42,10 +48,13 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
   const { data: schedData } = await supabase
     .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,open_time,close_time")
+    .select("day_of_week,open_time,close_time,price_override")
     .eq("court_id", courtId);
 
-  const schedules = (schedData ?? []) as Pick<CourtScheduleRow, "day_of_week" | "open_time" | "close_time">[];
+  const schedules = (schedData ?? []) as Pick<
+    CourtScheduleRow,
+    "day_of_week" | "open_time" | "close_time" | "price_override"
+  >[];
   const byDay = new Map(schedules.map((s) => [s.day_of_week, s]));
 
   return (
@@ -54,8 +63,14 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       <header className="space-y-2">
         <p className={`${adminKicker} text-[#0585FC]`}>Horarios</p>
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>
-        <p className={adminSubtitle}>Activá los días y definí apertura y cierre.</p>
+        <p className={adminSubtitle}>Activá los días y definí apertura y cierre. Podés fijar un precio distinto por día (opcional).</p>
       </header>
+
+      {savedFlash ? (
+        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">
+          Horarios guardados correctamente.
+        </div>
+      ) : null}
 
       {errorFlash ? (
         <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
@@ -96,6 +111,18 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                   />
                 </label>
               </div>
+              <label className="mt-3 block space-y-1">
+                <span className="text-xs font-semibold text-slate-500">Precio del turno este día (opcional, sobreescribe el precio base)</span>
+                <input
+                  type="number"
+                  name={`day_${d}_price_override`}
+                  min={0}
+                  step="1"
+                  placeholder="Vacío = usar precio de la cancha"
+                  defaultValue={formatPriceOverride(row?.price_override)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                />
+              </label>
             </div>
           );
         })}

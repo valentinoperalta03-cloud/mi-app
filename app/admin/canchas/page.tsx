@@ -103,8 +103,8 @@ export default async function AdminCanchasPage() {
                 defaultValue="cemento"
               >
                 <option value="cemento">Cemento</option>
-                <option value="cesped sintetico">Césped sintético</option>
                 <option value="cristal">Cristal</option>
+                <option value="cesped sintetico">Césped sintético</option>
                 <option value="moqueta">Moqueta</option>
               </select>
             </label>
@@ -167,8 +167,10 @@ export default async function AdminCanchasPage() {
                 </div>
               </div>
               <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700 [&::-webkit-details-marker]:hidden">
-                  Editar
+                <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5">
+                    Editar
+                  </span>
                 </summary>
                 <form action={updateCourt} className="mt-3 space-y-3">
                   <input type="hidden" name="court_id" value={c.id} />
@@ -193,8 +195,8 @@ export default async function AdminCanchasPage() {
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800"
                   >
                     <option value="cemento">Cemento</option>
-                    <option value="cesped sintetico">Césped sintético</option>
                     <option value="cristal">Cristal</option>
+                    <option value="cesped sintetico">Césped sintético</option>
                     <option value="moqueta">Moqueta</option>
                   </select>
                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700">

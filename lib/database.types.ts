@@ -58,6 +58,8 @@ export type CourtScheduleRow = {
   day_of_week: number;
   open_time: string | null;
   close_time: string | null;
+  /** Precio por turno para ese día; opcional en UI admin. */
+  price_override?: number | string | null;
 };
 
 export type MatchRow = {
