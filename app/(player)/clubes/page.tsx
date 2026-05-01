@@ -88,9 +88,7 @@ export default function ClubesPage() {
     if (showLoading) setLoading(true);
     setErrorMessage(null);
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from(DB_TABLES.clubs)
-      .select("id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours");
+    const { data, error } = await supabase.from(DB_TABLES.clubs).select("id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours");
 
     if (error) {
       setClubs([]);
