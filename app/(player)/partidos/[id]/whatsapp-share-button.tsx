@@ -17,7 +17,8 @@ export default function WhatsappShareButton({ fallbackPath, sharePath, shareText
       typeof window !== "undefined" && window.location?.href
         ? window.location.href
         : fallbackPath;
-    const message = `${shareText} ${pageUrl}`;
+    const hasUrlInText = /https?:\/\/\S+/.test(shareText);
+    const message = hasUrlInText ? shareText : `${shareText} ${pageUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
     if (typeof window !== "undefined") {

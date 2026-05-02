@@ -10,6 +10,7 @@ import MotionPage from "@/components/motion-page";
 import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
+import { formatLevel } from "@/lib/level-quiz-logic";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
@@ -126,8 +127,21 @@ type ParticipantRow = {
   name: string | null;
   avatar_url: string | null;
   category: string | null;
+  level: number | null;
   technical_score: number | null;
 };
+
+function participantShareLevel(p: ParticipantRow): string {
+  if (p.technical_score != null && Number.isFinite(Number(p.technical_score))) {
+    return Number(p.technical_score).toFixed(2);
+  }
+  if (p.level != null && Number.isFinite(Number(p.level))) {
+    return formatLevel(Number(p.level));
+  }
+  const cat = p.category?.trim();
+  if (cat) return cat;
+  return "s/d";
+}
 
 export default async function PartidoDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
@@ -218,7 +232,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const { data: participantsRows } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id, profiles(name,avatar_url,category)")
+    .select("player_id, profiles(name,avatar_url,category,level,technical_score)")
     .eq("match_id", id);
 
   const participants = ((participantsRows ?? []) as Array<{
@@ -228,12 +242,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           name: string | null;
           avatar_url: string | null;
           category: string | null;
+          level: number | null;
           technical_score: number | null;
         }
       | {
           name: string | null;
           avatar_url: string | null;
           category: string | null;
+          level: number | null;
           technical_score: number | null;
         }[]
       | null;
@@ -244,6 +260,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       name: profile?.name ?? null,
       avatar_url: profile?.avatar_url ?? null,
       category: profile?.category ?? null,
+      level: profile?.level ?? null,
       technical_score: profile?.technical_score ?? null,
     } satisfies ParticipantRow;
   });
@@ -304,7 +321,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
   const inviteUrl = siteOrigin ? `${siteOrigin}/partidos/${id}?invite=true` : `/partidos/${id}?invite=true`;
-  const sharePath = siteOrigin ? `${siteOrigin}/partidos/${id}` : `/partidos/${id}`;
 
   const { data: myPendingAccess } =
     isPrivate && !isOwner && !isParticipant && inviteOpen
@@ -394,6 +410,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     month: "long",
   });
   const longDateAr = longDateArRaw.charAt(0).toUpperCase() + longDateArRaw.slice(1);
+  const weekdayLineRaw = formatDateInArgentina(match.date, { weekday: "long" });
+  const weekdayLine = weekdayLineRaw.charAt(0).toUpperCase() + weekdayLineRaw.slice(1);
+  const fechaLargaRaw = formatDateInArgentina(match.date, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const fechaLarga = fechaLargaRaw.charAt(0).toUpperCase() + fechaLargaRaw.slice(1);
   const hourAr = formatDateInArgentina(match.date, {
     hour: "2-digit",
     minute: "2-digit",
@@ -406,31 +430,38 @@ Link del partido: ${partyUrl}`;
   const ownerWhatsHref = `https://wa.me/?text=${encodeURIComponent(ownerWhatsMessage)}`;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
   const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
+  const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
+  let ownerRestrictionCategory = "el organizador";
+  if (ownerParticipant) {
+    if (ownerParticipant.level != null && Number.isFinite(Number(ownerParticipant.level))) {
+      ownerRestrictionCategory = formatLevel(Number(ownerParticipant.level));
+    } else if (ownerParticipant.category?.trim()) {
+      ownerRestrictionCategory = ownerParticipant.category.trim();
+    }
+  }
+  const shareNivelLine = match.level_restricted
+    ? `restringido a ${ownerRestrictionCategory}`
+    : "abierto a todos";
+  const shareGender =
+    match.gender_category === "femenino"
+      ? "Femenino"
+      : match.gender_category === "masculino"
+        ? "Masculino"
+        : "Mixto";
   const playerLines = Array.from({ length: 4 }, (_, i) => {
     const player = participants[i];
     if (!player) return "⚪ Falta 1 jugador";
     const name = player.name?.trim() || "Jugador";
-    const tech =
-      player.technical_score != null && Number.isFinite(Number(player.technical_score))
-        ? Number(player.technical_score).toFixed(2)
-        : "s/d";
-    return `✅ ${name} (${tech})`;
+    return `✅ ${name} (${participantShareLevel(player)})`;
   });
-  const shareGender =
-    detail.gender_category === "femenino"
-      ? "Femenino"
-      : detail.gender_category === "masculino"
-        ? "Masculino"
-        : "Mixto";
-  const shareLevel = detail.level_restricted ? "restringido" : "abierto a todos";
   const shareWhatsTextFull = [
-    `🎾 ¡Quién se anima? PARTIDO EN ${(detail.club_name ?? "CLUB").toUpperCase()}`,
-    `📅 ${longDateAr} a las ${hourAr} · 90 min`,
+    `🎾 ¿Quién se anima? PARTIDO EN ${(detail.club_name ?? "CLUB").toUpperCase()}`,
+    `📅 ${weekdayLine} ${fechaLarga} a las ${hourAr} · 90 min`,
     `⚧️ ${shareGender}`,
-    `📊 Nivel ${shareLevel}`,
+    `📊 Nivel ${shareNivelLine}`,
     "Jugadores:",
     ...playerLines,
-    `🔗 ${sharePath}`,
+    `🔗 ${partyUrl}`,
     "¡Sumate antes de que se llene! 🔥",
   ].join("\n");
 
@@ -739,7 +770,7 @@ Link del partido: ${partyUrl}`;
               </div>
               <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
             </div>
-            <WhatsappShareButton fallbackPath={sharePath} sharePath={sharePath} shareText={shareWhatsTextFull} />
+            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsTextFull} />
           </div>
         ) : null}
 
@@ -882,7 +913,7 @@ Link del partido: ${partyUrl}`;
             Chat del partido
           </Link>
           <div className="flex w-full justify-center">
-            <WhatsappShareButton fallbackPath={sharePath} sharePath={sharePath} shareText={shareWhatsTextFull} />
+            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsTextFull} />
           </div>
           {(pendingRequestsCount ?? 0) > 0 ? (
             <Link
