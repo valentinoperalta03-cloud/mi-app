@@ -263,7 +263,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
         href="/buscar-partido"
         className="btn-primary-gradient flex w-full items-center justify-center rounded-2xl py-3.5 text-sm font-semibold transition hover:brightness-95"
       >
-        Ver en feed y unirme
+        Unirme al partido
       </Link>
     </MotionPage>
   );

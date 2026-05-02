@@ -67,12 +67,14 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     coverImageUrl: club.cover_image_url ?? null,
     logoUrl: club.logo_url ?? null,
   }));
-  const courts: CourtOption[] = ((courtsRaw ?? []) as Array<{
-    id: string;
-    club_id: string;
-    name: string | null;
-    price: number | null;
-  }>).map((court) => ({
+  const courtsDeduped = Array.from(
+    new Map(
+      ((courtsRaw ?? []) as Array<{ id: string; club_id: string; name: string | null; price: number | null }>).map(
+        (row) => [row.id, row]
+      )
+    ).values()
+  );
+  const courts: CourtOption[] = courtsDeduped.map((court) => ({
     id: court.id,
     clubId: court.club_id,
     name: court.name ?? "Cancha",

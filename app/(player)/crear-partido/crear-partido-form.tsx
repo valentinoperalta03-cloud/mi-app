@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
+import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
@@ -15,6 +16,13 @@ import { crearPartido } from "./actions";
 
 function fmtAr(numero: number) {
   return new Intl.NumberFormat("es-AR").format(numero);
+}
+
+function clubInitials(name: string): string {
+  const n = name.trim();
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase();
+  return n.slice(0, 2).toUpperCase() || "CL";
 }
 
 export type GenderCategory = "masculino" | "femenino" | "mixto";
@@ -117,10 +125,10 @@ export default function CrearPartidoForm({
     });
   }, []);
 
-  const availableCourts = useMemo(
-    () => courts.filter((court) => court.clubId === selectedClubId),
-    [courts, selectedClubId]
-  );
+  const availableCourts = useMemo(() => {
+    const list = courts.filter((court) => court.clubId === selectedClubId);
+    return Array.from(new Map(list.map((c) => [c.id, c])).values());
+  }, [courts, selectedClubId]);
   const filteredClubs = useMemo(
     () => clubs.filter((club) => club.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [clubs, searchQuery]
@@ -304,11 +312,12 @@ export default function CrearPartidoForm({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={thumbFallback} alt={club.name} className="h-full w-full object-cover" />
                       ) : (
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                          <circle cx="16" cy="16" r="12" fill="none" stroke="#0585FC" strokeWidth="2" opacity="0.5" />
-                          <path d="M8 13 Q16 11 24 13" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
-                          <path d="M8 16 Q16 14 24 16" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
-                        </svg>
+                        <div
+                          className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
+                          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                        >
+                          {clubInitials(club.name)}
+                        </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -511,7 +520,15 @@ export default function CrearPartidoForm({
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Opciones del partido</h1>
             <p className="mt-1 text-sm text-slate-500">
-              {selectedClub?.name} · {selectedDate} · {selectedSlot?.time}
+              {selectedClub?.name} ·{" "}
+              {selectedDate
+                ? formatDateInArgentina(`${selectedDate}T12:00:00`, {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "—"}{" "}
+              · {selectedSlot?.time}
             </p>
           </div>
 
@@ -578,23 +595,31 @@ export default function CrearPartidoForm({
                 const isDisabled =
                   (option === "femenino" && defaultGender === "masculino") ||
                   (option === "masculino" && defaultGender === "femenino");
+                const showFemeninoMismatch =
+                  option === "femenino" && defaultGender === "masculino" && isDisabled;
                 return (
-                  <button
-                    key={option}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => !isDisabled && setGenderCategory(option)}
-                    className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
-                      isDisabled
-                        ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:text-slate-700"
-                        : genderCategory === option
-                          ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                    }`}
-                  >
-                    {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
-                    {isDisabled ? <span className="mt-0.5 block text-[9px] opacity-60">No disponible</span> : null}
-                  </button>
+                  <div key={option} className="flex min-w-0 flex-col gap-1">
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      title={showFemeninoMismatch ? "Tu género no coincide" : undefined}
+                      onClick={() => !isDisabled && setGenderCategory(option)}
+                      className={`rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
+                        isDisabled
+                          ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-40 dark:border-slate-800 dark:bg-slate-900/40"
+                          : genderCategory === option
+                            ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      }`}
+                    >
+                      {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
+                    </button>
+                    {showFemeninoMismatch ? (
+                      <p className="text-center text-[10px] leading-tight text-slate-500 dark:text-slate-400">
+                        Tu género no coincide
+                      </p>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
@@ -754,7 +779,16 @@ export default function CrearPartidoForm({
             <div className="space-y-3 p-5">
               {[
                 { label: "Cancha", value: availableCourts.find((c) => c.id === selectedCourtId)?.name },
-                { label: "Fecha", value: selectedDate },
+                {
+                  label: "Fecha",
+                  value: selectedDate
+                    ? formatDateInArgentina(`${selectedDate}T12:00:00`, {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : undefined,
+                },
                 { label: "Hora", value: selectedSlot?.time },
                 { label: "Duración", value: `${selectedSlot?.duration ?? "—"} minutos` },
                 { label: "Tipo", value: matchType === "competitivo" ? "Competitivo" : "Amistoso" },

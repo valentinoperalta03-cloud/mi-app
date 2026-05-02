@@ -509,7 +509,10 @@ Link del partido: ${partyUrl}`;
           </div>
           <div className="flex justify-between gap-2 border-t border-slate-100 pt-2">
             <dt className="font-medium text-slate-500">Precio</dt>
-            <dd className="text-lg font-bold text-[#0461C4]">${detail.total_price ?? 0}</dd>
+            <dd className="text-right text-sm text-[var(--text-tertiary)]">
+              <span className="text-lg font-bold text-[#0461C4]">${detail.total_price ?? 0}</span>
+              <span> · Precio total del turno</span>
+            </dd>
           </div>
         </dl>
       </article>

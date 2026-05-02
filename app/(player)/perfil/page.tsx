@@ -136,7 +136,7 @@ export default async function PerfilPage() {
     Boolean((row.category ?? "").trim()) ||
     row.is_leveled === true ||
     hasTechnical;
-  const displayName = row?.name?.trim() || email.split("@")[0] || "Tu perfil";
+  const displayName = row?.name?.trim() || "Tu perfil";
   const nivelLine = formatProfileNivelFromRow(row);
   const nivelParts = splitOfficialCategoryLine(nivelLine);
 
@@ -184,7 +184,6 @@ export default async function PerfilPage() {
             {nivelParts.category || "—"}
             {nivelParts.description ? ` — ${nivelParts.description}` : ""}
           </p>
-          <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">{email}</p>
           <div className="mt-4 flex justify-center gap-3">
             <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
               <p className="text-sm font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>

@@ -184,7 +184,10 @@ export default function ClubsListClient({
                         className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200/80 dark:ring-slate-700"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-cyan-500 text-sm font-bold text-white ring-1 ring-[#0585FC]/30">
+                      <div
+                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white ring-1 ring-[#0585FC]/30"
+                        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                      >
                         {clubInitials(club.name)}
                       </div>
                     )}
