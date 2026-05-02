@@ -120,10 +120,16 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const { data: courtClub } = await supabase
     .from(DB_TABLES.courts)
-    .select("club_id")
+    .select("club_id, clubs!inner(mp_access_token, mp_user_id)")
     .eq("id", courtId)
     .maybeSingle();
-  const clubId = String((courtClub as { club_id?: string | null } | null)?.club_id ?? "").trim();
+  const courtClubTyped = courtClub as {
+    club_id?: string | null;
+    clubs?: { mp_access_token?: string | null; mp_user_id?: string | null } | null;
+  } | null;
+  const clubId = String(courtClubTyped?.club_id ?? "").trim();
+  const clubAccessToken = courtClubTyped?.clubs?.mp_access_token ?? null;
+  const clubMpUserId = courtClubTyped?.clubs?.mp_user_id ?? null;
   if (clubId) {
     const { data: blocked } = await supabase
       .from(DB_TABLES.blockedUsers)
@@ -238,6 +244,8 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     payerEmail: user.email ?? "",
     payerFirstName,
     payerLastName,
+    clubAccessToken,
+    clubMpUserId,
   });
 
   if ("error" in mp) {
