@@ -69,9 +69,12 @@ const itemVariants = {
 export default function ClubsListClient({
   clubs,
   errorMessage,
+  errorDebug,
 }: {
   clubs: ClubRow[];
   errorMessage: string | null;
+  /** Detalle técnico (p. ej. mensaje PostgREST) para depuración */
+  errorDebug?: string | null;
 }) {
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -145,6 +148,9 @@ export default function ClubsListClient({
       {errorMessage ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <p>{errorMessage}</p>
+          {errorDebug ? (
+            <p className="mt-2 break-words font-mono text-xs text-rose-600/90 dark:text-rose-300/90">{errorDebug}</p>
+          ) : null}
           <motion.button
             type="button"
             onClick={() => router.refresh()}

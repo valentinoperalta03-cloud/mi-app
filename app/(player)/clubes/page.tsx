@@ -5,8 +5,12 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
+/**
+ * Columnas que existen en `public.clubs` (sin latitude/longitude: no están en el schema actual).
+ * Pedir columnas inexistentes hace que PostgREST responda 400.
+ */
 const CLUBS_LIST_SELECT =
-  "id,name,location,latitude,longitude,cover_image_url,logo_url,description,business_hours";
+  "id,name,location,cover_image_url,logo_url,description,business_hours";
 
 function ClubesLoading() {
   return (
@@ -28,13 +32,31 @@ function ClubesLoading() {
 }
 
 async function ClubesContent() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from(DB_TABLES.clubs).select(CLUBS_LIST_SELECT);
+  let clubs: ClubRow[] = [];
+  let errorMessage: string | null = null;
+  let errorDebug: string | null = null;
 
-  const clubs: ClubRow[] = error ? [] : ((data as ClubRow[]) ?? []);
-  const errorMessage = error ? "No se pudieron cargar los clubes. Intenta nuevamente." : null;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from(DB_TABLES.clubs).select(CLUBS_LIST_SELECT);
 
-  return <ClubsListClient clubs={clubs} errorMessage={errorMessage} />;
+    console.log("[clubes] Supabase response", { data, error });
+
+    if (error) {
+      errorMessage = "No se pudieron cargar los clubes. Intenta nuevamente.";
+      errorDebug =
+        [error.message, error.details, error.hint, error.code].filter(Boolean).join(" — ") ||
+        JSON.stringify(error);
+    } else {
+      clubs = (data as ClubRow[]) ?? [];
+    }
+  } catch (e) {
+    console.error("[clubes] ClubesContent exception", e);
+    errorMessage = "Error inesperado al cargar clubes.";
+    errorDebug = e instanceof Error ? e.message : String(e);
+  }
+
+  return <ClubsListClient clubs={clubs} errorMessage={errorMessage} errorDebug={errorDebug} />;
 }
 
 export default function ClubesPage() {
