@@ -398,11 +398,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     month: "long",
   });
   const longDateAr = longDateArRaw.charAt(0).toUpperCase() + longDateArRaw.slice(1);
-  const hourAr = formatDateInArgentina(match.date, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const hourAr = match.scheduled_time
+    ? String(match.scheduled_time).slice(0, 5)
+    : format(parseISO(detail.date), "HH:mm", { locale: es });
   const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
   const sharePath = partyUrl;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
@@ -419,8 +417,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         : "Mixto";
   const slots = Array.from({ length: 4 }, (_, i) => {
     const p = participants[i];
-    if (p) return `✅ ${p.name ?? "Jugador"} (${p.level ?? p.technical_score ?? "Sin nivel"})`;
-    return "⚪ Falta 1 jugador";
+    if (p)
+      return `+ ${p.name ?? "Jugador"} (${formatProfileNivelFromRow(p).split(" - ")[0] ?? "Sin nivel"})`;
+    return "- Falta 1 jugador";
   }).join("\n");
 
   const nivelText = match.level_restricted
@@ -429,16 +428,16 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const shareWhatsText = `🎾 ¿Quién se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}
 
-📅 ${longDateAr} · ${hourAr} · 90 min
-⚧️ ${genderLabel}
-📊 Nivel ${nivelText}
+Fecha: ${longDateAr} · ${hourAr} · 90 min
+Género: ${genderLabel}
+Nivel: ${nivelText}
 
 Jugadores:
 ${slots}
 
-🔗 ${sharePath}
+Link: ${sharePath}
 
-¡Sumate antes de que se llene! 🔥`;
+¡Sumate antes de que se llene!`;
 
   const participantIds = new Set(participants.map((p) => p.player_id));
   const pendingRequestIds = new Set(accessRequesterIds);
