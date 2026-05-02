@@ -121,14 +121,6 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
               className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 pt-6 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)]`}
             >
               <div className={`absolute left-0 right-0 top-0 h-1.5 ${topBarColor}`} aria-hidden />
-              <div className="absolute right-3 top-3 opacity-5">
-                <svg width="32" height="32" viewBox="0 0 32 32" className="text-[#0585FC]">
-                  <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
-                  <path d="M5 12 Q16 10 27 12" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <path d="M5 16 Q16 14 27 16" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <path d="M5 20 Q16 18 27 20" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                </svg>
-              </div>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="truncate text-xl font-semibold leading-tight tracking-tight text-slate-900">
