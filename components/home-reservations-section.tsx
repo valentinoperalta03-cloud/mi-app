@@ -64,7 +64,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
                   <Link
-                    href={`/matches/${r.matchId}`}
+                    href={`/partidos/${r.matchId}`}
                     className="text-xs font-semibold text-[#0585FC] underline decoration-sky-200/80 underline-offset-2 hover:text-[#0461C4]"
                   >
                     Ver detalle
