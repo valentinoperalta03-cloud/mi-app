@@ -13,9 +13,12 @@ type FriendRow = {
 export default function InviteFriendsSection({
   matchId,
   friends,
+  sectionId,
 }: {
   matchId: string;
   friends: FriendRow[];
+  /** Ancla para "Invitar amigos" desde el hero del organizador */
+  sectionId?: string;
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export default function InviteFriendsSection({
 
   return (
     <>
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <section id={sectionId} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm scroll-mt-4">
         <h2 className="text-lg font-bold tracking-tight text-slate-950">Invitar amigos</h2>
         <ul className="mt-3 space-y-2">
           {friends.map((friend) => {
