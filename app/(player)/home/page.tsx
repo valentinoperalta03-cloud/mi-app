@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
+import { Building2, ChevronRight, CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
@@ -149,6 +149,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </Link>
         ))}
       </section>
+
+      <Link
+        href="/clubes"
+        className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition hover:opacity-95 active:scale-[0.99]"
+      >
+        <Building2 size={20} className="shrink-0 text-[#0585FC]" aria-hidden />
+        <div className="min-w-0 flex-1 text-left">
+          <p className="font-bold text-[var(--text-primary)]">Explorar clubes</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Encontrá canchas cerca tuyo</p>
+        </div>
+        <ChevronRight size={20} className="shrink-0 text-[#0585FC]" aria-hidden />
+      </Link>
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">

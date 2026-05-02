@@ -25,6 +25,8 @@ export type ClubOption = {
   location: string;
   description?: string | null;
   imageUrl?: string | null;
+  coverImageUrl?: string | null;
+  logoUrl?: string | null;
 };
 
 export type CourtOption = {
@@ -259,41 +261,74 @@ export default function CrearPartidoForm({
           </div>
 
           <div className="space-y-3">
-            {filteredClubs.map((club) => (
-              <button
-                key={club.id}
-                type="button"
-                onClick={() => {
-                  setSelectedClub(club);
-                  setSelectedClubId(club.id);
-                  setCurrentStep("club-detail");
-                }}
-                className="w-full rounded-2xl border border-black/[0.06] bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] dark:border-white/[0.06]"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
-                    {club.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- imagen externa cargada por URL de club
-                      <img src={club.imageUrl} alt={club.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="12" fill="none" stroke="#0585FC" strokeWidth="2" opacity="0.5" />
-                        <path d="M8 13 Q16 11 24 13" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
-                        <path d="M8 16 Q16 14 24 16" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
-                      </svg>
-                    )}
+            {filteredClubs.map((club) => {
+              const cover = club.coverImageUrl?.trim() || null;
+              const logo = club.logoUrl?.trim() || null;
+              const thumbFallback = club.imageUrl?.trim() || null;
+              return (
+                <button
+                  key={club.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedClub(club);
+                    setSelectedClubId(club.id);
+                    setCurrentStep("club-detail");
+                  }}
+                  className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] ${
+                    cover
+                      ? "border-black/[0.06] dark:border-white/[0.06]"
+                      : "border-black/[0.06] bg-white dark:border-white/[0.06]"
+                  }`}
+                >
+                  {cover ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- URL de Supabase storage */}
+                      <img
+                        src={cover}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/25" />
+                    </>
+                  ) : null}
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div
+                      className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${
+                        cover ? "border-2 border-white/90 bg-white/10 shadow-md ring-1 ring-white/20" : "bg-[#0585FC]/10"
+                      }`}
+                    >
+                      {logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- URL de Supabase storage
+                        <img src={logo} alt="" className="h-full w-full object-cover" />
+                      ) : thumbFallback ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumbFallback} alt={club.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                          <circle cx="16" cy="16" r="12" fill="none" stroke="#0585FC" strokeWidth="2" opacity="0.5" />
+                          <path d="M8 13 Q16 11 24 13" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
+                          <path d="M8 16 Q16 14 24 16" stroke="#0585FC" strokeWidth="1.5" fill="none" opacity="0.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`truncate font-bold ${cover ? "text-white drop-shadow-sm" : "text-slate-900 dark:text-white"}`}
+                      >
+                        {club.name}
+                      </p>
+                      <p
+                        className={`mt-0.5 flex items-center gap-1 text-sm ${cover ? "text-white/85" : "text-slate-500"}`}
+                      >
+                        <MapPin size={11} />
+                        {club.location || "Rosario"}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className={`shrink-0 ${cover ? "text-white/90" : "text-slate-400"}`} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-slate-900 dark:text-white">{club.name}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
-                      <MapPin size={11} />
-                      {club.location || "Rosario"}
-                    </p>
-                  </div>
-                  <ChevronRight size={18} className="shrink-0 text-slate-400" />
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
             {filteredClubs.length === 0 ? (
               <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 No encontramos clubes con ese nombre.
@@ -314,32 +349,59 @@ export default function CrearPartidoForm({
           </button>
 
           <div className="relative h-48 w-full overflow-hidden rounded-3xl bg-[#0585FC]/10">
-            {selectedClub?.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- imagen externa cargada por URL de club
-              <img src={selectedClub.imageUrl} alt={selectedClub.name} className="h-full w-full object-cover" />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-              >
-                <svg width="80" height="80" viewBox="0 0 80 80" opacity="0.3">
-                  <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
-                  <path d="M12 32 Q40 28 68 32" stroke="white" strokeWidth="2.5" fill="none" />
-                  <path d="M12 40 Q40 36 68 40" stroke="white" strokeWidth="2.5" fill="none" />
-                  <path d="M12 48 Q40 44 68 48" stroke="white" strokeWidth="2.5" fill="none" />
-                </svg>
-              </div>
-            )}
-            <div
-              className="absolute bottom-0 left-0 right-0 p-4"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }}
-            >
-              <h1 className="text-xl font-bold text-white">{selectedClub?.name}</h1>
-              <p className="flex items-center gap-1 text-sm text-white/80">
-                <MapPin size={12} />
-                {selectedClub?.location}
-              </p>
-            </div>
+            {(() => {
+              const heroSrc =
+                selectedClub?.coverImageUrl?.trim() ||
+                selectedClub?.logoUrl?.trim() ||
+                selectedClub?.imageUrl?.trim() ||
+                null;
+              const logoSrc = selectedClub?.logoUrl?.trim() || null;
+              const clubName = selectedClub?.name ?? "Club";
+              return (
+                <>
+                  {heroSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- URL de Supabase storage
+                    <img src={heroSrc} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                    >
+                      <svg width="80" height="80" viewBox="0 0 80 80" opacity="0.3">
+                        <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
+                        <path d="M12 32 Q40 28 68 32" stroke="white" strokeWidth="2.5" fill="none" />
+                        <path d="M12 40 Q40 36 68 40" stroke="white" strokeWidth="2.5" fill="none" />
+                        <path d="M12 48 Q40 44 68 48" stroke="white" strokeWidth="2.5" fill="none" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4">
+                    {logoSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logoSrc}
+                        alt=""
+                        className="h-16 w-16 shrink-0 rounded-2xl border-2 border-white object-cover shadow-lg"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white bg-white/15 text-lg font-bold text-white backdrop-blur-sm">
+                        {clubName.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1 pb-0.5">
+                      <h1 className="text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm">
+                        {clubName}
+                      </h1>
+                      <p className="mt-0.5 flex items-center gap-1 text-sm text-white/85">
+                        <MapPin size={12} />
+                        {selectedClub?.location}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {selectedClub?.description ? (

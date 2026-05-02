@@ -31,7 +31,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   const [{ data: clubsRaw, error: clubsError }, { data: courtsRaw, error: courtsError }] = await Promise.all([
     supabase
       .from(DB_TABLES.clubs)
-      .select("id, name, location, description, image_url")
+      .select("id, name, location, description, image_url, cover_image_url, logo_url")
       .order("name", { ascending: true }),
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
   ]);
@@ -56,12 +56,16 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     location: string | null;
     description?: string | null;
     image_url?: string | null;
+    cover_image_url?: string | null;
+    logo_url?: string | null;
   }>).map((club) => ({
     id: club.id,
     name: club.name ?? "Club sin nombre",
     location: club.location ?? "",
     description: club.description ?? null,
     imageUrl: club.image_url ?? null,
+    coverImageUrl: club.cover_image_url ?? null,
+    logoUrl: club.logo_url ?? null,
   }));
   const courts: CourtOption[] = ((courtsRaw ?? []) as Array<{
     id: string;
