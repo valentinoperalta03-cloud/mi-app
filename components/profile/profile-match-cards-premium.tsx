@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import type { ProfileMatchCard } from "@/lib/profile-insights";
 
 type ProfileMatchCardsPremiumProps = {
@@ -17,9 +18,21 @@ export function ProfileMatchCardsPremium({
 }: ProfileMatchCardsPremiumProps) {
   if (cards.length === 0) {
     return (
-      <p className="text-sm text-slate-400">
-        Aún no hay partidos con resultado en tu historial.
-      </p>
+      <div className="rounded-2xl border border-slate-200/70 bg-[var(--bg-card)] px-5 py-8 text-center dark:border-slate-700/70">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
+          <Trophy className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        </div>
+        <h3 className="mt-4 text-base font-bold text-[var(--text-primary)]">Todavía no jugaste partidos</h3>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          Cuando termines tu primer partido, verás tus resultados acá
+        </p>
+        <Link
+          href="/buscar-partido"
+          className="btn-primary-gradient mt-5 inline-flex w-full max-w-[240px] items-center justify-center rounded-2xl py-3 text-sm font-semibold transition hover:brightness-95 active:scale-[0.99]"
+        >
+          Buscar partido
+        </Link>
+      </div>
     );
   }
 

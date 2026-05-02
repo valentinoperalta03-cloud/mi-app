@@ -4,6 +4,7 @@ import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
+import { CreditCard } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import JoinToggleButton from "@/app/(player)/buscar-partido/join-toggle-button";
 import { ProfileAvatar } from "@/components/profile-avatar";
@@ -101,6 +102,13 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
               : match.gender_category === "femenino"
                 ? "Femenino"
                 : "Mixto";
+          const genderBadgeClass =
+            match.gender_category === "masculino"
+              ? "border-[#0585FC]/35 bg-[#0585FC]/10 text-[#0461C4]"
+              : match.gender_category === "femenino"
+                ? "border-[#ec4899]/35 bg-[#ec4899]/10 text-[#be185d]"
+                : "border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#6d28d9]";
+          const topBarColor = match.is_competitive ? "bg-[#0585FC]" : "bg-[#16a34a]";
 
             return (
             <motion.article
@@ -110,10 +118,9 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               key={match.id}
-              className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)] ${
-                match.is_competitive ? "border-t-2 border-t-sky-500" : "border-t-2 border-t-emerald-400"
-              }`}
+              className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 pt-6 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)]`}
             >
+              <div className={`absolute left-0 right-0 top-0 h-1.5 ${topBarColor}`} aria-hidden />
               <div className="absolute right-3 top-3 opacity-5">
                 <svg width="32" height="32" viewBox="0 0 32 32" className="text-[#0585FC]">
                   <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -130,7 +137,9 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                   <p className="truncate text-sm text-slate-500">{match.clubLocation}</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                  <span
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold ${genderBadgeClass}`}
+                  >
                     {categoryLabel}
                   </span>
                   {match.is_competitive ? (
@@ -160,14 +169,37 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                   </span>
                 </p>
                 {match.joinShare > 0 ? (
-                  <p>
-                    <span className="font-medium text-slate-800">💳 Costo para unirse:</span>{" "}
+                  <p className="flex flex-wrap items-center gap-2">
+                    <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={1.75} aria-hidden />
+                    <span className="font-medium text-slate-800">Costo para unirse:</span>{" "}
                     <span className="font-semibold text-[#0585FC]">${match.joinShare}</span>
                   </p>
                 ) : null}
-                <p>
-                  <span className="font-medium text-slate-800">Cupos libres:</span> {match.freeSlots} / 4
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-medium text-slate-800">Cupos:</span>
+                  <div
+                    className="flex items-center gap-1.5"
+                    role="img"
+                    aria-label={`${match.playersCount} jugadores anotados, ${match.freeSlots} cupos libres de 4`}
+                  >
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const filled = i < match.playersCount;
+                      return (
+                        <span
+                          key={i}
+                          className={
+                            filled
+                              ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[#0585FC]"
+                              : "h-2.5 w-2.5 shrink-0 rounded-full border-2 border-slate-300 bg-transparent dark:border-slate-500"
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs text-slate-500">
+                    {match.freeSlots} libre{match.freeSlots === 1 ? "" : "s"}
+                  </span>
+                </div>
               </div>
 
               {match.participants.length > 0 ? (

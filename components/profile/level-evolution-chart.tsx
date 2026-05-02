@@ -1,5 +1,6 @@
 "use client";
 
+import { TrendingUp } from "lucide-react";
 import type { EvolutionPoint } from "@/lib/profile-insights";
 import { formatTechnicalLevelDisplay } from "@/lib/technical-score";
 
@@ -13,9 +14,13 @@ const FILL = "rgba(37, 99, 235, 0.08)";
 export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
   if (points.length === 0) {
     return (
-      <p className="text-center text-sm text-slate-400">
-        Cuando actualices tu nivel, verás la evolución aquí.
-      </p>
+      <div className="rounded-2xl border border-slate-200/70 bg-[var(--bg-card)] px-5 py-8 text-center dark:border-slate-700/70">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
+          <TrendingUp className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        </div>
+        <h3 className="mt-4 text-base font-bold text-[var(--text-primary)]">Tu nivel va a crecer acá</h3>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">Jugá partidos para ver tu evolución</p>
+      </div>
     );
   }
 

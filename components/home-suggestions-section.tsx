@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { HomeSuggestionPlus } from "@/components/home-suggestion-plus";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -11,9 +12,23 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
 
   if (list.length === 0) {
     return (
-      <p className="rounded-[2rem] border border-dashed border-slate-200/90 bg-white/80 px-4 py-5 text-center text-sm text-slate-500">
-        Completá tu nivel de juego en el perfil para ver jugadores parecidos a vos.
-      </p>
+      <div className="rounded-2xl border border-slate-200/80 bg-[var(--bg-card)] px-5 py-6 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)] dark:border-slate-700/80">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
+          <Users className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        </div>
+        <h3 className="mt-4 text-base font-bold tracking-tight text-[var(--text-primary)]">
+          Encontrá jugadores de tu nivel
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+          Completá tu perfil para ver jugadores parecidos a vos
+        </p>
+        <Link
+          href="/perfil"
+          className="btn-primary-gradient mt-5 inline-flex w-full max-w-[240px] items-center justify-center rounded-2xl py-3 text-sm font-semibold transition hover:brightness-95 active:scale-[0.99]"
+        >
+          Completar perfil
+        </Link>
+      </div>
     );
   }
 
