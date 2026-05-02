@@ -10,8 +10,8 @@ import MotionPage from "@/components/motion-page";
 import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
-import { formatLevel } from "@/lib/level-quiz-logic";
 import { DB_TABLES } from "@/lib/db-tables";
+import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 import InviteFriendsSection from "./invite-friends-section";
@@ -130,18 +130,6 @@ type ParticipantRow = {
   level: number | null;
   technical_score: number | null;
 };
-
-function participantShareLevel(p: ParticipantRow): string {
-  if (p.technical_score != null && Number.isFinite(Number(p.technical_score))) {
-    return Number(p.technical_score).toFixed(2);
-  }
-  if (p.level != null && Number.isFinite(Number(p.level))) {
-    return formatLevel(Number(p.level));
-  }
-  const cat = p.category?.trim();
-  if (cat) return cat;
-  return "s/d";
-}
 
 export default async function PartidoDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
@@ -410,20 +398,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     month: "long",
   });
   const longDateAr = longDateArRaw.charAt(0).toUpperCase() + longDateArRaw.slice(1);
-  const weekdayLineRaw = formatDateInArgentina(match.date, { weekday: "long" });
-  const weekdayLine = weekdayLineRaw.charAt(0).toUpperCase() + weekdayLineRaw.slice(1);
-  const fechaLargaRaw = formatDateInArgentina(match.date, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const fechaLarga = fechaLargaRaw.charAt(0).toUpperCase() + fechaLargaRaw.slice(1);
   const hourAr = formatDateInArgentina(match.date, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
   const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
+  const sharePath = partyUrl;
   const ownerWhatsMessage = `¡Hola! Ya reservé la cancha para nuestro partido en ${detail.club_name ?? "el club"}.
 Día: ${longDateAr} a las ${hourAr}.
 Link del partido: ${partyUrl}`;
@@ -431,39 +412,37 @@ Link del partido: ${partyUrl}`;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
   const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
   const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
-  let ownerRestrictionCategory = "el organizador";
-  if (ownerParticipant) {
-    if (ownerParticipant.level != null && Number.isFinite(Number(ownerParticipant.level))) {
-      ownerRestrictionCategory = formatLevel(Number(ownerParticipant.level));
-    } else if (ownerParticipant.category?.trim()) {
-      ownerRestrictionCategory = ownerParticipant.category.trim();
-    }
-  }
-  const shareNivelLine = match.level_restricted
-    ? `restringido a ${ownerRestrictionCategory}`
-    : "abierto a todos";
-  const shareGender =
+  const ownerLevelLabel = formatProfileNivelFromRow(
+    ownerParticipant ? { level: ownerParticipant.level } : null
+  );
+  const genderLabel =
     match.gender_category === "femenino"
       ? "Femenino"
       : match.gender_category === "masculino"
         ? "Masculino"
         : "Mixto";
-  const playerLines = Array.from({ length: 4 }, (_, i) => {
-    const player = participants[i];
-    if (!player) return "⚪ Falta 1 jugador";
-    const name = player.name?.trim() || "Jugador";
-    return `✅ ${name} (${participantShareLevel(player)})`;
-  });
-  const shareWhatsTextFull = [
-    `🎾 ¿Quién se anima? PARTIDO EN ${(detail.club_name ?? "CLUB").toUpperCase()}`,
-    `📅 ${weekdayLine} ${fechaLarga} a las ${hourAr} · 90 min`,
-    `⚧️ ${shareGender}`,
-    `📊 Nivel ${shareNivelLine}`,
-    "Jugadores:",
-    ...playerLines,
-    `🔗 ${partyUrl}`,
-    "¡Sumate antes de que se llene! 🔥",
-  ].join("\n");
+  const slots = Array.from({ length: 4 }, (_, i) => {
+    const p = participants[i];
+    if (p) return `✅ ${p.name ?? "Jugador"} (${p.level ?? p.technical_score ?? "Sin nivel"})`;
+    return "⚪ Falta 1 jugador";
+  }).join("\n");
+
+  const nivelText = match.level_restricted
+    ? `restringido · ${ownerLevelLabel}`
+    : "abierto a todos";
+
+  const shareWhatsText = `🎾 ¿Quién se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}
+
+📅 ${longDateAr} · ${hourAr} · 90 min
+⚧️ ${genderLabel}
+📊 Nivel ${nivelText}
+
+Jugadores:
+${slots}
+
+🔗 ${sharePath}
+
+¡Sumate antes de que se llene! 🔥`;
 
   const participantIds = new Set(participants.map((p) => p.player_id));
   const pendingRequestIds = new Set(accessRequesterIds);
@@ -770,7 +749,7 @@ Link del partido: ${partyUrl}`;
               </div>
               <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
             </div>
-            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsTextFull} />
+            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
           </div>
         ) : null}
 
@@ -913,7 +892,7 @@ Link del partido: ${partyUrl}`;
             Chat del partido
           </Link>
           <div className="flex w-full justify-center">
-            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsTextFull} />
+            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
           </div>
           {(pendingRequestsCount ?? 0) > 0 ? (
             <Link
