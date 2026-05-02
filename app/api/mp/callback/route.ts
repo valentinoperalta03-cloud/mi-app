@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createServiceClient } from "@/utils/supabase/server";
 
 function redirectUri(): string {
   const explicit = process.env.MP_REDIRECT_URI?.trim();
@@ -100,7 +101,8 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${configUrl}?mp=red_error`);
   }
 
-  const { error: updErr } = await supabase
+  const serviceClient = createServiceClient();
+  const { error: updErr } = await serviceClient
     .from(DB_TABLES.clubs)
     .update({
       mp_access_token: tokenJson.access_token,
