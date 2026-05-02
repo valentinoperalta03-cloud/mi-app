@@ -405,10 +405,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   });
   const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
   const sharePath = partyUrl;
-  const ownerWhatsMessage = `¡Hola! Ya reservé la cancha para nuestro partido en ${detail.club_name ?? "el club"}.
-Día: ${longDateAr} a las ${hourAr}.
-Link del partido: ${partyUrl}`;
-  const ownerWhatsHref = `https://wa.me/?text=${encodeURIComponent(ownerWhatsMessage)}`;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
   const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
   const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
@@ -498,7 +494,7 @@ ${slots}
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <a
-              href={ownerWhatsHref}
+              href={`https://wa.me/?text=${encodeURIComponent(shareWhatsText)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.35)] transition hover:brightness-95 active:scale-[0.99]"
