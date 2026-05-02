@@ -227,7 +227,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
                   const courtName = court.name ?? "Cancha";
                   const indoorLabel = court.indoor ? "Techada" : "Descubierta";
                   const surfaceLabel = formatSurface(court.surface ?? null);
-                  const href = `/reservas/nueva?court_id=${encodeURIComponent(court.id)}&club_name=${encodeURIComponent(clubName)}&court_name=${encodeURIComponent(courtName)}&price=${encodeURIComponent(String(price))}`;
+                  const href = `/crear-partido?clubId=${encodeURIComponent(id)}`;
                   return (
                     <li key={court.id}>
                       <article className={`${PLAYER_CARD_INTERACTIVE} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
