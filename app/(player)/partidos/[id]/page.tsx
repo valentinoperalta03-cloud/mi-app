@@ -415,29 +415,29 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       : match.gender_category === "masculino"
         ? "Masculino"
         : "Mixto";
-  const slots = Array.from({ length: 4 }, (_, i) => {
-    const p = participants[i];
-    if (p)
-      return `+ ${p.name ?? "Jugador"} (${formatProfileNivelFromRow(p).split(" - ")[0] ?? "Sin nivel"})`;
-    return "- Falta 1 jugador";
-  }).join("\n");
 
   const nivelText = match.level_restricted
     ? `restringido · ${ownerLevelLabel}`
     : "abierto a todos";
 
-  const shareWhatsText = `🎾 ¿Quién se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}
-
-Fecha: ${longDateAr} · ${hourAr} · 90 min
-Género: ${genderLabel}
-Nivel: ${nivelText}
-
-Jugadores:
-${slots}
-
-Link: ${sharePath}
-
-¡Sumate antes de que se llene!`;
+  const shareWhatsText = [
+    `\u{1F3BE} \u00BFQui\u00E9n se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}`,
+    ``,
+    `\u{1F4C5} ${longDateAr} \u00B7 ${hourAr} \u00B7 90 min`,
+    `\u26A7\uFE0F ${genderLabel}`,
+    `\u{1F4CA} Nivel ${nivelText}`,
+    ``,
+    `Jugadores:`,
+    ...Array.from({ length: 4 }, (_, i) => {
+      const p = participants[i];
+      if (p) return `\u2705 ${p.name ?? "Jugador"} (${formatProfileNivelFromRow(p).split(" - ")[0] ?? "Sin nivel"})`;
+      return `\u26AA Falta 1 jugador`;
+    }),
+    ``,
+    `\u{1F517} ${sharePath}`,
+    ``,
+    `\u00A1Sumate antes de que se llene! \u{1F525}`,
+  ].join("\n");
 
   const participantIds = new Set(participants.map((p) => p.player_id));
   const pendingRequestIds = new Set(accessRequesterIds);
