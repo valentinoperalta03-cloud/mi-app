@@ -20,8 +20,8 @@ export default function BuscarPartidoPage({ searchParams }: PageProps) {
         description="Revisa partidos disponibles y crea uno nuevo en segundos."
         emptyTitle="No hay partidos abiertos cerca tuyo"
         emptySubtitle="Todavía no hay partidos disponibles en este momento."
-        emptyCtaLabel="Sé el primero en organizar uno"
-        emptyCtaHref="/crear-partido"
+        emptyCtaLabel=""
+        emptyCtaHref=""
         mobileFirst
       />
       <div className="pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2">
