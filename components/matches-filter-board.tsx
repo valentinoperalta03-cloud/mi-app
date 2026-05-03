@@ -225,13 +225,31 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                 <p className="min-w-0 text-xs text-slate-500">{match.playersCount} jugador(es) anotado(s)</p>
 
                 {userId ? (
-                  match.freeSlots > 0 || match.currentUserJoined ? (
+                  userId === match.owner_id ? (
+                    <Link
+                      href={`/partidos/${match.id}`}
+                      className={`${PLAYER_PRIMARY_BUTTON} inline-flex items-center justify-center rounded-[2rem] px-4 py-2 text-sm`}
+                    >
+                      Mi partido
+                    </Link>
+                  ) : match.currentUserJoined ? (
                     <Link
                       href={`/partidos/${match.id}`}
                       className={`${PLAYER_PRIMARY_BUTTON} inline-flex items-center justify-center rounded-[2rem] px-4 py-2 text-sm`}
                     >
                       Ver partido
                     </Link>
+                  ) : match.freeSlots > 0 && !match.genderRestrictionMessage ? (
+                    <Link
+                      href={`/partidos/${match.id}`}
+                      className={`${PLAYER_PRIMARY_BUTTON} inline-flex items-center justify-center rounded-[2rem] px-4 py-2 text-sm`}
+                    >
+                      Pagar y unirse
+                    </Link>
+                  ) : match.genderRestrictionMessage ? (
+                    <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                      Solo {categoryLabel}
+                    </span>
                   ) : (
                     <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
                       Completo
