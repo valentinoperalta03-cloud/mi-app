@@ -383,6 +383,20 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     freeSlots > 0 &&
     matchStatusNorm !== "full" &&
     matchStatusNorm !== "cancelled";
+  const isLevelRestricted = Boolean(match.level_restricted);
+  let userLevelDiff = 0;
+
+  if (isLevelRestricted && !isOwner && !isParticipant && canJoinAsNewPlayer) {
+    const [{ data: ownerLvl }, { data: userLvl }] = await Promise.all([
+      supabase.from(DB_TABLES.profiles).select("level").eq("user_id", match.owner_id ?? "").maybeSingle(),
+      supabase.from(DB_TABLES.profiles).select("level").eq("user_id", user.id).maybeSingle(),
+    ]);
+    const oLevel = Number((ownerLvl as { level?: number | null } | null)?.level ?? 0);
+    const uLevel = Number((userLvl as { level?: number | null } | null)?.level ?? 0);
+    userLevelDiff = Math.abs(oLevel - uLevel);
+  }
+
+  const userOutOfLevel = isLevelRestricted && userLevelDiff > 1;
   const typeLabel = detail.match_type === "competitivo" ? "Competitivo" : "Amistoso";
   const visibilityLabel = detail.visibility === "privado" ? "Privado" : "Público";
   const categoryLabel =
@@ -631,7 +645,17 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </p>
       ) : null}
 
-      {joinErrorKey === "nivel" ? (
+      {userOutOfLevel && canJoinAsNewPlayer && !joinSent ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
+          <p className="font-semibold text-amber-800 dark:text-amber-300">
+            Tu nivel no es compatible con este partido
+          </p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Podés enviar una solicitud especial. Los jugadores del partido votarán si te aceptan.
+          </p>
+          <RequestJoinButton matchId={id} levelOverride={true} submitLabel="Solicitar revisión" />
+        </div>
+      ) : joinErrorKey === "nivel" ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
           <p className="font-semibold text-amber-800 dark:text-amber-300">
             Tu nivel no es compatible con este partido
