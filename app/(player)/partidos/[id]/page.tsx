@@ -20,7 +20,7 @@ import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
 import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
-import { acceptJoinRequest, rejectJoinRequest } from "./actions";
+import { acceptJoinRequest, cancelParticipation, rejectJoinRequest } from "./actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -30,6 +30,8 @@ type PageProps = {
     join_sent?: string;
     join_error?: string;
     join_accepted?: string;
+    cancel_ok?: string;
+    cancel_error?: string;
   }>;
 };
 
@@ -108,6 +110,13 @@ const JOIN_FLASH_MESSAGES: Record<string, string> = {
   pago: "No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo o contactá soporte.",
 };
 
+const CANCEL_ERROR_MESSAGES: Record<string, string> = {
+  no_match: "No se encontró el partido.",
+  no_cupo: "No estabas anotado en este partido.",
+  finalizado: "Este partido ya no admite cambios.",
+  rpc: "No pudimos cancelar tu lugar. Intentá de nuevo.",
+};
+
 type MatchDetailRow = {
   id: string;
   date: string;
@@ -138,6 +147,11 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const editErrorMessage = editErrorKey ? EDIT_ERROR_MESSAGES[editErrorKey] ?? "No se pudo guardar la edición." : null;
   const joinSent = sp.join_sent === "1";
   const joinAccepted = sp.join_accepted === "1";
+  const cancelOk = sp.cancel_ok === "1";
+  const cancelErrorKey = sp.cancel_error?.trim() ?? "";
+  const cancelErrorMessage = cancelErrorKey
+    ? CANCEL_ERROR_MESSAGES[cancelErrorKey] ?? "No se pudo cancelar tu lugar."
+    : null;
   const joinErrorKey = sp.join_error?.trim() ?? "";
   const joinFlashMessage = joinSent
     ? JOIN_FLASH_MESSAGES.sent
@@ -599,6 +613,18 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </p>
       ) : null}
 
+      {cancelOk ? (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+          Cancelaste tu lugar. Si ya habías pagado, quedó registrada la solicitud de reembolso.
+        </p>
+      ) : null}
+
+      {cancelErrorMessage ? (
+        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+          {cancelErrorMessage}
+        </p>
+      ) : null}
+
       {joinAccepted && isOwner ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
           El jugador será redirigido al pago para confirmar su lugar (recibirá un aviso con el link).
@@ -727,6 +753,24 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           },
         }}
       />
+
+      {isParticipant && !isMatchFinished && matchStatusNorm !== "cancelled" ? (
+        <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">Tu cupo</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Si ya no podés jugar, cancelá tu lugar. El organizador será notificado.
+          </p>
+          <form action={cancelParticipation} className="mt-4">
+            <input type="hidden" name="match_id" value={id} />
+            <button
+              type="submit"
+              className="w-full rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 transition hover:bg-rose-100"
+            >
+              Cancelar lugar
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
         <div className="flex items-center justify-between gap-3">

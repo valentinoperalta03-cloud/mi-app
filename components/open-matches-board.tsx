@@ -187,7 +187,6 @@ export default async function OpenMatchesBoard({
       playersCount,
       freeSlots,
       joinShare,
-      requiresPaymentToJoin: turnTotal > 0 && !currentUserJoined,
       currentUserJoined,
       userCanJoinByGender,
       genderRestrictionMessage,

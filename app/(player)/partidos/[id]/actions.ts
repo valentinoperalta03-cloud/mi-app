@@ -680,6 +680,121 @@ export async function rejectJoinRequest(formData: FormData): Promise<void> {
   redirect(`/partidos/${matchId}`);
 }
 
+export async function cancelParticipation(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  if (!matchId) {
+    redirect("/buscar-partido");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: matchRow, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,owner_id,location_name,match_status")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (mErr || !matchRow) {
+    redirect(`/partidos/${matchId}?cancel_error=no_match`);
+  }
+
+  const m = matchRow as {
+    owner_id: string | null;
+    location_name: string | null;
+    match_status: string | null;
+  };
+  const matchStatusNorm = String(m.match_status ?? "").toLowerCase();
+  if (matchStatusNorm === "cancelled") {
+    redirect(`/partidos/${matchId}?cancel_error=finalizado`);
+  }
+
+  const ownerId = String(m.owner_id ?? "").trim();
+
+  const { data: partRow } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+  if (!partRow) {
+    redirect(`/partidos/${matchId}?cancel_error=no_cupo`);
+  }
+
+  const { data: profileRow } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const playerName = (profileRow as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+  const locationLabel = String(m.location_name ?? "").trim() || "tu partido";
+
+  const { data: leaveAtomic, error: leaveAtomicErr } = await supabase.rpc("leave_match_atomic", {
+    p_match_id: matchId,
+    p_player_id: user.id,
+  });
+  if (leaveAtomicErr) {
+    console.error("[cancelParticipation]", leaveAtomicErr);
+    redirect(`/partidos/${matchId}?cancel_error=rpc`);
+  }
+  const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
+  const delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
+
+  await supabase
+    .from(DB_TABLES.payments)
+    .update({ status: "refund_requested" })
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .eq("status", "approved");
+
+  const { count: remainingCount } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  if ((remainingCount ?? 0) < 4) {
+    await supabase.from(DB_TABLES.matches).update({ match_status: "scheduled" }).eq("id", matchId);
+  }
+
+  const isOwnerLeaving = ownerId === user.id;
+  if (isOwnerLeaving && delegatedOwner) {
+    const tplOwner = NOTIFICATION_TEMPLATES.match_owner_changed(locationLabel);
+    await createNotification(supabase, {
+      user_id: delegatedOwner,
+      type: "match_owner_changed",
+      title: tplOwner.title,
+      body: tplOwner.body,
+      match_id: matchId,
+    });
+  }
+
+  if (ownerId && ownerId !== user.id) {
+    await createNotification(supabase, {
+      user_id: ownerId,
+      type: "player_joined",
+      title: "Un jugador canceló su lugar",
+      body: `${playerName} dejó un cupo libre en ${locationLabel}.`,
+      match_id: matchId,
+    });
+  }
+
+  const service = createServiceClient();
+  const { data: group } = await service.from(DB_TABLES.groupChats).select("id").eq("match_id", matchId).maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (groupId) {
+    await service.from(DB_TABLES.groupChatMembers).delete().eq("group_id", groupId).eq("user_id", user.id);
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  revalidatePath("/buscar-partido");
+  revalidatePath("/home");
+  revalidatePath("/partidos");
+  redirect(`/partidos/${matchId}?cancel_ok=1`);
+}
+
 export async function toggleMatchVisibility(
   matchId: string,
   newVisibility: "publico" | "privado"

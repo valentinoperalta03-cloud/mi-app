@@ -6,9 +6,8 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import JoinToggleButton from "@/app/(player)/buscar-partido/join-toggle-button";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
+import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 
 export type MatchCardData = {
   id: string;
@@ -22,7 +21,6 @@ export type MatchCardData = {
   playersCount: number;
   freeSlots: number;
   joinShare: number;
-  requiresPaymentToJoin: boolean;
   currentUserJoined: boolean;
   userCanJoinByGender: boolean;
   genderRestrictionMessage: string | null;
@@ -228,14 +226,12 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
 
                 {userId ? (
                   match.freeSlots > 0 || match.currentUserJoined ? (
-                    <JoinToggleButton
-                      matchId={match.id}
-                      isJoined={match.currentUserJoined}
-                      levelRestricted={match.level_restricted}
-                      requiresPayment={match.requiresPaymentToJoin}
-                      disabled={!match.currentUserJoined && !match.userCanJoinByGender}
-                      disabledMessage={match.genderRestrictionMessage ?? undefined}
-                    />
+                    <Link
+                      href={`/partidos/${match.id}`}
+                      className={`${PLAYER_PRIMARY_BUTTON} inline-flex items-center justify-center rounded-[2rem] px-4 py-2 text-sm`}
+                    >
+                      Ver partido
+                    </Link>
                   ) : (
                     <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
                       Completo
