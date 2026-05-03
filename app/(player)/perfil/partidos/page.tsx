@@ -43,7 +43,7 @@ export default async function PerfilPartidosPage() {
           cards.map((c) => (
             <li key={c.matchId}>
               <Link
-                href={`/matches/${c.matchId}`}
+                href={`/partidos/${c.matchId}`}
                 className="flex items-center justify-between gap-3 rounded-[2rem] border border-slate-100 bg-white px-5 py-4 shadow-[0_1px_12px_-4px_rgba(15,23,42,0.05)] transition hover:border-slate-200"
               >
                 <div className="min-w-0">

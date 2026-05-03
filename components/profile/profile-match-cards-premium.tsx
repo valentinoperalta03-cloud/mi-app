@@ -46,7 +46,7 @@ export function ProfileMatchCardsPremium({
           transition={{ delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <Link
-            href={`/matches/${c.matchId}`}
+            href={`/partidos/${c.matchId}`}
             className="block rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-3.5 transition hover:border-slate-200 hover:bg-white"
           >
             <div className="flex items-start justify-between gap-3">

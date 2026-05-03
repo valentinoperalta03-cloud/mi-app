@@ -3,30 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createParticipantMercadoPagoCheckout } from "@/lib/match-payments";
 import { createNotification } from "@/lib/notifications";
-import { createClient, createServiceClient } from "@/utils/supabase/server";
-
-async function addPlayerToMatchGroup(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  matchId: string,
-  playerId: string
-) {
-  void supabase;
-  const service = createServiceClient();
-  const { data: group } = await service
-    .from(DB_TABLES.groupChats)
-    .select("id")
-    .eq("match_id", matchId)
-    .maybeSingle();
-  const groupId = (group as { id?: string } | null)?.id;
-  if (!groupId) return;
-  const { error } = await service
-    .from(DB_TABLES.groupChatMembers)
-    .insert({ group_id: groupId, user_id: playerId, role: "member" });
-  if (error && error.code !== "23505") {
-    console.error("[group-chats] add member", error.message);
-  }
-}
+import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -91,48 +70,54 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
     supabase.from(DB_TABLES.matchParticipants).select("player_id", { count: "exact", head: true }).eq("match_id", matchId),
   ]);
 
-  const currentParticipants = participantsCount ?? 0;
-  const approvals = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === true).length;
-  const rejections = (votes ?? []).filter((row) => (row as { vote?: boolean }).vote === false).length;
-  const participantsNeeded = Math.ceil(currentParticipants / 2) + 1;
+  const totalParticipants = participantsCount ?? 0;
+  const totalVotes = (votes ?? []).length;
+  const approvals = (votes ?? []).filter((r) => (r as { vote?: boolean }).vote === true).length;
+  const rejections = (votes ?? []).filter((r) => (r as { vote?: boolean }).vote === false).length;
   const requesterId = (requestRow as { player_id: string }).player_id;
 
-  if (rejections > 0) {
-    await supabase
-      .from(DB_TABLES.matchJoinRequests)
-      .update({ status: "rejected" })
-      .eq("id", requestId);
+  // Esperar a que todos voten
+  if (totalVotes < totalParticipants) {
+    revalidatePath(`/partidos/${matchId}/solicitudes`);
+    redirect(`/partidos/${matchId}/solicitudes`);
+  }
 
+  // Mayoría gana
+  if (approvals > rejections) {
+    // Aprobar — generar pago, NO insertar en match_participants todavía
+    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "approved" }).eq("id", requestId);
+
+    const mpRes = await createParticipantMercadoPagoCheckout({
+      supabase,
+      matchId,
+      payerUserId: requesterId,
+    });
+
+    if (mpRes.ok) {
+      await createNotification(supabase, {
+        user_id: requesterId,
+        type: "join_approved",
+        title: "¡Solicitud aprobada!",
+        body: "La mayoría del partido aprobó tu ingreso. Completá el pago para confirmar tu lugar.",
+        match_id: matchId,
+      });
+    } else {
+      await createNotification(supabase, {
+        user_id: requesterId,
+        type: "join_approved",
+        title: "¡Solicitud aprobada!",
+        body: "Tu solicitud fue aprobada pero hubo un error al generar el pago. Ingresá al partido para intentar nuevamente.",
+        match_id: matchId,
+      });
+    }
+  } else {
+    // Rechazar por mayoría
+    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "rejected" }).eq("id", requestId);
     await createNotification(supabase, {
       user_id: requesterId,
       type: "join_rejected",
       title: "Solicitud rechazada",
-      body: "Tu solicitud para unirte a este partido fue rechazada por votación.",
-      match_id: matchId,
-    });
-  } else if (approvals >= participantsNeeded) {
-    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "approved" }).eq("id", requestId);
-    await supabase.from(DB_TABLES.matchParticipants).insert(
-      {
-        match_id: matchId,
-        player_id: requesterId,
-      }
-    );
-    await addPlayerToMatchGroup(supabase, matchId, requesterId);
-
-    const { count: newCount } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("player_id", { count: "exact", head: true })
-      .eq("match_id", matchId);
-    if ((newCount ?? 0) >= 4) {
-      await supabase.from(DB_TABLES.matches).update({ match_status: "full" }).eq("id", matchId);
-    }
-
-    await createNotification(supabase, {
-      user_id: requesterId,
-      type: "join_approved",
-      title: "¡Solicitud aprobada!",
-      body: "La mayoría del partido aprobó tu ingreso.",
+      body: "La mayoría del partido rechazó tu solicitud de ingreso.",
       match_id: matchId,
     });
   }

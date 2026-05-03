@@ -34,7 +34,6 @@ export function isJugadorAppPath(pathname: string): boolean {
     "/reservas",
     "/perfil",
     "/jugador",
-    "/matches",
     "/clases",
     "/torneos",
     "/test",

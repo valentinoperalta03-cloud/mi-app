@@ -256,7 +256,7 @@ export async function recordMatchResultAction(
       .eq("id", matchId);
     if (lockErr) return { ok: false, message: lockErr.message };
 
-    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/partidos/${matchId}`);
     return { ok: true, message: "Carga iniciada. Ya podés ingresar el resultado." };
   }
 
@@ -315,7 +315,7 @@ export async function recordMatchResultAction(
       .eq("id", matchId);
     if (matchStatusErr) return { ok: false, message: matchStatusErr.message };
 
-    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     return { ok: true, message: "Resultado enviado. Falta confirmación de los otros 3 jugadores." };
   }
@@ -351,7 +351,7 @@ export async function recordMatchResultAction(
         .update({ status: "disputed", conflict_reason: "Un jugador impugnó o cargó score distinto." })
         .eq("id", existing.id);
       await supabase.from(DB_TABLES.matches).update({ result_status: "disputed" }).eq("id", matchId);
-      revalidatePath(`/matches/${matchId}`);
+      revalidatePath(`/partidos/${matchId}`);
       revalidatePath("/home");
       return { ok: true, message: "Resultado en disputa. No impacta ranking hasta resolver." };
     }
@@ -375,7 +375,7 @@ export async function recordMatchResultAction(
     );
 
     if (!allConfirmed) {
-      revalidatePath(`/matches/${matchId}`);
+      revalidatePath(`/partidos/${matchId}`);
       revalidatePath("/home");
       return { ok: true, message: "Confirmación registrada. Faltan respuestas del resto." };
     }
@@ -392,7 +392,7 @@ export async function recordMatchResultAction(
     });
     if (!eloRes.ok) return eloRes;
 
-    revalidatePath(`/matches/${matchId}`);
+    revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     revalidatePath("/perfil");
     revalidatePath("/buscar-partido");

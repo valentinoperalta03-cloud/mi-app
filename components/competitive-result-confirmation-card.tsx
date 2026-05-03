@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   recordMatchResultAction,
   type RecordMatchResultState,
-} from "@/app/(player)/matches/[id]/actions";
+} from "@/app/(player)/partidos/[id]/match-result-actions";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/client";
 

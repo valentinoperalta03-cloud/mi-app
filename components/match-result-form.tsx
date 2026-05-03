@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   recordMatchResultAction,
   type RecordMatchResultState,
-} from "@/app/(player)/matches/[id]/actions";
+} from "@/app/(player)/partidos/[id]/match-result-actions";
 
 const initial: RecordMatchResultState = { ok: false, message: "" };
 

@@ -13,7 +13,9 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return [];
+    return [
+      { source: "/matches/:id", destination: "/partidos/:id", permanent: true },
+    ];
   },
 };
 

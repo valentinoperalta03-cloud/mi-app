@@ -1,0 +1,119 @@
+import { DB_TABLES } from "@/lib/db-tables";
+import { createMPPreference } from "@/lib/mp-preference";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+
+async function loadMatchForMercadoPago(
+  supabase: SupabaseServer,
+  matchId: string
+): Promise<{ totalPrice: number; scheduledDate: string; clubName: string; courtName: string } | null> {
+  const { data: row, error } = await supabase
+    .from(DB_TABLES.matches)
+    .select("total_price,scheduled_date,date,courts(name,clubs(name))")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (error || !row) return null;
+  const m = row as {
+    total_price: number | null;
+    scheduled_date: string | null;
+    date: string;
+    courts:
+      | {
+          name: string | null;
+          clubs: { name: string | null } | { name: string | null }[] | null;
+        }
+      | {
+          name: string | null;
+          clubs: { name: string | null } | { name: string | null }[] | null;
+        }[]
+      | null;
+  };
+  const courtRel = Array.isArray(m.courts) ? m.courts[0] ?? null : m.courts;
+  const clubRel = courtRel?.clubs;
+  const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+  const totalPrice = Number(m.total_price ?? 0);
+  let scheduledDate = String(m.scheduled_date ?? "").trim();
+  if (!scheduledDate && m.date) {
+    scheduledDate = m.date.slice(0, 10);
+  }
+  const courtName = courtRel?.name ?? "Cancha";
+  const clubName = clubObj?.name ?? "Club";
+  return { totalPrice, scheduledDate, clubName, courtName };
+}
+
+async function getPayerIdentityForMp(payerUserId: string): Promise<{
+  email: string;
+  firstName: string;
+  lastName: string;
+}> {
+  const service = createServiceClient();
+  const { data: profile } = await service
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", payerUserId)
+    .maybeSingle();
+  const name = String((profile as { name?: string | null } | null)?.name ?? "").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  let email = "";
+  try {
+    const { data: authUser, error } = await service.auth.admin.getUserById(payerUserId);
+    if (!error && authUser?.user?.email) {
+      email = authUser.user.email;
+    }
+  } catch {
+    /* sin admin o usuario inexistente */
+  }
+  return {
+    email,
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" ") ?? "",
+  };
+}
+
+export async function createParticipantMercadoPagoCheckout(params: {
+  supabase: SupabaseServer;
+  matchId: string;
+  payerUserId: string;
+}): Promise<
+  | { ok: true; initPoint: string; prefId: string; total: number; marketplaceFee: number }
+  | { ok: false; message: string }
+> {
+  const meta = await loadMatchForMercadoPago(params.supabase, params.matchId);
+  if (!meta || !meta.scheduledDate) {
+    return { ok: false, message: "No se pudo cargar el partido." };
+  }
+  const perPlayerBase = Math.round(meta.totalPrice / 4);
+  if (!Number.isFinite(perPlayerBase) || perPlayerBase <= 0) {
+    return { ok: false, message: "Precio del partido inválido." };
+  }
+  const payer = await getPayerIdentityForMp(params.payerUserId);
+  const mp = await createMPPreference({
+    matchId: params.matchId,
+    amount: perPlayerBase,
+    clubName: meta.clubName,
+    courtName: meta.courtName,
+    date: meta.scheduledDate,
+    userId: params.payerUserId,
+    externalReference: `${params.matchId}__${params.payerUserId}`,
+    payerEmail: payer.email,
+    payerFirstName: payer.firstName,
+    payerLastName: payer.lastName,
+  });
+  if ("error" in mp) {
+    return { ok: false, message: mp.error };
+  }
+  const { error: payErr } = await params.supabase.from(DB_TABLES.payments).insert({
+    match_id: params.matchId,
+    user_id: params.payerUserId,
+    mp_preference_id: mp.prefId,
+    status: "pending",
+    amount: mp.total,
+    marketplace_fee: mp.marketplaceFee,
+  });
+  if (payErr) {
+    console.error("[createParticipantMercadoPagoCheckout] payment insert", payErr);
+    return { ok: false, message: "No se pudo registrar el pago." };
+  }
+  return { ok: true, initPoint: mp.initPoint, prefId: mp.prefId, total: mp.total, marketplaceFee: mp.marketplaceFee };
+}
