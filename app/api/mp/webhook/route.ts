@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { pickTeamForMatch } from "@/lib/match-teams";
 import { getPaymentClient } from "@/lib/mercadopago";
 import { createNotification } from "@/lib/notifications";
 
@@ -152,9 +153,11 @@ async function handleNotification(req: Request) {
         .maybeSingle();
 
       if (!alreadyIn) {
+        const pickedTeam = (await pickTeamForMatch(admin, matchId)) ?? 1;
         const { error: partErr } = await admin.from(DB_TABLES.matchParticipants).insert({
           match_id: matchId,
           player_id: payerUserId,
+          team: pickedTeam,
         });
         if (partErr && partErr.code !== "23505") {
           console.error("[mp webhook] insert match_participants", partErr);

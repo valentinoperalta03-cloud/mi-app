@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createParticipantMercadoPagoCheckout } from "@/lib/match-payments";
+import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -322,9 +323,25 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
+  const teamRaw = getField(formData, "team");
+  const teamNum = teamRaw === "2" ? 2 : teamRaw === "1" ? 1 : null;
+  if (teamNum !== 1 && teamNum !== 2) {
+    redirect(`/partidos/${matchId}?join_error=equipo`);
+  }
+
+  const { data: teamRows } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("team")
+    .eq("match_id", matchId);
+  const onChosenTeam = ((teamRows ?? []) as { team: number | null }[]).filter((r) => r.team === teamNum).length;
+  if (onChosenTeam >= 2) {
+    redirect(`/partidos/${matchId}?join_error=equipo_lleno`);
+  }
+
   const { error: pErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: matchId,
     player_id: user.id,
+    team: teamNum,
   });
 
   if (pErr && pErr.code !== "23505") {
@@ -451,9 +468,15 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
+  const pickedTeam = await pickTeamForMatch(supabase, matchId);
+  if (pickedTeam == null) {
+    redirect(`/partidos/${matchId}?join_error=cupos`);
+  }
+
   const { error: pErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: matchId,
     player_id: playerId,
+    team: pickedTeam,
   });
 
   if (pErr) {

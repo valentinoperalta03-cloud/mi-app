@@ -21,17 +21,21 @@ export default function RequestJoinButton({
   matchId,
   levelOverride = false,
   submitLabel,
+  team,
 }: {
   matchId: string;
   levelOverride?: boolean;
   /** Texto del botón (p. ej. "Pagar y unirme" en partidos públicos). */
   submitLabel?: string;
+  /** Equipo al unirse (obligatorio en el flujo desde el detalle con selector). */
+  team?: 1 | 2;
 }) {
   const label = submitLabel ?? "Solicitar unirse";
   return (
     <form action={requestToJoin} className="w-full">
       <input type="hidden" name="match_id" value={matchId} />
       <input type="hidden" name="level_override" value={levelOverride ? "true" : "false"} />
+      {team != null ? <input type="hidden" name="team" value={String(team)} /> : null}
       <SubmitInner label={label} />
     </form>
   );

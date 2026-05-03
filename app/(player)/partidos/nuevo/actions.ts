@@ -104,6 +104,7 @@ export async function createMatchAction(
   const { error: playerError } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: match.id,
     player_id: user.id,
+    team: 1,
   });
 
   if (playerError) {

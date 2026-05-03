@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { classifyCategory } from "@/lib/level-quiz-logic";
 import { computeEloDelta } from "@/lib/level-evolution-elo";
+import { validateBestOfThreeSets } from "@/lib/padel-set-score";
 import { createClient } from "@/utils/supabase/server";
 
 export type RecordMatchResultState = { ok: boolean; message: string };
@@ -27,7 +28,7 @@ function isLockAlive(iso: string | null | undefined): boolean {
   return new Date(iso).getTime() > Date.now();
 }
 
-function parseSets(raw: FormDataEntryValue | null): { a: number; b: number }[] {
+function parseSetsJson(raw: FormDataEntryValue | null): { a: number; b: number }[] {
   const source = String(raw ?? "").trim();
   if (!source) return [];
   try {
@@ -40,6 +41,15 @@ function parseSets(raw: FormDataEntryValue | null): { a: number; b: number }[] {
   } catch {
     return [];
   }
+}
+
+function parseAndValidateSets(raw: FormDataEntryValue | null):
+  | { ok: true; sets: { a: number; b: number }[]; setsWonA: number; setsWonB: number }
+  | { ok: false; message: string } {
+  const parsed = parseSetsJson(raw);
+  const v = validateBestOfThreeSets(parsed);
+  if (!v.ok) return { ok: false, message: v.message ?? "Marcador de sets inválido." };
+  return { ok: true, sets: parsed, setsWonA: v.setsWonA!, setsWonB: v.setsWonB! };
 }
 
 type ResultRow = {
@@ -164,6 +174,24 @@ async function applyEloForConfirmedMatch(params: {
   return { ok: true, message: "Resultado confirmado y ranking actualizado." };
 }
 
+async function finalizeFriendlyResult(matchId: string): Promise<RecordMatchResultState> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const { data: already } = await supabase
+    .from(DB_TABLES.matchResults)
+    .select("elo_applied_at")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if ((already as { elo_applied_at?: string | null } | null)?.elo_applied_at) {
+    return { ok: true, message: "Resultado confirmado." };
+  }
+  const { error: markErr } = await supabase
+    .from(DB_TABLES.matchResults)
+    .update({ elo_applied_at: nowIso() })
+    .eq("match_id", matchId);
+  if (markErr) return { ok: false, message: markErr.message };
+  return { ok: true, message: "Resultado amistoso confirmado." };
+}
+
 export async function recordMatchResultAction(
   prevState: RecordMatchResultState = initialState,
   formData: FormData
@@ -186,21 +214,29 @@ export async function recordMatchResultAction(
 
   const { data: mp } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id")
-    .order("player_id", { ascending: true })
+    .select("player_id, team")
     .eq("match_id", matchId);
 
-  const ids = (mp ?? []).map((r: { player_id: string }) => r.player_id);
+  const rows = (mp ?? []) as { player_id: string; team: number | null }[];
+  const ids = rows.map((r) => r.player_id);
   if (ids.length !== 4) {
-    return { ok: false, message: "Este flujo competitivo requiere exactamente 4 jugadores." };
+    return { ok: false, message: "Este resultado requiere exactamente 4 jugadores." };
   }
-  const teamAIds = [ids[0]!, ids[1]!];
-  const teamBIds = [ids[2]!, ids[3]!];
+  if (rows.some((r) => r.team !== 1 && r.team !== 2)) {
+    return { ok: false, message: "Todos los jugadores deben tener equipo asignado." };
+  }
+  const teamAIds = rows.filter((r) => r.team === 1).map((r) => r.player_id);
+  const teamBIds = rows.filter((r) => r.team === 2).map((r) => r.player_id);
+  if (teamAIds.length !== 2 || teamBIds.length !== 2) {
+    return { ok: false, message: "Cada equipo debe tener 2 jugadores." };
+  }
   const userTeam = teamAIds.includes(user.id) ? "A" : teamBIds.includes(user.id) ? "B" : null;
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("owner_id, match_type, result_status, result_locked_by, result_locked_team, result_lock_expires_at")
+    .select(
+      "owner_id, match_type, result_status, result_locked_by, result_locked_team, result_lock_expires_at"
+    )
     .eq("id", matchId)
     .maybeSingle();
   if (mErr) return { ok: false, message: mErr.message };
@@ -217,9 +253,6 @@ export async function recordMatchResultAction(
     | null;
   const ownerId = matchMeta?.owner_id;
   const isCompetitive = String(matchMeta?.match_type ?? "").toLowerCase() === "competitivo";
-  if (!isCompetitive) {
-    return { ok: false, message: "Este flujo de validación aplica solo a partidos competitivos." };
-  }
   const allowed = ids.includes(user.id) || ownerId === user.id;
   if (!allowed) {
     return { ok: false, message: "No podés cargar el resultado de este partido." };
@@ -261,12 +294,11 @@ export async function recordMatchResultAction(
   }
 
   if (intent === "propose") {
-    const teamA = parseScore(formData.get("team_a_score"));
-    const teamB = parseScore(formData.get("team_b_score"));
-    const sets = parseSets(formData.get("sets_json"));
-    if (teamA == null || teamB == null) {
-      return { ok: false, message: "Completá los sets con números válidos (0–30)." };
-    }
+    const setsRes = parseAndValidateSets(formData.get("sets_json"));
+    if (!setsRes.ok) return { ok: false, message: setsRes.message };
+    const teamA = setsRes.setsWonA;
+    const teamB = setsRes.setsWonB;
+    const sets = setsRes.sets;
     if (!userTeam) return { ok: false, message: "Solo un jugador del partido puede proponer." };
 
     const lockAlive = isLockAlive(matchMeta?.result_lock_expires_at);
@@ -346,14 +378,27 @@ export async function recordMatchResultAction(
     if (confErr) return { ok: false, message: confErr.message };
 
     if (decision === "dispute") {
+      await supabase.from(DB_TABLES.matchResultConfirmations).delete().eq("match_result_id", existing.id);
       await supabase
         .from(DB_TABLES.matchResults)
-        .update({ status: "disputed", conflict_reason: "Un jugador impugnó o cargó score distinto." })
+        .update({
+          status: "pending_confirmation",
+          conflict_reason: null,
+          team_a_score: null,
+          team_b_score: null,
+          sets: null,
+        })
         .eq("id", existing.id);
-      await supabase.from(DB_TABLES.matches).update({ result_status: "disputed" }).eq("id", matchId);
+      await supabase
+        .from(DB_TABLES.matches)
+        .update({ result_status: "pending_confirmation" })
+        .eq("id", matchId);
       revalidatePath(`/partidos/${matchId}`);
       revalidatePath("/home");
-      return { ok: true, message: "Resultado en disputa. No impacta ranking hasta resolver." };
+      return {
+        ok: true,
+        message: "Resultado en disputa. Cualquier jugador puede proponer uno nuevo.",
+      };
     }
 
     const { data: list, error: listErr } = await supabase
@@ -383,13 +428,18 @@ export async function recordMatchResultAction(
     await supabase.from(DB_TABLES.matchResults).update({ status: "confirmed" }).eq("id", existing.id);
     await supabase.from(DB_TABLES.matches).update({ result_status: "confirmed" }).eq("id", matchId);
 
-    const eloRes = await applyEloForConfirmedMatch({
-      matchId,
-      teamAIds,
-      teamBIds,
-      teamAScore: baseA,
-      teamBScore: baseB,
-    });
+    let eloRes: RecordMatchResultState;
+    if (isCompetitive) {
+      eloRes = await applyEloForConfirmedMatch({
+        matchId,
+        teamAIds,
+        teamBIds,
+        teamAScore: baseA,
+        teamBScore: baseB,
+      });
+    } else {
+      eloRes = await finalizeFriendlyResult(matchId);
+    }
     if (!eloRes.ok) return eloRes;
 
     revalidatePath(`/partidos/${matchId}`);

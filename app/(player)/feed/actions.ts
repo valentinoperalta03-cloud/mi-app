@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
+import { pickTeamForMatch } from "@/lib/match-teams";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 async function addPlayerToMatchGroup(
@@ -129,9 +130,15 @@ export async function joinMatchAction(
     return { success: false, message: "Este partido ya no tiene cupos libres." };
   }
 
+  const pickedTeam = await pickTeamForMatch(supabase, matchId);
+  if (pickedTeam == null) {
+    return { success: false, message: "Este partido ya no tiene cupos libres." };
+  }
+
   const { error: insertError } = await supabase.from(DB_TABLES.matchParticipants).insert({
     match_id: matchId,
     player_id: userId,
+    team: pickedTeam,
   });
 
   if (insertError) {

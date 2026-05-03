@@ -15,6 +15,7 @@ import { formatProfileNivelFromRow } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 import InviteFriendsSection from "./invite-friends-section";
+import JoinWithTeamForm from "./join-with-team-form";
 import PartidoEditSection from "./partido-edit-section";
 import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
@@ -108,6 +109,8 @@ const JOIN_FLASH_MESSAGES: Record<string, string> = {
   genero_masculino: "Este partido es solo masculino.",
   db: "Ocurrió un error al guardar. Intentá de nuevo.",
   pago: "No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo o contactá soporte.",
+  equipo: "Elegí equipo 1 o 2 antes de unirte.",
+  equipo_lleno: "Ese equipo ya tiene 2 jugadores. Elegí el otro.",
 };
 
 const CANCEL_ERROR_MESSAGES: Record<string, string> = {
@@ -133,6 +136,7 @@ type MatchDetailRow = {
 
 type ParticipantRow = {
   player_id: string;
+  team: number | null;
   name: string | null;
   avatar_url: string | null;
   category: string | null;
@@ -234,11 +238,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const { data: participantsRows } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id, profiles(name,avatar_url,category,level,technical_score)")
+    .select("player_id, team, profiles(name,avatar_url,category,level,technical_score)")
     .eq("match_id", id);
 
   const participants = ((participantsRows ?? []) as Array<{
     player_id: string;
+    team: number | null;
     profiles:
       | {
           name: string | null;
@@ -259,6 +264,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     return {
       player_id: row.player_id,
+      team: row.team ?? null,
       name: profile?.name ?? null,
       avatar_url: profile?.avatar_url ?? null,
       category: profile?.category ?? null,
@@ -266,6 +272,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       technical_score: profile?.technical_score ?? null,
     } satisfies ParticipantRow;
   });
+
+  const team1Players = participants.filter((p) => p.team === 1);
+  const team2Players = participants.filter((p) => p.team === 2);
+  const team1Count = team1Players.length;
+  const team2Count = team2Players.length;
+  const resultTeam1Label =
+    team1Players.map((p) => p.name?.trim() || "Jugador").join(" · ") || "Equipo 1";
+  const resultTeam2Label =
+    team2Players.map((p) => p.name?.trim() || "Jugador").join(" · ") || "Equipo 2";
 
   // Check if current user has paid
   const { data: myPayment } = await supabase
@@ -821,20 +836,66 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             Aún no hay jugadores anotados.
           </p>
         ) : (
-          <ul className="mt-3 space-y-2">
-            {participants.map((participant) => {
-              const name = participant.name?.trim() || "Jugador";
-              return (
-                <li key={participant.player_id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-                  <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                    <p className="text-xs text-slate-500">Nivel: {participant.category?.trim() || "Sin nivel"}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#0585FC]">Equipo 1</p>
+              <ul className="space-y-2">
+                {team1Players.length === 0 ? (
+                  <li className="rounded-2xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
+                    Sin jugadores
+                  </li>
+                ) : (
+                  team1Players.map((participant) => {
+                    const name = participant.name?.trim() || "Jugador";
+                    return (
+                      <li
+                        key={participant.player_id}
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+                          <p className="text-xs text-slate-500">
+                            Nivel: {participant.category?.trim() || "Sin nivel"}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                Equipo 2
+              </p>
+              <ul className="space-y-2">
+                {team2Players.length === 0 ? (
+                  <li className="rounded-2xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
+                    Sin jugadores
+                  </li>
+                ) : (
+                  team2Players.map((participant) => {
+                    const name = participant.name?.trim() || "Jugador";
+                    return (
+                      <li
+                        key={participant.player_id}
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
+                      >
+                        <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+                          <p className="text-xs text-slate-500">
+                            Nivel: {participant.category?.trim() || "Sin nivel"}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+          </div>
         )}
       </section>
 
@@ -859,8 +920,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           {!alreadySubmitted ? (
             <MatchResultForm
               matchId={id}
-              teamALabel="Tu dupla"
-              teamBLabel="Dupla rival"
+              teamALabel={resultTeam1Label}
+              teamBLabel={resultTeam2Label}
               lockedByTeammate={false}
               alreadyStarted={false}
             />
@@ -973,7 +1034,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">Sumate al partido</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Confirmás tu lugar con el pago del turno.</p>
           <div className="mt-4">
-            <RequestJoinButton matchId={id} submitLabel="Pagar y unirme" />
+            <JoinWithTeamForm
+              matchId={id}
+              team1Count={team1Count}
+              team2Count={team2Count}
+              submitLabel="Pagar y unirme"
+            />
           </div>
         </section>
       ) : null}
@@ -986,7 +1052,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           >
             Ver chat del partido
           </Link>
-          <RequestJoinButton matchId={id} submitLabel="Pagar y unirme" />
+          <JoinWithTeamForm
+            matchId={id}
+            team1Count={team1Count}
+            team2Count={team2Count}
+            submitLabel="Pagar y unirme"
+          />
         </div>
       ) : null}
 

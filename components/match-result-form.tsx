@@ -8,6 +8,7 @@ import {
   recordMatchResultAction,
   type RecordMatchResultState,
 } from "@/app/(player)/partidos/[id]/match-result-actions";
+import { isValidPadelSet, validateBestOfThreeSets } from "@/lib/padel-set-score";
 
 const initial: RecordMatchResultState = { ok: false, message: "" };
 
@@ -20,18 +21,25 @@ const PADEL_FACTS = [
   "🧠 El pádel desarrolla la inteligencia táctica más que cualquier otro deporte de raqueta.",
 ];
 
-function SubmitRow({ label }: { label: string }) {
+function SubmitRow({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="w-full rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(5,133,252,0.4)] active:scale-[0.98] disabled:opacity-60"
       style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
     >
       {pending ? "Guardando..." : label}
     </button>
   );
+}
+
+type SetScore = { a: number; b: number };
+
+function clampGames(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(7, Math.round(n)));
 }
 
 export function MatchResultForm({
@@ -50,37 +58,71 @@ export function MatchResultForm({
   const router = useRouter();
   const [state, formAction] = useActionState(recordMatchResultAction, initial);
   const [started, setStarted] = useState(alreadyStarted);
-  const [sets, setSets] = useState([
-    { a: 6, b: 4 },
-    { a: 6, b: 2 },
+  const [sets, setSets] = useState<SetScore[]>([
+    { a: 0, b: 0 },
+    { a: 0, b: 0 },
+    { a: 0, b: 0 },
   ]);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  const totals = useMemo(
-    () => ({
-      a: sets.reduce((acc, s) => acc + s.a, 0),
-      b: sets.reduce((acc, s) => acc + s.b, 0),
-    }),
-    [sets]
-  );
+  const { needsThird, payloadForSubmit, previewLabel } = useMemo(() => {
+    const s0 = sets[0]!;
+    const s1 = sets[1]!;
+    const s2 = sets[2]!;
+    if (!isValidPadelSet(s0.a, s0.b) || !isValidPadelSet(s1.a, s1.b)) {
+      const parts: string[] = [];
+      if (s0.a > 0 || s0.b > 0) parts.push(`${s0.a}-${s0.b}`);
+      if (s1.a > 0 || s1.b > 0) parts.push(`${s1.a}-${s1.b}`);
+      return { needsThird: false, payloadForSubmit: [] as SetScore[], previewLabel: parts.join(" / ") || "—" };
+    }
+    const aWins = (s0.a > s0.b ? 1 : 0) + (s1.a > s1.b ? 1 : 0);
+    const bWins = (s0.b > s0.a ? 1 : 0) + (s1.b > s1.a ? 1 : 0);
+    if (aWins === 2 || bWins === 2) {
+      const payload = [s0, s1];
+      return {
+        needsThird: false,
+        payloadForSubmit: payload,
+        previewLabel: payload.map((s) => `${s.a}-${s.b}`).join(" / "),
+      };
+    }
+    if (aWins === 1 && bWins === 1) {
+      const basePreview = `${s0.a}-${s0.b} / ${s1.a}-${s1.b}`;
+      if (!isValidPadelSet(s2.a, s2.b)) {
+        return {
+          needsThird: true,
+          payloadForSubmit: [] as SetScore[],
+          previewLabel: `${basePreview} / …`,
+        };
+      }
+      const payload = [s0, s1, s2];
+      return {
+        needsThird: true,
+        payloadForSubmit: payload,
+        previewLabel: payload.map((s) => `${s.a}-${s.b}`).join(" / "),
+      };
+    }
+    return { needsThird: false, payloadForSubmit: [] as SetScore[], previewLabel: `${s0.a}-${s0.b} / ${s1.a}-${s1.b}` };
+  }, [sets]);
+
+  const validation = useMemo(() => validateBestOfThreeSets(payloadForSubmit), [payloadForSubmit]);
+  const canSubmit = validation.ok;
 
   const fact = PADEL_FACTS[Math.abs(matchId.length) % PADEL_FACTS.length]!;
 
   useEffect(() => {
-    if (state.ok) {
-      if (!started) setStarted(true);
+    if (!state.ok) return;
+    if (state.message?.includes("Carga iniciada")) {
+      setStarted(true);
+    } else {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 3000);
-      router.refresh();
     }
-  }, [router, started, state.ok]);
+    router.refresh();
+  }, [router, state.ok, state.message]);
 
-  function adjustSet(idx: number, side: "a" | "b", delta: number) {
-    setSets((prev) =>
-      prev.map((set, i) =>
-        i === idx ? { ...set, [side]: Math.max(0, Math.min(7, set[side] + delta)) } : set
-      )
-    );
+  function setGame(idx: number, side: "a" | "b", raw: string) {
+    const n = clampGames(Number.parseInt(raw, 10) || 0);
+    setSets((prev) => prev.map((row, i) => (i === idx ? { ...row, [side]: n } : row)));
   }
 
   return (
@@ -139,7 +181,7 @@ export function MatchResultForm({
         </div>
         <p className="mb-2 text-3xl">🎾</p>
         <h2 className="text-xl font-bold">¡Gran partido!</h2>
-        <p className="mt-1 text-sm text-white/70">¿Quiénes se llevaron la victoria hoy?</p>
+        <p className="mt-1 text-sm text-white/70">Marcador por sets (juegos ganados por set)</p>
       </motion.div>
 
       <motion.div
@@ -185,9 +227,17 @@ export function MatchResultForm({
         >
           <input type="hidden" name="match_id" value={matchId} />
           <input type="hidden" name="intent" value="propose" />
-          <input type="hidden" name="team_a_score" value={totals.a} />
-          <input type="hidden" name="team_b_score" value={totals.b} />
-          <input type="hidden" name="sets_json" value={JSON.stringify(sets)} />
+          <input
+            type="hidden"
+            name="team_a_score"
+            value={canSubmit ? String(validation.setsWonA ?? 0) : "0"}
+          />
+          <input
+            type="hidden"
+            name="team_b_score"
+            value={canSubmit ? String(validation.setsWonB ?? 0) : "0"}
+          />
+          <input type="hidden" name="sets_json" value={JSON.stringify(payloadForSubmit)} />
 
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-3 dark:bg-[#0585FC]/20">
@@ -202,6 +252,10 @@ export function MatchResultForm({
             </div>
           </div>
 
+          <p className="text-center text-sm font-semibold text-[var(--text-primary)]">
+            Parcial: <span className="text-[#0585FC]">{previewLabel}</span>
+          </p>
+
           {[0, 1].map((idx) => (
             <motion.div
               key={idx}
@@ -214,50 +268,96 @@ export function MatchResultForm({
                 Set {idx + 1}
               </p>
               <div className="grid grid-cols-2 gap-4">
-                {(["a", "b"] as const).map((side) => (
-                  <div key={side} className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => adjustSet(idx, side, -1)}
-                        className="h-9 w-9 rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-primary)] transition hover:border-[#0585FC] hover:text-[#0585FC]"
-                      >
-                        −
-                      </button>
-                      <span className="w-8 text-center text-2xl font-bold text-[var(--text-primary)]">
-                        {sets[idx]![side]}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => adjustSet(idx, side, 1)}
-                        className="h-9 w-9 rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-primary)] transition hover:border-[#0585FC] hover:text-[#0585FC]"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <label className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-[var(--text-tertiary)]">Equipo A</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={7}
+                    value={sets[idx]!.a}
+                    onChange={(e) => setGame(idx, "a", e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2 text-center text-lg font-bold text-[var(--text-primary)]"
+                  />
+                </label>
+                <label className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-[var(--text-tertiary)]">Equipo B</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={7}
+                    value={sets[idx]!.b}
+                    onChange={(e) => setGame(idx, "b", e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2 text-center text-lg font-bold text-[var(--text-primary)]"
+                  />
+                </label>
               </div>
             </motion.div>
           ))}
 
+          {needsThird ? (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20"
+            >
+              <p className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300">
+                Set 3 (desempate)
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-[var(--text-tertiary)]">Equipo A</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={7}
+                    value={sets[2]!.a}
+                    onChange={(e) => setGame(2, "a", e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2 text-center text-lg font-bold text-[var(--text-primary)]"
+                  />
+                </label>
+                <label className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-[var(--text-tertiary)]">Equipo B</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={7}
+                    value={sets[2]!.b}
+                    onChange={(e) => setGame(2, "b", e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2 text-center text-lg font-bold text-[var(--text-primary)]"
+                  />
+                </label>
+              </div>
+            </motion.div>
+          ) : null}
+
           <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
-            <div className="grid grid-cols-3 items-center gap-2 text-center">
+            <p className="text-center text-xs text-[var(--text-tertiary)]">Sets ganados (cuando el marcador sea válido)</p>
+            <div className="mt-2 grid grid-cols-3 items-center gap-2 text-center">
               <div>
-                <p className="text-3xl font-bold text-[#0585FC]">{totals.a}</p>
+                <p className="text-3xl font-bold text-[#0585FC]">
+                  {canSubmit ? validation.setsWonA : "—"}
+                </p>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">Equipo A</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-[var(--text-tertiary)]">vs</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{totals.b}</p>
+                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">
+                  {canSubmit ? validation.setsWonB : "—"}
+                </p>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">Equipo B</p>
               </div>
             </div>
           </div>
 
-          <SubmitRow label="Enviar para confirmación 🎾" />
+          {!canSubmit && payloadForSubmit.length === 0 && (sets[0]!.a > 0 || sets[0]!.b > 0) ? (
+            <p className="text-center text-xs text-amber-700 dark:text-amber-400">
+              {validation.message ?? "Completá sets válidos de pádel (6-4, 7-6, etc.)."}
+            </p>
+          ) : null}
+
+          <SubmitRow label="Enviar para confirmación 🎾" disabled={!canSubmit} />
         </motion.form>
       )}
 
