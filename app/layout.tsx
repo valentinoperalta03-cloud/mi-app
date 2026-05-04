@@ -9,41 +9,39 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Padelibre — Reservá tu cancha de pádel",
+  title: "PadeLibre — Que organizar no sea un problema.",
   description:
-    "La app para reservar canchas, crear partidos y encontrar jugadores de pádel en Argentina.",
-  keywords: [
-    "pádel",
-    "padel argentina",
-    "reservar cancha de pádel",
-    "partidos de pádel",
-    "Padelibre",
-    "turnos de pádel",
-  ],
+    "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo. La app de pádel argentina.",
+  keywords:
+    "pádel, reservar cancha de pádel, pádel Argentina, jugadores de pádel, torneos de pádel",
+  alternates: {
+    canonical: "https://www.padelibre.online",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     title: "Padelibre",
   },
   openGraph: {
-    title: "Padelibre — La comunidad de pádel más grande de Argentina",
-    description: "Reservá, jugá y conectá. Todo en un solo lugar.",
-    url: "https://padelibre.app",
-    siteName: "Padelibre",
+    title: "PadeLibre — Que organizar no sea un problema.",
+    description: "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.",
+    url: "https://www.padelibre.online",
+    siteName: "PadeLibre",
     locale: "es_AR",
     type: "website",
     images: [
       {
-        url: "/og-image.png",
-        alt: "Padelibre — Reservá, jugá y conectá",
+        url: "https://www.padelibre.online/og-image.png",
+        width: 1200,
+        height: 630,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Padelibre",
-    description: "Digitalizando el pádel en Argentina.",
-    images: ["/og-image.png"],
+    title: "PadeLibre — Que organizar no sea un problema.",
+    description: "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.",
+    images: ["https://www.padelibre.online/og-image.png"],
   },
   icons: {
     icon: [
@@ -78,6 +76,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="canonical" href="https://www.padelibre.online" />
+      </head>
       <body suppressHydrationWarning className="min-h-full">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
