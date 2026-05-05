@@ -71,7 +71,7 @@ async function getPayerIdentityForMp(payerUserId: string): Promise<{
   };
 }
 
-export async function createParticipantMercadoPagoCheckout(params: {
+export async function createParticipantMercadoPagoPreference(params: {
   supabase: SupabaseServer;
   matchId: string;
   payerUserId: string;
@@ -102,6 +102,21 @@ export async function createParticipantMercadoPagoCheckout(params: {
   });
   if ("error" in mp) {
     return { ok: false, message: mp.error };
+  }
+  return { ok: true, initPoint: mp.initPoint, prefId: mp.prefId, total: mp.total, marketplaceFee: mp.marketplaceFee };
+}
+
+export async function createParticipantMercadoPagoCheckout(params: {
+  supabase: SupabaseServer;
+  matchId: string;
+  payerUserId: string;
+}): Promise<
+  | { ok: true; initPoint: string; prefId: string; total: number; marketplaceFee: number }
+  | { ok: false; message: string }
+> {
+  const mp = await createParticipantMercadoPagoPreference(params);
+  if (!mp.ok) {
+    return mp;
   }
   const { error: payErr } = await params.supabase.from(DB_TABLES.payments).insert({
     match_id: params.matchId,

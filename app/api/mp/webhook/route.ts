@@ -144,7 +144,7 @@ async function handleNotification(req: Request) {
     }
 
     if (payerUserId) {
-      // Si el pagador no está en match_participants todavía, insertarlo (viene de votación aprobada)
+      // Si el pagador no está en match_participants todavía, insertarlo.
       const { data: alreadyIn } = await admin
         .from(DB_TABLES.matchParticipants)
         .select("player_id")
@@ -162,21 +162,6 @@ async function handleNotification(req: Request) {
         if (partErr && partErr.code !== "23505") {
           console.error("[mp webhook] insert match_participants", partErr);
         } else {
-          const { data: group } = await admin
-            .from(DB_TABLES.groupChats)
-            .select("id")
-            .eq("match_id", matchId)
-            .maybeSingle();
-          const groupId = (group as { id?: string } | null)?.id;
-          if (groupId) {
-            const { error: memErr } = await admin
-              .from(DB_TABLES.groupChatMembers)
-              .insert({ group_id: groupId, user_id: payerUserId, role: "member" });
-            if (memErr && memErr.code !== "23505") {
-              console.error("[mp webhook] group_chat_members", memErr);
-            }
-          }
-
           const { count: newCount } = await admin
             .from(DB_TABLES.matchParticipants)
             .select("player_id", { count: "exact", head: true })
@@ -184,6 +169,21 @@ async function handleNotification(req: Request) {
           if ((newCount ?? 0) >= 4) {
             await admin.from(DB_TABLES.matches).update({ match_status: "full" }).eq("id", matchId);
           }
+        }
+      }
+
+      const { data: group } = await admin
+        .from(DB_TABLES.groupChats)
+        .select("id")
+        .eq("match_id", matchId)
+        .maybeSingle();
+      const groupId = (group as { id?: string } | null)?.id;
+      if (groupId) {
+        const { error: memErr } = await admin
+          .from(DB_TABLES.groupChatMembers)
+          .insert({ group_id: groupId, user_id: payerUserId, role: "member" });
+        if (memErr && memErr.code !== "23505") {
+          console.error("[mp webhook] group_chat_members", memErr);
         }
       }
 

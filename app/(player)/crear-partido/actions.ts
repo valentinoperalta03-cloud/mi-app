@@ -6,6 +6,7 @@ import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
+import { createNotification } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
@@ -91,7 +92,6 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
   const levelRestricted = getField(formData, "level_restricted") === "true";
   const invitedFriendIdsRaw = parseFriendIds(getField(formData, "invited_friend_ids"));
-  const paidFriendIdsRaw = parseFriendIds(getField(formData, "paid_friend_ids"));
 
   if (!courtId || !scheduledDate || !scheduledTime || !durationMinutesRaw) {
     return { error: "Completá club, cancha, fecha y horario." };
@@ -159,8 +159,6 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       (favRows ?? []).map((row: { favorite_user_id: string }) => row.favorite_user_id)
     );
     const invitedFriendIds = invitedFriendIdsRaw.filter((id) => allowedFriendIds.has(id));
-    const paidFriendIds = paidFriendIdsRaw.filter((id) => invitedFriendIds.includes(id));
-    const paidFriendSet = new Set(paidFriendIds);
 
     const totalPrice = Number((courtData as { price: number | null }).price ?? 0);
     const perPlayerBase = Math.round(totalPrice / 4);
@@ -258,17 +256,10 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       return { error: "No se pudo crear el partido." };
     }
 
-    const participantRows: Array<{ match_id: string; player_id: string }> = [
-      { match_id: data.id, player_id: user.id },
-      ...invitedFriendIds.map((friendId) => ({ match_id: data.id, player_id: friendId })),
-    ];
-    const uniqueParticipants = Array.from(
-      new Map(participantRows.map((row) => [row.player_id, row])).values()
-    ).slice(0, 4);
-
-    const { error: participantError } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .insert(uniqueParticipants);
+    const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
+      match_id: data.id,
+      player_id: user.id,
+    });
 
     if (participantError) {
       return { error: "No se pudo crear el partido." };
@@ -277,7 +268,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const invitedPaymentRows = invitedFriendIds.map((friendId) => ({
       match_id: data.id,
       user_id: friendId,
-      status: paidFriendSet.has(friendId) ? "approved" : "pending",
+      status: "invited",
       amount: perPlayerTotal,
       marketplace_fee: perPlayerFee,
     }));
@@ -287,7 +278,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const mp = await createMPPreference({
       matchId: data.id,
-      amount: Math.round(perPlayerTotal * (1 + paidFriendIds.length) * 100) / 100,
+      amount: perPlayerTotal,
       clubName,
       courtName,
       date: scheduledDate,
@@ -340,6 +331,22 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     );
     if (!groupRes.ok) {
       console.error("[crearPartido] group chat", groupRes.message);
+    }
+
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
+    if (invitedFriendIds.length > 0) {
+      await Promise.all(
+        invitedFriendIds.map((friendId) =>
+          createNotification(supabase, {
+            user_id: friendId,
+            type: "join_request",
+            title: "¡Te invitaron a un partido!",
+            body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
+            match_id: data.id,
+          })
+        )
+      );
     }
 
     redirect(mp.initPoint);

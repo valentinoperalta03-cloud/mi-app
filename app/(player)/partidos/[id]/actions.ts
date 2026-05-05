@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createParticipantMercadoPagoCheckout } from "@/lib/match-payments";
+import { createParticipantMercadoPagoCheckout, createParticipantMercadoPagoPreference } from "@/lib/match-payments";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -216,6 +216,74 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     .maybeSingle();
   if (alreadyApprovedPayment) {
     redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Ya pagaste este partido.")}`);
+  }
+
+  const { data: invitedPayment } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id,status")
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .eq("status", "invited")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (invitedPayment) {
+    const { count: countBeforeInvited, error: invitedCountErr } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id", { count: "exact", head: true })
+      .eq("match_id", matchId);
+    if (invitedCountErr || (countBeforeInvited ?? 0) >= 4) {
+      redirect(`/partidos/${matchId}?join_error=cupos`);
+    }
+
+    const pickedTeam = await pickTeamForMatch(supabase, matchId);
+    if (pickedTeam == null) {
+      redirect(`/partidos/${matchId}?join_error=cupos`);
+    }
+
+    const mpRes = await createParticipantMercadoPagoPreference({
+      supabase,
+      matchId,
+      payerUserId: user.id,
+    });
+    if (!mpRes.ok) {
+      revalidatePath(`/partidos/${matchId}`);
+      revalidatePath("/home");
+      revalidatePath("/buscar-partido");
+      redirect(`/partidos/${matchId}?join_error=pago`);
+    }
+
+    const { error: updateInvitedErr } = await supabase
+      .from(DB_TABLES.payments)
+      .update({
+        status: "pending",
+        mp_preference_id: mpRes.prefId,
+      })
+      .eq("id", (invitedPayment as { id: string }).id);
+    if (updateInvitedErr) {
+      console.error("[requestToJoin] invited payment update", updateInvitedErr);
+      redirect(`/partidos/${matchId}?join_error=db`);
+    }
+
+    const { error: invitedParticipantErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+      match_id: matchId,
+      player_id: user.id,
+      team: pickedTeam,
+    });
+    if (invitedParticipantErr && invitedParticipantErr.code !== "23505") {
+      console.error("[requestToJoin] invited participant", invitedParticipantErr);
+      await supabase.from(DB_TABLES.payments).update({ status: "invited", mp_preference_id: null }).eq(
+        "id",
+        (invitedPayment as { id: string }).id
+      );
+      redirect(`/partidos/${matchId}?join_error=db`);
+    }
+
+    revalidatePath(`/partidos/${matchId}`);
+    revalidatePath("/home");
+    revalidatePath("/buscar-partido");
+    redirect(mpRes.initPoint);
   }
 
   const { data: userProfile } = await supabase

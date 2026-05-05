@@ -21,7 +21,7 @@ import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
 import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
-import { acceptJoinRequest, cancelParticipation, rejectJoinRequest } from "./actions";
+import { acceptJoinRequest, cancelParticipation, rejectJoinRequest, requestToJoin } from "./actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -293,6 +293,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     .maybeSingle();
 
   const myPaymentStatus = (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? "none";
+  const hasInvitedPayment = String(myPaymentStatus).toLowerCase() === "invited";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved";
   const hasPendingPayment =
@@ -982,6 +983,23 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             hs
           </p>
         </div>
+      ) : null}
+
+      {hasInvitedPayment ? (
+        <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
+          <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
+          <p className="text-sm text-slate-700">Confirmá tu lugar pagando tu parte del turno.</p>
+          <form action={requestToJoin}>
+            <input type="hidden" name="match_id" value={id} />
+            <button
+              type="submit"
+              className="w-full rounded-2xl py-3 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            >
+              Confirmar y pagar
+            </button>
+          </form>
+        </section>
       ) : null}
 
       {hasPendingPayment ? (
