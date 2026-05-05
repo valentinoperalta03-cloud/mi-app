@@ -102,11 +102,11 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                 : "Mixto";
           const genderBadgeClass =
             match.gender_category === "masculino"
-              ? "border-[#0585FC]/35 bg-[#0585FC]/10 text-[#0461C4]"
+              ? "border-[var(--color-brand)]/35 bg-[var(--color-brand-light)] text-[var(--color-brand-dark)]"
               : match.gender_category === "femenino"
                 ? "border-[#ec4899]/35 bg-[#ec4899]/10 text-[#be185d]"
                 : "border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#6d28d9]";
-          const topBarColor = match.is_competitive ? "bg-[#0585FC]" : "bg-[#16a34a]";
+          const topBarColor = match.is_competitive ? "bg-[var(--color-brand)]" : "bg-[#16a34a]";
 
             return (
             <motion.article
@@ -133,12 +133,12 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                     {categoryLabel}
                   </span>
                   {match.is_competitive ? (
-                    <span className="shrink-0 rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]">
+                    <span className="shrink-0 rounded-full border border-[var(--color-brand)]/20 bg-[var(--color-brand-light)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-dark)]">
                       Partido competitivo
                     </span>
                   ) : null}
                   {match.level_restricted ? (
-                    <span className="shrink-0 rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]">
+                    <span className="shrink-0 rounded-full border border-[var(--color-brand)]/20 bg-[var(--color-brand-light)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-dark)]">
                       Nivel restringido 🎯
                     </span>
                   ) : null}
@@ -162,7 +162,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                   <p className="flex flex-wrap items-center gap-2">
                     <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={1.75} aria-hidden />
                     <span className="font-medium text-slate-800">Costo para unirse:</span>{" "}
-                    <span className="font-semibold text-[#0585FC]">${match.joinShare}</span>
+                    <span className="font-semibold text-[var(--color-brand)]">${match.joinShare}</span>
                   </p>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-3">
@@ -179,7 +179,7 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                           key={i}
                           className={
                             filled
-                              ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[#0585FC]"
+                              ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-brand)]"
                               : "h-2.5 w-2.5 shrink-0 rounded-full border-2 border-slate-300 bg-transparent dark:border-slate-500"
                           }
                         />

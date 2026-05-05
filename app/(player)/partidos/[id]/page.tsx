@@ -21,7 +21,18 @@ import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
 import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
-import { acceptJoinRequest, cancelParticipation, rejectJoinRequest, requestToJoin } from "./actions";
+import { MatchStatusBanner } from "@/components/match-status-banner";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from "@/lib/messages";
+import { PAYMENT_COPY } from "@/lib/payment-copy";
+import {
+  acceptJoinRequest,
+  cancelParticipation,
+  regenerarLinkPago,
+  rejectJoinRequest,
+  requestToJoin,
+} from "./actions";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -33,6 +44,7 @@ type PageProps = {
     join_accepted?: string;
     cancel_ok?: string;
     cancel_error?: string;
+    pay_regen_error?: string;
   }>;
 };
 
@@ -88,37 +100,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
   };
 }
-
-const EDIT_ERROR_MESSAGES: Record<string, string> = {
-  datos: "Faltan datos para guardar los cambios.",
-  duracion: "Duración del turno inválida.",
-  permiso: "No tenés permiso para editar este partido.",
-  pagado: "No podés editar un partido con jugadores que ya pagaron.",
-  fecha: "No se encontró la fecha del partido.",
-  ocupado: "Ese horario ya está ocupado. Elegí otro.",
-  db: "No se pudieron guardar los cambios. Intentá de nuevo.",
-};
-
-const JOIN_FLASH_MESSAGES: Record<string, string> = {
-  sent: "Solicitud enviada. El creador del partido podrá aceptarte desde el detalle del partido.",
-  error: "No se pudo enviar la solicitud. Intentá de nuevo.",
-  permiso: "No tenés permiso para esa acción.",
-  cupos: "El partido ya está completo.",
-  nivel: "Tu nivel no es compatible con este partido.",
-  genero_femenino: "Este partido es solo femenino.",
-  genero_masculino: "Este partido es solo masculino.",
-  db: "Ocurrió un error al guardar. Intentá de nuevo.",
-  pago: "No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo o contactá soporte.",
-  equipo: "Elegí equipo 1 o 2 antes de unirte.",
-  equipo_lleno: "Ese equipo ya tiene 2 jugadores. Elegí el otro.",
-};
-
-const CANCEL_ERROR_MESSAGES: Record<string, string> = {
-  no_match: "No se encontró el partido.",
-  no_cupo: "No estabas anotado en este partido.",
-  finalizado: "Este partido ya no admite cambios.",
-  rpc: "No pudimos cancelar tu lugar. Intentá de nuevo.",
-};
 
 type MatchDetailRow = {
   id: string;
@@ -285,7 +266,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   // Check if current user has paid
   const { data: myPayment } = await supabase
     .from(DB_TABLES.payments)
-    .select("status,mp_preference_id")
+    .select("id,status,mp_preference_id,updated_at")
     .eq("match_id", id)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -299,6 +280,18 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const hasPendingPayment =
     String(myPaymentStatus).toLowerCase() === "pending" && myPrefId.length > 0;
   const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
+  const paymentRowId = String((myPayment as { id?: string | null } | null)?.id ?? "").trim();
+  /** Preferencia vencida en MP: estado explícito en DB (evita Date.now en render por react-hooks/purity). */
+  const needsPaymentRegenerate = String(myPaymentStatus).toLowerCase() === "expired";
+  const payRegenErr = sp.pay_regen_error === "1";
+  const myPaymentBanner = (() => {
+    const s = String(myPaymentStatus).toLowerCase();
+    if (s === "approved") return "approved" as const;
+    if (s === "pending") return "pending" as const;
+    if (s === "rejected" || s === "expired") return "rejected" as const;
+    if (s === "invited") return "invited" as const;
+    return "none" as const;
+  })();
 
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
@@ -424,6 +417,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const levelLabel = detail.level_restricted ? "Mi nivel ±1" : "Cualquier nivel";
 
   const payStatus = String(match.payment_status ?? "").toLowerCase();
+  const matchFullyPaid = payStatus === "paid";
   const canEdit = !(payStatus === "paid" && participants.length > 1);
   const blockedEditMessage =
     "No podés editar un partido con jugadores que ya pagaron.";
@@ -624,6 +618,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </div>
         </dl>
       </article>
+
+      {isParticipant ? (
+        <MatchStatusBanner matchFullyPaid={matchFullyPaid} myPaymentNorm={myPaymentBanner} />
+      ) : null}
+
+      {payRegenErr ? (
+        <Alert variant="error">No pudimos generar el nuevo link. Intentá de nuevo en un rato.</Alert>
+      ) : null}
 
       {editErrorMessage ? (
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
@@ -1008,23 +1010,30 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
             <p className="font-semibold text-amber-800 dark:text-amber-300">Tenés un pago pendiente para confirmar tu lugar</p>
           </div>
-          <a
-            href={mercadoPagoPayHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-          >
-            Pagar ahora
-          </a>
+          {needsPaymentRegenerate && paymentRowId ? (
+            <form action={regenerarLinkPago} className="space-y-2">
+              <input type="hidden" name="payment_id" value={paymentRowId} />
+              <input type="hidden" name="match_id" value={id} />
+              <Button type="submit" variant="primary">
+                {PAYMENT_COPY.regenerateCta}
+              </Button>
+            </form>
+          ) : (
+            <a
+              href={mercadoPagoPayHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+              style={{ background: "var(--color-brand-gradient)" }}
+            >
+              Pagar ahora
+            </a>
+          )}
         </div>
       ) : null}
 
       {isParticipant && !isOwner && hasPaid && !isMatchFinished ? (
         <section className="space-y-3 rounded-2xl border border-emerald-200/80 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900/40">
-          <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-200">
-            Estás anotado ✓
-          </span>
           <Link
             href={`/partidos/${id}/chat`}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95 active:scale-[0.99]"

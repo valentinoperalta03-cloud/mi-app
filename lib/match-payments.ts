@@ -1,5 +1,6 @@
 import { DB_TABLES } from "@/lib/db-tables";
-import { createMPPreference } from "@/lib/mp-preference";
+import { log } from "@/lib/logger";
+import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
@@ -88,6 +89,14 @@ export async function createParticipantMercadoPagoPreference(params: {
     return { ok: false, message: "Precio del partido inválido." };
   }
   const payer = await getPayerIdentityForMp(params.payerUserId);
+  const base = getPublicBaseUrl();
+  const backUrls = base
+    ? {
+        success: `${base}/partidos/${params.matchId}/pago`,
+        failure: `${base}/partidos/${params.matchId}/pago`,
+        pending: `${base}/partidos/${params.matchId}/pago`,
+      }
+    : undefined;
   const mp = await createMPPreference({
     matchId: params.matchId,
     amount: perPlayerBase,
@@ -99,6 +108,7 @@ export async function createParticipantMercadoPagoPreference(params: {
     payerEmail: payer.email,
     payerFirstName: payer.firstName,
     payerLastName: payer.lastName,
+    backUrls,
   });
   if ("error" in mp) {
     return { ok: false, message: mp.error };
@@ -127,8 +137,67 @@ export async function createParticipantMercadoPagoCheckout(params: {
     marketplace_fee: mp.marketplaceFee,
   });
   if (payErr) {
-    console.error("[createParticipantMercadoPagoCheckout] payment insert", payErr);
+    log.error({
+      event: "payment.insert_failed",
+      matchId: params.matchId,
+      userId: params.payerUserId,
+      err: payErr,
+    });
     return { ok: false, message: "No se pudo registrar el pago." };
   }
   return { ok: true, initPoint: mp.initPoint, prefId: mp.prefId, total: mp.total, marketplaceFee: mp.marketplaceFee };
+}
+
+/** Regenera preferencia MP para un pago de jugador (link vencido / estado expired). */
+export async function regenerateParticipantMercadoPagoLink(params: {
+  supabase: SupabaseServer;
+  paymentId: string;
+  payerUserId: string;
+}): Promise<{ ok: true; initPoint: string } | { ok: false; message: string }> {
+  const { data: row, error } = await params.supabase
+    .from(DB_TABLES.payments)
+    .select("id,match_id,user_id,status")
+    .eq("id", params.paymentId)
+    .maybeSingle();
+  if (error || !row) {
+    return { ok: false, message: "No encontramos el pago." };
+  }
+  const typed = row as { match_id: string; user_id: string; status: string | null };
+  if (typed.user_id !== params.payerUserId) {
+    return { ok: false, message: "No tenés permiso para este pago." };
+  }
+  const st = String(typed.status ?? "").toLowerCase();
+  if (st === "approved") {
+    return { ok: false, message: "Este pago ya está confirmado." };
+  }
+  if (!["pending", "expired", "invited", "rejected"].includes(st)) {
+    return { ok: false, message: "No podemos regenerar este link en este momento." };
+  }
+
+  const mp = await createParticipantMercadoPagoPreference({
+    supabase: params.supabase,
+    matchId: typed.match_id,
+    payerUserId: params.payerUserId,
+  });
+  if (!mp.ok) {
+    return { ok: false, message: mp.message };
+  }
+
+  const { error: updErr } = await params.supabase
+    .from(DB_TABLES.payments)
+    .update({
+      mp_preference_id: mp.prefId,
+      status: "pending",
+      amount: mp.total,
+      marketplace_fee: mp.marketplaceFee,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.paymentId);
+
+  if (updErr) {
+    log.error({ event: "payment.regenerate_update_failed", paymentId: params.paymentId, err: updErr });
+    return { ok: false, message: "No se pudo guardar el nuevo link." };
+  }
+
+  return { ok: true, initPoint: mp.initPoint };
 }

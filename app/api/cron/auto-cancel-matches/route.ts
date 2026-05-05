@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { getPaymentRefundClient } from "@/lib/mercadopago";
 import { createNotification } from "@/lib/notifications";
 
@@ -39,8 +40,8 @@ export async function GET(req: Request) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, scheduled_date, scheduled_time, owner_id")
-    .in("match_status", ["reserved", "pending", "full"])
+    .select("id, scheduled_date, scheduled_time, owner_id, match_status")
+    .in("match_status", ["scheduled", "full"])
     .lte("scheduled_date", nowDate)
     .neq("match_status", "cancelled");
 
@@ -73,7 +74,7 @@ export async function GET(req: Request) {
         try {
           await getPaymentRefundClient().total({ payment_id: mpId });
         } catch (e) {
-          console.error("[auto-cancel] refund error", e);
+          log.error({ event: "cron.auto_cancel.refund_failed", matchId: match.id, err: e });
         }
       }
 
@@ -94,7 +95,8 @@ export async function GET(req: Request) {
     await supabase
       .from(DB_TABLES.matches)
       .update({ match_status: "cancelled" })
-      .eq("id", match.id);
+      .eq("id", match.id)
+      .in("match_status", ["scheduled", "full"]);
 
     processed++;
   }

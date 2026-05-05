@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createParticipantMercadoPagoCheckout, createParticipantMercadoPagoPreference } from "@/lib/match-payments";
+import {
+  createParticipantMercadoPagoCheckout,
+  createParticipantMercadoPagoPreference,
+  regenerateParticipantMercadoPagoLink,
+} from "@/lib/match-payments";
+import { log } from "@/lib/logger";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -406,14 +411,20 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=equipo_lleno`);
   }
 
-  const { error: pErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: user.id,
-    team: teamNum,
+  const { data: joinRpc, error: joinRpcErr } = await supabase.rpc("join_match_atomic", {
+    p_match_id: matchId,
+    p_player_id: user.id,
+    p_team: teamNum,
   });
-
-  if (pErr && pErr.code !== "23505") {
-    console.error("[requestToJoin] participant", pErr);
+  if (joinRpcErr) {
+    log.error({ event: "join_match_atomic.failed", matchId, userId: user.id, err: joinRpcErr });
+    redirect(`/partidos/${matchId}?join_error=db`);
+  }
+  const jr = (joinRpc as { ok?: boolean; reason?: string }[] | null)?.[0];
+  if (!jr?.ok) {
+    const r = jr?.reason ?? "";
+    if (r === "team_full") redirect(`/partidos/${matchId}?join_error=equipo_lleno`);
+    if (r === "match_full" || r === "match_closed") redirect(`/partidos/${matchId}?join_error=cupos`);
     redirect(`/partidos/${matchId}?join_error=db`);
   }
   await addPlayerToMatchGroup(supabase, matchId, user.id);
@@ -454,6 +465,25 @@ export async function requestToJoin(formData: FormData): Promise<void> {
       body: tpl.body,
       match_id: matchId,
     });
+  }
+
+  const { data: existingPay } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id,status,mp_preference_id")
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const ex = existingPay as { status?: string | null; mp_preference_id?: string | null } | null;
+  if (
+    ex &&
+    String(ex.status ?? "").toLowerCase() === "pending" &&
+    String(ex.mp_preference_id ?? "").trim().length > 0
+  ) {
+    const pref = encodeURIComponent(String(ex.mp_preference_id).trim());
+    revalidatePath(`/partidos/${matchId}`);
+    redirect(`https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${pref}`);
   }
 
   const mpRes = await createParticipantMercadoPagoCheckout({
@@ -541,17 +571,22 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
-  const { error: pErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: playerId,
-    team: pickedTeam,
+  const { data: joinRpc, error: joinRpcErr } = await supabase.rpc("join_match_atomic", {
+    p_match_id: matchId,
+    p_player_id: playerId,
+    p_team: pickedTeam,
   });
-
-  if (pErr) {
-    if (pErr.code !== "23505") {
-      console.error("[acceptJoinRequest] participant", pErr);
-      redirect(`/partidos/${matchId}?join_error=db`);
+  if (joinRpcErr) {
+    log.error({ event: "join_match_atomic.accept_failed", matchId, err: joinRpcErr });
+    redirect(`/partidos/${matchId}?join_error=db`);
+  }
+  const jr = (joinRpc as { ok?: boolean; reason?: string }[] | null)?.[0];
+  if (!jr?.ok) {
+    const r = jr?.reason ?? "";
+    if (r === "team_full" || r === "match_full" || r === "match_closed") {
+      redirect(`/partidos/${matchId}?join_error=cupos`);
     }
+    redirect(`/partidos/${matchId}?join_error=db`);
   }
   await addPlayerToMatchGroup(supabase, matchId, playerId);
 
@@ -715,7 +750,11 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     p_player_id: user.id,
   });
   if (leaveAtomicErr) {
-    console.error("[cancelParticipation]", leaveAtomicErr);
+    const msg = String(leaveAtomicErr.message ?? "");
+    if (msg.includes("participant_not_found")) {
+      redirect(`/partidos/${matchId}?cancel_ok=1`);
+    }
+    log.error({ event: "leave_match_atomic.failed", matchId, err: leaveAtomicErr });
     redirect(`/partidos/${matchId}?cancel_error=rpc`);
   }
   const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
@@ -770,6 +809,31 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   revalidatePath("/home");
   revalidatePath("/partidos");
   redirect(`/partidos/${matchId}?cancel_ok=1`);
+}
+
+export async function regenerarLinkPago(formData: FormData): Promise<void> {
+  const paymentId = getField(formData, "payment_id");
+  const matchId = getField(formData, "match_id");
+  if (!paymentId || !matchId) {
+    redirect("/buscar-partido");
+  }
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const res = await regenerateParticipantMercadoPagoLink({
+    supabase,
+    paymentId,
+    payerUserId: user.id,
+  });
+  if (!res.ok) {
+    redirect(`/partidos/${matchId}?pay_regen_error=1`);
+  }
+  revalidatePath(`/partidos/${matchId}`);
+  redirect(res.initPoint);
 }
 
 export async function toggleMatchVisibility(

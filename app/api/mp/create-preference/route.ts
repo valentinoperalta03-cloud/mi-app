@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { getPreferenceClient } from "@/lib/mercadopago";
 
 type Body = {
@@ -64,7 +65,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autenticado." }, { status: 401 });
     }
 
-    const json = (await req.json().catch(() => ({}))) as Body;
+    const json = (await req.json().catch((err) => {
+      log.warn({ event: "mp.create_preference.body_parse", err });
+      return {};
+    })) as Body;
     const matchId = String(json.match_id ?? "").trim();
     const amount = Number(json.amount);
     const clubName = String(json.club_name ?? "Club").trim() || "Club";
@@ -94,7 +98,7 @@ export async function POST(req: Request) {
 
     let preference: { id?: string; init_point?: string; sandbox_init_point?: string };
     try {
-      console.log("[mp] attempting to create preference, accessToken exists:", !!accessToken);
+      log.info({ event: "mp.preference.create_attempt", userId: user.id, matchId });
       preference = await getPreferenceClient().create({
         body: {
           items: [
@@ -117,9 +121,8 @@ export async function POST(req: Request) {
           ...(notificationUrl ? { notification_url: notificationUrl } : {}),
         },
       });
-      console.log("[mp] preference response:", JSON.stringify(preference));
     } catch (e) {
-      console.error("[mp] create preference", e);
+      log.error({ event: "mp.preference.create_failed", userId: user.id, matchId, err: e });
       return NextResponse.json(
         {
           error:
@@ -148,7 +151,7 @@ export async function POST(req: Request) {
     });
 
     if (payErr) {
-      console.error("[mp] insert payment", payErr);
+      log.error({ event: "mp.payment.insert_failed", userId: user.id, matchId, err: payErr });
       return NextResponse.json(
         { error: "No se pudo registrar el pago. Intentá de nuevo." },
         { status: 500 }
@@ -157,7 +160,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ preference_id: prefId, init_point: initPoint });
   } catch (e) {
-    console.error("[mp] create-preference", e);
+    log.error({ event: "mp.create_preference.unhandled", err: e });
     return NextResponse.json({ error: "Error interno." }, { status: 500 });
   }
 }

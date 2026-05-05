@@ -1,6 +1,7 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getPreferenceClient } from "@/lib/mercadopago";
+import { log } from "@/lib/logger";
 import { createServiceClient } from "@/utils/supabase/server";
 
 function parseFeeRate(): number {
@@ -9,7 +10,7 @@ function parseFeeRate(): number {
   return Number.isFinite(n) && n >= 0 ? n : 0.05;
 }
 
-function getPublicBaseUrl(): string {
+export function getPublicBaseUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   if (site) return site;
   const v = process.env.VERCEL_URL?.replace(/\/$/, "");
@@ -31,15 +32,17 @@ export async function createMPPreference(params: {
   payerLastName?: string;
   clubAccessToken?: string | null;
   clubMpUserId?: string | null;
+  /** Si se pasa, reemplaza MP_SUCCESS_URL / FAILURE / PENDING (ej. confirmación de partido). */
+  backUrls?: { success: string; failure: string; pending: string };
 }): Promise<
   | { error: string }
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
 > {
   let rawAmount = params.amount;
   const accessToken = process.env.MP_ACCESS_TOKEN;
-  const successUrl = process.env.MP_SUCCESS_URL;
-  const failureUrl = process.env.MP_FAILURE_URL;
-  const pendingUrl = process.env.MP_PENDING_URL;
+  const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
+  const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
+  const pendingUrl = params.backUrls?.pending ?? process.env.MP_PENDING_URL;
 
   if ((!accessToken && !params.clubAccessToken) || !successUrl || !failureUrl || !pendingUrl) {
     return { error: "Falta configuración de Mercado Pago en el servidor." };
@@ -124,7 +127,7 @@ export async function createMPPreference(params: {
 
     return { prefId, initPoint, total, marketplaceFee };
   } catch (e) {
-    console.error("[mp] create preference", e);
+    log.error({ event: "mp.preference.create_failed", matchId: params.matchId, err: e });
     return {
       error:
         "Mercado Pago no pudo crear el pago en este momento. Intentá de nuevo en unos minutos o contactá soporte.",

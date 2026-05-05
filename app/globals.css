@@ -10,6 +10,10 @@
 
 /* CSS Variables for theming */
 :root {
+  --color-brand: #0585fc;
+  --color-brand-dark: #0461c4;
+  --color-brand-light: rgba(5, 133, 252, 0.12);
+  --color-brand-gradient: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
   --bg-app: #f0f4ff;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
@@ -25,6 +29,10 @@
 }
 
 .dark {
+  --color-brand: #38bdf8;
+  --color-brand-dark: #7dd3fc;
+  --color-brand-light: rgba(56, 189, 248, 0.15);
+  --color-brand-gradient: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
   --bg-app: #000000;
   --bg-card: #1c1c1e;
   --bg-card-hover: #1f2937;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 
 type MatchRow = {
@@ -30,6 +31,8 @@ export async function GET(req: Request) {
     .select("id,owner_id")
     .eq("payment_status", "pending")
     .in("match_status", ["pending", "scheduled"])
+    .not("match_status", "eq", "reserved")
+    .not("match_status", "eq", "cancelled")
     .in("match_type", ["reservation", "amistoso", "competitivo"])
     .lt("created_at", thresholdIso);
 
@@ -42,8 +45,12 @@ export async function GET(req: Request) {
     const { error: updateMatchErr } = await supabase
       .from(DB_TABLES.matches)
       .update({ match_status: "cancelled", payment_status: "expired" })
-      .eq("id", match.id);
-    if (updateMatchErr) continue;
+      .eq("id", match.id)
+      .in("match_status", ["pending", "scheduled"]);
+    if (updateMatchErr) {
+      log.warn({ event: "cron.expire_unpaid.match_update_skipped", matchId: match.id, err: updateMatchErr });
+      continue;
+    }
 
     await supabase
       .from(DB_TABLES.payments)

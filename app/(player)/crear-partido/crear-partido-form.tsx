@@ -12,6 +12,7 @@ import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
+import { Button } from "@/components/ui/button";
 import { crearPartido } from "./actions";
 
 function fmtAr(numero: number) {
@@ -707,14 +708,15 @@ export default function CrearPartidoForm({
             )}
           </section>
 
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="lg"
             onClick={() => setCurrentStep("payment")}
             disabled={!canSubmit}
-            className="w-full rounded-2xl bg-[#0585FC] py-4 text-base font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition-all hover:bg-[#0461C4] disabled:opacity-50"
           >
             Continuar al pago →
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -733,7 +735,7 @@ export default function CrearPartidoForm({
           <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06]">
             <div
               className="flex h-20 w-full items-center gap-3 bg-[#0585FC]/10 px-5"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              style={{ background: "var(--color-brand-gradient)" }}
             >
               <div>
                 <p className="font-bold text-white">{selectedClub?.name}</p>
@@ -788,13 +790,9 @@ export default function CrearPartidoForm({
             <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{error}</p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !canSubmit}
-            className="w-full rounded-2xl bg-[#0585FC] py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:bg-[#0461C4] active:scale-[0.98] disabled:opacity-60"
-          >
+          <Button type="submit" variant="primary" size="lg" disabled={isSubmitting || !canSubmit}>
             {isSubmitting ? "Procesando..." : "Confirmar y pagar 🎾"}
-          </button>
+          </Button>
         </div>
       ) : null}
 

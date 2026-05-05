@@ -28,7 +28,7 @@ const quickActions = [
     href: "/crear-partido",
     Icon: CirclePlus,
     desc: "Organizá un partido en segundos",
-    gradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+    gradient: "var(--color-brand-gradient)",
     shadow: "0 4px 16px rgba(5,133,252,0.35)",
   },
   {
@@ -107,7 +107,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <OnboardingSlides />
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-100">
-          <p className="text-sm font-semibold">Perfil guardado con exito.</p>
+          <p className="text-sm font-semibold">Perfil guardado con éxito.</p>
           <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
             Tu nivel y preferencias ya se actualizaron correctamente.
           </p>
@@ -117,7 +117,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section
         className="relative overflow-hidden rounded-3xl p-6 text-white"
         style={{
-          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          background: "var(--color-brand-gradient)",
           boxShadow: "0 4px 20px rgba(5,133,252,0.3)",
         }}
       >

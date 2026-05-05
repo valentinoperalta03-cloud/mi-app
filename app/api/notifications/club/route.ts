@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/utils/supabase/server";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as
+  const body = (await req.json().catch((err: unknown) => {
+    log.warn({ event: "notifications.club.body_parse", err });
+    return null;
+  })) as
     | { clubId?: string; type?: "payment_approved" | "payment_rejected" | "reservation_cancelled"; title?: string; body?: string }
     | null;
   const clubId = String(body?.clubId ?? "").trim();

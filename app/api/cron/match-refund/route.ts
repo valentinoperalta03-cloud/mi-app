@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { getPaymentRefundClient } from "@/lib/mercadopago";
 import { createNotification } from "@/lib/notifications";
 
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
         try {
           await getPaymentRefundClient().total({ payment_id: mpId });
         } catch (e) {
-          console.error("[cron refund]", e);
+          log.error({ event: "cron.match_refund.payment_failed", matchId: match.id, err: e });
           continue;
         }
       }

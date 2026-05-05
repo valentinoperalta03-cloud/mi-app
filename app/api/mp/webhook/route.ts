@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendAlert } from "@/lib/alerts";
 import { DB_TABLES } from "@/lib/db-tables";
-import { pickTeamForMatch } from "@/lib/match-teams";
+import { log } from "@/lib/logger";
 import { getPaymentClient } from "@/lib/mercadopago";
+import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
+import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { createNotification } from "@/lib/notifications";
 
 function getSupabaseAdmin() {
@@ -43,32 +46,6 @@ function parseExternalReference(ref: string): { matchId: string; userId: string 
   return { matchId: trimmed, userId: null };
 }
 
-async function allParticipantsPaymentsApproved(
-  admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
-  matchId: string
-): Promise<boolean> {
-  const { data: parts } = await admin
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id")
-    .eq("match_id", matchId);
-  if (!parts?.length) return false;
-  for (const row of parts) {
-    const pid = (row as { player_id: string }).player_id;
-    const { data: pay } = await admin
-      .from(DB_TABLES.payments)
-      .select("status")
-      .eq("match_id", matchId)
-      .eq("user_id", pid)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (String((pay as { status?: string | null } | null)?.status ?? "").toLowerCase() !== "approved") {
-      return false;
-    }
-  }
-  return true;
-}
-
 export async function POST(req: Request) {
   return handleNotification(req);
 }
@@ -83,18 +60,34 @@ export async function OPTIONS() {
 }
 
 async function handleNotification(req: Request) {
+  const requestId = crypto.randomUUID();
   let body: unknown = null;
   if (req.headers.get("content-type")?.includes("application/json")) {
-    body = await req.json().catch(() => null);
+    body = await req.json().catch((err) => {
+      log.warn({ event: "mp.webhook.body_parse_failed", requestId, err });
+      return null;
+    });
   }
 
-  console.log("[mp webhook] called, url:", req.url);
-  console.log("[mp webhook] method:", req.method);
-  console.log("[mp webhook] body:", JSON.stringify(body));
+  const bodySummary =
+    body && typeof body === "object"
+      ? {
+          type: (body as { type?: string }).type,
+          topic: (body as { topic?: string }).topic,
+          action: (body as { action?: string }).action,
+          dataId: (body as { data?: { id?: string } }).data?.id,
+        }
+      : null;
+  log.info({
+    event: "mp.webhook.received",
+    requestId,
+    method: req.method,
+    bodySummary,
+  });
 
   const admin = getSupabaseAdmin();
   if (!admin) {
-    console.warn("[mp] webhook: sin SUPABASE_SERVICE_ROLE_KEY");
+    log.warn({ event: "mp.webhook.no_admin", requestId });
     return NextResponse.json({ ok: true });
   }
 
@@ -114,7 +107,14 @@ async function handleNotification(req: Request) {
   try {
     mpPayment = await getPaymentClient().get({ id: paymentId });
   } catch (e) {
-    console.error("[mp] webhook get payment", e);
+    log.error({ event: "mp.webhook.get_payment_failed", requestId, mpPaymentId: paymentId, err: e });
+    void sendAlert({
+      source: "app",
+      kind: "mp_webhook",
+      title: "MP webhook: fallo al obtener pago",
+      detail: String(e instanceof Error ? e.message : e).slice(0, 500),
+      requestId,
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -127,50 +127,46 @@ async function handleNotification(req: Request) {
   const now = new Date().toISOString();
 
   if (status === "approved") {
-    let payUpd = admin
-      .from(DB_TABLES.payments)
-      .update({
-        status: "approved",
-        mp_payment_id: paymentId,
-        updated_at: now,
-      })
-      .eq("match_id", matchId);
-    if (payerUserId) {
-      payUpd = payUpd.eq("user_id", payerUserId);
-    }
-    const { error: payErr } = await payUpd;
-    if (payErr) {
-      console.error("[mp webhook] update payment approved", payErr);
-    }
+    log.info({
+      event: "payment.approved",
+      requestId,
+      matchId,
+      userId: payerUserId ?? undefined,
+      mpPaymentId: paymentId,
+    });
 
     if (payerUserId) {
-      // Si el pagador no está en match_participants todavía, insertarlo.
-      const { data: alreadyIn } = await admin
-        .from(DB_TABLES.matchParticipants)
-        .select("player_id")
-        .eq("match_id", matchId)
-        .eq("player_id", payerUserId)
-        .maybeSingle();
-
-      if (!alreadyIn) {
-        const pickedTeam = (await pickTeamForMatch(admin, matchId)) ?? 1;
-        const { error: partErr } = await admin.from(DB_TABLES.matchParticipants).insert({
-          match_id: matchId,
-          player_id: payerUserId,
-          team: pickedTeam,
+      const { data: rpcRows, error: rpcErr } = await admin.rpc("confirm_participant_payment_atomic", {
+        p_match_id: matchId,
+        p_user_id: payerUserId,
+        p_mp_payment_id: paymentId,
+      });
+      if (rpcErr) {
+        log.error({
+          event: "payment.rpc.confirm_failed",
+          requestId,
+          matchId,
+          userId: payerUserId,
+          mpPaymentId: paymentId,
+          err: rpcErr,
         });
-        if (partErr && partErr.code !== "23505") {
-          console.error("[mp webhook] insert match_participants", partErr);
-        } else {
-          const { count: newCount } = await admin
-            .from(DB_TABLES.matchParticipants)
-            .select("player_id", { count: "exact", head: true })
-            .eq("match_id", matchId);
-          if ((newCount ?? 0) >= 4) {
-            await admin.from(DB_TABLES.matches).update({ match_status: "full" }).eq("id", matchId);
-          }
-        }
+        void sendAlert({
+          source: "app",
+          kind: "mp_webhook",
+          title: "confirm_participant_payment_atomic falló",
+          detail: rpcErr.message,
+          requestId,
+        });
+        return NextResponse.json({ ok: true });
       }
+      const row = (rpcRows as { payment_row_id?: string; idempotent_ok?: boolean }[] | null)?.[0];
+      log.info({
+        event: "payment.rpc.confirm_ok",
+        requestId,
+        matchId,
+        paymentId: row?.payment_row_id,
+        idempotent: row?.idempotent_ok,
+      });
 
       const { data: group } = await admin
         .from(DB_TABLES.groupChats)
@@ -183,17 +179,16 @@ async function handleNotification(req: Request) {
           .from(DB_TABLES.groupChatMembers)
           .insert({ group_id: groupId, user_id: payerUserId, role: "member" });
         if (memErr && memErr.code !== "23505") {
-          console.error("[mp webhook] group_chat_members", memErr);
+          log.error({
+            event: "mp.webhook.group_chat_failed",
+            requestId,
+            matchId,
+            userId: payerUserId,
+            err: memErr,
+          });
         }
       }
 
-      const allPaid = await allParticipantsPaymentsApproved(admin, matchId);
-      if (allPaid) {
-        await admin
-          .from(DB_TABLES.matches)
-          .update({ payment_status: "paid", match_status: "reserved" })
-          .eq("id", matchId);
-      }
       await createNotification(admin, {
         user_id: payerUserId,
         type: "payment_approved",
@@ -202,6 +197,41 @@ async function handleNotification(req: Request) {
         match_id: matchId,
       });
     } else {
+      const { data: matchBefore } = await admin
+        .from(DB_TABLES.matches)
+        .select("match_status,payment_status")
+        .eq("id", matchId)
+        .maybeSingle();
+      const mb = matchBefore as { match_status?: string | null; payment_status?: string | null } | null;
+      try {
+        assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
+          requestId,
+          matchId,
+          trigger: "webhook.approved_reserva",
+        });
+        assertMatchTransition(mb?.match_status, "reserved", {
+          requestId,
+          matchId,
+          trigger: "webhook.approved_reserva",
+        });
+      } catch {
+        /* logging ya en asserts */
+      }
+
+      const payUpd = admin
+        .from(DB_TABLES.payments)
+        .update({
+          status: "approved",
+          mp_payment_id: paymentId,
+          updated_at: now,
+        })
+        .eq("match_id", matchId);
+
+      const { error: payErr } = await payUpd;
+      if (payErr) {
+        log.error({ event: "mp.webhook.update_payment_reserva", requestId, matchId, err: payErr });
+      }
+
       await admin
         .from(DB_TABLES.matches)
         .update({ payment_status: "paid", match_status: "reserved" })
@@ -222,11 +252,11 @@ async function handleNotification(req: Request) {
           match_id: matchId,
         });
       }
-      const matchTyped = (matchRow as {
+      const matchTyped = matchRow as {
         total_price?: number | null;
         scheduled_date?: string | null;
         courts?: { name?: string | null; club_id?: string | null } | null;
-      } | null);
+      } | null;
       const clubId = String(matchTyped?.courts?.club_id ?? "").trim();
       if (clubId) {
         const { data: clubRow } = await admin
@@ -250,12 +280,37 @@ async function handleNotification(req: Request) {
       }
     }
   } else if (status === "rejected" || status === "cancelled" || status === "expired") {
-    const paymentDbStatus =
-      status === "cancelled" ? "cancelled" : status === "expired" ? "rejected" : "rejected";
+    const { data: payRow } = payerUserId
+      ? await admin
+          .from(DB_TABLES.payments)
+          .select("id,status")
+          .eq("match_id", matchId)
+          .eq("user_id", payerUserId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+
+    const prevPay = (payRow as { status?: string | null } | null)?.status;
+    const dbPayStatus =
+      status === "cancelled" ? "cancelled" : status === "expired" ? "expired" : "rejected";
+    try {
+      if (payerUserId) {
+        assertPaymentRowTransition(prevPay, dbPayStatus, {
+          requestId,
+          paymentId: (payRow as { id?: string } | null)?.id,
+          userId: payerUserId,
+          trigger: "webhook.rejected",
+        });
+      }
+    } catch {
+      /* logged */
+    }
+
     let payUpd = admin
       .from(DB_TABLES.payments)
       .update({
-        status: paymentDbStatus,
+        status: dbPayStatus,
         mp_payment_id: paymentId,
         updated_at: now,
       })
@@ -274,6 +329,27 @@ async function handleNotification(req: Request) {
         match_id: matchId,
       });
     } else {
+      const { data: mBefore } = await admin
+        .from(DB_TABLES.matches)
+        .select("match_status,payment_status")
+        .eq("id", matchId)
+        .maybeSingle();
+      const mb = mBefore as { match_status?: string | null; payment_status?: string | null } | null;
+      try {
+        assertMatchPaymentStatusTransition(mb?.payment_status, status === "cancelled" ? "cancelled" : "rejected", {
+          requestId,
+          matchId,
+          trigger: "webhook.reject_reserva",
+        });
+        assertMatchTransition(mb?.match_status, "cancelled", {
+          requestId,
+          matchId,
+          trigger: "webhook.reject_reserva",
+        });
+      } catch {
+        /* logged */
+      }
+
       await admin
         .from(DB_TABLES.matches)
         .update({
@@ -312,6 +388,27 @@ async function handleNotification(req: Request) {
     await payUpd;
 
     if (!payerUserId) {
+      const { data: mBefore } = await admin
+        .from(DB_TABLES.matches)
+        .select("match_status,payment_status")
+        .eq("id", matchId)
+        .maybeSingle();
+      const mb = mBefore as { match_status?: string | null; payment_status?: string | null } | null;
+      try {
+        assertMatchPaymentStatusTransition(mb?.payment_status, "refunded", {
+          requestId,
+          matchId,
+          trigger: "webhook.refunded_reserva",
+        });
+        assertMatchTransition(mb?.match_status, "cancelled", {
+          requestId,
+          matchId,
+          trigger: "webhook.refunded_reserva",
+        });
+      } catch {
+        /* logged */
+      }
+
       await admin
         .from(DB_TABLES.matches)
         .update({ payment_status: "refunded", match_status: "cancelled" })

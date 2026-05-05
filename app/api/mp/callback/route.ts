@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { createServiceClient } from "@/utils/supabase/server";
 
 function redirectUri(): string {
@@ -91,13 +92,16 @@ export async function GET(req: Request) {
         grant_type: "authorization_code",
       }),
     });
-    tokenJson = (await res.json().catch(() => ({}))) as typeof tokenJson;
+    tokenJson = (await res.json().catch((err) => {
+      log.warn({ event: "mp.oauth.json_parse", err });
+      return {};
+    })) as typeof tokenJson;
     if (!res.ok || !tokenJson.access_token) {
-      console.error("[mp] oauth token", tokenJson);
+      log.error({ event: "mp.oauth.token_invalid", msg: tokenJson.message });
       return NextResponse.redirect(`${configUrl}?mp=token_error`);
     }
   } catch (e) {
-    console.error("[mp] oauth fetch", e);
+    log.error({ event: "mp.oauth.fetch_failed", err: e });
     return NextResponse.redirect(`${configUrl}?mp=red_error`);
   }
 
