@@ -108,7 +108,6 @@ export default function CrearPartidoForm({
   const [genderCategory, setGenderCategory] = useState<GenderCategory>(defaultGender);
   const [levelRestricted, setLevelRestricted] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
-  const [paidForFriendIds, setPaidForFriendIds] = useState<string[]>([]);
   const [isSubmitting, startSubmit] = useTransition();
 
   const dates = useMemo(() => {
@@ -205,29 +204,22 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0, jugadoresPagados: 1 };
+    if (!selectedCourt) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0 };
     const precioCanchaJugador = Math.round(selectedCourt.price / 4);
     const comisionPorJugador = Math.round(precioCanchaJugador * 0.05);
-    const jugadoresPagados = 1 + paidForFriendIds.length;
-    const total = (precioCanchaJugador + comisionPorJugador) * jugadoresPagados;
-    return { precioCanchaJugador, comisionPorJugador, total, jugadoresPagados };
-  }, [selectedCourt, paidForFriendIds.length]);
+    const total = precioCanchaJugador + comisionPorJugador;
+    return { precioCanchaJugador, comisionPorJugador, total };
+  }, [selectedCourt]);
 
   function toggleFriend(friendId: string) {
     setSelectedFriendIds((prev) => {
       const exists = prev.includes(friendId);
       if (exists) {
-        setPaidForFriendIds((paid) => paid.filter((id) => id !== friendId));
         return prev.filter((id) => id !== friendId);
       }
       if (prev.length >= 3) return prev;
       return [...prev, friendId];
     });
-  }
-
-  function togglePaidFor(friendId: string) {
-    if (!selectedFriendIds.includes(friendId)) return;
-    setPaidForFriendIds((prev) => (prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]));
   }
 
   return (
@@ -711,33 +703,6 @@ export default function CrearPartidoForm({
                     );
                   })}
                 </div>
-                {selectedFriendIds.map((friendId) => {
-                  const friend = friends.find((f) => f.userId === friendId);
-                  if (!friend) return null;
-                  const checked = paidForFriendIds.includes(friendId);
-                  return (
-                    <label
-                      key={`pay-${friendId}`}
-                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"
-                    >
-                      <span className="text-sm font-medium text-slate-700">¿Pagar por esta persona? ({friend.name})</span>
-                      <button
-                        type="button"
-                        aria-pressed={checked}
-                        onClick={() => togglePaidFor(friendId)}
-                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
-                          checked ? "bg-[#0585FC]/50" : "bg-slate-300"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition dark:bg-slate-100 ${
-                            checked ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  );
-                })}
               </div>
             )}
           </section>
@@ -843,7 +808,6 @@ export default function CrearPartidoForm({
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
       <input type="hidden" name="invited_friend_ids" value={selectedFriendIds.join(",")} />
-      <input type="hidden" name="paid_friend_ids" value={paidForFriendIds.join(",")} />
     </form>
   );
 }
