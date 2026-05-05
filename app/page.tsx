@@ -117,6 +117,12 @@ export default function LandingPage() {
           >
             Descubrí cómo funciona ↓
           </Link>
+          <Link
+            href="/login"
+            className="mt-3 rounded-2xl border border-white/40 bg-white/10 px-7 py-3 text-base font-semibold text-white transition hover:bg-white/20"
+          >
+            Empezar gratis
+          </Link>
           <p className="mt-4 text-xs font-medium text-white/70 sm:text-sm">
             Gratis para jugadores · Sin descargas · Funciona desde el celular
           </p>
@@ -295,7 +301,7 @@ export default function LandingPage() {
             Unite a PadeLibre hoy. Es gratis para jugadores y tus primeros 2 partidos no tienen comisión.
           </p>
           <Link
-            href="/register"
+            href="/login"
             className="mt-7 inline-flex rounded-2xl bg-white px-8 py-3 text-base font-bold text-[#0461C4] transition hover:bg-white/90"
           >
             Empezar gratis
@@ -316,17 +322,36 @@ export default function LandingPage() {
             <span className="font-semibold">PadeLibre</span>
           </div>
           <p className="text-sm text-[var(--text-secondary)]">© 2025 PadeLibre. Hecho en Argentina 🇦🇷</p>
-          <div className="flex gap-4 text-sm">
-            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="mailto:soporte.padelibre@gmail.com">
-              Contacto
+          <div className="flex flex-wrap gap-4 text-sm">
+            <a
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              href="mailto:soporte.padelibre@gmail.com"
+            >
+              Email
             </a>
             <a
               className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="https://instagram.com/padelibre"
+              href="https://instagram.com/padelibre_"
               target="_blank"
               rel="noreferrer"
             >
               Instagram
+            </a>
+            <a
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              href="https://www.padelibre.online/legal/privacidad"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Privacidad
+            </a>
+            <a
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              href="https://wa.me/5493412571953"
+              target="_blank"
+              rel="noreferrer"
+            >
+              WhatsApp
             </a>
           </div>
         </div>
