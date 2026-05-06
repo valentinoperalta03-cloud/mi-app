@@ -124,7 +124,7 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
   const saved = sp.saved === "1";
   const actionErrorKey = sp.error?.trim() ?? "";
 
-  const supabase = await createClient({ allowCookieWrites: true });
+  const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
 
   if (!ctx?.userId) {
