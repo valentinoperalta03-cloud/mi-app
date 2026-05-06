@@ -12,6 +12,19 @@ const NO_CLUB_MSG =
 const CLUB_ADMIN_COLUMNS =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id" as const;
 
+function formatSupabaseUserMessage(err: {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}): string {
+  const parts = [err.message];
+  if (err.code) parts.push(`código ${err.code}`);
+  if (err.details) parts.push(err.details);
+  if (err.hint) parts.push(`Sugerencia: ${err.hint}`);
+  return parts.join(" — ");
+}
+
 type PageProps = {
   searchParams?: Promise<{ saved?: string; error?: string }>;
 };
@@ -58,7 +71,7 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
         details: clubError.details,
         hint: clubError.hint,
       });
-      throw new Error(clubError.message);
+      throw new Error(formatSupabaseUserMessage(clubError));
     }
     const club = (clubRaw ?? {}) as Record<string, string | null>;
 
