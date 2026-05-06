@@ -46,6 +46,11 @@ type BlockRow = {
   start_time: string | null;
 };
 
+type SlotView = GeneratedSlot & {
+  available: boolean;
+  reason?: string;
+};
+
 function fmtAr(numero: number) {
   return new Intl.NumberFormat("es-AR").format(numero);
 }
@@ -65,7 +70,7 @@ function NuevaReservaContent() {
   const [selectedSlot, setSelectedSlot] = useState<GeneratedSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [slots, setSlots] = useState<GeneratedSlot[]>([]);
+  const [slots, setSlots] = useState<SlotView[]>([]);
   const [pendingConfirm, startConfirm] = useTransition();
 
   const dateChips = useMemo(() => {
@@ -124,11 +129,13 @@ function NuevaReservaContent() {
       const blocks = (blockRows ?? []) as BlockRow[];
       const blockStarts = new Set(blocks.map((b) => normalizeDbTime(b.start_time)));
 
-      const filtered = built.filter((slot) => {
+      const resolvedSlots = built.map((slot) => {
         const slotStart = clockToMinutes(slot.time);
         const slotDur = slot.duration;
 
-        if (blockStarts.has(normalizeDbTime(slot.time))) return false;
+        if (blockStarts.has(normalizeDbTime(slot.time))) {
+          return { ...slot, available: false, reason: "Bloqueado por el club" } satisfies SlotView;
+        }
 
         for (const m of matches) {
           const isReservation = String(m.match_type ?? "").toLowerCase() === "reservation";
@@ -138,12 +145,14 @@ function NuevaReservaContent() {
           if (!shouldBlockSlot) continue;
           const mStart = clockToMinutes(normalizeDbTime(m.scheduled_time));
           const mDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
-          if (overlapsSlot(slotStart, slotDur, mStart, mDur)) return false;
+          if (overlapsSlot(slotStart, slotDur, mStart, mDur)) {
+            return { ...slot, available: false, reason: "Ya reservado" } satisfies SlotView;
+          }
         }
-        return true;
+        return { ...slot, available: true } satisfies SlotView;
       });
 
-      setSlots(filtered);
+      setSlots(resolvedSlots);
     } finally {
       setLoading(false);
     }
@@ -229,7 +238,7 @@ function NuevaReservaContent() {
             <p className="text-sm text-slate-500">Cargando horarios…</p>
           ) : slots.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              No hay horarios disponibles para este día
+              Esta cancha no tiene horarios cargados para este día.
             </p>
           ) : (
             <div className="grid grid-cols-3 gap-2">
@@ -241,19 +250,24 @@ function NuevaReservaContent() {
                   <button
                     key={key}
                     type="button"
+                    disabled={!slot.available}
                     onClick={() => {
+                      if (!slot.available) return;
                       setSelectedSlot(slot);
                       setError(null);
                       setStep(3);
                     }}
                     className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center text-xs font-semibold transition-all ${
-                      selected
-                      ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      !slot.available
+                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                        : selected
+                          ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                     }`}
                   >
                     <span>{slot.time}</span>
                     <span className="mt-0.5 opacity-90">{slot.duration} min</span>
+                    {!slot.available ? <span className="mt-1 text-[10px] font-medium">{slot.reason ?? "No disponible"}</span> : null}
                   </button>
                 );
               })}

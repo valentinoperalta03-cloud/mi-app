@@ -116,6 +116,7 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
           clubId={clubId}
           initial={{
             name: club.name ?? "",
+            location: club.location ?? "",
             description: club.description ?? "",
             address: club.address ?? "",
             contact_phone: club.contact_phone ?? "",

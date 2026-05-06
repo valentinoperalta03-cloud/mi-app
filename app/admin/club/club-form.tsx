@@ -65,6 +65,7 @@ type Props = {
   clubId: string;
   initial: {
     name: string;
+    location: string;
     description: string;
     address: string;
     contact_phone: string;
@@ -222,6 +223,15 @@ export default function ClubForm({ clubId, initial }: Props) {
       <label className="block space-y-1">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nombre del club</span>
         <input name="name" defaultValue={initial.name} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Ciudad / ubicación</span>
+        <input
+          name="location"
+          defaultValue={initial.location}
+          placeholder="Ej. Rosario, Santa Fe"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+        />
       </label>
       <label className="block space-y-1">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Descripción</span>

@@ -40,7 +40,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
   const { data: court } = await supabase
     .from(DB_TABLES.courts)
-    .select("id,name")
+    .select("id,name,price")
     .eq("id", courtId)
     .maybeSingle();
 
@@ -63,8 +63,11 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       <header className="space-y-2">
         <p className={`${adminKicker} text-[#0585FC]`}>Horarios</p>
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>
-        <p className={adminSubtitle}>Activá los días y definí apertura y cierre. Podés fijar un precio distinto por día (opcional).</p>
+        <p className={adminSubtitle}>Activá los días, definí apertura/cierre y, si querés, un precio especial por día.</p>
       </header>
+      <div className="rounded-2xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-sky-900">
+        Precio base actual de la cancha: <span className="font-semibold">${Number(court.price ?? 0)}</span>. Si dejás el precio diario vacío, se usa este valor.
+      </div>
 
       {savedFlash ? (
         <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">

@@ -29,6 +29,7 @@ export async function updateClubInfo(formData: FormData) {
 
     const payload = {
       name: getField(formData, "name") || null,
+      location: getField(formData, "location") || null,
       description: getField(formData, "description") || null,
       address: getField(formData, "address") || null,
       contact_phone: getField(formData, "contact_phone") || null,
