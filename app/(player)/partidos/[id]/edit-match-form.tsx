@@ -136,7 +136,7 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
             .from(DB_TABLES.courtSchedules)
             .select("court_id,day_of_week,open_time,close_time")
             .eq("court_id", courtId)
-            .eq("day_of_week", dow),
+            .not("day_of_week", "is", null),
           supabase
             .from(DB_TABLES.matches)
             .select("id,scheduled_time,duration_minutes")
@@ -158,7 +158,9 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
         return;
       }
 
-      const schedules = (schedRows ?? []) as ScheduleInput[];
+      const schedules = (schedRows ?? []).filter(
+        (r) => Number((r as ScheduleInput).day_of_week) === dow
+      ) as ScheduleInput[];
       const built = buildSlotsForDay([courtId], dayDate, schedules);
       const matches = (matchRows ?? []) as MatchRow[];
       const blocks = (blockRows ?? []) as BlockRow[];

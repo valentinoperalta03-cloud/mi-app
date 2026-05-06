@@ -160,7 +160,7 @@ export default function CrearPartidoForm({
             .from(DB_TABLES.courtSchedules)
             .select("court_id,day_of_week,open_time,close_time")
             .eq("court_id", selectedCourtId)
-            .eq("day_of_week", dayOfWeek),
+            .not("day_of_week", "is", null),
           supabase
             .from(DB_TABLES.matches)
             .select("scheduled_time,duration_minutes")
@@ -175,7 +175,9 @@ export default function CrearPartidoForm({
         return;
       }
 
-      const schedules = (scheduleRows ?? []) as ScheduleInput[];
+      const schedules = (scheduleRows ?? []).filter(
+        (r) => Number((r as ScheduleInput).day_of_week) === dayOfWeek
+      ) as ScheduleInput[];
       const generated = buildSlotsForDay([selectedCourtId], dayDate, schedules);
       const matches = (matchRows ?? []) as MatchRow[];
 

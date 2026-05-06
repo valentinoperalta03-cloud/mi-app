@@ -19,14 +19,25 @@ const FALLBACK_SLOTS: GeneratedSlot[] = [
   { time: "15:30", duration: 90 },
   { time: "17:00", duration: 90 },
   { time: "18:30", duration: 90 },
+  { time: "20:00", duration: 90 },
+  { time: "21:30", duration: 90 },
 ];
 
 function parseClockToMinutes(clock: string): number {
-  const parts = clock.trim().split(":");
+  let s = clock.trim();
+  const tIdx = s.indexOf("T");
+  if (tIdx >= 0) s = s.slice(tIdx + 1);
+  s = s.replace(/[zZ].*$/, "").trim();
+  const parts = s.split(":");
   const h = Number(parts[0]);
   const m = Number(parts[1] ?? 0);
   if (Number.isNaN(h) || Number.isNaN(m)) return 0;
   return h * 60 + m;
+}
+
+function scheduleMatchesDay(dayOfWeekRaw: number | null | undefined, dow: number): boolean {
+  if (dayOfWeekRaw == null) return false;
+  return Number(dayOfWeekRaw) === dow;
 }
 
 function minutesToClock(total: number): string {
@@ -49,11 +60,11 @@ export function buildSlotsForDay(
 
   for (const cid of courtIds) {
     const s = schedules.find(
-      (x) => x.court_id === cid && x.day_of_week === dow
+      (x) => String(x.court_id) === String(cid) && scheduleMatchesDay(x.day_of_week, dow)
     );
     if (s?.open_time && s?.close_time) {
-      const o = parseClockToMinutes(s.open_time);
-      const c = parseClockToMinutes(s.close_time);
+      const o = parseClockToMinutes(String(s.open_time));
+      const c = parseClockToMinutes(String(s.close_time));
       if (c > o) {
         minM = Math.min(minM, o);
         maxM = Math.max(maxM, c);
@@ -68,7 +79,8 @@ export function buildSlotsForDay(
   const slots: GeneratedSlot[] = [];
   let cur = minM;
   const dur = 90;
-  while (cur < maxM) {
+  /** El turno debe terminar a la hora de cierre: último inicio = close - duración */
+  while (cur + dur <= maxM) {
     slots.push({ time: minutesToClock(cur), duration: dur });
     cur += dur;
   }
