@@ -4,18 +4,34 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { saveCourtHourlyPrices } from "./actions";
+import { type RangeKey } from "./actions";
+import PreciosForm, { type RangeFormInitial } from "./precios-form";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ saved?: string; error?: string }>;
 };
 
-function buildHours() {
-  return Array.from({ length: 15 }, (_, idx) => `${String(idx + 8).padStart(2, "0")}:00`);
+const DEFAULTS: Record<RangeKey, { start: string; end: string }> = {
+  manana: { start: "06:00", end: "12:00" },
+  tarde: { start: "12:00", end: "18:00" },
+  noche: { start: "18:00", end: "23:00" },
+};
+
+function decodeErr(raw: string): string {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    return raw;
+  }
 }
 
-export default async function AdminCanchaPreciosPage({ params }: PageProps) {
+export default async function AdminCanchaPreciosPage({ params, searchParams }: PageProps) {
   const { id: courtId } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const saved = sp.saved === "1";
+  const errRaw = sp.error?.trim() ?? "";
+
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -24,48 +40,66 @@ export default async function AdminCanchaPreciosPage({ params }: PageProps) {
   const { data: court } = await supabase.from(DB_TABLES.courts).select("id,name,price").eq("id", courtId).maybeSingle();
   if (!court) notFound();
 
-  const { data: rows } = await supabase
-    .from(DB_TABLES.courtSchedules)
-    .select("start_time,price_override")
-    .eq("court_id", courtId)
-    .not("price_override", "is", null);
-
-  const byHour = new Map(
-    ((rows ?? []) as Array<{ start_time: string | null; price_override: number | null }>)
-      .filter((r) => r.start_time)
-      .map((r) => [String(r.start_time).slice(0, 5), Number(r.price_override ?? 0)])
-  );
   const basePrice = Number((court as { price: number | null }).price ?? 0);
-  const hours = buildHours();
+  const courtName = (court as { name: string | null }).name ?? "Cancha";
+
+  const { data: bandRows } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .select("start_time,end_time,price_override,range_name")
+    .eq("court_id", courtId)
+    .is("day_of_week", null)
+    .not("range_name", "is", null);
+
+  const empty = (key: RangeKey): RangeFormInitial => ({
+    active: false,
+    start: DEFAULTS[key].start,
+    end: DEFAULTS[key].end,
+    price: basePrice,
+  });
+
+  const initial: Record<RangeKey, RangeFormInitial> = {
+    manana: empty("manana"),
+    tarde: empty("tarde"),
+    noche: empty("noche"),
+  };
+
+  for (const row of bandRows ?? []) {
+    const k = String((row as { range_name: string | null }).range_name ?? "")
+      .toLowerCase()
+      .trim();
+    if (k !== "manana" && k !== "tarde" && k !== "noche") continue;
+    const rk = k as RangeKey;
+    initial[rk] = {
+      active: true,
+      start: String((row as { start_time: string | null }).start_time ?? "").slice(0, 5) || DEFAULTS[rk].start,
+      end: String((row as { end_time: string | null }).end_time ?? "").slice(0, 5) || DEFAULTS[rk].end,
+      price: Number((row as { price_override: number | null }).price_override ?? basePrice),
+    };
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/canchas" />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Precios dinámicos</p>
-        <h1 className={adminTitle}>{(court as { name: string | null }).name ?? "Cancha"}</h1>
-        <p className={adminSubtitle}>Configurá precio por franja horaria (08:00 a 22:00).</p>
+        <p className={`${adminKicker} text-[#0585FC]`}>Precios por franja</p>
+        <h1 className={adminTitle}>{courtName}</h1>
+        <p className={adminSubtitle}>
+          Activá una o más franjas (mañana, tarde, noche), definí horario cada 30 minutos y el precio en pesos.
+        </p>
       </header>
 
-      <form action={saveCourtHourlyPrices} className={`${adminCard} space-y-4`}>
-        <input type="hidden" name="court_id" value={courtId} />
-        {hours.map((hour) => (
-          <label key={hour} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
-            <span className="text-sm font-semibold text-slate-700">{hour}</span>
-            <input
-              type="number"
-              min={0}
-              step="1"
-              name={`price_${hour}`}
-              defaultValue={byHour.get(hour) ?? basePrice}
-              className="w-36 rounded-xl border border-slate-300 px-3 py-2 text-right text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-            />
-          </label>
-        ))}
-        <button type="submit" className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-          Guardar todo
-        </button>
-      </form>
+      {saved ? (
+        <div className={`${adminCard} border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800`}>
+          Precios guardados correctamente.
+        </div>
+      ) : null}
+      {errRaw ? (
+        <div className={`${adminCard} border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800`}>
+          {decodeErr(errRaw)}
+        </div>
+      ) : null}
+
+      <PreciosForm courtId={courtId} initial={initial} />
     </div>
   );
 }

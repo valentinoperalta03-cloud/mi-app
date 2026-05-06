@@ -229,7 +229,7 @@ export default function ClubForm({ clubId, initial }: Props) {
         <input
           name="location"
           defaultValue={initial.location}
-          placeholder="Ej. Rosario, Santa Fe"
+          placeholder="Ej: Rosario, Santa Fe"
           className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
         />
       </label>

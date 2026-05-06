@@ -10,6 +10,13 @@ function parseFeeRate(): number {
   return Number.isFinite(n) && n >= 0 ? n : 0.05;
 }
 
+function clockToMinutes(clock: string): number {
+  const s = clock.trim().slice(0, 5);
+  const [h, m] = s.split(":").map((x) => Number.parseInt(x, 10));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return NaN;
+  return h * 60 + m;
+}
+
 export function getPublicBaseUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   if (site) return site;
@@ -57,14 +64,45 @@ export async function createMPPreference(params: {
   const matchTyped = match as { court_id: string | null; scheduled_time: string | null } | null;
   const hour = String(matchTyped?.scheduled_time ?? "").trim().slice(0, 5);
   if (matchTyped?.court_id && hour) {
-    const { data: schedule } = await service
-      .from(DB_TABLES.courtSchedules)
-      .select("price_override")
-      .eq("court_id", matchTyped.court_id)
-      .eq("start_time", hour)
-      .not("price_override", "is", null)
-      .maybeSingle();
-    const override = Number((schedule as { price_override: number | null } | null)?.price_override ?? 0);
+    const hMin = clockToMinutes(hour);
+    let override = 0;
+
+    if (Number.isFinite(hMin)) {
+      const { data: bandRows } = await service
+        .from(DB_TABLES.courtSchedules)
+        .select("price_override,start_time,end_time")
+        .eq("court_id", matchTyped.court_id)
+        .is("day_of_week", null)
+        .not("range_name", "is", null)
+        .not("price_override", "is", null);
+
+      for (const row of (bandRows ?? []) as Array<{
+        price_override: number | null;
+        start_time: string | null;
+        end_time: string | null;
+      }>) {
+        const s = clockToMinutes(String(row.start_time ?? ""));
+        const e = clockToMinutes(String(row.end_time ?? ""));
+        if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+        const inRange = e > s ? hMin >= s && hMin < e : hMin >= s || hMin < e;
+        if (inRange) {
+          override = Number(row.price_override ?? 0);
+          break;
+        }
+      }
+    }
+
+    if (!Number.isFinite(override) || override <= 0) {
+      const { data: legacy } = await service
+        .from(DB_TABLES.courtSchedules)
+        .select("price_override")
+        .eq("court_id", matchTyped.court_id)
+        .eq("start_time", hour)
+        .not("price_override", "is", null)
+        .maybeSingle();
+      override = Number((legacy as { price_override: number | null } | null)?.price_override ?? 0);
+    }
+
     if (Number.isFinite(override) && override > 0) {
       rawAmount = override;
     }

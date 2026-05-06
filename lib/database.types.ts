@@ -69,9 +69,13 @@ export type CourtRow = {
 
 export type CourtScheduleRow = {
   court_id: Uuid;
-  day_of_week: number;
+  /** Horario semanal por día; null en filas de precio por franja (mañana/tarde/noche). */
+  day_of_week: number | null;
   open_time: string | null;
   close_time: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  range_name?: string | null;
   /** Precio por turno para ese día; opcional en UI admin. */
   price_override?: number | string | null;
 };

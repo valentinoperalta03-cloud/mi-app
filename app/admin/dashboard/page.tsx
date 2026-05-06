@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Activity, CalendarDays, DollarSign, Settings, Target, Users } from "lucide-react";
@@ -64,7 +63,6 @@ const modules = [
   },
 ] as const;
 
-const BRAND_LOGO_SRC = "/logo.png";
 const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 export default async function AdminDashboardPage() {
@@ -76,7 +74,7 @@ export default async function AdminDashboardPage() {
 
   const { data: owned } = await supabase
     .from(DB_TABLES.clubs)
-    .select("id")
+    .select("id,logo_url")
     .eq("owner_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -84,10 +82,12 @@ export default async function AdminDashboardPage() {
   const today = getTodayYmdInArgentina();
   const todayLong = formatLongDateInArgentina();
 
+  const ownedClub = owned as { id: string; logo_url: string | null } | null;
+
   const { data: clubCourts } = await supabase
     .from(DB_TABLES.courts)
     .select("id")
-    .eq("club_id", owned?.id ?? "");
+    .eq("club_id", ownedClub?.id ?? "");
 
   const courtIds = (clubCourts ?? []).map((c: { id: string }) => c.id);
 
@@ -162,7 +162,7 @@ export default async function AdminDashboardPage() {
     },
   ] as const;
 
-  if (!owned) {
+  if (!ownedClub) {
     return (
       <div className={`${adminCard} border-amber-200/80 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-950/40`}>
         <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Sin club asignado</h1>
@@ -189,19 +189,16 @@ export default async function AdminDashboardPage() {
               Seguimiento diario de reservas, ingresos y ocupación del club en tiempo real.
             </p>
           </div>
-          <div className="relative h-14 w-40 shrink-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 p-2">
-            <Image
-              src={BRAND_LOGO_SRC}
-              alt="Logo de marca"
-              fill
-              className="object-contain p-2 opacity-80"
-            />
-            <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Tu marca
-              </span>
+          {ownedClub.logo_url ? (
+            <div className="relative h-14 w-40 shrink-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element -- URL pública de Storage */}
+              <img
+                src={ownedClub.logo_url}
+                alt=""
+                className="h-full w-full object-contain p-2"
+              />
             </div>
-          </div>
+          ) : null}
         </div>
       </header>
 

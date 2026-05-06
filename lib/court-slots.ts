@@ -2,7 +2,8 @@ import { getDay } from "date-fns";
 
 export type ScheduleInput = {
   court_id: string;
-  day_of_week: number;
+  /** null en filas solo de precio por franja; se ignoran al armar la grilla. */
+  day_of_week: number | null;
   open_time: string | null;
   close_time: string | null;
 };
