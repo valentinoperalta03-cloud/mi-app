@@ -323,7 +323,7 @@ export default function CrearPartidoForm({
                         className={`mt-0.5 flex items-center gap-1 text-sm ${cover ? "text-white/85" : "text-slate-500"}`}
                       >
                         <MapPin size={11} />
-                        {club.location || "Rosario"}
+                        {club.location?.trim() || "Ciudad no indicada"}
                       </p>
                     </div>
                     <ChevronRight size={18} className={`shrink-0 ${cover ? "text-white/90" : "text-slate-400"}`} />
