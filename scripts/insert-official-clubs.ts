@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from "../lib/supabase-service.ts";
+import { createServiceRoleClient } from "../lib/supabase-service";
 
 type ClubSeed = {
   name: string;
