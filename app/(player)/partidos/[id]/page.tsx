@@ -840,10 +840,10 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
+      <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40`}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-950">Jugadores anotados</h2>
-          <span className="text-xs font-medium text-slate-500">
+          <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">Equipos</h2>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
             {freeSlots} cupo{freeSlots === 1 ? "" : "s"} libre{freeSlots === 1 ? "" : "s"} de 4
           </span>
         </div>
@@ -860,79 +860,108 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </div>
         ) : null}
 
-        {participants.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-            Aún no hay jugadores anotados.
-          </p>
-        ) : (
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#0585FC]">Equipo 1</p>
-              <ul className="space-y-2">
-                {team1Players.length === 0 ? (
-                  <li className="rounded-2xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
-                    Sin jugadores
-                  </li>
-                ) : (
-                  team1Players.map((participant) => {
-                    const name = participant.name?.trim() || "Jugador";
-                    return (
-                      <li
-                        key={participant.player_id}
-                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
-                      >
-                        <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                          <p className="text-xs text-slate-500">
-                            Nivel: {participant.category?.trim() || "Sin nivel"}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Equipo 2
-              </p>
-              <ul className="space-y-2">
-                {team2Players.length === 0 ? (
-                  <li className="rounded-2xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
-                    Sin jugadores
-                  </li>
-                ) : (
-                  team2Players.map((participant) => {
-                    const name = participant.name?.trim() || "Jugador";
-                    return (
-                      <li
-                        key={participant.player_id}
-                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
-                      >
-                        <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                          <p className="text-xs text-slate-500">
-                            Nivel: {participant.category?.trim() || "Sin nivel"}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
-            </div>
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-3">
+          <div className="space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#0585FC]">Equipo 1</p>
+            {Array.from({ length: 2 }, (_, i) => {
+              const participant = team1Players[i];
+              if (!participant) {
+                return (
+                  <div
+                    key={`team1-empty-${i}`}
+                    className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-dashed border-slate-300 px-3 py-2 dark:border-slate-600"
+                  >
+                    <span className="h-8 w-8 rounded-full border border-dashed border-slate-300 dark:border-slate-600" />
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Libre</span>
+                  </div>
+                );
+              }
+              const name = participant.name?.trim() || "Jugador";
+              const level = formatProfileNivelFromRow(participant);
+              return (
+                <div
+                  key={participant.player_id}
+                  className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-2 dark:border-[#0585FC]/35 dark:bg-[#0585FC]/10"
+                >
+                  <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} ringClassName="ring-2 ring-[#0585FC]/20" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</p>
+                    <p className="truncate text-xs text-slate-600 dark:text-slate-300">{level}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {canJoinAsNewPlayer && team1Count < 2 ? (
+              <form action={requestToJoin}>
+                <input type="hidden" name="match_id" value={id} />
+                <input type="hidden" name="level_override" value="false" />
+                <input type="hidden" name="team" value="1" />
+                <button
+                  type="submit"
+                  className="mt-1 w-full rounded-2xl bg-[#0585FC] px-3 py-2.5 text-xs font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95"
+                >
+                  Unirse
+                </button>
+              </form>
+            ) : null}
           </div>
-        )}
+          <div className="flex h-full items-center justify-center pt-7">
+            <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              VS
+            </span>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Equipo 2</p>
+            {Array.from({ length: 2 }, (_, i) => {
+              const participant = team2Players[i];
+              if (!participant) {
+                return (
+                  <div
+                    key={`team2-empty-${i}`}
+                    className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-dashed border-slate-300 px-3 py-2 dark:border-slate-600"
+                  >
+                    <span className="h-8 w-8 rounded-full border border-dashed border-slate-300 dark:border-slate-600" />
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Libre</span>
+                  </div>
+                );
+              }
+              const name = participant.name?.trim() || "Jugador";
+              const level = formatProfileNivelFromRow(participant);
+              return (
+                <div
+                  key={participant.player_id}
+                  className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70"
+                >
+                  <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} ringClassName="ring-2 ring-slate-200 dark:ring-slate-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</p>
+                    <p className="truncate text-xs text-slate-600 dark:text-slate-300">{level}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {canJoinAsNewPlayer && team2Count < 2 ? (
+              <form action={requestToJoin}>
+                <input type="hidden" name="match_id" value={id} />
+                <input type="hidden" name="level_override" value="false" />
+                <input type="hidden" name="team" value="2" />
+                <button
+                  type="submit"
+                  className="mt-1 w-full rounded-2xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                >
+                  Unirse
+                </button>
+              </form>
+            ) : null}
+          </div>
+        </div>
       </section>
 
       {isOwner && freeSlots > 0 ? (
         <InviteFriendsSection matchId={id} friends={inviteCandidates} sectionId="invitar-amigos" />
       ) : null}
 
-      {isMatchFinished && isParticipant ? (
+      {isParticipant && isMatchFinished ? (
         <section className="space-y-3">
           <div
             className="rounded-2xl p-4 text-center"
@@ -1115,7 +1144,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               matchId={id}
               team1Count={team1Count}
               team2Count={team2Count}
-              submitLabel="Pagar y unirme"
             />
           </div>
         </section>
@@ -1133,7 +1161,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             matchId={id}
             team1Count={team1Count}
             team2Count={team2Count}
-            submitLabel="Pagar y unirme"
           />
         </div>
       ) : null}

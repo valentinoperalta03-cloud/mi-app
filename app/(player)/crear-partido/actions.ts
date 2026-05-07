@@ -277,6 +277,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
       match_id: data.id,
       player_id: user.id,
+      team: 1,
     });
 
     if (participantError) {

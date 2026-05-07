@@ -28,6 +28,7 @@ type MatchFeedRow = {
   match_participants:
     | {
         player_id: string;
+        team?: number | null;
         profiles:
           | {
               name: string | null;
@@ -127,6 +128,7 @@ export default async function OpenMatchesBoard({
       ),
       match_participants (
         player_id,
+        team,
         profiles (
           name,
           avatar_url,
@@ -171,6 +173,7 @@ export default async function OpenMatchesBoard({
       const nivelParts = splitOfficialCategoryLine(nivelLine);
       return {
         player_id: mp.player_id,
+        team: mp.team ?? null,
         name: p?.name?.trim() || "Jugador",
         avatar_url: p?.avatar_url ?? null,
         nivelCategory: nivelParts.category ?? "",
@@ -196,6 +199,8 @@ export default async function OpenMatchesBoard({
       levelCategory: levelParts.category ?? "",
       levelDescription: levelParts.description ?? "",
       participants,
+      team1Count: participants.filter((p) => p.team === 1).length,
+      team2Count: participants.filter((p) => p.team === 2).length,
     };
   });
 

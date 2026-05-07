@@ -29,11 +29,14 @@ export type MatchCardData = {
   levelDescription: string;
   participants: Array<{
     player_id: string;
+    team?: number | null;
     name: string;
     avatar_url: string | null;
     nivelCategory: string;
     nivelDescription: string;
   }>;
+  team1Count: number;
+  team2Count: number;
 };
 
 type Props = {
@@ -190,6 +193,9 @@ export default function MatchesFilterBoard({ matches, userId }: Props) {
                     {match.freeSlots} libre{match.freeSlots === 1 ? "" : "s"}
                   </span>
                 </div>
+                <p className="text-xs text-slate-500">
+                  Equipos: {match.team1Count}/2 · {match.team2Count}/2
+                </p>
               </div>
 
               {match.participants.length > 0 ? (

@@ -231,6 +231,16 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "No se pudo crear la reserva. Intentá de nuevo." };
   }
 
+  const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: data.id,
+    player_id: user.id,
+    team: 1,
+  });
+  if (participantError) {
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return { error: "No se pudo crear la reserva. Intentá de nuevo." };
+  }
+
   await createNotification(supabase, {
     user_id: user.id,
     type: "reservation_confirmed",
