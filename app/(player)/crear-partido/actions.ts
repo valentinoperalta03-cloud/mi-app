@@ -187,12 +187,12 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       (courtData as { clubs?: { mp_access_token?: string | null } | null }).clubs?.mp_access_token ?? null;
     const clubMpUserId =
       (courtData as { clubs?: { mp_user_id?: string | null } | null }).clubs?.mp_user_id ?? null;
+    const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
     if (!clubAccessToken) {
       return {
         error: "Este club aún no tiene Mercado Pago configurado. No es posible crear partidos en este club por el momento.",
       };
     }
-    const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
 
     const slotStart = clockToMinutes(scheduledTime);
     const todayAr = getTodayYmdInArgentina();

@@ -45,14 +45,12 @@ export async function createMPPreference(params: {
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
 > {
   let rawAmount = params.amount;
+  const accessToken = process.env.MP_ACCESS_TOKEN;
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
   const pendingUrl = params.backUrls?.pending ?? process.env.MP_PENDING_URL;
 
-  if (!params.clubAccessToken || !params.clubAccessToken.trim()) {
-    return { error: "El club no tiene Mercado Pago configurado." };
-  }
-  if (!successUrl || !failureUrl || !pendingUrl) {
+  if ((!accessToken && !params.clubAccessToken) || !successUrl || !failureUrl || !pendingUrl) {
     return { error: "Falta configuración de Mercado Pago en el servidor." };
   }
 
@@ -120,7 +118,11 @@ export async function createMPPreference(params: {
 
   const base = getPublicBaseUrl();
   const notificationUrl = base ? `${base}/api/mp/webhook` : undefined;
-  const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken: params.clubAccessToken }));
+  const clubToken = String(params.clubAccessToken ?? "").trim();
+  if (!clubToken) {
+    return { error: "El club no tiene Mercado Pago configurado." };
+  }
+  const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken: clubToken }));
 
   try {
     const preferenceBody = {
