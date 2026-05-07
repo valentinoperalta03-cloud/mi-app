@@ -287,8 +287,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const hasCashPendingPayment = String(myPaymentStatus).toLowerCase() === "cash_pending";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved";
-  const hasPendingPayment =
-    String(myPaymentStatus).toLowerCase() === "pending" && myPrefId.length > 0;
   const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
   const paymentRowId = String((myPayment as { id?: string | null } | null)?.id ?? "").trim();
   /** Preferencia vencida en MP: estado explícito en DB (evita Date.now en render por react-hooks/purity). */
@@ -395,6 +393,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     .eq("status", "pending");
 
   const when = format(parseISO(detail.date), "EEEE d 'de' MMMM '·' HH:mm", { locale: es });
+  const roundedDuration = Math.round((Number(detail.duration_minutes ?? 0) / 5)) * 5;
   const freeSlots = Math.max(0, 4 - participants.length);
   const matchStatusNorm = String(match.match_status ?? "").toLowerCase();
   const canJoinAsNewPlayer =
@@ -529,14 +528,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       </header>
 
       {isOwner ? (
-        <section className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/95 to-white p-5 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-slate-900/40">
+        <section className="rounded-2xl border border-[var(--border-subtle)] border-l-[3px] border-l-[#0585FC] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">Tu partido</h2>
+            <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Tu partido</h2>
             <span className="shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-emerald-500">
               Organizás
             </span>
           </div>
-          <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">
             {participants.length}/4 jugadores confirmados
             {freeSlots > 0 ? ` · ${freeSlots} cupo${freeSlots === 1 ? "" : "s"} libre${freeSlots === 1 ? "" : "s"}` : ""}
           </p>
@@ -580,48 +579,50 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      <article className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
+      <article className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]`}>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-xl font-bold tracking-tight text-slate-950">{detail.club_name ?? "Club"}</h2>
+          <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{detail.club_name ?? "Club"}</h2>
           {isPrivate ? (
             <span className="rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0585FC]">
               Privado
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-slate-500">{detail.club_location ?? "Ubicación pendiente"}</p>
-        <p className="mt-1 text-sm text-slate-600">Cancha: {detail.court_name ?? "Cancha"}</p>
+        {detail.club_location?.trim() ? (
+          <p className="text-sm text-[var(--text-tertiary)]">{detail.club_location}</p>
+        ) : null}
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">Cancha: {detail.court_name ?? "Cancha"}</p>
         {isOwner ? (
           <VisibilityToggle matchId={id} initialVisibility={detail.visibility === "privado" ? "privado" : "publico"} />
         ) : null}
 
-        <dl className="mt-4 space-y-2 text-sm text-slate-600">
+        <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Fecha y hora</dt>
-            <dd className="text-right font-semibold text-slate-900">{when}</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Fecha y hora</dt>
+            <dd className="text-right font-semibold text-[var(--text-primary)]">{when}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Tipo</dt>
-            <dd className="font-semibold text-slate-900">{typeLabel}</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Tipo</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{typeLabel}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Visibilidad</dt>
-            <dd className="font-semibold text-slate-900">{visibilityLabel}</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Visibilidad</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{visibilityLabel}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Categoría</dt>
-            <dd className="font-semibold text-slate-900">{categoryLabel}</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Categoría</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{categoryLabel}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Nivel</dt>
-            <dd className="font-semibold text-slate-900">{levelLabel}</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Nivel</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{levelLabel}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500">Duración</dt>
-            <dd className="font-semibold text-slate-900">{detail.duration_minutes ?? 0} min</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Duración</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{roundedDuration} min</dd>
           </div>
-          <div className="flex justify-between gap-2 border-t border-slate-100 pt-2">
-            <dt className="font-medium text-slate-500">Precio</dt>
+          <div className="flex justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
+            <dt className="font-medium text-[var(--text-tertiary)]">Precio</dt>
             <dd className="text-right text-sm text-[var(--text-tertiary)]">
               <span className="text-lg font-bold text-[#0461C4]">${detail.total_price ?? 0}</span>
               <span> · Precio total del turno</span>
@@ -632,6 +633,44 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {isParticipant ? (
         <MatchStatusBanner matchFullyPaid={matchFullyPaid} myPaymentNorm={myPaymentBanner} />
+      ) : null}
+
+      {isParticipant && myPaymentBanner === "pending" ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-[var(--shadow-card)] dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <p className="font-semibold text-amber-800 dark:text-amber-300">
+              Pago pendiente — completá el pago para confirmar tu lugar
+            </p>
+          </div>
+          {needsPaymentRegenerate && paymentRowId ? (
+            <form action={regenerarLinkPago} className="mt-3">
+              <input type="hidden" name="payment_id" value={paymentRowId} />
+              <input type="hidden" name="match_id" value={id} />
+              <Button type="submit" variant="primary">
+                {PAYMENT_COPY.regenerateCta}
+              </Button>
+            </form>
+          ) : myPrefId ? (
+            <a
+              href={mercadoPagoPayHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+              style={{ background: "var(--color-brand-gradient)" }}
+            >
+              Pagar ahora
+            </a>
+          ) : null}
+        </section>
+      ) : null}
+      {isParticipant && myPaymentBanner === "approved" ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-[var(--shadow-card)] dark:border-emerald-800 dark:bg-emerald-950/30">
+          <div className="flex items-center gap-2">
+            <span className="text-lg text-emerald-700 dark:text-emerald-400">✓</span>
+            <p className="font-semibold text-emerald-800 dark:text-emerald-300">Lugar confirmado</p>
+          </div>
+        </section>
       ) : null}
 
       {payRegenErr ? (
@@ -1059,33 +1098,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {hasPendingPayment ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
-            <p className="font-semibold text-amber-800 dark:text-amber-300">Tenés un pago pendiente para confirmar tu lugar</p>
-          </div>
-          {needsPaymentRegenerate && paymentRowId ? (
-            <form action={regenerarLinkPago} className="space-y-2">
-              <input type="hidden" name="payment_id" value={paymentRowId} />
-              <input type="hidden" name="match_id" value={id} />
-              <Button type="submit" variant="primary">
-                {PAYMENT_COPY.regenerateCta}
-              </Button>
-            </form>
-          ) : (
-            <a
-              href={mercadoPagoPayHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-              style={{ background: "var(--color-brand-gradient)" }}
-            >
-              Pagar ahora
-            </a>
-          )}
-        </div>
-      ) : null}
       {isFixedSlotMatch && hasCashPendingPayment ? (
         <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">Turno fijo — confirmá tu asistencia</h2>

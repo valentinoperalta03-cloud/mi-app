@@ -35,8 +35,8 @@ export default function VisibilityToggle({
 
   return (
     <>
-      <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-        <span className="text-sm font-medium text-slate-600">{visibility === "publico" ? "Público" : "Privado"}</span>
+      <div className="mt-3 flex items-center justify-between rounded-xl bg-[var(--bg-subtle)] px-3 py-2">
+        <span className="text-sm font-medium text-[var(--text-secondary)]">Privado</span>
         <button
           type="button"
           onClick={onToggle}
