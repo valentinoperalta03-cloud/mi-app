@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -49,18 +48,18 @@ function getTimeFromMatch(m: MatchRow): string {
   }
 }
 
-function getHourBucket(m: MatchRow): string {
-  const hour = Number(getTimeFromMatch(m).slice(0, 2));
-  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return "00:00";
-  return `${String(hour).padStart(2, "0")}:00`;
+function getSlotBucket(m: MatchRow): string {
+  const time = getTimeFromMatch(m);
+  if (!/^\d{2}:\d{2}$/.test(time)) return "00:00";
+  return time;
 }
 
 function durationMin(m: MatchRow): number {
   return m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
 }
 
-function buildHours() {
-  return Array.from({ length: 16 }, (_, idx) => `${String(idx + 8).padStart(2, "0")}:00`);
+function buildSlots() {
+  return ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"];
 }
 
 export default async function AdminReservasPage({ searchParams }: PageProps) {
@@ -117,7 +116,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const slotMap = new Map<string, MatchRow>();
   for (const m of matches) {
-    const key = `${m.court_id}__${getHourBucket(m)}`;
+    const key = `${m.court_id}__${getSlotBucket(m)}`;
     if (!slotMap.has(key)) slotMap.set(key, m);
   }
   const blockMap = new Map<string, BlockRow>();
@@ -129,7 +128,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   }
 
   const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
-  const hours = buildHours();
+  const slots = buildSlots();
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
 
   return (
@@ -143,9 +142,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             <p className={`${adminKicker} text-[#0585FC]`}>Agenda diaria</p>
             <h1 className={adminTitle}>Gestión de reservas</h1>
             <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
-          </div>
-          <div className="relative h-14 w-40 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90">
-            <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-2 opacity-85" />
           </div>
         </div>
       </header>
@@ -178,10 +174,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       ) : (
         <section className={`${adminCard} overflow-hidden p-0`}>
           <div className="overflow-x-auto">
-            <div className="min-w-[920px]">
+            <div className="min-w-[1100px]">
               <div
                 className="grid border-b border-slate-200/80 bg-slate-50/80"
-                style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(160px, 1fr))` }}
+                style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
               >
                 <div className="sticky left-0 z-20 border-r border-slate-200/80 bg-slate-50/95 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Hora
@@ -193,17 +189,17 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                 ))}
               </div>
 
-              {hours.map((hour) => (
+              {slots.map((slot) => (
                 <div
-                  key={hour}
+                  key={slot}
                   className="grid border-b border-slate-100/90"
-                  style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(160px, 1fr))` }}
+                  style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
                 >
                   <div className="sticky left-0 z-10 border-r border-slate-200/70 bg-white px-3 py-4 text-xs font-semibold text-slate-500">
-                    {hour}
+                    {slot}
                   </div>
                   {ctx.courts.map((court) => {
-                    const slotKey = `${court.id}__${hour}`;
+                    const slotKey = `${court.id}__${slot}`;
                     const reservation = slotMap.get(slotKey);
                     const blocked = blockMap.get(slotKey);
                     if (!reservation) {
@@ -213,7 +209,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                             <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-200 bg-rose-100/90 p-2">
                               <input type="hidden" name="court_id" value={court.id} />
                               <input type="hidden" name="date" value={selectedDate} />
-                              <input type="hidden" name="time" value={hour} />
+                              <input type="hidden" name="time" value={slot} />
                               <button type="submit" className="w-full rounded-lg bg-rose-600 px-2 py-2 text-xs font-semibold text-white">
                                 Bloqueado
                               </button>
@@ -227,7 +223,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                               <form action={blockCourtSlotAction} className="mt-2 space-y-2">
                                 <input type="hidden" name="court_id" value={court.id} />
                                 <input type="hidden" name="date" value={selectedDate} />
-                                <input type="hidden" name="time" value={hour} />
+                                <input type="hidden" name="time" value={slot} />
                                 <input
                                   type="text"
                                   name="reason"
@@ -309,7 +305,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2">
-              {String(selectedMatch.payment_status ?? "").toLowerCase() === "paid" ? (
+              {["paid", "pending"].includes(String(selectedMatch.payment_status ?? "").toLowerCase()) ? (
                 <form action={cancelReservationAdmin}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
                   <input type="hidden" name="date" value={selectedDate} />

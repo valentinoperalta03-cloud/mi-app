@@ -22,7 +22,7 @@ function AdminDesktopHeaderInner() {
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block dark:border-slate-800 dark:bg-slate-950/85">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
         <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Panel del club</p>
         <nav className="flex flex-wrap items-center gap-1" aria-label="Modulos">
           {desktopLinks.map((item) => {

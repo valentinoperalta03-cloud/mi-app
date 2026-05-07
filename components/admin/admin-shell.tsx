@@ -9,7 +9,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh bg-[var(--bg-app)]">
       <AdminShellBody>
         <AdminDesktopHeader />
-        <div className="mx-auto w-full max-w-5xl px-4 pb-32 pt-6 md:pb-10 md:pt-8">
+        <div className="mx-auto w-full max-w-7xl px-4 pb-32 pt-6 md:px-8 md:pb-10 md:pt-8">
           <AdminRouteTransition>{children}</AdminRouteTransition>
         </div>
         <AdminBottomNav />
