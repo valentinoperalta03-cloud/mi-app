@@ -19,7 +19,7 @@ export function GoogleAuthForm() {
     setError(null);
     setPending(true);
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? window.location.origin}/auth/callback`;
     const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
