@@ -38,7 +38,7 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
             </p>
           )}
         </div>
-        <nav className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]" aria-label="Modulos">
+        <nav className="flex flex-wrap items-center justify-end gap-1 overflow-hidden" aria-label="Modulos">
           {desktopLinks.map((item) => {
             const Icon = item.icon;
             const active =
@@ -50,7 +50,7 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
                 key={item.href}
                 href={item.href}
                 prefetch
-                className={`relative inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-semibold touch-manipulation transition-transform duration-150 hover:scale-[1.02] active:scale-[0.96] ${
+                className={`relative inline-flex items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-semibold touch-manipulation transition-transform duration-150 hover:scale-[1.02] active:scale-[0.96] ${
                   active ? "text-[#0461C4] dark:text-sky-400" : "text-slate-600 hover:bg-slate-50 hover:text-[#0585FC] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-400"
                 }`}
               >
