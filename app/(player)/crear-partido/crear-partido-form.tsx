@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
+import type { ScheduleInput } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -63,7 +63,25 @@ type MatchRow = {
   scheduled_time: string | null;
   duration_minutes: number | null;
 };
+type TurnSlot = {
+  time: string;
+  endTime: string;
+  duration: number;
+};
 type Step = "clubs" | "club-detail" | "options" | "payment";
+
+const COURT_TURNS: TurnSlot[] = [
+  { time: "09:00", endTime: "10:30", duration: 90 },
+  { time: "10:30", endTime: "12:00", duration: 90 },
+  { time: "12:00", endTime: "13:30", duration: 90 },
+  { time: "13:30", endTime: "15:00", duration: 90 },
+  { time: "15:00", endTime: "16:30", duration: 90 },
+  { time: "16:30", endTime: "18:00", duration: 90 },
+  { time: "18:00", endTime: "19:30", duration: 90 },
+  { time: "19:30", endTime: "21:00", duration: 90 },
+  { time: "21:00", endTime: "22:30", duration: 90 },
+  { time: "22:30", endTime: "23:59", duration: 89 },
+];
 
 function clockToMinutes(clock: string): number {
   const t = clock.trim().slice(0, 5);
@@ -76,6 +94,18 @@ function overlapsSlot(slotStartMin: number, slotDur: number, otherStartMin: numb
   const slotEnd = slotStartMin + slotDur;
   const otherEnd = otherStartMin + otherDur;
   return slotStartMin < otherEnd && otherStartMin < slotEnd;
+}
+
+function slotFitsInWindows(slot: TurnSlot, windows: ScheduleInput[]): boolean {
+  if (windows.length === 0) return true;
+  const slotStart = clockToMinutes(slot.time);
+  const slotEnd = clockToMinutes(slot.endTime);
+  return windows.some((window) => {
+    if (!window.open_time || !window.close_time) return false;
+    const winStart = clockToMinutes(String(window.open_time).slice(0, 5));
+    const winEnd = clockToMinutes(String(window.close_time).slice(0, 5));
+    return slotStart >= winStart && slotEnd <= winEnd;
+  });
 }
 
 function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): string {
@@ -107,8 +137,8 @@ export default function CrearPartidoForm({
   const [selectedClubId, setSelectedClubId] = useState<string>(initialClubId);
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedSlot, setSelectedSlot] = useState<GeneratedSlot | null>(null);
-  const [slots, setSlots] = useState<GeneratedSlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<TurnSlot | null>(null);
+  const [slots, setSlots] = useState<TurnSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchType, setMatchType] = useState<"amistoso" | "competitivo">("amistoso");
@@ -214,10 +244,10 @@ export default function CrearPartidoForm({
       const schedules = (scheduleRows ?? []).filter(
         (r) => Number((r as ScheduleInput).day_of_week) === dayOfWeek
       ) as ScheduleInput[];
-      const generated = buildSlotsForDay([selectedCourtId], dayDate, schedules);
       const matches = (matchRows ?? []) as MatchRow[];
 
-      const available = generated.filter((slot) => {
+      const available = COURT_TURNS.filter((slot) => {
+        if (!slotFitsInWindows(slot, schedules)) return false;
         const slotStart = clockToMinutes(slot.time);
         for (const match of matches) {
           const otherStart = clockToMinutes(String(match.scheduled_time ?? ""));
