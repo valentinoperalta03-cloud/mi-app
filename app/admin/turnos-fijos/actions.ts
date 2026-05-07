@@ -24,15 +24,14 @@ export async function createFixedSlot(formData: FormData) {
     return { error: "Completá cancha, día y horario." };
   }
 
-  let players: Array<{ playerId: string; paymentMethod: "mp" | "cash" }> = [];
+  let players: Array<{ playerId: string }> = [];
   try {
-    const parsed = JSON.parse(playersPayload) as Array<{ playerId: string; paymentMethod: "mp" | "cash" }>;
+    const parsed = JSON.parse(playersPayload) as Array<{ playerId: string }>;
     players = parsed
       .filter((p) => p?.playerId)
       .slice(0, 4)
       .map((p) => ({
         playerId: String(p.playerId),
-        paymentMethod: p.paymentMethod === "cash" ? "cash" : "mp",
       }));
   } catch {
     return { error: "Jugadores inválidos." };
@@ -69,7 +68,7 @@ export async function createFixedSlot(formData: FormData) {
     players.map((p) => ({
       fixed_slot_id: fixedSlotId,
       player_id: p.playerId,
-      payment_method: p.paymentMethod,
+      payment_method: "mp",
     }))
   );
   if (playersErr) {

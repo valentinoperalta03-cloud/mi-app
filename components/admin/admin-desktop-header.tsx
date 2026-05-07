@@ -11,7 +11,7 @@ const desktopLinks = [
   { href: "/admin/reservas", label: "Reservas", icon: Target },
   { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
   { href: "/admin/analytics", label: "Ocupación", icon: Activity },
-  { href: "/admin/turnos-fijos", label: "Turnos Fijos", icon: CalendarCheck },
+  { href: "/admin/turnos-fijos", label: "Turnos", icon: CalendarCheck },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
   { href: "/admin/canchas", label: "Canchas", icon: LayoutGrid },
   { href: "/admin/club", label: "Club", icon: Building2 },
@@ -39,7 +39,7 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
             </p>
           )}
         </div>
-        <nav className="flex flex-wrap items-center justify-end gap-1 overflow-hidden" aria-label="Modulos">
+        <nav className="flex flex-nowrap items-center justify-end gap-0.5 overflow-hidden" aria-label="Modulos">
           {desktopLinks.map((item) => {
             const Icon = item.icon;
             const active =

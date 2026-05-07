@@ -7,7 +7,7 @@ import { createFixedSlot } from "./actions";
 
 type Court = { id: string; name: string | null };
 type PlayerResult = { user_id: string; name: string | null };
-type SelectedPlayer = { playerId: string; name: string; paymentMethod: "mp" | "cash" };
+type SelectedPlayer = { playerId: string; name: string };
 
 const SLOT_OPTIONS = ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"];
 const DAY_OPTIONS = [
@@ -26,10 +26,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
   const [results, setResults] = useState<PlayerResult[]>([]);
   const [selected, setSelected] = useState<SelectedPlayer[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const playersPayload = useMemo(
-    () => JSON.stringify(selected.map((p) => ({ playerId: p.playerId, paymentMethod: p.paymentMethod }))),
-    [selected]
-  );
+  const playersPayload = useMemo(() => JSON.stringify(selected.map((p) => ({ playerId: p.playerId }))), [selected]);
 
   async function searchPlayers(next: string) {
     setQuery(next);
@@ -52,7 +49,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
     if (selected.some((p) => p.playerId === player.user_id) || selected.length >= 4) return;
     setSelected((prev) => [
       ...prev,
-      { playerId: player.user_id, name: player.name?.trim() || "Jugador", paymentMethod: "mp" },
+      { playerId: player.user_id, name: player.name?.trim() || "Jugador" },
     ]);
     setQuery("");
     setResults([]);
@@ -145,22 +142,6 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
           {selected.map((p) => (
             <li key={p.playerId} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
               <span className="flex-1 text-sm font-medium text-slate-800">{p.name}</span>
-              <select
-                value={p.paymentMethod}
-                onChange={(e) =>
-                  setSelected((prev) =>
-                    prev.map((x) =>
-                      x.playerId === p.playerId
-                        ? { ...x, paymentMethod: e.target.value === "cash" ? "cash" : "mp" }
-                        : x
-                    )
-                  )
-                }
-                className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-              >
-                <option value="mp">Mercado Pago</option>
-                <option value="cash">Efectivo</option>
-              </select>
               <button
                 type="button"
                 onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
