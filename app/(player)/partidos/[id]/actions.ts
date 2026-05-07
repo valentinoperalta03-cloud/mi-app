@@ -836,6 +836,146 @@ export async function regenerarLinkPago(formData: FormData): Promise<void> {
   redirect(res.initPoint);
 }
 
+export async function confirmCashPayment(matchId: string): Promise<{ ok?: true; error?: string }> {
+  if (!matchId) return { error: "Partido inválido." };
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Iniciá sesión." };
+
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,es_turno_fijo,scheduled_time,courts(name,club_id)")
+    .eq("id", matchId)
+    .maybeSingle();
+  const match = matchRow as {
+    id: string;
+    es_turno_fijo: boolean | null;
+    scheduled_time: string | null;
+    courts: { name: string | null; club_id: string | null } | null;
+  } | null;
+  if (!match || !match.es_turno_fijo) return { error: "Este partido no es un turno fijo." };
+
+  const { data: paymentRow } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id,status")
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const payment = paymentRow as { id: string; status: string | null } | null;
+  if (!payment || String(payment.status ?? "").toLowerCase() !== "cash_pending") {
+    return { error: "No tenés un pago en efectivo pendiente." };
+  }
+
+  await supabase.from(DB_TABLES.payments).update({ status: "cash_confirmed" }).eq("id", payment.id);
+
+  const { data: profileRow } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const playerName = String((profileRow as { name?: string | null } | null)?.name ?? "Jugador");
+
+  const clubId = String(match.courts?.club_id ?? "");
+  if (clubId) {
+    const { data: clubRow } = await supabase
+      .from(DB_TABLES.clubs)
+      .select("owner_id")
+      .eq("id", clubId)
+      .maybeSingle();
+    const ownerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "");
+    if (ownerId) {
+      await createNotification(supabase, {
+        user_id: ownerId,
+        type: "payment_approved",
+        title: "Jugador confirmó pago en efectivo",
+        body: `${playerName} confirmó asistencia en efectivo para el turno de ${String(match.scheduled_time ?? "").slice(0, 5)} en ${match.courts?.name ?? "cancha"}.`,
+        match_id: matchId,
+      });
+    }
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  return { ok: true };
+}
+
+export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; error?: string }> {
+  if (!matchId) return { error: "Partido inválido." };
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Iniciá sesión." };
+
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id,es_turno_fijo,scheduled_date,scheduled_time,courts(name,club_id)")
+    .eq("id", matchId)
+    .maybeSingle();
+  const match = matchRow as {
+    id: string;
+    es_turno_fijo: boolean | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    courts: { name: string | null; club_id: string | null } | null;
+  } | null;
+  if (!match || !match.es_turno_fijo) return { error: "Este partido no es un turno fijo." };
+
+  const slotIso = `${String(match.scheduled_date ?? "").slice(0, 10)}T${String(match.scheduled_time ?? "").slice(0, 5)}:00`;
+  const slotDate = new Date(slotIso);
+  const diffHours = (slotDate.getTime() - Date.now()) / (1000 * 60 * 60);
+  if (!Number.isFinite(diffHours) || diffHours < 24) {
+    return { error: "Debés cancelar con al menos 24hs de anticipación" };
+  }
+
+  await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).eq("player_id", user.id);
+  await supabase.from(DB_TABLES.payments).update({ status: "cancelled" }).eq("match_id", matchId).eq("user_id", user.id);
+
+  const { data: profileRow } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const playerName = String((profileRow as { name?: string | null } | null)?.name ?? "Jugador");
+
+  const clubId = String(match.courts?.club_id ?? "");
+  if (clubId) {
+    const { data: clubRow } = await supabase
+      .from(DB_TABLES.clubs)
+      .select("owner_id")
+      .eq("id", clubId)
+      .maybeSingle();
+    const ownerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "");
+    if (ownerId) {
+      await createNotification(supabase, {
+        user_id: ownerId,
+        type: "reservation_cancelled",
+        title: "Baja en turno fijo",
+        body: `${playerName} canceló su lugar en el turno de ${String(match.scheduled_time ?? "").slice(0, 5)}. La cancha quedó libre para ese día.`,
+        match_id: matchId,
+      });
+    }
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  return { ok: true };
+}
+
+export async function confirmCashPaymentAction(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  const res = await confirmCashPayment(matchId);
+  if (res.error) redirect(`/partidos/${matchId}?cash_error=${encodeURIComponent(res.error)}`);
+  redirect(`/partidos/${matchId}?cash_ok=1`);
+}
+
+export async function cancelFixedSlotDayAction(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  const res = await cancelFixedSlotDay(matchId);
+  if (res.error) redirect(`/partidos/${matchId}?cash_error=${encodeURIComponent(res.error)}`);
+  redirect(`/partidos/${matchId}?cash_cancel_ok=1`);
+}
+
 export async function toggleMatchVisibility(
   matchId: string,
   newVisibility: "publico" | "privado"
