@@ -1,6 +1,5 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { DB_TABLES } from "@/lib/db-tables";
-import { getPreferenceClient } from "@/lib/mercadopago";
 import { log } from "@/lib/logger";
 import { createServiceClient } from "@/utils/supabase/server";
 
@@ -46,12 +45,14 @@ export async function createMPPreference(params: {
   | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
 > {
   let rawAmount = params.amount;
-  const accessToken = process.env.MP_ACCESS_TOKEN;
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
   const pendingUrl = params.backUrls?.pending ?? process.env.MP_PENDING_URL;
 
-  if ((!accessToken && !params.clubAccessToken) || !successUrl || !failureUrl || !pendingUrl) {
+  if (!params.clubAccessToken || !params.clubAccessToken.trim()) {
+    return { error: "El club no tiene Mercado Pago configurado." };
+  }
+  if (!successUrl || !failureUrl || !pendingUrl) {
     return { error: "Falta configuración de Mercado Pago en el servidor." };
   }
 
@@ -119,9 +120,7 @@ export async function createMPPreference(params: {
 
   const base = getPublicBaseUrl();
   const notificationUrl = base ? `${base}/api/mp/webhook` : undefined;
-  const preferenceClient = params.clubAccessToken
-    ? new Preference(new MercadoPagoConfig({ accessToken: params.clubAccessToken }))
-    : getPreferenceClient();
+  const preferenceClient = new Preference(new MercadoPagoConfig({ accessToken: params.clubAccessToken }));
 
   try {
     const preferenceBody = {

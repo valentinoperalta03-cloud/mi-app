@@ -47,7 +47,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   const { data: clubRow, error: clubError } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "name,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4"
+      "name,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,mp_access_token"
     )
     .eq("id", id)
     .maybeSingle();
@@ -69,6 +69,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   const location = club.location ?? "";
   const heroSrc = club.cover_image_url?.trim() || club.logo_url?.trim() || null;
   const logoSrc = club.logo_url?.trim() || null;
+  const hasPaymentsConfigured = Boolean(club.mp_access_token?.trim());
 
   const galleryUrls = [club.gallery_image_1, club.gallery_image_2, club.gallery_image_3, club.gallery_image_4]
     .map((u) => (u ?? "").trim())
@@ -140,6 +141,12 @@ export default async function ClubDetailPage({ params }: PageProps) {
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800 dark:text-slate-200">
                 {club.description.trim()}
               </p>
+            </section>
+          ) : null}
+
+          {!hasPaymentsConfigured ? (
+            <section className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 text-sm font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+              Este club aún no tiene pagos configurados. Las reservas no están disponibles por el momento.
             </section>
           ) : null}
 
@@ -238,9 +245,15 @@ export default async function ClubDetailPage({ params }: PageProps) {
                             {surfaceLabel} · {indoorLabel}
                           </p>
                         </div>
-                        <Link href={href} className={`inline-flex shrink-0 justify-center ${PLAYER_PRIMARY_BUTTON}`}>
-                          Reservar
-                        </Link>
+                        {hasPaymentsConfigured ? (
+                          <Link href={href} className={`inline-flex shrink-0 justify-center ${PLAYER_PRIMARY_BUTTON}`}>
+                            Reservar
+                          </Link>
+                        ) : (
+                          <span className="inline-flex shrink-0 cursor-not-allowed justify-center rounded-2xl bg-slate-300 px-4 py-2 text-sm font-bold text-white opacity-80">
+                            Reservas no disponibles
+                          </span>
+                        )}
                       </article>
                     </li>
                   );
@@ -253,12 +266,18 @@ export default async function ClubDetailPage({ params }: PageProps) {
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="pointer-events-auto w-full max-w-md px-4">
-          <Link
-            href={`/crear-partido?clubId=${encodeURIComponent(id)}`}
-            className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-[#0585FC]/25 transition hover:brightness-105 active:scale-[0.99]"
-          >
-            Crear partido aquí
-          </Link>
+          {hasPaymentsConfigured ? (
+            <Link
+              href={`/crear-partido?clubId=${encodeURIComponent(id)}`}
+              className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-[#0585FC]/25 transition hover:brightness-105 active:scale-[0.99]"
+            >
+              Crear partido aquí
+            </Link>
+          ) : (
+            <span className="flex w-full cursor-not-allowed items-center justify-center rounded-2xl bg-slate-300 py-3.5 text-center text-sm font-bold text-white opacity-85">
+              Reservas no disponibles
+            </span>
+          )}
         </div>
       </div>
     </>

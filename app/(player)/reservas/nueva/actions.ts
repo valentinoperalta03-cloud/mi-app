@@ -130,6 +130,12 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const clubId = String(courtClubTyped?.club_id ?? "").trim();
   const clubAccessToken = courtClubTyped?.clubs?.mp_access_token ?? null;
   const clubMpUserId = courtClubTyped?.clubs?.mp_user_id ?? null;
+  if (!clubAccessToken) {
+    return {
+      error:
+        "Este club aún no tiene Mercado Pago configurado. No es posible realizar reservas por el momento. Contactá al club para más información.",
+    };
+  }
   if (clubId) {
     const { data: blocked } = await supabase
       .from(DB_TABLES.blockedUsers)
