@@ -55,13 +55,12 @@ export default async function AdminTurnosFijosPage() {
     (profilesData ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name ?? "Jugador"])
   );
 
-  const playersBySlot = new Map<string, Array<{ playerId: string; name: string; paymentMethod: "mp" | "cash" }>>();
+  const playersBySlot = new Map<string, Array<{ playerId: string; name: string }>>();
   for (const p of slotPlayers) {
     const list = playersBySlot.get(p.fixed_slot_id) ?? [];
     list.push({
       playerId: p.player_id,
       name: profileNameById.get(p.player_id) ?? "Jugador",
-      paymentMethod: p.payment_method,
     });
     playersBySlot.set(p.fixed_slot_id, list);
   }
@@ -72,7 +71,7 @@ export default async function AdminTurnosFijosPage() {
       <header className="space-y-2">
         <p className={`${adminKicker} text-[#0585FC]`}>Operacion semanal</p>
         <h1 className={adminTitle}>Turnos fijos</h1>
-        <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores con su método de pago.</p>
+        <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores.</p>
       </header>
 
       <section className={adminCard}>
@@ -108,14 +107,53 @@ export default async function AdminTurnosFijosPage() {
                       </button>
                     </form>
                   </div>
-                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {players.map((p) => (
-                      <li key={`${slot.id}-${p.playerId}`} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                        <span className="font-semibold text-slate-800">{p.name}</span>
-                        <span className="ml-2 text-xs text-slate-500">{p.paymentMethod === "cash" ? "Efectivo" : "Mercado Pago"}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-3">
+                    <div className="space-y-2">
+                      {Array.from({ length: 2 }, (_, i) => {
+                        const player = players[i];
+                        if (!player) {
+                          return (
+                            <div
+                              key={`${slot.id}-left-empty-${i}`}
+                              className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500"
+                            >
+                              Libre
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={`${slot.id}-${player.playerId}`} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                            <span className="font-semibold text-slate-800">{player.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex h-full items-center justify-center pt-4">
+                      <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-slate-500">
+                        VS
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {Array.from({ length: 2 }, (_, i) => {
+                        const player = players[i + 2];
+                        if (!player) {
+                          return (
+                            <div
+                              key={`${slot.id}-right-empty-${i}`}
+                              className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500"
+                            >
+                              Libre
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={`${slot.id}-${player.playerId}`} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                            <span className="font-semibold text-slate-800">{player.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <form action={addExceptionToFixedSlot} className="mt-3 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="fixed_slot_id" value={slot.id} />
                     <label className="text-xs font-semibold text-slate-600">
