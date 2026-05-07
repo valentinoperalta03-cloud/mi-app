@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
@@ -46,13 +47,13 @@ export default async function AdminJugadoresPage() {
 
   const userIds = Array.from(byUser.keys());
   const { data: profilesRaw } = userIds.length
-    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", userIds)
+    ? await supabase.from(DB_TABLES.profiles).select("user_id,name,avatar_url").in("user_id", userIds)
     : { data: [] };
 
-  const names = new Map(
-    (profilesRaw ?? []).map((p: { user_id: string; name: string | null }) => [
+  const profileData = new Map(
+    (profilesRaw ?? []).map((p: { user_id: string; name: string | null; avatar_url: string | null }) => [
       p.user_id,
-      p.name ?? "Jugador",
+      { name: p.name ?? "Jugador", avatarUrl: p.avatar_url ?? null },
     ])
   );
 
@@ -68,7 +69,8 @@ export default async function AdminJugadoresPage() {
           : ("Recurrente" as const);
       return {
         uid,
-        name: names.get(uid) ?? "Jugador",
+        name: profileData.get(uid)?.name ?? "Jugador",
+        avatarUrl: profileData.get(uid)?.avatarUrl ?? null,
         count: stats.count,
         last: stats.last,
         segment,
@@ -102,6 +104,29 @@ export default async function AdminJugadoresPage() {
     revalidatePath("/admin/jugadores");
   }
 
+  async function unblockPlayerAction(formData: FormData) {
+    "use server";
+    const userId = String(formData.get("user_id") ?? "").trim();
+    if (!userId) return;
+    const supabaseAction = await createClient({ allowCookieWrites: true });
+    const actionCtx = await getOwnerAdminContext(supabaseAction);
+    if (!actionCtx?.userId || !actionCtx.clubIds.length) return;
+    await supabaseAction
+      .from(DB_TABLES.blockedUsers)
+      .delete()
+      .eq("club_id", actionCtx.clubIds[0])
+      .eq("user_id", userId);
+    revalidatePath("/admin/jugadores");
+  }
+
+  const monthCutoff = new Date();
+  monthCutoff.setDate(monthCutoff.getDate() - 30);
+  const monthPlayers = list.filter((p) => parseISO(p.last) >= monthCutoff);
+  const totalUniqueMonth = monthPlayers.length;
+  const nuevos = monthPlayers.filter((p) => p.segment === "Nuevo").length;
+  const recurrentes = monthPlayers.filter((p) => p.segment === "Recurrente").length;
+  const topPlayer = list[0] ?? null;
+
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
@@ -114,6 +139,23 @@ export default async function AdminJugadoresPage() {
         </p>
       </header>
 
+      <section className="grid gap-3 sm:grid-cols-3">
+        <div className={adminCard}>
+          <p className={adminKicker}>Total jugadores únicos (mes)</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{totalUniqueMonth}</p>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Nuevos vs recurrentes</p>
+          <p className="mt-2 text-lg font-bold text-slate-900">{nuevos} / {recurrentes}</p>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Jugador más activo</p>
+          <p className="mt-2 text-sm font-bold text-slate-900">
+            {topPlayer ? `${topPlayer.name} (${topPlayer.count})` : "Sin datos"}
+          </p>
+        </div>
+      </section>
+
       {list.length === 0 ? (
         <p className={`${adminCard} text-center text-sm font-medium text-slate-500`}>
           Todavía no hay creadores de partidos en tus canchas.
@@ -124,7 +166,12 @@ export default async function AdminJugadoresPage() {
             <li key={row.uid}>
               <AdminPressableSurface className={adminCard}>
                 <div className="flex gap-4">
-                  <PlayerAvatar name={row.name} />
+                  {row.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+                    <img src={row.avatarUrl} alt={row.name} className="h-12 w-12 rounded-full border border-slate-200 object-cover" />
+                  ) : (
+                    <PlayerAvatar name={row.name} />
+                  )}
                   <div className="min-w-0 flex-1 space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -153,22 +200,40 @@ export default async function AdminJugadoresPage() {
                         </dd>
                       </div>
                     </dl>
-                    {!blockedSet.has(row.uid) ? (
-                      <form action={blockPlayerAction} className="flex items-center gap-2">
-                        <input type="hidden" name="user_id" value={row.uid} />
-                        <input
-                          name="reason"
-                          placeholder="Motivo (opcional)"
-                          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
-                        >
-                          Bloquear
-                        </button>
-                      </form>
-                    ) : null}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!blockedSet.has(row.uid) ? (
+                        <form action={blockPlayerAction} className="flex items-center gap-2">
+                          <input type="hidden" name="user_id" value={row.uid} />
+                          <input
+                            name="reason"
+                            placeholder="Motivo (opcional)"
+                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
+                          >
+                            Bloquear
+                          </button>
+                        </form>
+                      ) : (
+                        <form action={unblockPlayerAction}>
+                          <input type="hidden" name="user_id" value={row.uid} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                          >
+                            Desbloquear
+                          </button>
+                        </form>
+                      )}
+                      <Link
+                        href={`/admin/reservas?selected=&date=${format(parseISO(row.last), "yyyy-MM-dd")}`}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                      >
+                        Ver reservas
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </AdminPressableSurface>

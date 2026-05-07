@@ -2,29 +2,43 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Activity, DollarSign, House, Settings, Target, Users } from "lucide-react";
+import { Activity, Building2, DollarSign, House, LayoutGrid, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
 
 const desktopLinks = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
-  { href: "/admin/reservas", label: "Partidos", icon: Target },
+  { href: "/admin/reservas", label: "Reservas", icon: Target },
   { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
   { href: "/admin/analytics", label: "Ocupación", icon: Activity },
-  { href: "/admin/pagos", label: "Pagos", icon: DollarSign },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
-  { href: "/admin/club", label: "Club", icon: House },
+  { href: "/admin/canchas", label: "Canchas", icon: LayoutGrid },
+  { href: "/admin/club", label: "Club", icon: Building2 },
   { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;
 
-function AdminDesktopHeaderInner() {
+type AdminDesktopHeaderProps = {
+  logoUrl?: string | null;
+  clubName?: string | null;
+};
+
+function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps) {
   const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block dark:border-slate-800 dark:bg-slate-950/85">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
-        <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Panel del club</p>
-        <nav className="flex flex-wrap items-center gap-1" aria-label="Modulos">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(180px,1fr)_minmax(0,2fr)] items-center gap-4 px-4 py-3 md:px-8">
+        <div className="min-w-0">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+            <img src={logoUrl} alt={clubName ?? "Club"} className="h-10 w-auto max-w-[180px] object-contain" />
+          ) : (
+            <p className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              {clubName ?? "Panel del club"}
+            </p>
+          )}
+        </div>
+        <nav className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]" aria-label="Modulos">
           {desktopLinks.map((item) => {
             const Icon = item.icon;
             const active =

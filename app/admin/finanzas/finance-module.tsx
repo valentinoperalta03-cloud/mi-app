@@ -1,5 +1,8 @@
 "use client";
 
+import { endOfMonth, format, parseISO, startOfMonth, startOfWeek, subDays, subMonths } from "date-fns";
+import { es } from "date-fns/locale";
+import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -23,19 +26,23 @@ const btnPrimary = `rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-w
 const btnSecondary = `rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ${adminPressable} hover:bg-slate-50/90`;
 
 type Court = { id: string; name: string | null };
+type FinanceRow = MatchMoneyRow & {
+  owner_id: string | null;
+  scheduled_date: string | null;
+};
 
-const inflightByKey = new Map<string, Promise<{ rows: MatchMoneyRow[]; error: string | null }>>();
+const inflightByKey = new Map<string, Promise<{ rows: FinanceRow[]; error: string | null }>>();
 
 function cacheKey(courtIds: string[]) {
   return `${CACHE_PREFIX}${[...courtIds].sort().join(",")}`;
 }
 
-function readSessionCache(courtIds: string[]): MatchMoneyRow[] | null {
+function readSessionCache(courtIds: string[]): FinanceRow[] | null {
   if (typeof window === "undefined" || courtIds.length === 0) return null;
   try {
     const raw = sessionStorage.getItem(cacheKey(courtIds));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { t: number; rows: MatchMoneyRow[] };
+    const parsed = JSON.parse(raw) as { t: number; rows: FinanceRow[] };
     if (Date.now() - parsed.t > CACHE_TTL_MS) return null;
     return parsed.rows;
   } catch {
@@ -43,7 +50,7 @@ function readSessionCache(courtIds: string[]): MatchMoneyRow[] | null {
   }
 }
 
-function writeSessionCache(courtIds: string[], rows: MatchMoneyRow[]) {
+function writeSessionCache(courtIds: string[], rows: FinanceRow[]) {
   try {
     sessionStorage.setItem(cacheKey(courtIds), JSON.stringify({ t: Date.now(), rows }));
   } catch {
@@ -52,7 +59,7 @@ function writeSessionCache(courtIds: string[], rows: MatchMoneyRow[]) {
 }
 
 async function fetchPaidMatchesDeduped(courtIds: string[]): Promise<{
-  rows: MatchMoneyRow[];
+  rows: FinanceRow[];
   error: string | null;
 }> {
   if (courtIds.length === 0) return { rows: [], error: null };
@@ -64,13 +71,14 @@ async function fetchPaidMatchesDeduped(courtIds: string[]): Promise<{
     const supabase = createClient();
     const { data, error } = await supabase
       .from(DB_TABLES.matches)
-      .select("id,date,court_id,total_price,payment_status")
+      .select("id,date,court_id,total_price,payment_status,owner_id,scheduled_date")
       .in("court_id", courtIds)
+      .eq("match_type", "reservation")
       .order("date", { ascending: false });
     if (error) {
       return { rows: [], error: error.message };
     }
-    return { rows: (data ?? []) as MatchMoneyRow[], error: null };
+    return { rows: (data ?? []) as FinanceRow[], error: null };
   })();
 
   inflightByKey.set(key, promise);
@@ -118,7 +126,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const [unlocked, setUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
-  const [rows, setRows] = useState<MatchMoneyRow[]>([]);
+  const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const courtIdsRef = useRef(courtIds);
@@ -174,6 +182,57 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const byWeek = useMemo(() => aggregateByWeek(rows), [rows]);
   const byMonth = useMemo(() => aggregateByMonth(rows), [rows]);
   const maxDay = useMemo(() => byDay.reduce((m, x) => Math.max(m, x.total), 0), [byDay]);
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekIncome = useMemo(
+    () =>
+      rows
+        .filter((r) => (r.payment_status ?? "").toLowerCase() === "paid")
+        .filter((r) => {
+          const d = parseISO(r.date);
+          return d >= weekStart && d <= now;
+        })
+        .reduce((acc, r) => acc + Number(r.total_price ?? 0), 0),
+    [now, rows, weekStart]
+  );
+  const paidRows = useMemo(
+    () => rows.filter((r) => (r.payment_status ?? "").toLowerCase() === "paid"),
+    [rows]
+  );
+  const avgTicket = paidRows.length > 0 ? total / paidRows.length : 0;
+  const thisMonthStart = startOfMonth(now);
+  const thisMonthEnd = endOfMonth(now);
+  const topCourtMonth = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of paidRows) {
+      const d = parseISO(row.date);
+      if (d < thisMonthStart || d > thisMonthEnd) continue;
+      map.set(row.court_id, (map.get(row.court_id) ?? 0) + Number(row.total_price ?? 0));
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+  }, [paidRows, thisMonthEnd, thisMonthStart]);
+  const pendingRows = useMemo(() => {
+    const since = subDays(now, 30);
+    return rows
+      .filter((r) => (r.payment_status ?? "").toLowerCase() === "pending")
+      .filter((r) => parseISO(r.date) >= since)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [now, rows]);
+  const pendingOwnerIds = Array.from(new Set(pendingRows.map((r) => r.owner_id).filter((v): v is string => Boolean(v))));
+  const [ownerNames, setOwnerNames] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    async function loadOwnerNames() {
+      if (pendingOwnerIds.length === 0) {
+        setOwnerNames(new Map());
+        return;
+      }
+      const supabase = createClient();
+      const { data } = await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", pendingOwnerIds);
+      setOwnerNames(new Map((data ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name ?? "Jugador"])));
+    }
+    void loadOwnerNames();
+  }, [pendingOwnerIds.join(",")]);
 
   if (!unlocked) {
     return (
@@ -236,6 +295,31 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             </p>
           </section>
 
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className={adminCard}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ingresos semana actual</p>
+              <p className="mt-2 text-xl font-bold text-emerald-700">${weekIncome.toFixed(2)}</p>
+            </div>
+            <div className={adminCard}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ticket promedio</p>
+              <p className="mt-2 text-xl font-bold text-slate-900">${avgTicket.toFixed(2)}</p>
+              <p className="mt-1 text-xs font-medium text-slate-500">Por reserva pagada</p>
+            </div>
+            <div className={adminCard}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cancha más rentable (mes)</p>
+              <p className="mt-2 text-base font-bold text-slate-900">
+                {topCourtMonth ? `${courtName.get(topCourtMonth[0]) ?? "Cancha"}` : "Sin datos"}
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                {topCourtMonth ? `$${topCourtMonth[1].toFixed(2)}` : "Sin ingresos del mes"}
+              </p>
+            </div>
+            <div className={adminCard}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pagos pendientes (30 días)</p>
+              <p className="mt-2 text-xl font-bold text-amber-700">{pendingRows.length}</p>
+            </div>
+          </section>
+
           <section className={adminCard}>
             <h3 className="text-base font-bold text-slate-900">Este mes vs mes anterior</h3>
             <div className="mt-5 grid gap-6 sm:grid-cols-2">
@@ -262,6 +346,35 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
               {compare.deltaPct >= 0 ? "↑" : "↓"} {Math.abs(compare.deltaPct).toFixed(1)}% vs periodo
               anterior
             </p>
+          </section>
+
+          <section className={adminCard}>
+            <h3 className="text-base font-bold text-slate-900">Pagos pendientes</h3>
+            {pendingRows.length === 0 ? (
+              <p className="mt-3 text-sm font-medium text-slate-500">No hay pendientes en los últimos 30 días.</p>
+            ) : (
+              <ul className="mt-4 flex flex-col gap-2">
+                {pendingRows.slice(0, 20).map((row) => {
+                  const dateYmd = row.scheduled_date ?? format(parseISO(row.date), "yyyy-MM-dd");
+                  return (
+                    <li key={row.id} className="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-slate-900">{ownerNames.get(row.owner_id ?? "") ?? "Jugador"}</p>
+                        <p className="text-xs text-slate-500">
+                          {format(parseISO(`${dateYmd}T12:00:00`), "d MMM yyyy", { locale: es })} · {courtName.get(row.court_id) ?? "Cancha"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold text-amber-700">${Number(row.total_price ?? 0).toFixed(2)}</p>
+                        <Link href={`/admin/reservas?date=${dateYmd}`} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                          Ver detalle
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
           <section className={adminCard}>

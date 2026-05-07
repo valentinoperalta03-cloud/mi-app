@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Activity, DollarSign, Settings, Target, Users } from "lucide-react";
+import { Building2, House, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/admin/reservas", label: "Partidos", icon: Target },
-  { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
-  { href: "/admin/analytics", label: "Ocupación", icon: Activity },
+  { href: "/admin/dashboard", label: "Inicio", icon: House },
+  { href: "/admin/reservas", label: "Reservas", icon: Target },
+  { href: "/admin/club", label: "Club", icon: Building2 },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
-  { href: "/admin/config", label: "Ajustes", icon: Settings },
+  { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;
 
 function AdminBottomNavInner() {
@@ -27,7 +27,10 @@ function AdminBottomNavInner() {
         <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/85 px-1 py-1.5 shadow-[0_8px_30px_-8px_rgba(15,23,42,0.12),0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/85">
           {items.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active =
+              item.href === "/admin/dashboard"
+                ? pathname === "/admin/dashboard" || pathname === "/admin"
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}

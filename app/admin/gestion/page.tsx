@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default async function AdminGestionPage() {
-  redirect("/club/gestion");
+export default function Page() {
+  redirect("/admin/reservas");
 }

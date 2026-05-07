@@ -58,6 +58,8 @@ export default async function AdminAnalyticsPage() {
   const sumMoney = (rows: typeof monthMatches) => rows.reduce((acc, r) => acc + Number(r.total_price ?? 0), 0);
   const currentRevenue = sumMoney(monthMatches);
   const previousRevenue = sumMoney(prevMatches);
+  const revenueDeltaPct =
+    previousRevenue === 0 ? (currentRevenue > 0 ? 100 : 0) : ((currentRevenue - previousRevenue) / previousRevenue) * 100;
 
   const countByCourt = new Map<string, number>();
   for (const row of monthMatches) {
@@ -98,6 +100,16 @@ export default async function AdminAnalyticsPage() {
     }
   }
   const uniquePlayers = new Set(monthMatches.map((m) => m.owner_id).filter((id): id is string => Boolean(id))).size;
+  const weekDayLabels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const byWeekDay = [0, 0, 0, 0, 0, 0, 0];
+  for (const row of last30Matches) {
+    if (!row.scheduled_date) continue;
+    const d = new Date(`${row.scheduled_date}T12:00:00`);
+    const jsDay = d.getDay();
+    const mondayFirst = jsDay === 0 ? 6 : jsDay - 1;
+    byWeekDay[mondayFirst] += 1;
+  }
+  const maxWeekday = Math.max(1, ...byWeekDay);
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,6 +125,9 @@ export default async function AdminAnalyticsPage() {
           <p className={adminKicker}>Ingresos del mes</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">${currentRevenue.toFixed(2)}</p>
           <p className="text-sm font-medium text-slate-500">Mes anterior: ${previousRevenue.toFixed(2)}</p>
+          <p className={`mt-2 text-sm font-semibold ${revenueDeltaPct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            {revenueDeltaPct >= 0 ? "↑" : "↓"} {Math.abs(revenueDeltaPct).toFixed(1)}% mes a mes
+          </p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Jugadores únicos (mes)</p>
@@ -132,6 +147,24 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
+        <h2 className="text-base font-bold text-slate-900">Reservas por día de la semana (30 días)</h2>
+        <div className="mt-4 grid gap-2">
+          {weekDayLabels.map((label, idx) => (
+            <div key={label} className="grid grid-cols-[42px_1fr_28px] items-center gap-2 text-xs">
+              <span className="font-semibold text-slate-500">{label}</span>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
+                  style={{ width: `${Math.max(6, (byWeekDay[idx] / maxWeekday) * 100)}%` }}
+                />
+              </div>
+              <span className="text-right font-bold text-slate-700">{byWeekDay[idx]}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={adminCard}>
         <h2 className="text-base font-bold text-slate-900">Tasa de ocupación por cancha</h2>
         <ul className="mt-4 flex flex-col gap-2">
           {ctx.courts.map((court) => {
@@ -143,6 +176,12 @@ export default async function AdminAnalyticsPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-slate-800">{court.name ?? "Cancha"}</span>
                   <span className="font-bold text-slate-900">{ratio}%</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/60">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-[#0461C4]"
+                    style={{ width: `${Math.max(2, ratio)}%` }}
+                  />
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   {reservations} reservas / {slots} slots disponibles
