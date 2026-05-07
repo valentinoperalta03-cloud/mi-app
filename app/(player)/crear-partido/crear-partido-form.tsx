@@ -44,6 +44,11 @@ export type CourtOption = {
   name: string;
   price: number;
 };
+export type SlotPriceOption = {
+  courtId: string;
+  startTime: string;
+  price: number;
+};
 
 export type FriendOption = {
   userId: string;
@@ -81,12 +86,14 @@ function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): stri
 export default function CrearPartidoForm({
   clubs,
   courts,
+  slotPrices,
   defaultGender,
   friends,
   defaultClubId,
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
+  slotPrices: SlotPriceOption[];
   defaultGender: GenderCategory;
   friends: FriendOption[];
   defaultClubId?: string;
@@ -132,6 +139,35 @@ export default function CrearPartidoForm({
   const filteredClubs = useMemo(
     () => clubs.filter((club) => club.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [clubs, searchQuery]
+  );
+  const slotPriceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of slotPrices) {
+      map.set(`${row.courtId}__${row.startTime}`, row.price);
+    }
+    return map;
+  }, [slotPrices]);
+  const minPriceByCourt = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const court of courts) {
+      map.set(court.id, court.price);
+    }
+    for (const row of slotPrices) {
+      const current = map.get(row.courtId);
+      if (current == null || row.price < current) {
+        map.set(row.courtId, row.price);
+      }
+    }
+    return map;
+  }, [courts, slotPrices]);
+
+  const getTurnPrice = useCallback(
+    (courtId: string, startTime: string): number => {
+      const slotPrice = slotPriceMap.get(`${courtId}__${startTime}`);
+      if (slotPrice != null) return slotPrice;
+      return courts.find((c) => c.id === courtId)?.price ?? 0;
+    },
+    [courts, slotPriceMap]
   );
 
   useEffect(() => {
@@ -207,12 +243,13 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0 };
-    const precioCanchaJugador = Math.round(selectedCourt.price / 4);
+    if (!selectedCourt || !selectedSlot) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0 };
+    const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
+    const precioCanchaJugador = Math.round(turnPrice / 4);
     const comisionPorJugador = Math.round(precioCanchaJugador * 0.05);
     const total = precioCanchaJugador + comisionPorJugador;
     return { precioCanchaJugador, comisionPorJugador, total };
-  }, [selectedCourt]);
+  }, [getTurnPrice, selectedCourt, selectedSlot]);
 
   function toggleFriend(friendId: string) {
     setSelectedFriendIds((prev) => {
@@ -446,7 +483,7 @@ export default function CrearPartidoForm({
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
                       <p className="text-sm font-semibold text-[#0585FC]">
-                        ${new Intl.NumberFormat("es-AR").format(court.price)}/turno
+                        Desde ${new Intl.NumberFormat("es-AR").format(minPriceByCourt.get(court.id) ?? court.price)}/turno
                       </p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">

@@ -7,6 +7,7 @@ import CrearPartidoForm, {
   type CourtOption,
   type FriendOption,
   type GenderCategory,
+  type SlotPriceOption,
 } from "./crear-partido-form";
 
 type PageProps = {
@@ -28,12 +29,22 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   const defaultGender: GenderCategory =
     profileGender === "femenino" ? "femenino" : profileGender === "masculino" ? "masculino" : "mixto";
 
-  const [{ data: clubsRaw, error: clubsError }, { data: courtsRaw, error: courtsError }] = await Promise.all([
+  const [
+    { data: clubsRaw, error: clubsError },
+    { data: courtsRaw, error: courtsError },
+    { data: slotPricesRaw },
+  ] = await Promise.all([
     supabase
       .from(DB_TABLES.clubs)
       .select("id, name, location, description, image_url, cover_image_url, logo_url")
       .order("name", { ascending: true }),
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
+    supabase
+      .from(DB_TABLES.courtSchedules)
+      .select("court_id,start_time,price_override")
+      .is("day_of_week", null)
+      .not("start_time", "is", null)
+      .not("price_override", "is", null),
   ]);
 
   const { data: favoritesRaw } = user
@@ -80,6 +91,17 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     name: court.name ?? "Cancha",
     price: court.price ?? 0,
   }));
+  const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
+    court_id: string;
+    start_time: string | null;
+    price_override: number | null;
+  }>)
+    .filter((row) => row.start_time && row.price_override != null)
+    .map((row) => ({
+      courtId: row.court_id,
+      startTime: String(row.start_time).slice(0, 5),
+      price: Number(row.price_override ?? 0),
+    }));
   const friends: FriendOption[] = ((friendProfilesRaw ?? []) as Array<{
     user_id: string;
     name: string | null;
@@ -116,6 +138,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
         <CrearPartidoForm
           clubs={clubs}
           courts={courts}
+          slotPrices={slotPrices}
           defaultGender={defaultGender}
           friends={friends}
           defaultClubId={defaultClubId}

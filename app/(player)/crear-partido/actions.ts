@@ -160,7 +160,21 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     );
     const invitedFriendIds = invitedFriendIdsRaw.filter((id) => allowedFriendIds.has(id));
 
-    const totalPrice = Number((courtData as { price: number | null }).price ?? 0);
+    const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+    const { data: slotPriceRows } = await supabase
+      .from(DB_TABLES.courtSchedules)
+      .select("start_time,price_override")
+      .eq("court_id", courtId)
+      .is("day_of_week", null)
+      .not("start_time", "is", null)
+      .not("price_override", "is", null);
+    const matchedSlotPrice = ((slotPriceRows ?? []) as Array<{
+      start_time: string | null;
+      price_override: number | null;
+    }>).find((row) => String(row.start_time ?? "").slice(0, 5) === timeNorm);
+    const totalPrice = Number(
+      matchedSlotPrice?.price_override ?? (courtData as { price: number | null }).price ?? 0
+    );
     const perPlayerBase = Math.round(totalPrice / 4);
     const feeRate = Number.parseFloat(process.env.MP_MARKETPLACE_FEE ?? "0.05");
     const safeFeeRate = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0.05;
@@ -176,7 +190,6 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
 
     const slotStart = clockToMinutes(scheduledTime);
-    const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
     const todayAr = getTodayYmdInArgentina();
     if (scheduledDate < todayAr) {
       return { error: "La fecha debe ser futura." };
