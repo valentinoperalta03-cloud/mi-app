@@ -137,7 +137,8 @@ export default function OnboardingPage({ defaultName = "" }: { defaultName?: str
       });
       if (!res.ok) {
         const msg = String(res.message ?? "").toLowerCase();
-        const canIgnoreLevelingError = msg.includes("nivelación") || msg.includes("leveled");
+        const canIgnoreLevelingError =
+          msg.includes("nivelación") || msg.includes("nivelacion") || msg.includes("leveled");
         if (!canIgnoreLevelingError) {
           showToast(res.message);
           return;
