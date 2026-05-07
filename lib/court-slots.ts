@@ -59,10 +59,11 @@ export function buildSlotsForDay(
   let maxM = 0;
 
   for (const cid of courtIds) {
-    const s = schedules.find(
+    const daySchedules = schedules.filter(
       (x) => String(x.court_id) === String(cid) && scheduleMatchesDay(x.day_of_week, dow)
     );
-    if (s?.open_time && s?.close_time) {
+    for (const s of daySchedules) {
+      if (!s.open_time || !s.close_time) continue;
       const o = parseClockToMinutes(String(s.open_time));
       const c = parseClockToMinutes(String(s.close_time));
       if (c > o) {
