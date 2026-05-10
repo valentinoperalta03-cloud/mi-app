@@ -10,7 +10,7 @@ export default function PrivacidadPage() {
       <header className="mb-6 mt-3 space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Legal</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Política de Privacidad</h1>
-        <p className="text-xs text-slate-400">Última actualización: Abril 2026</p>
+        <p className="text-xs text-slate-400">Última actualización: Mayo 2026</p>
       </header>
 
       <div className="space-y-6 text-sm leading-relaxed text-slate-700">
@@ -31,6 +31,18 @@ export default function PrivacidadPage() {
             El responsable del tratamiento de los datos personales es Padelibre, con domicilio de contacto en
             soporte.padelibre@gmail.com. Ante cualquier consulta relacionada con el tratamiento de sus datos, el
             Usuario puede dirigirse a dicha dirección.
+          </p>
+        </section>
+
+        <hr className="border-slate-100" />
+
+        <section className="space-y-3">
+          <h2 className="text-base font-bold text-slate-900">2 bis. Modelo de Intermediación</h2>
+          <p className="text-sm leading-relaxed text-slate-600">
+            PadeLibre actúa exclusivamente como plataforma de intermediación tecnológica entre Jugadores y Clubes
+            deportivos. PadeLibre no es propietaria ni operadora de las instalaciones físicas, y no asume responsabilidad
+            alguna por el estado, seguridad o condiciones de las canchas. Los datos del Jugador son compartidos con el
+            Club únicamente en la medida necesaria para gestionar la reserva (nombre y contacto).
           </p>
         </section>
 

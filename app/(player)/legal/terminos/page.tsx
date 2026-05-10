@@ -10,7 +10,7 @@ export default function TerminosPage() {
       <header className="mb-6 mt-3 space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Legal</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Términos y Condiciones de Uso</h1>
-        <p className="text-xs text-slate-400">Última actualización: Abril 2026</p>
+        <p className="text-xs text-slate-400">Última actualización: Mayo 2026</p>
       </header>
 
       <div className="space-y-6 text-sm leading-relaxed text-slate-700">
@@ -61,9 +61,10 @@ export default function TerminosPage() {
               de tarjetas de crédito o débito.
             </li>
             <li>
-              Distribución (Split Payment): Al abonar una reserva, el Jugador comprende que el monto total se divide
-              automáticamente: una parte corresponde a la tarifa del Club por el uso de la instalación, y otra parte
-              corresponde a la comisión por el servicio de uso de la Plataforma.
+              Comisión de servicio: El Jugador abona el precio base del turno más una comisión de servicio del 5%
+              correspondiente al uso de la Plataforma. El 100% del precio base se transfiere automáticamente al Club a
+              través de Mercado Pago. PadeLibre percibe únicamente la comisión del 5% como contraprestación por el
+              servicio tecnológico.
             </li>
             <li>
               Confirmación: La reserva solo se considerará efectiva una vez que el pago haya sido procesado
@@ -117,6 +118,12 @@ export default function TerminosPage() {
             Fallas Técnicas: No garantizamos que la Plataforma esté libre de errores o interrupciones. No asumimos
             responsabilidad por caídas del sistema de pagos de terceros ni por pérdidas derivadas de las mismas.
           </p>
+          <p className="text-sm leading-relaxed text-slate-600">
+            Responsabilidad del Club: Los Clubes adheridos a la Plataforma son responsables exclusivos de mantener sus
+            instalaciones en condiciones aptas para la práctica deportiva, de contar con los seguros de responsabilidad
+            civil exigidos por la normativa vigente, y de cumplir con todas las obligaciones legales aplicables a su
+            actividad. PadeLibre no garantiza ni avala las condiciones de ningún Club en particular.
+          </p>
         </section>
 
         <hr className="border-slate-100" />
@@ -163,6 +170,19 @@ export default function TerminosPage() {
             Estos Términos y Condiciones se rigen por las leyes de la República Argentina. Para cualquier controversia
             legal, las partes se someten a la jurisdicción de los Tribunales Ordinarios de la ciudad de Rosario,
             Provincia de Santa Fe, renunciando a cualquier otro fuero que pudiera corresponder.
+          </p>
+        </section>
+
+        <hr className="border-slate-100" />
+
+        <section className="space-y-3">
+          <h2 className="text-base font-bold text-slate-900">11. Turnos Fijos</h2>
+          <p className="text-sm leading-relaxed text-slate-600">
+            Los Usuarios pueden ser asignados a turnos fijos semanales por parte de los Clubes. Los turnos fijos generan
+            reservas automáticas cada semana con estado &apos;pendiente de confirmación&apos;. El Usuario debe confirmar
+            y abonar su lugar con al menos 24 horas de anticipación. La cancelación de un día puntual debe realizarse
+            con no menos de 24 horas de antelación al inicio del turno. PadeLibre no se hace responsable por turnos
+            fijos no confirmados ni por cancelaciones realizadas fuera de plazo.
           </p>
         </section>
       </div>
