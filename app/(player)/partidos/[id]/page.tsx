@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { MatchResultForm } from "@/components/match-result-form";
@@ -392,7 +392,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     .eq("match_id", id)
     .eq("status", "pending");
 
-  const when = format(parseISO(detail.date), "EEEE d 'de' MMMM '·' HH:mm", { locale: es });
   const roundedDuration = Math.round((Number(detail.duration_minutes ?? 0) / 5)) * 5;
   const freeSlots = Math.max(0, 4 - participants.length);
   const matchStatusNorm = String(match.match_status ?? "").toLowerCase();
@@ -417,14 +416,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const userOutOfLevel = isLevelRestricted && userLevelDiff > 1;
   const typeLabel = detail.match_type === "competitivo" ? "Competitivo" : "Amistoso";
-  const visibilityLabel = detail.visibility === "privado" ? "Privado" : "Público";
   const categoryLabel =
     detail.gender_category === "masculino"
       ? "Masculino"
       : detail.gender_category === "femenino"
         ? "Femenino"
         : "Mixto";
-  const levelLabel = detail.level_restricted ? "Mi nivel ±1" : "Cualquier nivel";
 
   const payStatus = String(match.payment_status ?? "").toLowerCase();
   const matchFullyPaid = payStatus === "paid";
@@ -449,6 +446,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const hourAr = match.scheduled_time
     ? String(match.scheduled_time).slice(0, 5)
     : format(parseISO(detail.date), "HH:mm", { locale: es });
+  const matchDateForHero = parseISO(detail.date);
+  const heroWeekday = format(matchDateForHero, "EEE", { locale: es }).replace(/\.$/, "");
+  const heroWeekdayCap = heroWeekday.charAt(0).toUpperCase() + heroWeekday.slice(1);
+  const heroDayNum = format(matchDateForHero, "d", { locale: es });
+  const heroMonthShort = format(matchDateForHero, "MMM", { locale: es }).replace(/\.$/, "");
+  const heroMonthCap = heroMonthShort.charAt(0).toUpperCase() + heroMonthShort.slice(1);
+  const heroDateHeadline = `${heroWeekdayCap} ${heroDayNum} ${heroMonthCap}`;
+  const heroMatchTitleLine = `${detail.club_name ?? "Club"} · ${heroDateHeadline} · ${hourAr}`;
+  const clubWhenDurationLine = `${heroDateHeadline} · ${hourAr} · ${roundedDuration} min`;
   const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
   const sharePath = partyUrl;
   const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
@@ -524,8 +530,192 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Detalle del partido</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Detalle del partido</h1>
       </header>
+
+      <section
+        className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#031733] to-[#0461C4] p-6 shadow-xl ring-1 ring-white/10 dark:ring-white/15"
+        aria-label="Equipos del partido"
+      >
+        <p className="mb-6 text-center text-sm leading-snug text-white/80">{heroMatchTitleLine}</p>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-4">
+          <div className="min-w-0">
+            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-white/60">Equipo 1</p>
+            <div className="flex justify-center gap-2 sm:gap-3">
+              {Array.from({ length: 2 }, (_, i) => {
+                const participant = team1Players[i];
+                if (!participant) {
+                  return (
+                    <div
+                      key={`hero-t1-empty-${i}`}
+                      className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
+                    >
+                      <div
+                        className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-white/30 bg-white/5"
+                        aria-hidden
+                      >
+                        <User className="h-6 w-6 text-white/45" strokeWidth={1.75} aria-hidden />
+                      </div>
+                      <span className="text-center text-xs font-medium text-white/35">Libre</span>
+                    </div>
+                  );
+                }
+                const name = participant.name?.trim() || "Jugador";
+                const level = formatProfileNivelFromRow(participant);
+                return (
+                  <div
+                    key={participant.player_id}
+                    className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
+                  >
+                    <ProfileAvatar
+                      avatarUrl={participant.avatar_url}
+                      name={name}
+                      size={56}
+                      ringClassName="ring-2 ring-white/20"
+                    />
+                    <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
+                    <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {canJoinAsNewPlayer && team1Count < 2 ? (
+              <form action={requestToJoin} className="mt-4 flex justify-center">
+                <input type="hidden" name="match_id" value={id} />
+                <input type="hidden" name="level_override" value="false" />
+                <input type="hidden" name="team" value="1" />
+                <button
+                  type="submit"
+                  className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0461C4] shadow-md transition hover:bg-white/95 active:scale-[0.98]"
+                >
+                  Unirse
+                </button>
+              </form>
+            ) : null}
+          </div>
+
+          <div className="flex shrink-0 flex-col items-center justify-center self-center px-0.5 pt-8 sm:px-1">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] ring-2 ring-white/25 sm:h-16 sm:w-16">
+              <span className="text-base font-bold tracking-tight text-white sm:text-lg">VS</span>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-white/60">Equipo 2</p>
+            <div className="flex justify-center gap-2 sm:gap-3">
+              {Array.from({ length: 2 }, (_, i) => {
+                const participant = team2Players[i];
+                if (!participant) {
+                  return (
+                    <div
+                      key={`hero-t2-empty-${i}`}
+                      className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
+                    >
+                      <div
+                        className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-white/30 bg-white/5"
+                        aria-hidden
+                      >
+                        <User className="h-6 w-6 text-white/45" strokeWidth={1.75} aria-hidden />
+                      </div>
+                      <span className="text-center text-xs font-medium text-white/35">Libre</span>
+                    </div>
+                  );
+                }
+                const name = participant.name?.trim() || "Jugador";
+                const level = formatProfileNivelFromRow(participant);
+                return (
+                  <div
+                    key={participant.player_id}
+                    className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
+                  >
+                    <ProfileAvatar
+                      avatarUrl={participant.avatar_url}
+                      name={name}
+                      size={56}
+                      ringClassName="ring-2 ring-white/20"
+                    />
+                    <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
+                    <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                  </div>
+                );
+              })}
+            </div>
+            {canJoinAsNewPlayer && team2Count < 2 ? (
+              <form action={requestToJoin} className="mt-4 flex justify-center">
+                <input type="hidden" name="match_id" value={id} />
+                <input type="hidden" name="level_override" value="false" />
+                <input type="hidden" name="team" value="2" />
+                <button
+                  type="submit"
+                  className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0461C4] shadow-md transition hover:bg-white/95 active:scale-[0.98]"
+                >
+                  Unirse
+                </button>
+              </form>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-2 border-t border-white/15 pt-5">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold text-white ${
+              detail.match_type === "competitivo" ? "bg-blue-500/50" : "bg-emerald-500/50"
+            }`}
+          >
+            {typeLabel}
+          </span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">{categoryLabel}</span>
+          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+            {detail.level_restricted ? "Nivel restringido" : "Cualquier nivel"}
+          </span>
+        </div>
+
+        {freeSlots > 0 && !isOwner ? (
+          <div className="mt-5 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-center text-xs font-medium text-white/75 sm:text-left">
+              Invitá jugadores y completá el partido.
+            </p>
+            <div className="flex justify-center sm:justify-end">
+              <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <article
+        className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">{detail.club_name ?? "Club"}</h2>
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              isPrivate
+                ? "border border-[#0585FC]/25 bg-[#0585FC]/10 text-[#0461C4] dark:text-sky-300"
+                : "border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
+            }`}
+          >
+            {isPrivate ? "Privado" : "Público"}
+          </span>
+        </div>
+        {detail.club_location?.trim() ? (
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">{detail.club_location}</p>
+        ) : null}
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          {clubWhenDurationLine}
+          <span className="text-[var(--text-tertiary)]"> · Cancha: </span>
+          <span className="font-medium text-[var(--text-primary)]">{detail.court_name ?? "Cancha"}</span>
+        </p>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+          <div>
+            <p className="text-xs font-medium text-[var(--text-tertiary)]">Precio total</p>
+            <p className="text-xl font-bold text-[#0461C4]">${detail.total_price ?? 0}</p>
+          </div>
+          {isOwner ? (
+            <VisibilityToggle matchId={id} initialVisibility={detail.visibility === "privado" ? "privado" : "publico"} />
+          ) : null}
+        </div>
+      </article>
 
       {isOwner ? (
         <section className="rounded-2xl border border-[var(--border-subtle)] border-l-[3px] border-l-[#0585FC] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
@@ -578,58 +768,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </div>
         </section>
       ) : null}
-
-      <article className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]`}>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{detail.club_name ?? "Club"}</h2>
-          {isPrivate ? (
-            <span className="rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0585FC]">
-              Privado
-            </span>
-          ) : null}
-        </div>
-        {detail.club_location?.trim() ? (
-          <p className="text-sm text-[var(--text-tertiary)]">{detail.club_location}</p>
-        ) : null}
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Cancha: {detail.court_name ?? "Cancha"}</p>
-        {isOwner ? (
-          <VisibilityToggle matchId={id} initialVisibility={detail.visibility === "privado" ? "privado" : "publico"} />
-        ) : null}
-
-        <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Fecha y hora</dt>
-            <dd className="text-right font-semibold text-[var(--text-primary)]">{when}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Tipo</dt>
-            <dd className="font-semibold text-[var(--text-primary)]">{typeLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Visibilidad</dt>
-            <dd className="font-semibold text-[var(--text-primary)]">{visibilityLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Categoría</dt>
-            <dd className="font-semibold text-[var(--text-primary)]">{categoryLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Nivel</dt>
-            <dd className="font-semibold text-[var(--text-primary)]">{levelLabel}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Duración</dt>
-            <dd className="font-semibold text-[var(--text-primary)]">{roundedDuration} min</dd>
-          </div>
-          <div className="flex justify-between gap-2 border-t border-[var(--border-subtle)] pt-2">
-            <dt className="font-medium text-[var(--text-tertiary)]">Precio</dt>
-            <dd className="text-right text-sm text-[var(--text-tertiary)]">
-              <span className="text-lg font-bold text-[#0461C4]">${detail.total_price ?? 0}</span>
-              <span> · Precio total del turno</span>
-            </dd>
-          </div>
-        </dl>
-      </article>
 
       {isParticipant ? (
         <MatchStatusBanner matchFullyPaid={matchFullyPaid} myPaymentNorm={myPaymentBanner} />
@@ -878,123 +1016,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </form>
         </section>
       ) : null}
-
-      <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40`}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">Equipos</h2>
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            {freeSlots} cupo{freeSlots === 1 ? "" : "s"} libre{freeSlots === 1 ? "" : "s"} de 4
-          </span>
-        </div>
-
-        {freeSlots > 0 && !isOwner ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#0585FC]/20/70 bg-[#0585FC]/5/70 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <div className="relative h-7 w-20 overflow-hidden rounded-xl border border-slate-200/70 bg-white/90">
-                <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain p-1" />
-              </div>
-              <p className="text-xs font-medium text-slate-600">Invitá jugadores y completa el partido.</p>
-            </div>
-            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-start gap-2 sm:gap-3">
-          <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#0585FC]">Equipo 1</p>
-            {Array.from({ length: 2 }, (_, i) => {
-              const participant = team1Players[i];
-              if (!participant) {
-                return (
-                  <div
-                    key={`team1-empty-${i}`}
-                    className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-dashed border-slate-300 px-3 py-2 dark:border-slate-600"
-                  >
-                    <span className="h-8 w-8 rounded-full border border-dashed border-slate-300 dark:border-slate-600" />
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Libre</span>
-                  </div>
-                );
-              }
-              const name = participant.name?.trim() || "Jugador";
-              const level = formatProfileNivelFromRow(participant);
-              return (
-                <div
-                  key={participant.player_id}
-                  className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-2 dark:border-[#0585FC]/35 dark:bg-[#0585FC]/10"
-                >
-                  <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} ringClassName="ring-2 ring-[#0585FC]/20" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="truncate text-xs text-slate-600 dark:text-slate-300">{level}</p>
-                  </div>
-                </div>
-              );
-            })}
-            {canJoinAsNewPlayer && team1Count < 2 ? (
-              <form action={requestToJoin}>
-                <input type="hidden" name="match_id" value={id} />
-                <input type="hidden" name="level_override" value="false" />
-                <input type="hidden" name="team" value="1" />
-                <button
-                  type="submit"
-                  className="mt-1 w-full rounded-2xl bg-[#0585FC] px-3 py-2.5 text-xs font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95"
-                >
-                  Unirse
-                </button>
-              </form>
-            ) : null}
-          </div>
-          <div className="flex h-full items-center justify-center pt-7">
-            <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              VS
-            </span>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Equipo 2</p>
-            {Array.from({ length: 2 }, (_, i) => {
-              const participant = team2Players[i];
-              if (!participant) {
-                return (
-                  <div
-                    key={`team2-empty-${i}`}
-                    className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-dashed border-slate-300 px-3 py-2 dark:border-slate-600"
-                  >
-                    <span className="h-8 w-8 rounded-full border border-dashed border-slate-300 dark:border-slate-600" />
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Libre</span>
-                  </div>
-                );
-              }
-              const name = participant.name?.trim() || "Jugador";
-              const level = formatProfileNivelFromRow(participant);
-              return (
-                <div
-                  key={participant.player_id}
-                  className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70"
-                >
-                  <ProfileAvatar avatarUrl={participant.avatar_url} name={name} size={34} ringClassName="ring-2 ring-slate-200 dark:ring-slate-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="truncate text-xs text-slate-600 dark:text-slate-300">{level}</p>
-                  </div>
-                </div>
-              );
-            })}
-            {canJoinAsNewPlayer && team2Count < 2 ? (
-              <form action={requestToJoin}>
-                <input type="hidden" name="match_id" value={id} />
-                <input type="hidden" name="level_override" value="false" />
-                <input type="hidden" name="team" value="2" />
-                <button
-                  type="submit"
-                  className="mt-1 w-full rounded-2xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
-                >
-                  Unirse
-                </button>
-              </form>
-            ) : null}
-          </div>
-        </div>
-      </section>
 
       {isOwner && freeSlots > 0 ? (
         <InviteFriendsSection matchId={id} friends={inviteCandidates} sectionId="invitar-amigos" />
