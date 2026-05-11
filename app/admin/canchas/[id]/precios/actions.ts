@@ -29,7 +29,7 @@ function normalizeHour(value: string) {
 }
 
 function redirectPreciosError(courtId: string, message: string): never {
-  redirect(`/admin/canchas/${courtId}/precios?error=${encodeURIComponent(message)}`);
+  redirect(`/admin/canchas/${courtId}/horarios?price_error=${encodeURIComponent(message)}`);
 }
 
 export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
@@ -95,7 +95,7 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
     }
   }
 
-  revalidatePath(`/admin/canchas/${courtId}/precios`);
+  revalidatePath(`/admin/canchas/${courtId}/horarios`);
   revalidatePath("/admin/canchas");
-  redirect(`/admin/canchas/${courtId}/precios?saved=1`);
+  redirect(`/admin/canchas/${courtId}/horarios?price_saved=1`);
 }

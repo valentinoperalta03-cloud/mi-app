@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -6,13 +5,26 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import type { CourtScheduleRow } from "@/lib/database.types";
 import { createClient } from "@/utils/supabase/server";
+import { saveCourtHourlyPrices } from "../precios/actions";
 import { saveSchedules } from "./actions";
 
 const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const COURT_TURNS = [
+  { start: "09:00", end: "10:30" },
+  { start: "10:30", end: "12:00" },
+  { start: "12:00", end: "13:30" },
+  { start: "13:30", end: "15:00" },
+  { start: "15:00", end: "16:30" },
+  { start: "16:30", end: "18:00" },
+  { start: "18:00", end: "19:30" },
+  { start: "19:30", end: "21:00" },
+  { start: "21:00", end: "22:30" },
+  { start: "22:30", end: "23:59" },
+] as const;
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string; saved?: string }>;
+  searchParams?: Promise<{ error?: string; saved?: string; price_error?: string; price_saved?: string }>;
 };
 
 function normalizeTime(t: string | null | undefined, fallback: string) {
@@ -21,129 +33,164 @@ function normalizeTime(t: string | null | undefined, fallback: string) {
   return s.length >= 5 ? s.slice(0, 5) : fallback;
 }
 
-function formatPriceOverride(v: CourtScheduleRow["price_override"]): string {
-  if (v === null || v === undefined) return "";
-  return String(v);
+function decodeErr(raw: string): string {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    return raw;
+  }
 }
 
 export default async function AdminCanchaHorariosPage({ params, searchParams }: PageProps) {
   const { id: courtId } = await params;
   const sp = searchParams ? await searchParams : {};
-  const errorFlash = sp.error?.trim() ?? "";
-  const savedFlash = sp.saved === "1";
+  const horariosError = sp.error?.trim() ?? "";
+  const horariosSaved = sp.saved === "1";
+  const preciosError = sp.price_error?.trim() ?? "";
+  const preciosSaved = sp.price_saved === "1";
+
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  if (!ctx.courtIds.includes(courtId)) {
-    notFound();
-  }
+  if (!ctx.courtIds.includes(courtId)) notFound();
 
   const { data: court } = await supabase
     .from(DB_TABLES.courts)
     .select("id,name,price")
     .eq("id", courtId)
     .maybeSingle();
-
   if (!court) notFound();
 
   const { data: schedData } = await supabase
     .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,open_time,close_time,price_override")
+    .select("day_of_week,open_time,close_time")
     .eq("court_id", courtId);
-
-  const schedules = (schedData ?? []) as Pick<
-    CourtScheduleRow,
-    "day_of_week" | "open_time" | "close_time" | "price_override"
-  >[];
+  const schedules = (schedData ?? []) as Pick<CourtScheduleRow, "day_of_week" | "open_time" | "close_time">[];
   const byDay = new Map(schedules.map((s) => [s.day_of_week, s]));
+
+  const { data: slotRows } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .select("start_time,price_override")
+    .eq("court_id", courtId)
+    .is("day_of_week", null)
+    .not("start_time", "is", null);
+  const byTurnStart = new Map(
+    ((slotRows ?? []) as Array<{ start_time: string | null; price_override: number | null }>)
+      .filter((r) => r.start_time)
+      .map((r) => [String(r.start_time).slice(0, 5), Number(r.price_override ?? 0)])
+  );
+  const basePrice = Number((court as { price: number | null }).price ?? 0);
 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/canchas" />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Horarios</p>
+        <p className={`${adminKicker} text-[#0585FC]`}>Horarios y precios</p>
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>
-        <p className={adminSubtitle}>Activá los días, definí apertura/cierre y, si querés, un precio especial por día.</p>
+        <p className={adminSubtitle}>Configurá la disponibilidad y precios de la cancha en una sola vista.</p>
       </header>
-      <div className="rounded-2xl border border-sky-100 bg-sky-50/80 px-4 py-3 text-sm text-sky-900">
-        Precio base actual de la cancha: <span className="font-semibold">${Number(court.price ?? 0)}</span>. Si dejás el precio diario vacío, se usa este valor.
-      </div>
 
-      {savedFlash ? (
-        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">
-          Horarios guardados correctamente.
+      <section className={`${adminCard} space-y-5`}>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Horarios de atención</h2>
+          <p className="text-sm text-slate-500">Activá los días y definí apertura y cierre.</p>
         </div>
-      ) : null}
+        {horariosSaved ? (
+          <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">
+            Horarios guardados correctamente.
+          </div>
+        ) : null}
+        {horariosError ? (
+          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
+            {decodeErr(horariosError)}
+          </div>
+        ) : null}
 
-      {errorFlash ? (
-        <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
-          {errorFlash}
-        </div>
-      ) : null}
-
-      <form action={saveSchedules} className={`${adminCard} space-y-5`}>
-        <input type="hidden" name="court_id" value={courtId} />
-
-        {dayLabels.map((label, d) => {
-          const row = byDay.get(d);
-          const active = Boolean(row?.open_time && row?.close_time);
-          return (
-            <div key={d} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-sm font-bold text-slate-900">{label}</p>
-              <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" name={`day_${d}_active`} defaultChecked={active} className="h-4 w-4 rounded border-slate-300" />
-                Activo
-              </label>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-slate-500">Apertura</span>
-                  <input
-                    type="time"
-                    name={`day_${d}_open`}
-                    defaultValue={normalizeTime(row?.open_time ?? null, "08:00")}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-                  />
+        <form action={saveSchedules} className="space-y-5">
+          <input type="hidden" name="court_id" value={courtId} />
+          {dayLabels.map((label, d) => {
+            const row = byDay.get(d);
+            const active = Boolean(row?.open_time && row?.close_time);
+            return (
+              <div key={d} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p className="text-sm font-bold text-slate-900">{label}</p>
+                <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input type="checkbox" name={`day_${d}_active`} defaultChecked={active} className="h-4 w-4 rounded border-slate-300" />
+                  Activo
                 </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-semibold text-slate-500">Cierre</span>
-                  <input
-                    type="time"
-                    name={`day_${d}_close`}
-                    defaultValue={normalizeTime(row?.close_time ?? null, "22:00")}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-                  />
-                </label>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-semibold text-slate-500">Apertura</span>
+                    <input
+                      type="time"
+                      name={`day_${d}_open`}
+                      defaultValue={normalizeTime(row?.open_time ?? null, "08:00")}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs font-semibold text-slate-500">Cierre</span>
+                    <input
+                      type="time"
+                      name={`day_${d}_close`}
+                      defaultValue={normalizeTime(row?.close_time ?? null, "22:00")}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                    />
+                  </label>
+                </div>
               </div>
-              <label className="mt-3 block space-y-1">
-                <span className="text-xs font-semibold text-slate-500">Precio del turno este día (opcional, sobreescribe el precio base)</span>
-                <input
-                  type="number"
-                  name={`day_${d}_price_override`}
-                  min={0}
-                  step="1"
-                  placeholder="Vacío = usar precio de la cancha"
-                  defaultValue={formatPriceOverride(row?.price_override)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-                />
-              </label>
-            </div>
-          );
-        })}
+            );
+          })}
+          <button
+            type="submit"
+            className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Guardar horarios
+          </button>
+        </form>
+      </section>
 
-        <button
-          type="submit"
-          className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Guardar horarios
-        </button>
-      </form>
+      <section className={`${adminCard} space-y-5`}>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Precios por turno</h2>
+          <p className="text-sm text-slate-500">Configurá el precio de cada turno de 1h30.</p>
+        </div>
+        {preciosSaved ? (
+          <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">
+            Precios guardados correctamente.
+          </div>
+        ) : null}
+        {preciosError ? (
+          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
+            {decodeErr(preciosError)}
+          </div>
+        ) : null}
 
-      <Link
-        href="/admin/canchas"
-        className="inline-flex justify-center rounded-2xl border border-slate-200 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-      >
-        Volver a canchas
-      </Link>
+        <form action={saveCourtHourlyPrices} className="space-y-4">
+          <input type="hidden" name="court_id" value={courtId} />
+          {COURT_TURNS.map((turn) => (
+            <label key={`${turn.start}-${turn.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
+              <span className="text-sm font-semibold text-slate-700">
+                {turn.start} - {turn.end}
+              </span>
+              <input
+                type="number"
+                min={0}
+                step="1"
+                name={`price_${turn.start}`}
+                defaultValue={byTurnStart.get(turn.start) ?? basePrice}
+                className="w-36 rounded-xl border border-slate-300 px-3 py-2 text-right text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+              />
+            </label>
+          ))}
+          <button
+            type="submit"
+            className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Guardar precios
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

@@ -33,15 +33,6 @@ export async function saveSchedules(formData: FormData): Promise<void> {
     const active = formData.get(`day_${d}_active`) === "on";
     const open = getField(formData, `day_${d}_open`) || "08:00";
     const close = getField(formData, `day_${d}_close`) || "22:00";
-    const priceRaw = getField(formData, `day_${d}_price_override`);
-    let price_override: number | null = null;
-    if (priceRaw !== "") {
-      const n = Number(priceRaw);
-      if (!Number.isFinite(n) || n < 0) {
-        redirectHorariosError(courtId, "Precio por horario inválido.");
-      }
-      price_override = n;
-    }
 
     const { error: delErr } = await supabase
       .from(DB_TABLES.courtSchedules)
@@ -58,7 +49,6 @@ export async function saveSchedules(formData: FormData): Promise<void> {
         day_of_week: d,
         open_time: open.length >= 5 ? open.slice(0, 5) : open,
         close_time: close.length >= 5 ? close.slice(0, 5) : close,
-        price_override,
       });
       if (insErr) {
         redirectHorariosError(courtId, insErr.message);
