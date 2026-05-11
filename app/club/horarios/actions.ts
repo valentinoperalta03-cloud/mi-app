@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -39,32 +41,11 @@ export async function upsertCourtScheduleAction(
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Debes iniciar sesion para editar horarios." };
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    redirect("/login");
   }
-
-  const { data: courtRow, error: courtError } = await supabase
-    .from(DB_TABLES.courts)
-    .select("id,club_id")
-    .eq("id", courtId)
-    .maybeSingle();
-
-  if (courtError || !courtRow) {
-    return { success: false, message: "La cancha seleccionada no existe." };
-  }
-
-  const { data: clubRow, error: clubError } = await supabase
-    .from(DB_TABLES.clubs)
-    .select("id")
-    .eq("id", courtRow.club_id)
-    .eq("owner_id", user.id)
-    .maybeSingle();
-
-  if (clubError || !clubRow) {
+  if (!ctx.courtIds.includes(courtId)) {
     return {
       success: false,
       message: "No tienes permiso para editar horarios de esta cancha.",

@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/server";
 
 export type ActionState = {
   success: boolean;
@@ -41,6 +43,15 @@ export async function createCourtAction(
   const price = Number(priceRaw);
   if (Number.isNaN(price) || price < 0) {
     return { success: false, message: "El precio debe ser un numero positivo." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    redirect("/login");
+  }
+  if (!ctx.clubIds.includes(clubId)) {
+    return { success: false, message: "Club no autorizado." };
   }
 
   const { error } = await supabase.from(DB_TABLES.courts).insert({
@@ -82,6 +93,18 @@ export async function upsertCourtScheduleAction(
     return {
       success: false,
       message: "La hora de apertura debe ser menor al cierre.",
+    };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) {
+    redirect("/login");
+  }
+  if (!ctx.courtIds.includes(courtId)) {
+    return {
+      success: false,
+      message: "No tenés permiso para editar horarios de esta cancha.",
     };
   }
 
