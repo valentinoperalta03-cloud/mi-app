@@ -45,6 +45,9 @@ type MatchRow = {
 type BlockRow = {
   start_time: string | null;
 };
+type BlockRowModern = {
+  blocked_time: string | null;
+};
 
 type SlotView = GeneratedSlot & {
   available: boolean;
@@ -96,28 +99,43 @@ function NuevaReservaContent() {
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
       const dow = getDay(dayDate);
 
-      const [{ data: schedRows, error: schedErr }, { data: matchRows, error: matchErr }, { data: blockRows, error: blockErr }] =
-        await Promise.all([
-          supabase
-            .from(DB_TABLES.courtSchedules)
-            .select("court_id,day_of_week,open_time,close_time")
-            .eq("court_id", courtId)
-            .not("day_of_week", "is", null),
-          supabase
-            .from(DB_TABLES.matches)
-            .select("scheduled_time,duration_minutes,match_type,payment_status,match_status")
-            .eq("court_id", courtId)
-            .eq("scheduled_date", selectedDate)
-            .neq("match_status", "cancelled"),
-          supabase
-            .from(DB_TABLES.courtBlocks)
-            .select("start_time")
-            .eq("court_id", courtId)
-            .eq("date", selectedDate),
-        ]);
+      const [
+        { data: schedRows, error: schedErr },
+        { data: matchRows, error: matchErr },
+        { data: blockRowsModern, error: blockErrModern },
+        { data: blockRowsLegacy, error: blockErrLegacy },
+      ] = await Promise.all([
+        supabase
+          .from(DB_TABLES.courtSchedules)
+          .select("court_id,day_of_week,open_time,close_time")
+          .eq("court_id", courtId)
+          .not("day_of_week", "is", null),
+        supabase
+          .from(DB_TABLES.matches)
+          .select("scheduled_time,duration_minutes,match_type,payment_status,match_status")
+          .eq("court_id", courtId)
+          .eq("scheduled_date", selectedDate)
+          .neq("match_status", "cancelled"),
+        supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("blocked_time")
+          .eq("court_id", courtId)
+          .eq("blocked_date", selectedDate),
+        supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("start_time")
+          .eq("court_id", courtId)
+          .eq("date", selectedDate),
+      ]);
 
-      if (schedErr || matchErr || blockErr) {
-        setError(schedErr?.message ?? matchErr?.message ?? blockErr?.message ?? "Error al cargar horarios.");
+      if (schedErr || matchErr || blockErrModern || blockErrLegacy) {
+        setError(
+          schedErr?.message ??
+            matchErr?.message ??
+            blockErrModern?.message ??
+            blockErrLegacy?.message ??
+            "Error al cargar horarios."
+        );
         setSlots([]);
         return;
       }
@@ -128,8 +146,14 @@ function NuevaReservaContent() {
       const built = buildSlotsForDay([courtId], dayDate, schedules);
 
       const matches = (matchRows ?? []) as MatchRow[];
-      const blocks = (blockRows ?? []) as BlockRow[];
-      const blockStarts = new Set(blocks.map((b) => normalizeDbTime(b.start_time)));
+      const blocksModern = (blockRowsModern ?? []) as BlockRowModern[];
+      const blocksLegacy = (blockRowsLegacy ?? []) as BlockRow[];
+      const blockStarts = new Set(
+        [
+          ...blocksModern.map((b) => normalizeDbTime((b as { blocked_time: string | null }).blocked_time)),
+          ...blocksLegacy.map((b) => normalizeDbTime((b as { start_time: string | null }).start_time)),
+        ].filter(Boolean)
+      );
 
       const resolvedSlots = built.map((slot) => {
         const slotStart = clockToMinutes(slot.time);
@@ -143,7 +167,9 @@ function NuevaReservaContent() {
           const isReservation = String(m.match_type ?? "").toLowerCase() === "reservation";
           const paymentStatus = String(m.payment_status ?? "").toLowerCase();
           const matchStatus = String(m.match_status ?? "").toLowerCase();
-          const shouldBlockSlot = !isReservation || (matchStatus === "reserved" && paymentStatus === "paid");
+          const shouldBlockSlot =
+            matchStatus !== "cancelled" &&
+            (!isReservation || paymentStatus === "paid" || paymentStatus === "pending");
           if (!shouldBlockSlot) continue;
           const mStart = clockToMinutes(normalizeDbTime(m.scheduled_time));
           const mDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
