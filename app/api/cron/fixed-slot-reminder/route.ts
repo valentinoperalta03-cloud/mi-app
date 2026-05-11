@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { createNotification } from "@/lib/notifications";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createServiceClient } from "@/utils/supabase/server";
@@ -32,9 +32,20 @@ function toMinutes(t: string) {
   return h * 60 + m;
 }
 
-export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+function cronSecretFromRequest(req: NextRequest): string | null {
+  const bearer = req.headers.get("authorization");
+  const bearerSecret =
+    bearer?.startsWith("Bearer ") ? bearer.slice("Bearer ".length).trim() : null;
+  return (
+    req.headers.get("x-cron-secret")?.trim() ??
+    req.nextUrl.searchParams.get("secret") ??
+    bearerSecret
+  );
+}
+
+export async function GET(req: NextRequest) {
+  const secret = cronSecretFromRequest(req);
+  if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
