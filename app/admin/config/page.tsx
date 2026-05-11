@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle, LogOut, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
@@ -23,42 +21,79 @@ async function signOutAction() {
   redirect("/login");
 }
 
-export default async function AdminConfigPage() {
+async function updateFinancePin(formData: FormData) {
+  "use server";
+  const currentPin = String(formData.get("current_pin") ?? "").trim();
+  const newPin = String(formData.get("new_pin") ?? "").trim();
+  const confirmPin = String(formData.get("confirm_pin") ?? "").trim();
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/config?pin_error=no_club");
+
+  const clubId = ctx.clubIds[0];
+  const { data: clubRow } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("finance_pin")
+    .eq("id", clubId)
+    .maybeSingle();
+
+  const storedPin = String((clubRow as { finance_pin?: string | null } | null)?.finance_pin ?? "").trim();
+  const fallbackPin = String(process.env.NEXT_PUBLIC_ADMIN_FINANCE_PIN ?? "1234").trim();
+  const expectedCurrent = storedPin || fallbackPin;
+
+  if (!/^\d{6}$/.test(newPin)) {
+    redirect("/admin/config?pin_error=El+nuevo+PIN+debe+tener+6+d%C3%ADgitos.");
+  }
+  if (newPin !== confirmPin) {
+    redirect("/admin/config?pin_error=La+confirmaci%C3%B3n+del+PIN+no+coincide.");
+  }
+  if (currentPin !== expectedCurrent) {
+    redirect("/admin/config?pin_error=El+PIN+actual+es+incorrecto.");
+  }
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update({ finance_pin: newPin }).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?pin_error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/admin/config?pin_saved=1");
+}
+
+type PageProps = {
+  searchParams?: Promise<{ pin_saved?: string; pin_error?: string }>;
+};
+
+export default async function AdminConfigPage({ searchParams }: PageProps) {
+  const sp = searchParams ? await searchParams : {};
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: matchesRaw } =
-    ctx.courtIds.length > 0
-      ? await supabase
-          .from(DB_TABLES.matches)
-          .select("date")
-          .in("court_id", ctx.courtIds)
-          .order("date", { ascending: true })
-      : { data: [] };
+  const { data: authData } = await supabase.auth.getUser();
+  const userEmail = authData.user?.email ?? "—";
 
-  const dates = (matchesRaw ?? []) as { date: string }[];
-  const byMonth = new Map<string, number>();
-  for (const { date } of dates) {
-    const mk = format(parseISO(date), "yyyy-MM");
-    byMonth.set(mk, (byMonth.get(mk) ?? 0) + 1);
-  }
-  const monthKeys = Array.from(byMonth.keys()).sort();
-  const growth = monthKeys.map((k) => ({
-    key: k,
-    label: format(parseISO(`${k}-01T12:00:00`), "MMM yyyy", { locale: es }),
-    count: byMonth.get(k) ?? 0,
-  }));
-  const maxG = growth.reduce((m, x) => Math.max(m, x.count), 0);
   const { data: clubData } = ctx.clubIds.length
     ? await supabase
         .from(DB_TABLES.clubs)
-        .select("mp_access_token,mp_user_id")
+        .select("name,mp_access_token,mp_user_id,finance_pin")
         .eq("id", ctx.clubIds[0])
         .maybeSingle()
     : { data: null };
-  const isMpConnected = Boolean((clubData as { mp_access_token?: string | null } | null)?.mp_access_token);
-  const mpUserId = (clubData as { mp_user_id?: string | null } | null)?.mp_user_id ?? "—";
+  const typedClub = clubData as {
+    name?: string | null;
+    mp_access_token?: string | null;
+    mp_user_id?: string | null;
+    finance_pin?: string | null;
+  } | null;
+  const isMpConnected = Boolean(typedClub?.mp_access_token);
+  const mpUserId = typedClub?.mp_user_id ?? "—";
+  const clubName = typedClub?.name ?? "Club";
+  const clubId = ctx.clubIds[0] ?? "";
+  const clubIdShort = clubId ? clubId.slice(-8) : "—";
+  const pinSaved = sp.pin_saved === "1";
+  const pinError = sp.pin_error ? decodeURIComponent(sp.pin_error) : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,14 +104,27 @@ export default async function AdminConfigPage() {
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200/60">
             <Settings2 size={24} strokeWidth={2} aria-hidden />
           </span>
-          Club y canchas
+          Configuración del club
         </h1>
-        <p className={adminSubtitle}>
-          Accesos directos a horarios operativos y gestión de turnos.
-        </p>
+        <p className={adminSubtitle}>Configuraciones generales de tu cuenta y del club.</p>
       </header>
 
-      <section className="flex flex-col gap-4 md:grid md:grid-cols-2">
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">Cuenta</h2>
+        <div className="mt-3 space-y-2 text-sm">
+          <p className="text-slate-600 dark:text-slate-300">
+            <span className="font-semibold">Email:</span> {userEmail}
+          </p>
+          <p className="text-slate-600 dark:text-slate-300">
+            <span className="font-semibold">Club:</span> {clubName}
+          </p>
+          <p className="text-slate-600 dark:text-slate-300">
+            <span className="font-semibold">ID del club:</span> {clubIdShort}
+          </p>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
         <Link
           href="/admin/config/mp-connect"
           className={`group flex h-full flex-col rounded-2xl border p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.1)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:shadow-lg ${
@@ -105,66 +153,93 @@ export default async function AdminConfigPage() {
             {isMpConnected ? "Reconectar" : "Conectar"}
           </span>
         </Link>
-        <Link
-          href="/admin/club"
-          className={`group flex h-full flex-col rounded-2xl border border-indigo-200/60 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(59,130,246,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-indigo-300/80 hover:shadow-lg`}
-        >
-          <p className="text-sm font-semibold text-indigo-700">Club</p>
-          <p className="mt-2 text-base font-bold text-slate-900">Información del club</p>
-          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Editá nombre, contacto, imágenes y horarios de atención.
-          </p>
-          <span className="mt-5 text-sm font-semibold text-indigo-600">Abrir</span>
-        </Link>
-        <Link
-          href="/admin/pagos"
-          className={`group flex h-full flex-col rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-500/10 to-lime-500/10 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(16,185,129,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-emerald-300/80 hover:shadow-lg`}
-        >
-          <p className="text-sm font-semibold text-emerald-700">Tesorería</p>
-          <p className="mt-2 text-base font-bold text-slate-900">Historial de pagos</p>
-          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Revisá pagos aprobados, pendientes y reembolsos por mes.
-          </p>
-          <span className="mt-5 text-sm font-semibold text-emerald-600">Abrir</span>
-        </Link>
-        <Link
-          href="/admin/canchas"
-          className={`group flex h-full flex-col rounded-2xl border border-[#0585FC]/20/55 bg-gradient-to-br from-[#0585FC]/12 to-cyan-500/8 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(14,165,233,0.12)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-[#0585FC]/30/80 hover:shadow-lg`}
-        >
-          <p className="text-sm font-semibold text-[#0461C4]">Horarios</p>
-          <p className="mt-2 text-base font-bold text-slate-900">Configuración de canchas</p>
-          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Apertura y cierre por día (
-            <code className="text-xs text-slate-500">court_schedules</code>).
-          </p>
-          <span className="mt-5 text-sm font-semibold text-[#0585FC] group-hover:text-[#0585FC]">
-            Abrir
-          </span>
-        </Link>
-        <Link
-          href="/admin/reservas"
-          className={`group flex h-full flex-col rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-500/8 to-slate-400/6 p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.08)] transition-all duration-300 ${adminPressable} hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-lg`}
-        >
-          <p className="text-sm font-semibold text-slate-600">Turnos</p>
-          <p className="mt-2 text-base font-bold text-slate-900">Gestión de disponibilidad</p>
-          <p className="mt-2 flex-1 text-sm font-medium leading-relaxed text-slate-600">
-            Grilla del día, bloqueos manuales y estado frente a partidos reservados.
-          </p>
-          <span className="mt-5 text-sm font-semibold text-[#0585FC] group-hover:text-[#0585FC]">
-            Abrir
-          </span>
-        </Link>
       </section>
+
       <section className={adminCard}>
-        <h2 className="text-base font-bold tracking-tight text-slate-900">Apariencia</h2>
-        <p className="mt-2 text-sm font-medium text-slate-500">Personalizá el modo claro/oscuro del panel.</p>
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">PIN de finanzas</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+          Cambiá el PIN del módulo financiero. Se guarda en tu club y aplica sin redeploy.
+        </p>
+        {pinSaved ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+            PIN actualizado correctamente.
+          </p>
+        ) : null}
+        {pinError ? (
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+            {pinError}
+          </p>
+        ) : null}
+        <form action={updateFinancePin} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1 sm:col-span-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">PIN actual</span>
+            <input
+              name="current_pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4,6}"
+              required
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nuevo PIN (6 dígitos)</span>
+            <input
+              name="new_pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              required
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Confirmar nuevo PIN</span>
+            <input
+              name="confirm_pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              required
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <div className="sm:col-span-2">
+            <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
+              Cambiar PIN
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">Apariencia</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Personalizá el modo claro/oscuro del panel.</p>
         <div className="mt-4">
           <ThemeToggleButton />
         </div>
       </section>
       <section className={adminCard}>
-        <h2 className="text-base font-bold tracking-tight text-slate-900">Sesión</h2>
-        <p className="mt-2 text-sm font-medium text-slate-500">Podés cerrar sesión del panel admin.</p>
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">Soporte</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">¿Necesitás ayuda? Contactá a PadeLibre</p>
+        <div className="mt-3 space-y-1 text-sm">
+          <p className="text-slate-700 dark:text-slate-200">Email: soporte.padelibre@gmail.com</p>
+          <a
+            href="https://wa.me/5493412571953"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[#0585FC]"
+          >
+            WhatsApp de soporte
+          </a>
+        </div>
+      </section>
+
+      <section className={adminCard}>
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">Sesión</h2>
+        <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Podés cerrar sesión del panel admin.</p>
         <form action={signOutAction} className="mt-4">
           <button
             type="submit"
@@ -174,37 +249,6 @@ export default async function AdminConfigPage() {
             Cerrar sesión
           </button>
         </form>
-      </section>
-
-      <section className={adminCard}>
-        <h2 className="text-base font-bold tracking-tight text-slate-900">
-          Volumen de actividad mensual
-        </h2>
-        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
-          Partidos en tus canchas por mes: métrica de uso y rentabilidad operativa.
-        </p>
-        <div className="mt-6 flex flex-col gap-4">
-          {growth.length === 0 ? (
-            <p className="text-sm font-medium text-slate-500">Sin datos aún.</p>
-          ) : (
-            growth.map((g) => (
-              <div key={g.key} className="space-y-2">
-                <div className="flex justify-between text-sm font-semibold text-slate-700">
-                  <span className="text-slate-600">{g.label}</span>
-                  <span className="tabular-nums text-slate-800">{g.count} partidos</span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/60 ring-1 ring-slate-200/40">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#0585FC]/90 via-[#0585FC]/85 to-[#0461C4]/75 shadow-sm"
-                    style={{
-                      width: `${maxG > 0 ? Math.max(8, (g.count / maxG) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       </section>
     </div>
   );
