@@ -154,3 +154,70 @@ export async function addExceptionToFixedSlot(formData: FormData): Promise<void>
 
   revalidatePath("/admin/turnos-fijos");
 }
+
+export async function addPlayerToFixedSlot(formData: FormData): Promise<void> {
+  const fixedSlotId = getField(formData, "fixed_slot_id");
+  const playerId = getField(formData, "player_id");
+  if (!fixedSlotId || !playerId) return;
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: slot } = await supabase
+    .from(DB_TABLES.fixedSlots)
+    .select("id,court_id")
+    .eq("id", fixedSlotId)
+    .maybeSingle();
+  const typedSlot = slot as { id: string; court_id: string } | null;
+  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
+
+  const { count } = await supabase
+    .from(DB_TABLES.fixedSlotPlayers)
+    .select("id", { count: "exact", head: true })
+    .eq("fixed_slot_id", fixedSlotId);
+  if ((count ?? 0) >= 4) return;
+
+  const { error } = await supabase.from(DB_TABLES.fixedSlotPlayers).insert({
+    fixed_slot_id: fixedSlotId,
+    player_id: playerId,
+  });
+  if (error && error.code !== "23505") return;
+
+  await createNotification(supabase, {
+    user_id: playerId,
+    type: "join_request",
+    title: "Te agregaron a un turno fijo",
+    body: "El club te agregó a un turno fijo. Revisá tu próxima confirmación en la app.",
+  });
+
+  revalidatePath("/admin/turnos-fijos");
+}
+
+export async function removeException(formData: FormData): Promise<void> {
+  const exceptionId = getField(formData, "exception_id");
+  if (!exceptionId) return;
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: exceptionRow } = await supabase
+    .from(DB_TABLES.fixedSlotExceptions)
+    .select("id,fixed_slot_id")
+    .eq("id", exceptionId)
+    .maybeSingle();
+  const exception = exceptionRow as { id: string; fixed_slot_id: string } | null;
+  if (!exception) return;
+
+  const { data: slot } = await supabase
+    .from(DB_TABLES.fixedSlots)
+    .select("id,court_id")
+    .eq("id", exception.fixed_slot_id)
+    .maybeSingle();
+  const typedSlot = slot as { id: string; court_id: string } | null;
+  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
+
+  await supabase.from(DB_TABLES.fixedSlotExceptions).delete().eq("id", exceptionId);
+  revalidatePath("/admin/turnos-fijos");
+}
