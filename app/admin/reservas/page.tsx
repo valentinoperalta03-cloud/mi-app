@@ -1,4 +1,4 @@
-import { addDays, format, parseISO, subDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -79,9 +79,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const selectedDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : getTodayYmdInArgentina();
   const selectedMatchId = sp.selected?.trim() ?? "";
-  const previousDate = format(subDays(parseISO(`${selectedDate}T12:00:00`), 1), "yyyy-MM-dd");
-  const nextDate = format(addDays(parseISO(`${selectedDate}T12:00:00`), 1), "yyyy-MM-dd");
-  const todayDate = getTodayYmdInArgentina();
 
   const { data: matchesRaw, error: matchesError } = await supabase
     .from(DB_TABLES.matches)
@@ -168,27 +165,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       </header>
 
       <section className={`${adminCard} flex flex-col gap-4`}>
-        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-          <Link
-            href={`/admin/reservas?date=${previousDate}`}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          >
-            ← Anterior
-          </Link>
-          <Link
-            href={`/admin/reservas?date=${todayDate}`}
-            className="rounded-full border border-[#0585FC]/30 bg-[#0585FC]/10 px-3 py-1 text-[#0461C4] transition hover:bg-[#0585FC]/20 dark:text-sky-300"
-          >
-            Hoy
-          </Link>
-          <Link
-            href={`/admin/reservas?date=${nextDate}`}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          >
-            Siguiente →
-          </Link>
-        </div>
-
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className={adminKicker}>Fecha seleccionada</p>
