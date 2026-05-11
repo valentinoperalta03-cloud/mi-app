@@ -66,12 +66,11 @@ export async function GET(req: Request) {
 
     const { data: playersRaw } = await supabase
       .from(DB_TABLES.fixedSlotPlayers)
-      .select("player_id,payment_method,created_at")
+      .select("player_id,created_at")
       .eq("fixed_slot_id", slot.id)
       .order("created_at", { ascending: true });
     const players = (playersRaw ?? []) as Array<{
       player_id: string;
-      payment_method: "mp" | "cash";
       created_at: string;
     }>;
     if (players.length === 0) continue;
@@ -113,11 +112,10 @@ export async function GET(req: Request) {
     );
 
     for (const player of players) {
-      const status = player.payment_method === "cash" ? "cash_pending" : "invited";
       await supabase.from(DB_TABLES.payments).insert({
         match_id: matchId,
         user_id: player.player_id,
-        status,
+        status: "invited",
         amount: 0,
         marketplace_fee: 0,
       });
@@ -126,10 +124,7 @@ export async function GET(req: Request) {
         user_id: player.player_id,
         type: "join_request",
         title: "Turno fijo generado",
-        body:
-          player.payment_method === "cash"
-            ? `Recordá confirmar tu turno fijo del ${targetDate} en efectivo.`
-            : `Tenés un turno fijo pendiente de pago para el ${targetDate}.`,
+        body: `Tenés un turno fijo pendiente de pago para el ${targetDate}.`,
         match_id: matchId,
       });
     }

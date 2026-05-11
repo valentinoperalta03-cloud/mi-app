@@ -68,10 +68,9 @@ export async function GET(req: Request) {
 
     const { data: slotPlayersRaw } = await supabase
       .from(DB_TABLES.fixedSlotPlayers)
-      .select("player_id,payment_method")
-      .eq("fixed_slot_id", fixedSlotId)
-      .eq("payment_method", "mp");
-    const slotPlayers = (slotPlayersRaw ?? []) as Array<{ player_id: string; payment_method: "mp" | "cash" }>;
+      .select("player_id")
+      .eq("fixed_slot_id", fixedSlotId);
+    const slotPlayers = (slotPlayersRaw ?? []) as Array<{ player_id: string }>;
     if (slotPlayers.length === 0) continue;
 
     const playerIds = slotPlayers.map((p) => p.player_id);

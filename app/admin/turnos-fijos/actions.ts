@@ -68,7 +68,6 @@ export async function createFixedSlot(formData: FormData) {
     players.map((p) => ({
       fixed_slot_id: fixedSlotId,
       player_id: p.playerId,
-      payment_method: "mp",
     }))
   );
   if (playersErr) {

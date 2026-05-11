@@ -38,13 +38,12 @@ export default async function AdminTurnosFijosPage() {
   const { data: slotPlayersRaw } = slotIds.length
     ? await supabase
         .from(DB_TABLES.fixedSlotPlayers)
-        .select("fixed_slot_id,player_id,payment_method")
+        .select("fixed_slot_id,player_id")
         .in("fixed_slot_id", slotIds)
     : { data: [] };
   const slotPlayers = (slotPlayersRaw ?? []) as Array<{
     fixed_slot_id: string;
     player_id: string;
-    payment_method: "mp" | "cash";
   }>;
 
   const playerIds = Array.from(new Set(slotPlayers.map((p) => p.player_id)));
