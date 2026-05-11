@@ -1,4 +1,4 @@
-import { endOfMonth, format, startOfMonth, subDays } from "date-fns";
+import { format, subDays } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -6,48 +6,87 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
+const SLOT_MINUTES = 90;
+const SLOT_LABELS = ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"];
+const WEEKDAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+function toMinutes(hhmm: string): number {
+  const [hRaw, mRaw] = hhmm.slice(0, 5).split(":");
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return -1;
+  return h * 60 + m;
+}
+
+function slotKeyFromTime(value: string | null): string {
+  const parsed = toMinutes(String(value ?? "").trim());
+  if (parsed < 0) return SLOT_LABELS[0];
+  let closest = SLOT_LABELS[0];
+  let minDiff = Number.POSITIVE_INFINITY;
+  for (const slot of SLOT_LABELS) {
+    const diff = Math.abs(toMinutes(slot) - parsed);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = slot;
+    }
+  }
+  return closest;
+}
+
+function mondayFirstIndex(ymd: string | null): number | null {
+  if (!ymd) return null;
+  const d = new Date(`${ymd}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const jsDay = d.getDay();
+  return jsDay === 0 ? 6 : jsDay - 1;
+}
+
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
-  const prevStart = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-  const prevEnd = endOfMonth(prevStart);
   const since30 = subDays(now, 30);
+  const since30Ymd = format(since30, "yyyy-MM-dd");
 
-  const reservationQuery = () =>
-    supabase
-      .from(DB_TABLES.matches)
-      .select("id,court_id,owner_id,total_price,scheduled_date,scheduled_time")
-      .in("court_id", ctx.courtIds)
-      .eq("match_type", "reservation")
-      .eq("match_status", "reserved");
-
-  const [{ data: monthRows }, { data: prevRows }, { data: last30Rows }, { data: schedulesRaw }] = await Promise.all([
-    reservationQuery().gte("scheduled_date", format(monthStart, "yyyy-MM-dd")).lte("scheduled_date", format(monthEnd, "yyyy-MM-dd")),
-    reservationQuery().gte("scheduled_date", format(prevStart, "yyyy-MM-dd")).lte("scheduled_date", format(prevEnd, "yyyy-MM-dd")),
-    reservationQuery().gte("scheduled_date", format(since30, "yyyy-MM-dd")),
+  const [{ data: matchesRaw }, { data: participantsRaw }, { data: schedulesRaw }] = await Promise.all([
     ctx.courtIds.length > 0
-      ? await supabase
+      ? supabase
+          .from(DB_TABLES.matches)
+          .select("id,court_id,owner_id,scheduled_date,scheduled_time,match_status")
+          .in("court_id", ctx.courtIds)
+          .gte("scheduled_date", since30Ymd)
+          .neq("match_status", "cancelled")
+      : { data: [] },
+    ctx.courtIds.length > 0
+      ? supabase
+          .from(DB_TABLES.matchParticipants)
+          .select("match_id,player_id,matches!inner(court_id,scheduled_date)")
+          .in("matches.court_id", ctx.courtIds)
+          .gte("matches.scheduled_date", since30Ymd)
+      : { data: [] },
+    ctx.courtIds.length > 0
+      ? supabase
           .from(DB_TABLES.courtSchedules)
           .select("court_id,day_of_week,open_time,close_time")
           .in("court_id", ctx.courtIds)
       : { data: [] },
   ]);
 
-  const monthMatches = (monthRows ?? []) as Array<{
+  const matches = (matchesRaw ?? []) as Array<{
     id: string;
     court_id: string;
     owner_id: string | null;
-    total_price: number | null;
     scheduled_date: string | null;
     scheduled_time: string | null;
+    match_status: string | null;
   }>;
-  const prevMatches = (prevRows ?? []) as typeof monthMatches;
-  const last30Matches = (last30Rows ?? []) as typeof monthMatches;
+  const participants = (participantsRaw ?? []) as Array<{
+    match_id: string;
+    player_id: string;
+    matches: { court_id: string; scheduled_date: string | null } | { court_id: string; scheduled_date: string | null }[] | null;
+  }>;
   const schedules = (schedulesRaw ?? []) as Array<{
     court_id: string;
     day_of_week: number | null;
@@ -55,127 +94,220 @@ export default async function AdminAnalyticsPage() {
     close_time: string | null;
   }>;
 
-  const sumMoney = (rows: typeof monthMatches) => rows.reduce((acc, r) => acc + Number(r.total_price ?? 0), 0);
-  const currentRevenue = sumMoney(monthMatches);
-  const previousRevenue = sumMoney(prevMatches);
-  const revenueDeltaPct =
-    previousRevenue === 0 ? (currentRevenue > 0 ? 100 : 0) : ((currentRevenue - previousRevenue) / previousRevenue) * 100;
-
-  const countByCourt = new Map<string, number>();
-  for (const row of monthMatches) {
-    countByCourt.set(row.court_id, (countByCourt.get(row.court_id) ?? 0) + 1);
+  const participantCountByMatch = new Map<string, number>();
+  for (const row of participants) {
+    participantCountByMatch.set(row.match_id, (participantCountByMatch.get(row.match_id) ?? 0) + 1);
   }
-  const topCourt = [...countByCourt.entries()].sort((a, b) => b[1] - a[1])[0];
-  const courtNameById = new Map(ctx.courts.map((c) => [c.id, c.name ?? "Cancha"]));
 
-  const hours = new Map<string, number>();
-  for (const row of last30Matches) {
-    const hh = String(row.scheduled_time ?? "").trim().slice(0, 2);
-    if (!hh) continue;
-    const key = `${hh}:00`;
-    hours.set(key, (hours.get(key) ?? 0) + 1);
-  }
-  const peakHour = [...hours.entries()].sort((a, b) => b[1] - a[1])[0];
+  const totalReservations = matches.length;
 
   const scheduleByCourtDay = new Map<string, { open: string; close: string }>();
   for (const s of schedules) {
     if (s.day_of_week == null || !s.open_time || !s.close_time) continue;
-    scheduleByCourtDay.set(`${s.court_id}__${s.day_of_week}`, { open: s.open_time, close: s.close_time });
+    scheduleByCourtDay.set(`${s.court_id}__${s.day_of_week}`, {
+      open: String(s.open_time).slice(0, 5),
+      close: String(s.close_time).slice(0, 5),
+    });
   }
+
+  let totalAvailableSlots = 0;
+  for (let i = 0; i < 30; i++) {
+    const day = subDays(now, i);
+    const jsDay = day.getDay();
+    for (const court of ctx.courts) {
+      const schedule = scheduleByCourtDay.get(`${court.id}__${jsDay}`);
+      if (!schedule) continue;
+      const openMin = toMinutes(schedule.open);
+      const closeMin = toMinutes(schedule.close);
+      if (openMin < 0 || closeMin <= openMin) continue;
+      totalAvailableSlots += Math.max(0, Math.floor((closeMin - openMin) / SLOT_MINUTES));
+    }
+  }
+  const globalOccupancy = totalAvailableSlots > 0 ? Math.round((totalReservations / totalAvailableSlots) * 100) : 0;
+
+  const totalParticipants = matches.reduce((acc, m) => acc + (participantCountByMatch.get(m.id) ?? 0), 0);
+  const avgPlayers = totalReservations > 0 ? totalParticipants / totalReservations : 0;
+
+  const slotCounts = new Map<string, number>(SLOT_LABELS.map((s) => [s, 0]));
+  for (const m of matches) {
+    const slot = slotKeyFromTime(m.scheduled_time);
+    slotCounts.set(slot, (slotCounts.get(slot) ?? 0) + 1);
+  }
+  const busiestSlot = [...slotCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [SLOT_LABELS[0], 0];
+  const maxSlotCount = Math.max(1, ...SLOT_LABELS.map((s) => slotCounts.get(s) ?? 0));
+
+  const dayCounts = new Array(7).fill(0);
+  for (const m of matches) {
+    const idx = mondayFirstIndex(m.scheduled_date);
+    if (idx == null) continue;
+    dayCounts[idx] += 1;
+  }
+  const maxDayCount = Math.max(1, ...dayCounts);
+  const minDayCount = Math.min(...dayCounts);
+  const busiestDayIdx = dayCounts.findIndex((c) => c === maxDayCount);
+  const quietestDayIdx = dayCounts.findIndex((c) => c === minDayCount);
+
   const reservationsByCourt = new Map<string, number>();
-  for (const row of last30Matches) {
-    reservationsByCourt.set(row.court_id, (reservationsByCourt.get(row.court_id) ?? 0) + 1);
+  const completeByCourt = new Map<string, number>();
+  const incompleteByCourt = new Map<string, number>();
+  for (const m of matches) {
+    reservationsByCourt.set(m.court_id, (reservationsByCourt.get(m.court_id) ?? 0) + 1);
+    const count = participantCountByMatch.get(m.id) ?? 0;
+    if (count >= 4) {
+      completeByCourt.set(m.court_id, (completeByCourt.get(m.court_id) ?? 0) + 1);
+    } else {
+      incompleteByCourt.set(m.court_id, (incompleteByCourt.get(m.court_id) ?? 0) + 1);
+    }
   }
   const availableSlotsByCourt = new Map<string, number>();
   for (let i = 0; i < 30; i++) {
-    const d = subDays(now, i);
-    const day = d.getDay();
+    const day = subDays(now, i);
+    const jsDay = day.getDay();
     for (const court of ctx.courts) {
-      const schedule = scheduleByCourtDay.get(`${court.id}__${day}`);
+      const schedule = scheduleByCourtDay.get(`${court.id}__${jsDay}`);
       if (!schedule) continue;
-      const openMin = Number(schedule.open.slice(0, 2)) * 60 + Number(schedule.open.slice(3, 5));
-      const closeMin = Number(schedule.close.slice(0, 2)) * 60 + Number(schedule.close.slice(3, 5));
-      const slots = Math.max(0, Math.floor((closeMin - openMin) / 60));
+      const openMin = toMinutes(schedule.open);
+      const closeMin = toMinutes(schedule.close);
+      if (openMin < 0 || closeMin <= openMin) continue;
+      const slots = Math.max(0, Math.floor((closeMin - openMin) / SLOT_MINUTES));
       availableSlotsByCourt.set(court.id, (availableSlotsByCourt.get(court.id) ?? 0) + slots);
     }
   }
-  const uniquePlayers = new Set(monthMatches.map((m) => m.owner_id).filter((id): id is string => Boolean(id))).size;
-  const weekDayLabels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-  const byWeekDay = [0, 0, 0, 0, 0, 0, 0];
-  for (const row of last30Matches) {
-    if (!row.scheduled_date) continue;
-    const d = new Date(`${row.scheduled_date}T12:00:00`);
-    const jsDay = d.getDay();
-    const mondayFirst = jsDay === 0 ? 6 : jsDay - 1;
-    byWeekDay[mondayFirst] += 1;
+
+  const weekBuckets = [0, 0, 0, 0];
+  for (const m of matches) {
+    if (!m.scheduled_date) continue;
+    const diffDays = Math.floor((now.getTime() - new Date(`${m.scheduled_date}T12:00:00`).getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0 || diffDays > 29) continue;
+    const idx = 3 - Math.floor(diffDays / 7);
+    if (idx >= 0 && idx < 4) weekBuckets[idx] += 1;
   }
-  const maxWeekday = Math.max(1, ...byWeekDay);
+  const maxWeek = Math.max(1, ...weekBuckets);
+  const weekDelta = weekBuckets[3] - weekBuckets[2];
+
+  const playerVisits = new Map<string, Set<string>>();
+  for (const m of matches) {
+    if (!m.owner_id) continue;
+    const set = playerVisits.get(m.owner_id) ?? new Set<string>();
+    set.add(m.id);
+    playerVisits.set(m.owner_id, set);
+  }
+  for (const p of participants) {
+    const set = playerVisits.get(p.player_id) ?? new Set<string>();
+    set.add(p.match_id);
+    playerVisits.set(p.player_id, set);
+  }
+  let oneTimePlayers = 0;
+  let recurrentPlayers = 0;
+  for (const visits of playerVisits.values()) {
+    if (visits.size <= 1) oneTimePlayers += 1;
+    else recurrentPlayers += 1;
+  }
+
+  const deadSlots = [...slotCounts.entries()].sort((a, b) => a[1] - b[1]).slice(0, 3);
 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
         <p className={`${adminKicker} text-violet-600`}>Analytics</p>
-        <h1 className={adminTitle}>Estadísticas del club</h1>
-        <p className={adminSubtitle}>KPIs clave de reservas, ingresos y ocupación.</p>
+        <h1 className={adminTitle}>Uso y ocupación del club</h1>
+        <p className={adminSubtitle}>Estadísticas puras de ocupación y demanda de los últimos 30 días.</p>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={adminCard}>
-          <p className={adminKicker}>Ingresos del mes</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">${currentRevenue.toFixed(2)}</p>
-          <p className="text-sm font-medium text-slate-500">Mes anterior: ${previousRevenue.toFixed(2)}</p>
-          <p className={`mt-2 text-sm font-semibold ${revenueDeltaPct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-            {revenueDeltaPct >= 0 ? "↑" : "↓"} {Math.abs(revenueDeltaPct).toFixed(1)}% mes a mes
+          <p className={adminKicker}>Tasa de ocupación global</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{globalOccupancy}%</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {totalReservations} reservas / {totalAvailableSlots} slots
+          </p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, globalOccupancy)}%` }} />
+          </div>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Partido promedio</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{avgPlayers.toFixed(1)}/4</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">jugadores promedio</p>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Horario más demandado</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{busiestSlot[0]}hs</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{busiestSlot[1]} reservas</p>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Día más ocupado</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {busiestDayIdx >= 0 ? WEEKDAY_LABELS[busiestDayIdx] : "Sin datos"}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {busiestDayIdx >= 0 ? `${dayCounts[busiestDayIdx]} reservas` : "Sin reservas"}
           </p>
         </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Jugadores únicos (mes)</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{uniquePlayers}</p>
-        </div>
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900">Cancha más reservada</h2>
-        <p className="mt-2 text-lg font-semibold text-slate-800">
-          {topCourt ? `${courtNameById.get(topCourt[0]) ?? "Cancha"} (${topCourt[1]} reservas)` : "Sin datos"}
-        </p>
-        <h2 className="mt-5 text-base font-bold text-slate-900">Hora pico (últimos 30 días)</h2>
-        <p className="mt-2 text-lg font-semibold text-slate-800">
-          {peakHour ? `${peakHour[0]} (${peakHour[1]} reservas)` : "Sin datos"}
-        </p>
-      </section>
-
-      <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900">Reservas por día de la semana (30 días)</h2>
-        <div className="mt-4 grid gap-2">
-          {weekDayLabels.map((label, idx) => (
-            <div key={label} className="grid grid-cols-[42px_1fr_28px] items-center gap-2 text-xs">
-              <span className="font-semibold text-slate-500">{label}</span>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
-                  style={{ width: `${Math.max(6, (byWeekDay[idx] / maxWeekday) * 100)}%` }}
-                />
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Ocupación por hora (30 días)</h2>
+        <div className="mt-4 space-y-2">
+          {SLOT_LABELS.map((slot) => {
+            const count = slotCounts.get(slot) ?? 0;
+            const isTop = slot === busiestSlot[0];
+            return (
+              <div key={slot} className="grid grid-cols-[56px_1fr_40px] items-center gap-2 text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">{slot}</span>
+                <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className={`h-full rounded-full ${isTop ? "bg-[#0461C4]" : "bg-[#7CC0FF]"}`}
+                    style={{ width: `${Math.max(3, (count / maxSlotCount) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-right font-bold text-slate-700 dark:text-slate-200">{count}</span>
               </div>
-              <span className="text-right font-bold text-slate-700">{byWeekDay[idx]}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900">Tasa de ocupación por cancha</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Ocupación por día de semana</h2>
+        <div className="mt-4 space-y-2">
+          {WEEKDAY_LABELS.map((day, idx) => {
+            const count = dayCounts[idx];
+            const isMax = idx === busiestDayIdx;
+            const isMin = idx === quietestDayIdx;
+            return (
+              <div key={day} className="grid grid-cols-[70px_1fr_36px] items-center gap-2 text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">{day.slice(0, 3)}</span>
+                <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className={`h-full rounded-full ${
+                      isMax ? "bg-[#0461C4]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
+                    }`}
+                    style={{ width: `${Math.max(3, (count / maxDayCount) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-right font-bold text-slate-700 dark:text-slate-200">{count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={adminCard}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Tasa de ocupación por cancha</h2>
         <ul className="mt-4 flex flex-col gap-2">
           {ctx.courts.map((court) => {
             const reservations = reservationsByCourt.get(court.id) ?? 0;
             const slots = availableSlotsByCourt.get(court.id) ?? 0;
             const ratio = slots > 0 ? Math.round((reservations / slots) * 100) : 0;
+            const completos = completeByCourt.get(court.id) ?? 0;
+            const incompletos = incompleteByCourt.get(court.id) ?? 0;
             return (
-              <li key={court.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm">
+              <li key={court.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/30">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-800">{court.name ?? "Cancha"}</span>
-                  <span className="font-bold text-slate-900">{ratio}%</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{court.name ?? "Cancha"}</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{ratio}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/60">
                   <div
@@ -183,13 +315,72 @@ export default async function AdminAnalyticsPage() {
                     style={{ width: `${Math.max(2, ratio)}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {reservations} reservas / {slots} slots disponibles
+                </p>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                  {completos} partidos completos · {incompletos} incompletos
                 </p>
               </li>
             );
           })}
         </ul>
+      </section>
+
+      <section className={adminCard}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Tendencia semanal (últimas 4 semanas)</h2>
+        <div className="mt-4 grid grid-cols-4 gap-3">
+          {weekBuckets.map((value, idx) => (
+            <div key={idx} className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Semana {idx + 1}</p>
+              <div className="mt-2 flex h-24 items-end justify-center">
+                <div
+                  className="w-10 rounded-t-md bg-[#0585FC]"
+                  style={{ height: `${Math.max(8, (value / maxWeek) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">{value} reservas</p>
+            </div>
+          ))}
+        </div>
+        <p
+          className={`mt-3 text-sm font-semibold ${
+            weekDelta > 0 ? "text-emerald-600" : weekDelta < 0 ? "text-rose-600" : "text-slate-500"
+          }`}
+        >
+          {weekDelta > 0 ? `↑ Esta semana va +${weekDelta} vs la anterior` : null}
+          {weekDelta < 0 ? `↓ Esta semana va ${Math.abs(weekDelta)} menos vs la anterior` : null}
+          {weekDelta === 0 ? "→ Esta semana está igual que la anterior" : null}
+        </p>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className={adminCard}>
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Jugadores únicos vs recurrentes</h2>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">1 sola vez</p>
+              <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-100">{oneTimePlayers}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">2+ veces</p>
+              <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-100">{recurrentPlayers}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <h2 className="text-base font-bold text-amber-900 dark:text-amber-300">
+            💡 Horarios con baja ocupación — considerá promociones
+          </h2>
+          <ul className="mt-3 space-y-1 text-sm font-medium text-amber-800 dark:text-amber-200">
+            {deadSlots.map(([slot, count]) => (
+              <li key={slot}>
+                {slot}hs → {count} reservas en 30 días
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
     </div>
   );
