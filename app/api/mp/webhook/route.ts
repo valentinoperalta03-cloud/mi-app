@@ -196,6 +196,21 @@ async function handleNotification(req: Request) {
         body: "Tu pago fue procesado correctamente.",
         match_id: matchId,
       });
+      const { data: ownerRow } = await admin
+        .from(DB_TABLES.matches)
+        .select("owner_id")
+        .eq("id", matchId)
+        .maybeSingle();
+      const ownerId = String((ownerRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+      if (ownerId && ownerId !== payerUserId) {
+        await createNotification(admin, {
+          user_id: ownerId,
+          type: "payment_approved",
+          title: "Pago confirmado de jugador",
+          body: "Un jugador confirmó su pago y su lugar en el partido.",
+          match_id: matchId,
+        });
+      }
     } else {
       const { data: matchBefore } = await admin
         .from(DB_TABLES.matches)

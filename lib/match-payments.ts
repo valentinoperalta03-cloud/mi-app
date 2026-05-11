@@ -76,6 +76,7 @@ export async function createParticipantMercadoPagoPreference(params: {
   supabase: SupabaseServer;
   matchId: string;
   payerUserId: string;
+  requestedTeam?: 1 | 2 | null;
 }): Promise<
   | { ok: true; initPoint: string; prefId: string; total: number; marketplaceFee: number }
   | { ok: false; message: string }
@@ -120,6 +121,7 @@ export async function createParticipantMercadoPagoCheckout(params: {
   supabase: SupabaseServer;
   matchId: string;
   payerUserId: string;
+  requestedTeam?: 1 | 2 | null;
 }): Promise<
   | { ok: true; initPoint: string; prefId: string; total: number; marketplaceFee: number }
   | { ok: false; message: string }
@@ -135,6 +137,8 @@ export async function createParticipantMercadoPagoCheckout(params: {
     status: "pending",
     amount: mp.total,
     marketplace_fee: mp.marketplaceFee,
+    team_preference:
+      params.requestedTeam === 1 || params.requestedTeam === 2 ? params.requestedTeam : null,
   });
   if (payErr) {
     log.error({
