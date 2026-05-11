@@ -28,9 +28,7 @@ import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from 
 import { PAYMENT_COPY } from "@/lib/payment-copy";
 import {
   acceptJoinRequest,
-  cancelFixedSlotDayAction,
   cancelParticipation,
-  confirmCashPaymentAction,
   regenerarLinkPago,
   rejectJoinRequest,
   requestToJoin,
@@ -47,9 +45,6 @@ type PageProps = {
     cancel_ok?: string;
     cancel_error?: string;
     pay_regen_error?: string;
-    cash_ok?: string;
-    cash_cancel_ok?: string;
-    cash_error?: string;
   }>;
 };
 
@@ -142,9 +137,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const cancelErrorMessage = cancelErrorKey
     ? CANCEL_ERROR_MESSAGES[cancelErrorKey] ?? "No se pudo cancelar tu lugar."
     : null;
-  const cashOk = sp.cash_ok === "1";
-  const cashCancelOk = sp.cash_cancel_ok === "1";
-  const cashErrorMessage = sp.cash_error ? decodeURIComponent(sp.cash_error) : null;
   const joinErrorKey = sp.join_error?.trim() ?? "";
   const joinFlashMessage = joinSent
     ? JOIN_FLASH_MESSAGES.sent
@@ -284,7 +276,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const myPaymentStatus = (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? "none";
   const hasInvitedPayment = String(myPaymentStatus).toLowerCase() === "invited";
-  const hasCashPendingPayment = String(myPaymentStatus).toLowerCase() === "cash_pending";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved";
   const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
@@ -327,7 +318,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const favoriteIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
 
   const isPrivate = String(match.visibility ?? "").toLowerCase() === "privado";
-  const isFixedSlotMatch = Boolean(match.es_turno_fijo);
   const inviteOpen = sp.invite === "true";
   const ownerId = match.owner_id ?? "";
   const isFriendOfOwner = Boolean(ownerId && favoriteIds.includes(ownerId));
@@ -843,22 +833,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
           {cancelErrorMessage}
         </p>
-      ) : null}
-      {cashOk ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-          Confirmaste tu asistencia en efectivo para este turno fijo.
-        </p>
-      ) : null}
-      {cashCancelOk ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-          Cancelaste tu lugar para este turno fijo.
-        </p>
-      ) : null}
-      {cashErrorMessage ? (
-        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
-          {cashErrorMessage}
-        </p>
-      ) : null}
+       ) : null}
 
       {joinAccepted && isOwner ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
@@ -1102,7 +1077,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </div>
       ) : null}
 
-      {hasInvitedPayment ? (
+      {hasInvitedPayment && !isParticipant ? (
         <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
           <p className="text-sm text-slate-700">Confirmá tu lugar pagando tu parte del turno.</p>
@@ -1114,31 +1089,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
             >
               Confirmar y pagar
-            </button>
-          </form>
-        </section>
-      ) : null}
-
-      {isFixedSlotMatch && hasCashPendingPayment ? (
-        <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
-          <h2 className="text-base font-bold text-[#0461C4]">Turno fijo — confirmá tu asistencia</h2>
-          <form action={confirmCashPaymentAction}>
-            <input type="hidden" name="match_id" value={id} />
-            <button
-              type="submit"
-              className="w-full rounded-2xl py-3 text-sm font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-            >
-              Voy a pagar en efectivo
-            </button>
-          </form>
-          <form action={cancelFixedSlotDayAction}>
-            <input type="hidden" name="match_id" value={id} />
-            <button
-              type="submit"
-              className="w-full rounded-2xl border border-rose-300 bg-rose-50 py-3 text-sm font-semibold text-rose-800"
-            >
-              No puedo ir este día
             </button>
           </form>
         </section>
@@ -1207,3 +1157,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     </MotionPage>
   );
 }
+
+
+
+
+
+
