@@ -5,7 +5,8 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { createCourt, updateCourt } from "./actions";
+import { createCourt, deleteCourt, updateCourt } from "./actions";
+import CourtImageUploader from "./court-image-uploader";
 
 type CourtRow = {
   id: string;
@@ -17,10 +18,16 @@ type CourtRow = {
   image_url?: string | null;
 };
 
-export default async function AdminCanchasPage() {
+export default async function AdminCanchasPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
+  const sp = (await searchParams) ?? {};
+  const errorParam = typeof sp.error === "string" ? sp.error : "";
 
   const { data: courtsRaw, error } =
     ctx.courtIds.length > 0
@@ -32,6 +39,54 @@ export default async function AdminCanchasPage() {
       : { data: [], error: null };
 
   const courts = (courtsRaw ?? []) as CourtRow[];
+  const today = new Date().toISOString().slice(0, 10);
+
+  const courtIds = courts.map((c) => c.id);
+  const { data: blocksRaw } = courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("court_id,id")
+        .in("court_id", courtIds)
+        .eq("blocked_date", today)
+    : { data: [] };
+  const blockedCourtIds = new Set((blocksRaw ?? []).map((b: { court_id: string }) => b.court_id));
+
+  const { data: schedulesRaw } = courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtSchedules)
+        .select("court_id,range_name,price")
+        .in("court_id", courtIds)
+        .not("range_name", "is", null)
+    : { data: [] };
+  const schedules = (schedulesRaw ?? []) as Array<{ court_id: string; range_name: string | null; price: number | null }>;
+  const priceRangesByCourt = new Map<string, Map<string, number>>();
+  for (const row of schedules) {
+    const range = String(row.range_name ?? "").trim().toLowerCase();
+    if (!range) continue;
+    const courtMap = priceRangesByCourt.get(row.court_id) ?? new Map<string, number>();
+    if (typeof row.price === "number" && Number.isFinite(row.price)) {
+      courtMap.set(range, row.price);
+    }
+    priceRangesByCourt.set(row.court_id, courtMap);
+  }
+
+  function getPriceSummary(courtId: string) {
+    const ranges = priceRangesByCourt.get(courtId);
+    if (!ranges || ranges.size === 0) return "Sin precios dinámicos";
+    const morning = ranges.get("mañana") ?? ranges.get("manana");
+    const afternoon = ranges.get("tarde");
+    const night = ranges.get("noche");
+    const parts: string[] = [];
+    if (typeof morning === "number") parts.push(`Mañana: $${morning}`);
+    if (typeof afternoon === "number") parts.push(`Tarde: $${afternoon}`);
+    if (typeof night === "number") parts.push(`Noche: $${night}`);
+    if (parts.length === 0) {
+      for (const [name, amount] of ranges.entries()) {
+        parts.push(`${name.charAt(0).toUpperCase()}${name.slice(1)}: $${amount}`);
+      }
+    }
+    return parts.join(" · ");
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,6 +102,7 @@ export default async function AdminCanchasPage() {
           {error.message}
         </div>
       ) : null}
+      {errorParam ? <div className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800`}>{errorParam}</div> : null}
 
       {ctx.clubs.length > 0 ? (
         <details className={`${adminCard} group`}>
@@ -55,7 +111,7 @@ export default async function AdminCanchasPage() {
               Nueva cancha +
             </span>
           </summary>
-          <form action={createCourt} className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+          <form action={createCourt} className="mt-4 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Club</span>
               <select
@@ -112,15 +168,7 @@ export default async function AdminCanchasPage() {
               <input type="checkbox" name="indoor" className="h-4 w-4 rounded border-slate-300" />
               Techada
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Imagen URL</span>
-              <input
-                name="image_url"
-                type="text"
-                placeholder="https://..."
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-              />
-            </label>
+            <CourtImageUploader courtId={`new-${ctx.userId}`} label="Imagen de cancha" />
             <button
               type="submit"
               className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
@@ -143,32 +191,48 @@ export default async function AdminCanchasPage() {
         <ul className="flex flex-col gap-3">
           {courts.map((c) => (
             <li key={c.id} className={adminCard}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-lg font-bold text-slate-900">{c.name ?? "Cancha"}</p>
-                  <p className="text-sm font-medium text-[#0461C4]">${c.price ?? 0}/turno</p>
-                  <p className="text-xs font-medium text-slate-500">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  {c.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- URL pública storage
+                    <img src={c.image_url} alt={c.name ?? "Cancha"} className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-200 text-lg font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {(c.name ?? "C").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{c.name ?? "Cancha"}</p>
+                    <p className="text-base font-semibold text-[#0461C4]">${c.price ?? 0}/turno</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {blockedCourtIds.has(c.id) ? "🔴 Bloqueada hoy" : "🟢 Disponible"}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {getPriceSummary(c.id)}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                     {c.surface ? c.surface : "Superficie no definida"} · {c.indoor ? "Techada" : "Descubierta"}
-                  </p>
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Link
                     href={`/admin/canchas/${c.id}/horarios`}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5"
+                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:text-slate-200"
                   >
                     Horarios
                   </Link>
                   <Link
                     href={`/admin/canchas/${c.id}/precios`}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5"
+                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:text-slate-200"
                   >
                     Precios
                   </Link>
                 </div>
               </div>
-              <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+              <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
                 <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5">
+                  <span className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                     Editar
                   </span>
                 </summary>
@@ -203,9 +267,21 @@ export default async function AdminCanchasPage() {
                     <input type="checkbox" name="indoor" defaultChecked={Boolean(c.indoor)} className="h-4 w-4 rounded border-slate-300" />
                     Techada
                   </label>
-                  <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-                    Guardar cambios
-                  </button>
+                  <CourtImageUploader courtId={c.id} initialUrl={c.image_url ?? ""} label="Imagen de cancha" />
+                  <div className="flex flex-wrap gap-2">
+                    <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+                      Guardar cambios
+                    </button>
+                    <button
+                      type="submit"
+                      formAction={deleteCourt}
+                      name="court_id"
+                      value={c.id}
+                      className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </form>
               </details>
             </li>

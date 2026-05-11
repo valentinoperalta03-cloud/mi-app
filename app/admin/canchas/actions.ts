@@ -62,6 +62,7 @@ export async function updateCourt(formData: FormData): Promise<void> {
   const priceRaw = getField(formData, "price");
   const surface = getField(formData, "surface");
   const indoor = formData.get("indoor") === "on";
+  const imageUrl = getField(formData, "image_url");
 
   if (!courtId || !name) {
     redirectCanchasError("Completá los datos de la cancha.");
@@ -80,12 +81,44 @@ export async function updateCourt(formData: FormData): Promise<void> {
 
   const { error } = await supabase
     .from(DB_TABLES.courts)
-    .update({ name, price, surface: surface || null, indoor })
+    .update({ name, price, surface: surface || null, indoor, image_url: imageUrl || null })
     .eq("id", courtId);
 
   if (error) {
     redirectCanchasError(error.message);
   }
+  revalidatePath("/admin/canchas");
+  redirect("/admin/canchas");
+}
+
+export async function deleteCourt(formData: FormData): Promise<void> {
+  const courtId = getField(formData, "court_id");
+  if (!courtId) {
+    redirectCanchasError("Cancha inválida.");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.courtIds.includes(courtId)) {
+    redirectCanchasError("Cancha no autorizada.");
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { count } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id", { count: "exact", head: true })
+    .eq("court_id", courtId)
+    .eq("match_type", "reservation")
+    .gte("scheduled_date", today);
+
+  if ((count ?? 0) > 0) {
+    redirectCanchasError("No podés eliminar una cancha con reservas futuras.");
+  }
+
+  const { error } = await supabase.from(DB_TABLES.courts).delete().eq("id", courtId);
+  if (error) redirectCanchasError(error.message);
+
   revalidatePath("/admin/canchas");
   redirect("/admin/canchas");
 }
