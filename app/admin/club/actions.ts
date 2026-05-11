@@ -22,7 +22,7 @@ export async function updateClubInfo(formData: FormData) {
     redirect("/login");
   }
   if (!actionCtx.clubIds.length) {
-    redirect("/admin/club?error=no_club");
+    redirect("/admin/config?error=no_club");
   }
   const ownClubId = actionCtx.clubIds[0];
 
@@ -51,9 +51,9 @@ export async function updateClubInfo(formData: FormData) {
     .eq("owner_id", actionCtx.userId);
   if (error) {
     console.error("[admin/club] update error", error);
-    redirect(`/admin/club?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/config?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath("/admin/club");
-  redirect("/admin/club?saved=1");
+  revalidatePath("/admin/config");
+  redirect("/admin/config?saved=1");
 }

@@ -18,7 +18,6 @@ import {
 import { adminCard, adminPressable } from "@/components/admin/admin-premium";
 import { SkeletonBlock } from "@/components/admin/ui-skeleton";
 
-const PIN = process.env.NEXT_PUBLIC_ADMIN_FINANCE_PIN ?? "1234";
 const CACHE_PREFIX = "admin_finance_matches_v1:";
 const CACHE_TTL_MS = 90_000;
 
@@ -126,6 +125,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const [unlocked, setUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
+  const [expectedPin, setExpectedPin] = useState("1234");
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -162,9 +162,42 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     if (unlocked) void fetchPaid();
   }, [unlocked, fetchPaid]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExpectedPin() {
+      if (courtIds.length === 0) {
+        setExpectedPin("1234");
+        return;
+      }
+      const supabase = createClient();
+      const { data: courtRow } = await supabase
+        .from(DB_TABLES.courts)
+        .select("club_id")
+        .in("id", courtIds)
+        .limit(1)
+        .maybeSingle();
+      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
+      if (!clubId) {
+        setExpectedPin("1234");
+        return;
+      }
+      const { data: clubRow } = await supabase
+        .from(DB_TABLES.clubs)
+        .select("finance_pin")
+        .eq("id", clubId)
+        .maybeSingle();
+      const pin = String((clubRow as { finance_pin?: string | null } | null)?.finance_pin ?? "").trim();
+      if (!cancelled) setExpectedPin(pin || "1234");
+    }
+    void loadExpectedPin();
+    return () => {
+      cancelled = true;
+    };
+  }, [courtIds]);
+
   function tryPin(e: FormEvent) {
     e.preventDefault();
-    if (pinInput === PIN) {
+    if (pinInput === expectedPin) {
       setUnlocked(true);
       setPinError(false);
       setPinInput("");

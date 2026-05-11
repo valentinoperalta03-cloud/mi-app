@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Activity, Building2, CalendarCheck, CreditCard, DollarSign, House, LayoutGrid, Settings, Target, Users } from "lucide-react";
+import { Activity, CalendarCheck, CreditCard, DollarSign, House, LayoutGrid, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
 
@@ -15,7 +15,6 @@ const desktopLinks = [
   { href: "/admin/turnos-fijos", label: "Turnos", icon: CalendarCheck },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
   { href: "/admin/canchas", label: "Canchas", icon: LayoutGrid },
-  { href: "/admin/club", label: "Club", icon: Building2 },
   { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;
 
@@ -28,19 +27,19 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 hidden border-b border-slate-100/80 bg-white/85 backdrop-blur-md md:block dark:border-slate-800 dark:bg-slate-950/85">
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(180px,1fr)_minmax(0,2fr)] items-center gap-4 px-4 py-3 md:px-8">
-        <div className="min-w-0">
+    <header className="sticky top-0 z-40 hidden border-b border-slate-800 bg-slate-950 md:block">
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-2 md:px-6">
+        <div className="min-w-0 shrink-0">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-            <img src={logoUrl} alt={clubName ?? "Club"} className="h-10 w-auto max-w-[180px] object-contain" />
+            <img src={logoUrl} alt={clubName ?? "Club"} className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-700" />
           ) : (
-            <p className="truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              {clubName ?? "Panel del club"}
-            </p>
+            <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-xs font-bold text-slate-200 ring-1 ring-slate-700">
+              {(clubName ?? "Club").slice(0, 1).toUpperCase()}
+            </div>
           )}
         </div>
-        <nav className="flex flex-nowrap items-center justify-end gap-0.5 overflow-hidden" aria-label="Modulos">
+        <nav className="flex flex-nowrap items-center justify-end gap-0.5 overflow-visible" aria-label="Modulos">
           {desktopLinks.map((item) => {
             const Icon = item.icon;
             const active =
@@ -52,18 +51,18 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
                 key={item.href}
                 href={item.href}
                 prefetch
-                className={`relative inline-flex items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-semibold touch-manipulation transition-transform duration-150 hover:scale-[1.02] active:scale-[0.96] ${
-                  active ? "text-[#0461C4] dark:text-sky-400" : "text-slate-600 hover:bg-slate-50 hover:text-[#0585FC] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-400"
+                className={`relative inline-flex items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-semibold touch-manipulation transition-colors ${
+                  active ? "bg-[#0585FC]/15 text-[#0585FC]" : "text-slate-400 hover:bg-slate-800 hover:text-white"
                 }`}
               >
                 {active ? (
                   <motion.span
                     layoutId="admin-desktop-nav-pill"
-                    className="absolute inset-0 -z-10 rounded-2xl bg-[#0585FC]/10/85 ring-1 ring-[#0585FC]/20/50"
+                    className="absolute inset-0 -z-10 rounded-xl bg-[#0585FC]/15"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 ) : null}
-                <Icon size={16} strokeWidth={2} className={active ? "text-[#0585FC] dark:text-sky-400" : "text-slate-400 dark:text-slate-500"} />
+                <Icon size={14} strokeWidth={2} className={active ? "text-[#0585FC]" : "text-slate-500"} />
                 {item.label}
               </Link>
             );
