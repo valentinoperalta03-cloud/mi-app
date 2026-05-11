@@ -18,7 +18,7 @@ import {
 import { adminCard, adminPressable } from "@/components/admin/admin-premium";
 import { SkeletonBlock } from "@/components/admin/ui-skeleton";
 
-const PIN = "1234";
+const PIN = process.env.NEXT_PUBLIC_ADMIN_FINANCE_PIN ?? "1234";
 const CACHE_PREFIX = "admin_finance_matches_v1:";
 const CACHE_TTL_MS = 90_000;
 
@@ -178,7 +178,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const byCourt = useMemo(() => sumByCourt(rows), [rows]);
   const total = useMemo(() => totalPaid(rows), [rows]);
   const compare = useMemo(() => compareThisMonthVsPrevious(rows), [rows]);
-  const byDay = useMemo(() => aggregateByDay(rows, 14), [rows]);
+  const byDay = useMemo(() => aggregateByDay(rows, 30), [rows]);
   const byWeek = useMemo(() => aggregateByWeek(rows), [rows]);
   const byMonth = useMemo(() => aggregateByMonth(rows), [rows]);
   const maxDay = useMemo(() => byDay.reduce((m, x) => Math.max(m, x.total), 0), [byDay]);
@@ -211,28 +211,16 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
   }, [paidRows, thisMonthEnd, thisMonthStart]);
-  const pendingRows = useMemo(() => {
-    const since = subDays(now, 30);
-    return rows
-      .filter((r) => (r.payment_status ?? "").toLowerCase() === "pending")
-      .filter((r) => parseISO(r.date) >= since)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [now, rows]);
-  const pendingOwnerIds = Array.from(new Set(pendingRows.map((r) => r.owner_id).filter((v): v is string => Boolean(v))));
-  const [ownerNames, setOwnerNames] = useState<Map<string, string>>(new Map());
-
-  useEffect(() => {
-    async function loadOwnerNames() {
-      if (pendingOwnerIds.length === 0) {
-        setOwnerNames(new Map());
-        return;
-      }
-      const supabase = createClient();
-      const { data } = await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", pendingOwnerIds);
-      setOwnerNames(new Map((data ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name ?? "Jugador"])));
-    }
-    void loadOwnerNames();
-  }, [pendingOwnerIds.join(",")]);
+  const refundsThisMonth = useMemo(
+    () =>
+      rows
+        .filter((r) => (r.payment_status ?? "").toLowerCase() === "refund_requested")
+        .filter((r) => {
+          const d = parseISO(r.date);
+          return d >= thisMonthStart && d <= thisMonthEnd;
+        }).length,
+    [rows, thisMonthEnd, thisMonthStart]
+  );
 
   if (!unlocked) {
     return (
@@ -242,19 +230,19 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
       >
         <h2 className="text-lg font-bold text-slate-900">Módulo financiero</h2>
         <p className="text-sm font-medium text-slate-500">
-          Ingresá el PIN de administrador (4 dígitos) para ver agregados de ingresos.
+          Ingresá el PIN de administrador (6 dígitos) para ver agregados de ingresos.
         </p>
         <input
           type="password"
           inputMode="numeric"
-          maxLength={4}
+          maxLength={6}
           value={pinInput}
           onChange={(e) => {
-            setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4));
+            setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6));
             setPinError(false);
           }}
           className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
-          placeholder="····"
+          placeholder="······"
           autoComplete="one-time-code"
         />
         {pinError ? (
@@ -315,8 +303,8 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
               </p>
             </div>
             <div className={adminCard}>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pagos pendientes (30 días)</p>
-              <p className="mt-2 text-xl font-bold text-amber-700">{pendingRows.length}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Reembolsos del mes</p>
+              <p className="mt-2 text-xl font-bold text-sky-700">{refundsThisMonth}</p>
             </div>
           </section>
 
@@ -338,43 +326,15 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
                 </p>
               </div>
             </div>
-            <p
-              className={`mt-4 text-sm font-semibold ${
-                compare.deltaPct >= 0 ? "text-emerald-600" : "text-rose-600"
+            <div
+              className={`mt-4 inline-flex w-fit items-center rounded-full px-3 py-1.5 text-sm font-semibold ${
+                compare.deltaPct >= 0
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
               }`}
             >
-              {compare.deltaPct >= 0 ? "↑" : "↓"} {Math.abs(compare.deltaPct).toFixed(1)}% vs periodo
-              anterior
-            </p>
-          </section>
-
-          <section className={adminCard}>
-            <h3 className="text-base font-bold text-slate-900">Pagos pendientes</h3>
-            {pendingRows.length === 0 ? (
-              <p className="mt-3 text-sm font-medium text-slate-500">No hay pendientes en los últimos 30 días.</p>
-            ) : (
-              <ul className="mt-4 flex flex-col gap-2">
-                {pendingRows.slice(0, 20).map((row) => {
-                  const dateYmd = row.scheduled_date ?? format(parseISO(row.date), "yyyy-MM-dd");
-                  return (
-                    <li key={row.id} className="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-3 text-sm md:flex-row md:items-center md:justify-between">
-                      <div className="space-y-0.5">
-                        <p className="font-semibold text-slate-900">{ownerNames.get(row.owner_id ?? "") ?? "Jugador"}</p>
-                        <p className="text-xs text-slate-500">
-                          {format(parseISO(`${dateYmd}T12:00:00`), "d MMM yyyy", { locale: es })} · {courtName.get(row.court_id) ?? "Cancha"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-bold text-amber-700">${Number(row.total_price ?? 0).toFixed(2)}</p>
-                        <Link href={`/admin/reservas?date=${dateYmd}`} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                          Ver detalle
-                        </Link>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+              {compare.deltaPct >= 0 ? "↑" : "↓"} {Math.abs(compare.deltaPct).toFixed(1)}%
+            </div>
           </section>
 
           <section className={adminCard}>
@@ -447,6 +407,14 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
                 ))}
               </ul>
             </div>
+          </section>
+          <section className={adminCard}>
+            <Link
+              href="/admin/finanzas/reembolsos"
+              className="text-base font-bold text-[#0585FC] transition hover:text-[#0461C4]"
+            >
+              Ver panel de reembolsos →
+            </Link>
           </section>
         </>
       ) : null}
