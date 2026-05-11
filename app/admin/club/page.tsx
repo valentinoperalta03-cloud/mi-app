@@ -13,7 +13,7 @@ const NO_CLUB_MSG =
   "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id" as const;
 
 function formatSupabaseUserMessage(err: {
   message: string;
@@ -36,7 +36,7 @@ async function fetchClubRowForOwner(
   userSupabase: SupabaseClient,
   clubId: string,
   ownerUserId: string
-): Promise<{ row: Record<string, string | null>; errorMsg: string | null }> {
+): Promise<{ row: Record<string, string | null> & { cancellation_hours?: number | null }; errorMsg: string | null }> {
   const q1 = await userSupabase
     .from(DB_TABLES.clubs)
     .select(CLUB_ADMIN_COLUMNS)
@@ -45,7 +45,10 @@ async function fetchClubRowForOwner(
     .maybeSingle();
 
   if (!q1.error && q1.data) {
-    return { row: q1.data as Record<string, string | null>, errorMsg: null };
+    return {
+      row: q1.data as Record<string, string | null> & { cancellation_hours?: number | null },
+      errorMsg: null,
+    };
   }
 
   if (q1.error) {
@@ -97,7 +100,10 @@ async function fetchClubRowForOwner(
     };
   }
 
-  return { row: q2.data as Record<string, string | null>, errorMsg: null };
+  return {
+    row: q2.data as Record<string, string | null> & { cancellation_hours?: number | null },
+    errorMsg: null,
+  };
 }
 
 function ClubLoadError({ message }: { message: string }) {
@@ -173,6 +179,9 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
         <h1 className={adminTitle}>Información del club</h1>
         <p className={adminSubtitle}>Actualizá datos públicos y de contacto del club.</p>
       </header>
+      <a href={`/clubes/${clubId}`} target="_blank" rel="noreferrer" className="text-[#0585FC] text-sm font-semibold">
+        Ver cómo te ven los jugadores →
+      </a>
       {saved ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
           Cambios guardados correctamente.
@@ -201,6 +210,10 @@ export default async function AdminClubPage({ searchParams }: PageProps) {
           gallery_image_3: club.gallery_image_3 ?? "",
           gallery_image_4: club.gallery_image_4 ?? "",
           cancellation_policy: club.cancellation_policy ?? "",
+          cancellation_hours:
+            typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours)
+              ? club.cancellation_hours
+              : null,
         }}
       />
     </div>

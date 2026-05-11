@@ -79,6 +79,7 @@ type Props = {
     gallery_image_3: string;
     gallery_image_4: string;
     cancellation_policy: string;
+    cancellation_hours: number | null;
   };
 };
 
