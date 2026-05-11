@@ -1,352 +1,467 @@
-import { addDays, format, isTomorrow, isToday, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Activity, CalendarDays, DollarSign, LayoutGrid, Target, Users } from "lucide-react";
-import { adminCard, adminKicker, adminPressable, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
-import { formatLongDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  LayoutGrid,
+  Settings,
+  ShieldAlert,
+  SquareChartGantt,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
+import CurrentArTime from "./current-ar-time";
 
-const quickActions = [
-  { href: "/admin/reservas", label: "Reservas" },
-  { href: "/admin/finanzas", label: "Finanzas" },
-  { href: "/admin/canchas", label: "Canchas" },
-  { href: "/admin/club", label: "Info del club" },
-] as const;
+const quickActions: Array<{
+  href: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}> = [
+  { href: "/admin/reservas", label: "Reservas", description: "Gestioná agenda y pagos", icon: CalendarDays },
+  { href: "/admin/finanzas", label: "Finanzas", description: "Controlá ingresos y egresos", icon: Wallet },
+  { href: "/admin/agenda", label: "Ocupación", description: "Estado de canchas y horarios", icon: SquareChartGantt },
+  { href: "/admin/jugadores", label: "Jugadores", description: "Actividad y retención", icon: Users },
+  { href: "/admin/canchas", label: "Canchas", description: "Configuración de canchas", icon: Building2 },
+  { href: "/admin/club", label: "Club", description: "Datos y branding del club", icon: CircleDollarSign },
+  { href: "/admin/turnos-fijos", label: "Turnos Fijos", description: "Gestión semanal fija", icon: Clock3 },
+  { href: "/admin/config", label: "Config", description: "Preferencias y permisos", icon: Settings },
+];
 
-const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+function getArgentinaNow() {
+  const now = new Date();
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const timeParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const y = dateParts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = dateParts.find((p) => p.type === "month")?.value ?? "01";
+  const d = dateParts.find((p) => p.type === "day")?.value ?? "01";
+  const hh = Number(timeParts.find((p) => p.type === "hour")?.value ?? "0");
+  const mm = Number(timeParts.find((p) => p.type === "minute")?.value ?? "0");
+  return { ymd: `${y}-${m}-${d}`, minutes: hh * 60 + mm };
+}
+
+function timeToMinutes(value: string | null): number {
+  const t = String(value ?? "").slice(0, 5);
+  const [hRaw, mRaw] = t.split(":");
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return -1;
+  return h * 60 + m;
+}
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
+  if (ctx.clubIds.length === 0) redirect("/admin/club");
 
   const today = getTodayYmdInArgentina();
-  const todayLong = formatLongDateInArgentina();
-  const tomorrow = format(addDays(new Date(`${today}T12:00:00`), 1), "yyyy-MM-dd");
-  const weekEnd = format(addDays(new Date(`${today}T12:00:00`), 6), "yyyy-MM-dd");
+  const arNow = getArgentinaNow();
+  const todayDateLabel = formatDateInArgentina(`${today}T12:00:00`, {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const weekAgoDate = new Date(`${today}T12:00:00`);
+  weekAgoDate.setDate(weekAgoDate.getDate() - 7);
+  const weekAgo = weekAgoDate.toISOString().slice(0, 10);
 
-  const { data: todayMatches } = ctx.courtIds.length > 0
+  const { data: clubInfoRaw } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("id,name,logo_url")
+    .in("id", ctx.clubIds)
+    .order("name", { ascending: true })
+    .limit(1);
+  const club = ((clubInfoRaw ?? [])[0] ?? null) as
+    | { id: string; name: string | null; logo_url: string | null }
+    | null;
+  const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
+  const clubInitials = clubName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
+  const { data: todayMatchesRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("id,court_id,owner_id,total_price,payment_status,scheduled_time,scheduled_date,duration_minutes")
+        .select("id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,courts(name)")
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
-        .eq("match_type", "reservation")
-        .eq("match_status", "reserved")
     : { data: [] };
-
-  const todayRows = (todayMatches ?? []) as Array<{
-    id: string; court_id: string; owner_id: string | null; total_price: number | null;
-    payment_status: string | null; scheduled_time: string | null; scheduled_date: string | null; duration_minutes: number | null;
+  const todayMatches = (todayMatchesRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    owner_id: string | null;
+    payment_status: string | null;
+    scheduled_time: string | null;
+    scheduled_date: string | null;
+    match_status: string | null;
+    es_turno_fijo: boolean | null;
+    courts: { name: string | null } | { name: string | null }[] | null;
   }>;
+  const todayMatchIds = todayMatches.map((m) => m.id);
 
-  const reservasHoy = todayRows.length;
-  const ingresosEstimados = todayRows
-    .filter((r) => String(r.payment_status ?? "").toLowerCase() === "paid")
-    .reduce((sum, r) => sum + (r.total_price ?? 0), 0);
-  const canchasOcupadas = new Set(todayRows.map((r) => r.court_id)).size;
-  const ocupacionPct = ctx.courtIds.length > 0 ? Math.round((canchasOcupadas / ctx.courtIds.length) * 100) : 0;
-  const jugadoresActivos = new Set(todayRows.map((r) => r.owner_id).filter((id): id is string => Boolean(id)))
-    .size;
+  const { data: fixedSlotsTodayRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.fixedSlots)
+        .select("id")
+        .in("court_id", ctx.courtIds)
+        .eq("is_active", true)
+        .eq("day_of_week", new Date(`${today}T12:00:00`).getDay())
+    : { data: [] };
+  const fixedSlotsTodayCount = (fixedSlotsTodayRaw ?? []).length;
 
-  const bucketsByHour = Array.from({ length: 24 }, (_, hour) => ({ hour, total: 0 }));
-  for (const row of todayRows) {
-    const raw = String(row.scheduled_time ?? "").trim();
-    if (!raw) continue;
-    const hour = Number(raw.slice(0, 2));
-    if (!Number.isInteger(hour) || hour < 0 || hour > 23) continue;
-    bucketsByHour[hour].total += 1;
-  }
-  const hourlyBars = bucketsByHour.filter((b) => b.total > 0);
-  const chartData = hourlyBars.length > 0 ? hourlyBars : bucketsByHour.slice(8, 23);
-  const maxHourly = Math.max(1, ...chartData.map((b) => b.total));
+  const { data: refundRequestedRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.payments)
+        .select("id,matches!inner(court_id)")
+        .eq("status", "refund_requested")
+        .in("matches.court_id", ctx.courtIds)
+    : { data: [] };
+  const refundRequestedCount = (refundRequestedRaw ?? []).length;
 
-  const todayMetrics = [
-    {
-      label: "Reservas de Hoy",
-      value: String(reservasHoy),
-      icon: Target,
-      color: "text-[#0461C4]",
-      topBorder: "#0585FC",
-    },
-    {
-      label: "Ingresos Estimados",
-      value: money.format(ingresosEstimados),
-      icon: DollarSign,
-      color: "text-emerald-700",
-      topBorder: "#22c55e",
-    },
-    {
-      label: "Ocupación de Canchas (%)",
-      value: `${ocupacionPct}%`,
-      icon: Activity,
-      color: "text-violet-700",
-      topBorder: "#8b5cf6",
-    },
-    {
-      label: "Jugadores Activos",
-      value: String(jugadoresActivos),
-      icon: Users,
-      color: "text-amber-700",
-      topBorder: "#f59e0b",
-    },
-  ] as const;
-
-  const { data: weekRaw } = ctx.courtIds.length > 0
+  const { data: cancelledTodayRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("id,scheduled_date,total_price,payment_status")
+        .select("id")
         .in("court_id", ctx.courtIds)
-        .eq("match_type", "reservation")
-        .eq("match_status", "reserved")
-        .gte("scheduled_date", today)
-        .lte("scheduled_date", weekEnd)
+        .eq("scheduled_date", today)
+        .eq("match_status", "cancelled")
     : { data: [] };
+  const cancelledTodayCount = (cancelledTodayRaw ?? []).length;
 
-  const weekRows = (weekRaw ?? []) as Array<{
-    id: string; scheduled_date: string | null; total_price: number | null; payment_status: string | null;
-  }>;
-  const weekRevenue = weekRows
-    .filter((r) => String(r.payment_status ?? "").toLowerCase() === "paid")
-    .reduce((acc, r) => acc + Number(r.total_price ?? 0), 0);
-  const byDay = new Map<string, number>();
-  for (const row of weekRows) {
-    const d = row.scheduled_date;
-    if (!d) continue;
-    byDay.set(d, (byDay.get(d) ?? 0) + 1);
-  }
-  const busiestDay = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0];
-
-  const { data: upcomingRaw } = ctx.courtIds.length > 0
+  const { data: nextMatchRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("id,owner_id,payment_status,scheduled_date,scheduled_time,court_id")
+        .select("id,owner_id,court_id,payment_status,scheduled_time,courts(name),match_status")
         .in("court_id", ctx.courtIds)
-        .eq("match_type", "reservation")
-        .eq("match_status", "reserved")
-        .gte("scheduled_date", today)
-        .lte("scheduled_date", tomorrow)
-        .order("scheduled_date", { ascending: true })
+        .eq("scheduled_date", today)
+        .neq("match_status", "cancelled")
         .order("scheduled_time", { ascending: true })
-        .limit(12)
+        .limit(20)
     : { data: [] };
-
-  const upcomingRows = (upcomingRaw ?? []) as Array<{
-    id: string; owner_id: string | null; payment_status: string | null; scheduled_date: string | null; scheduled_time: string | null; court_id: string;
+  const nextMatchRows = (nextMatchRaw ?? []) as Array<{
+    id: string;
+    owner_id: string | null;
+    court_id: string;
+    payment_status: string | null;
+    scheduled_time: string | null;
+    courts: { name: string | null } | { name: string | null }[] | null;
+    match_status: string | null;
   }>;
-  const ownerIds = Array.from(new Set(upcomingRows.map((r) => r.owner_id).filter((v): v is string => Boolean(v))));
-  const { data: profilesData } = ownerIds.length
-    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", ownerIds)
+  const nextMatch =
+    nextMatchRows.find((m) => {
+      const min = timeToMinutes(m.scheduled_time);
+      return min >= arNow.minutes;
+    }) ?? null;
+
+  const ownerIdsForNext = Array.from(new Set([nextMatch?.owner_id].filter((id): id is string => Boolean(id))));
+  const { data: nextOwnerProfileRaw } = ownerIdsForNext.length
+    ? await supabase
+        .from(DB_TABLES.profiles)
+        .select("user_id,name")
+        .in("user_id", ownerIdsForNext)
     : { data: [] };
-  const profileNameById = new Map((profilesData ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name ?? "Jugador"]));
+  const ownerNameById = new Map(
+    ((nextOwnerProfileRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
+      p.user_id,
+      p.name?.trim() || "Jugador",
+    ])
+  );
 
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const occupiedCourtsNow = new Set<string>();
-  for (const row of todayRows) {
-    const t = String(row.scheduled_time ?? "").trim();
-    if (!/^\d{2}:\d{2}/.test(t)) continue;
-    const startMinutes = Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-    if (Math.abs(startMinutes - nowMinutes) <= 30) {
-      occupiedCourtsNow.add(row.court_id);
-    }
+  const { data: participantsTodayRaw } = todayMatchIds.length
+    ? await supabase
+        .from(DB_TABLES.matchParticipants)
+        .select("match_id,player_id")
+        .in("match_id", todayMatchIds)
+    : { data: [] };
+  const participantsToday = (participantsTodayRaw ?? []) as Array<{ match_id: string; player_id: string }>;
+
+  const participantIds = Array.from(new Set(participantsToday.map((p) => p.player_id)));
+  const { data: participantPaymentsRaw } = participantIds.length && todayMatchIds.length
+    ? await supabase
+        .from(DB_TABLES.payments)
+        .select("match_id,user_id,status")
+        .in("match_id", todayMatchIds)
+        .in("user_id", participantIds)
+    : { data: [] };
+  const participantPayments = (participantPaymentsRaw ?? []) as Array<{
+    match_id: string;
+    user_id: string;
+    status: string | null;
+  }>;
+  const paymentMap = new Map<string, string>();
+  for (const pay of participantPayments) {
+    paymentMap.set(`${pay.match_id}:${pay.user_id}`, String(pay.status ?? "").toLowerCase());
   }
 
-  if (ctx.clubIds.length === 0) {
-    return (
-      <div className={`${adminCard} border-amber-200/80 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-950/40`}>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Sin club asignado</h1>
-        <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-          No encontramos un club donde seas titular. Si acabas de configurar tu cuenta, revisa
-          permisos en la base o contacta soporte.
-        </p>
-      </div>
-    );
+  const occupiedNowCount = new Set(
+    todayMatches
+      .filter((m) => {
+        if (String(m.match_status ?? "").toLowerCase() === "cancelled") return false;
+        const start = timeToMinutes(m.scheduled_time);
+        if (start < 0) return false;
+        return arNow.minutes >= start && arNow.minutes < start + 90;
+      })
+      .map((m) => m.court_id)
+  ).size;
+  const totalCourts = ctx.courtIds.length;
+  const occupiedPct = totalCourts > 0 ? Math.round((occupiedNowCount / totalCourts) * 100) : 0;
+
+  const reservasHoy = todayMatches.filter((m) => !Boolean(m.es_turno_fijo)).length;
+  const reservasPagadas = todayMatches.filter(
+    (m) => !Boolean(m.es_turno_fijo) && String(m.payment_status ?? "").toLowerCase() === "paid"
+  ).length;
+  const reservasPendientes = Math.max(0, reservasHoy - reservasPagadas);
+
+  const turnosFijosHoy = todayMatches.filter((m) => Boolean(m.es_turno_fijo)).length;
+  let turnosFijosConfirmados = 0;
+  let turnosFijosSinConfirmar = 0;
+  for (const part of participantsToday) {
+    const match = todayMatches.find((m) => m.id === part.match_id);
+    if (!match || !match.es_turno_fijo) continue;
+    const status = paymentMap.get(`${part.match_id}:${part.player_id}`) ?? "";
+    if (status === "approved") turnosFijosConfirmados += 1;
+    else turnosFijosSinConfirmar += 1;
   }
+
+  const reservasSinPagoHoyAlert = reservasPendientes;
+  const turnosFijosSinConfirmarAlert = turnosFijosSinConfirmar;
+
+  const ownerIdsWeek = Array.from(
+    new Set(
+      todayMatches
+        .filter((m) => String(m.scheduled_date ?? "") >= weekAgo)
+        .map((m) => m.owner_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const { data: newPlayersWeekRaw } = ownerIdsWeek.length
+    ? await supabase
+        .from(DB_TABLES.profiles)
+        .select("user_id")
+        .in("user_id", ownerIdsWeek)
+        .gte("created_at", `${weekAgo}T00:00:00`)
+    : { data: [] };
+  const newPlayersWeekCount = (newPlayersWeekRaw ?? []).length;
+
+  const criticalAlerts = [
+    refundRequestedCount > 0
+      ? {
+          key: "refunds",
+          text: `${refundRequestedCount} reembolsos esperando tu aprobación`,
+          href: "/admin/finanzas/reembolsos",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
+
+  const importantAlerts = [
+    reservasSinPagoHoyAlert > 0
+      ? {
+          key: "pending_today",
+          text: `${reservasSinPagoHoyAlert} reservas de hoy sin pago confirmado`,
+          href: `/admin/reservas?date=${today}`,
+        }
+      : null,
+    turnosFijosSinConfirmarAlert > 0
+      ? {
+          key: "fixed_slots",
+          text: `${turnosFijosSinConfirmarAlert} jugadores no confirmaron su turno de hoy`,
+          href: "/admin/turnos-fijos",
+        }
+      : null,
+    cancelledTodayCount > 0
+      ? {
+          key: "cancelled_today",
+          text: `${cancelledTodayCount} cancelaciones registradas hoy`,
+          href: "/admin/reservas",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
+
+  const infoAlerts = [
+    newPlayersWeekCount > 0
+      ? {
+          key: "new_players_week",
+          text: `${newPlayersWeekCount} jugadores nuevos se sumaron esta semana`,
+          href: "/admin/jugadores",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
+
+  const totalAlerts = criticalAlerts.length + importantAlerts.length + infoAlerts.length;
+  const nextCourtRel = Array.isArray(nextMatch?.courts) ? nextMatch?.courts[0] : nextMatch?.courts;
+  const nextOwnerName = nextMatch?.owner_id ? ownerNameById.get(nextMatch.owner_id) ?? "Jugador" : "Jugador";
+  const nextPayStatus = String(nextMatch?.payment_status ?? "").toLowerCase();
+  const nextPayLabel =
+    nextPayStatus === "paid" || nextPayStatus === "approved"
+      ? "Pagado"
+      : nextPayStatus === "pending"
+        ? "Pendiente"
+        : "Sin confirmar";
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-12 -top-10 h-40 w-40 rounded-full bg-[#0585FC]/10 blur-2xl" />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
-              <CalendarDays size={15} className="text-[#0585FC]" strokeWidth={2.25} />
-              {todayLong}
+    <div className="flex flex-col gap-6">
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#031733] to-[#0461C4] p-5 shadow-[0_10px_30px_rgba(3,23,51,0.35)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            {club?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+              <img src={club.logo_url} alt={clubName} className="h-16 w-16 rounded-2xl border border-white/20 object-cover" />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0585FC] text-xl font-bold text-white">
+                {clubInitials || "CL"}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-white">{clubName}</h1>
+              <p className="text-sm text-white/70">{todayDateLabel}</p>
+              <CurrentArTime className="text-xs text-white/50" />
             </div>
-            <h1 className={adminTitle}>Panel de administración</h1>
-            <p className={`${adminSubtitle} max-w-xl`}>
-              Seguimiento diario de reservas, ingresos y ocupación del club en tiempo real.
-            </p>
           </div>
-          <div className="inline-flex items-center rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-3 py-1 text-xs font-semibold text-[#0461C4]">
-            {ctx.clubs[0]?.name ?? "Mi club"}
-          </div>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {todayMetrics.map(({ label, value, icon: Icon, color, topBorder }) => (
           <div
-            key={label}
-            className={`${adminCard} flex flex-col gap-2 border-t-2 p-4`}
-            style={{ borderTopColor: topBorder }}
+            className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+              totalAlerts > 0
+                ? "bg-rose-500/20 text-rose-100 ring-1 ring-rose-300/40"
+                : "bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/40"
+            }`}
           >
-            <Icon size={18} className={color} strokeWidth={2} />
-            <p className={adminKicker}>{label}</p>
-            <p className={`text-lg font-bold tabular-nums ${color}`}>{value}</p>
-            {label.includes("Ocupación") ? (
-              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
-                  style={{ width: `${ocupacionPct}%` }}
-                />
-              </div>
-            ) : null}
+            {totalAlerts > 0 ? `🔴 ${totalAlerts} alertas pendientes` : "🟢 Todo en orden"}
           </div>
-        ))}
-      </section>
-
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5`}>
-          <p className={adminKicker}>Esta semana</p>
-          <p className="mt-2 text-2xl font-bold text-[#0461C4]">{weekRows.length}</p>
-          <p className="text-xs font-medium text-slate-500">Total de reservas</p>
-        </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Ingresos estimados (paid)</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-700">{money.format(weekRevenue)}</p>
-          <p className="text-xs font-medium text-slate-500">Próximos 7 días</p>
-        </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Día más ocupado</p>
-          <p className="mt-2 text-xl font-bold text-slate-900">
-            {busiestDay ? format(parseISO(`${busiestDay[0]}T12:00:00`), "EEE d MMM", { locale: es }) : "Sin datos"}
-          </p>
-          <p className="text-xs font-medium text-slate-500">
-            {busiestDay ? `${busiestDay[1]} reservas` : "No hay reservas cargadas"}
-          </p>
         </div>
       </section>
 
-      <section className={`${adminCard} p-5`}>
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <p className={`${adminKicker} text-slate-500`}>Actividad del día</p>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Horas pico del día</h2>
-          </div>
-          <p className="text-sm font-semibold text-slate-500">
-            Total: <span className="text-slate-800">{reservasHoy}</span>
+      <section className="grid gap-3 md:grid-cols-3">
+        <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
+          <p className={adminKicker}>Canchas ocupadas ahora</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            {occupiedNowCount} <span className="text-base font-semibold text-slate-500">de {totalCourts}</span>
           </p>
-        </div>
-        <div className="space-y-3">
-          {chartData.map((item) => (
-            <div key={item.hour} className="grid grid-cols-[44px_1fr_36px] items-center gap-3">
-              <p className="text-[11px] font-semibold text-slate-500">{String(item.hour).padStart(2, "0")}:00</p>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-400"
-                  style={{ width: `${Math.max(6, (item.total / maxHourly) * 100)}%` }}
-                  title={`${item.total} reservas`}
-                />
-              </div>
-              <p className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{item.total}</p>
-            </div>
-          ))}
-        </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
+          </div>
+        </Link>
+        <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
+          <p className={adminKicker}>Reservas hoy</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{reservasHoy}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {reservasPagadas} pagadas · {reservasPendientes} pendientes
+          </p>
+        </Link>
+        <Link href="/admin/turnos-fijos" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
+          <p className={adminKicker}>Turnos fijos hoy</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {turnosFijosConfirmados} confirmados · {turnosFijosSinConfirmar} sin confirmar
+          </p>
+        </Link>
       </section>
 
-      <section className={`${adminCard} p-5`}>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className={adminKicker}>Agenda</p>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Próximas reservas</h2>
-          </div>
-          <Link href="/admin/reservas" className="text-sm font-semibold text-[#0585FC]">
-            Ver todas →
-          </Link>
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <ShieldAlert size={17} className="text-rose-500" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Alertas urgentes</h2>
         </div>
 
-        {upcomingRows.length === 0 ? (
-          <p className="py-4 text-center text-sm text-slate-400">No hay reservas entre hoy y mañana</p>
+        {totalAlerts === 0 ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+            ✅ Sin alertas pendientes. Todo en orden.
+          </div>
         ) : (
-          <ul className="space-y-3">
-            {upcomingRows.slice(0, 8).map((row) => {
-              const time = String(row.scheduled_time ?? "").slice(0, 5) || "--:--";
-              const isPaid = String(row.payment_status ?? "").toLowerCase() === "paid";
-              const dateLabel = row.scheduled_date
-                ? (() => {
-                    const date = parseISO(`${row.scheduled_date}T12:00:00`);
-                    if (isToday(date)) return "Hoy";
-                    if (isTomorrow(date)) return "Mañana";
-                    return format(date, "EEE d MMM", { locale: es });
-                  })()
-                : "Sin fecha";
-              return (
-                <li
-                  key={row.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0585FC]/10 text-sm font-bold text-[#0585FC]">
-                      {time}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {profileNameById.get(row.owner_id ?? "") ?? "Jugador"}
-                      </p>
-                      <p className="text-xs text-slate-500">{dateLabel} · {time} hs</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                      isPaid
-                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-400"
-                        : "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-400"
-                    }`}
-                  >
-                    {isPaid ? "Pagado" : "Pendiente"}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-2">
+            {criticalAlerts.map((a) => (
+              <Link
+                key={a.key}
+                href={a.href}
+                className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+              >
+                <span>🔴 {a.text}</span>
+                <ChevronRight size={16} />
+              </Link>
+            ))}
+            {importantAlerts.map((a) => (
+              <Link
+                key={a.key}
+                href={a.href}
+                className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+              >
+                <span>🟡 {a.text}</span>
+                <ChevronRight size={16} />
+              </Link>
+            ))}
+            {infoAlerts.map((a) => (
+              <Link
+                key={a.key}
+                href={a.href}
+                className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+              >
+                <span>🔵 {a.text}</span>
+                <ChevronRight size={16} />
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 
       <section className={adminCard}>
-        <div className="mb-4 flex items-center gap-2">
-          <LayoutGrid size={16} className="text-[#0585FC]" />
-          <h2 className="text-base font-bold text-slate-900">Canchas libres ahora</h2>
-        </div>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {ctx.courts.map((court) => {
-            const isOccupied = occupiedCourtsNow.has(court.id);
-            return (
-              <li key={court.id} className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-white px-3 py-2 text-sm">
-                <span className="font-semibold text-slate-800">{court.name ?? "Cancha"}</span>
-                <span className={isOccupied ? "font-semibold text-rose-700" : "font-semibold text-emerald-700"}>
-                  {isOccupied ? "Ocupada" : "Libre"}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <p className={adminKicker}>Próximo turno</p>
+        {nextMatch ? (
+          <div className="mt-3 space-y-1">
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{String(nextMatch.scheduled_time ?? "").slice(0, 5)} hs</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Cancha: {nextCourtRel?.name ?? "Cancha"}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Jugador: {nextOwnerName}</p>
+            <p
+              className={`text-sm font-semibold ${
+                nextPayLabel === "Pagado" ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              Estado de pago: {nextPayLabel}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">No hay más turnos por hoy 🎾</p>
+        )}
       </section>
 
-      <section className={adminCard}>
-        <p className={adminKicker}>Accesos rápidos</p>
-        <div className="mt-4 flex flex-col gap-3 text-sm font-semibold sm:flex-row sm:flex-wrap sm:gap-x-6">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <LayoutGrid size={16} className="text-[#0585FC]" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Accesos rápidos</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {quickActions.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`text-[#0585FC] hover:text-[#0585FC] ${adminPressable} inline-flex w-fit rounded-full px-1 py-0.5`}
+              className={`${adminCard} group transition hover:-translate-y-0.5 hover:shadow-md`}
             >
-              {item.label}
+              <div className="flex items-start justify-between gap-3">
+                <item.icon size={22} className="text-[#0585FC]" />
+                <ChevronRight size={16} className="text-slate-400 transition group-hover:text-[#0585FC]" />
+              </div>
+              <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">{item.label}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
             </Link>
           ))}
         </div>
