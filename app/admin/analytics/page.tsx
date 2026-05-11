@@ -282,7 +282,7 @@ export default async function AdminAnalyticsPage() {
                 <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                   <div
                     className={`h-full rounded-full ${
-                      isMax ? "bg-[#0461C4]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
+                      isMax ? "bg-[#0585FC]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
                     }`}
                     style={{ width: `${Math.max(3, (count / maxDayCount) * 100)}%` }}
                   />
@@ -310,10 +310,7 @@ export default async function AdminAnalyticsPage() {
                   <span className="font-bold text-slate-900 dark:text-slate-100">{ratio}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/60">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-[#0461C4]"
-                    style={{ width: `${Math.max(2, ratio)}%` }}
-                  />
+                  <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, ratio)}%` }} />
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {reservations} reservas / {slots} slots disponibles

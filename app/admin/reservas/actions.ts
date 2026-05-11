@@ -95,6 +95,8 @@ export async function createManualCourtBlockAction(
 
   const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
     court_id: courtId,
+    date,
+    start_time: startTime.length >= 5 ? startTime.slice(0, 5) : startTime,
     blocked_date: date,
     blocked_time: startTime.length >= 5 ? startTime.slice(0, 5) : startTime,
     reason: null,
@@ -142,6 +144,8 @@ async function toggleCourtBlockRow(params: {
 
   const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
     court_id: courtId,
+    date,
+    start_time: time,
     blocked_date: date,
     blocked_time: time,
     reason: reason || null,

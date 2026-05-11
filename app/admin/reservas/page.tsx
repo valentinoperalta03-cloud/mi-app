@@ -247,14 +247,14 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                           className="min-h-16 border-r border-slate-100/90 bg-slate-50/70 px-2 py-2 dark:border-slate-800 dark:bg-slate-900/20"
                         >
                           {blocked ? (
-                            <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-200 bg-rose-100/90 p-2 dark:border-rose-800 dark:bg-rose-950/30">
+                            <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-600 bg-rose-500 p-2 text-white dark:border-rose-500 dark:bg-rose-600">
                               <input type="hidden" name="court_id" value={court.id} />
                               <input type="hidden" name="date" value={selectedDate} />
                               <input type="hidden" name="time" value={slot} />
-                              <button type="submit" className="w-full rounded-lg bg-rose-600 px-2 py-2 text-xs font-semibold text-white">
+                              <button type="submit" className="w-full rounded-lg bg-rose-700 px-2 py-2 text-xs font-semibold text-white dark:bg-rose-800">
                                 Bloqueado
                               </button>
-                              <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300">
+                              <p className="mt-1 text-[11px] text-white/90">
                                 {blocked.reason ? blocked.reason : "Toque para desbloquear"}
                               </p>
                             </form>
