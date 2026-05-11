@@ -13,6 +13,8 @@ import { updateFinancePin } from "./actions";
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin" as const;
+const CLUB_ADMIN_COLUMNS_FALLBACK =
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin" as const;
 
 async function signOutAction() {
   "use server";
@@ -49,12 +51,26 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   }
 
   const clubId = ctx.clubIds[0];
-  const { data: clubRaw, error: clubErr } = await supabase
+  const firstFetch = await supabase
     .from(DB_TABLES.clubs)
     .select(CLUB_ADMIN_COLUMNS)
     .eq("id", clubId)
     .eq("owner_id", ctx.userId)
     .maybeSingle();
+  let clubRaw: Record<string, unknown> | null = (firstFetch.data as Record<string, unknown> | null) ?? null;
+  let clubErr = firstFetch.error;
+
+  // Compat: algunos entornos aún no tienen cancellation_hours en clubs.
+  if (clubErr?.message?.toLowerCase().includes("cancellation_hours")) {
+    const fallback = await supabase
+      .from(DB_TABLES.clubs)
+      .select(CLUB_ADMIN_COLUMNS_FALLBACK)
+      .eq("id", clubId)
+      .eq("owner_id", ctx.userId)
+      .maybeSingle();
+    clubRaw = (fallback.data as Record<string, unknown> | null) ?? null;
+    clubErr = fallback.error;
+  }
   if (clubErr || !clubRaw) {
     return (
       <div className="flex flex-col gap-6">
