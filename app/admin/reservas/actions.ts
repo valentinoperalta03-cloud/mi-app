@@ -95,8 +95,10 @@ export async function createManualCourtBlockAction(
 
   const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
     court_id: courtId,
-    date,
-    start_time: startTime.length >= 5 ? startTime.slice(0, 5) : startTime,
+    blocked_date: date,
+    blocked_time: startTime.length >= 5 ? startTime.slice(0, 5) : startTime,
+    reason: null,
+    created_by: ctx.userId,
   });
 
   if (error) {
@@ -122,46 +124,26 @@ async function toggleCourtBlockRow(params: {
   userId: string;
 }) {
   const { supabase, courtId, date, time, reason, userId } = params;
-
-  const modernFilter = supabase
+  const existing = await supabase
     .from(DB_TABLES.courtBlocks)
     .select("id")
     .eq("court_id", courtId)
     .eq("blocked_date", date)
     .eq("blocked_time", time)
     .maybeSingle();
-  const modernExisting = await modernFilter;
-
-  if (!modernExisting.error) {
-    if (modernExisting.data?.id) {
-      const { error } = await supabase.from(DB_TABLES.courtBlocks).delete().eq("id", modernExisting.data.id);
-      return { blocked: false, error };
-    }
-    const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
-      court_id: courtId,
-      blocked_date: date,
-      blocked_time: time,
-      reason: reason || null,
-      created_by: userId,
-    });
-    return { blocked: true, error };
+  if (existing.error) {
+    return { blocked: false, error: existing.error };
   }
 
-  const legacyExisting = await supabase
-    .from(DB_TABLES.courtBlocks)
-    .select("id")
-    .eq("court_id", courtId)
-    .eq("date", date)
-    .eq("start_time", time)
-    .maybeSingle();
-  if (legacyExisting.data?.id) {
-    const { error } = await supabase.from(DB_TABLES.courtBlocks).delete().eq("id", legacyExisting.data.id);
+  if (existing.data?.id) {
+    const { error } = await supabase.from(DB_TABLES.courtBlocks).delete().eq("id", existing.data.id);
     return { blocked: false, error };
   }
+
   const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
     court_id: courtId,
-    date,
-    start_time: time,
+    blocked_date: date,
+    blocked_time: time,
     reason: reason || null,
     created_by: userId,
   });
