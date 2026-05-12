@@ -1,0 +1,229 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { DB_TABLES } from "@/lib/db-tables";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { formatCategoryRange } from "@/lib/tournament-utils";
+import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
+
+type PageProps = { params: Promise<{ id: string }> };
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminTorneoDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: t } = await supabase
+    .from(DB_TABLES.tournaments)
+    .select(
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (!t) redirect("/admin/torneos");
+  const tour = t as {
+    club_id: string;
+    name: string;
+    description: string | null;
+    tournament_type: string;
+    status: string;
+    max_pairs: number;
+    price_per_pair: number;
+    prize: string | null;
+    start_date: string;
+    end_date: string;
+    start_time: string;
+    registration_deadline: string;
+    cancellation_hours: number;
+    category_min: number | null;
+    category_max: number | null;
+    group_chat_id: string | null;
+  };
+  if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
+
+  const service = createServiceClient();
+  const [{ data: regs }, { data: matches }] = await Promise.all([
+    service
+      .from(DB_TABLES.tournamentRegistrations)
+      .select("id, player1_id, player2_id, payment_status, waitlist, registered_at")
+      .eq("tournament_id", id)
+      .order("registered_at", { ascending: true }),
+    service
+      .from(DB_TABLES.tournamentMatches)
+      .select("id, round, round_name, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id")
+      .eq("tournament_id", id)
+      .order("round", { ascending: true }),
+  ]);
+
+  const regList = (regs ?? []) as Array<{
+    id: string;
+    player1_id: string;
+    player2_id: string | null;
+    payment_status: string;
+    waitlist: boolean;
+  }>;
+  const playerIds = [...new Set(regList.flatMap((r) => [r.player1_id, r.player2_id].filter(Boolean) as string[]))];
+  const { data: profiles } = playerIds.length
+    ? await service.from(DB_TABLES.profiles).select("user_id, name, avatar_url").in("user_id", playerIds)
+    : { data: [] };
+  const profileMap = new Map(
+    ((profiles ?? []) as Array<{ user_id: string; name: string | null; avatar_url: string | null }>).map((p) => [
+      p.user_id,
+      p,
+    ])
+  );
+
+  const typeBadge = TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)?.badge ?? tour.tournament_type;
+  const approved = regList.filter((r) => r.payment_status === "approved" && !r.waitlist);
+  const waitlist = regList.filter((r) => r.waitlist);
+  const pending = regList.filter((r) => r.payment_status === "pending");
+
+  const matchRows = (matches ?? []) as Array<{
+    id: string;
+    round: number;
+    round_name: string | null;
+    pair1_id: string | null;
+    pair2_id: string | null;
+    pair1_score: number | null;
+    pair2_score: number | null;
+    status: string;
+  }>;
+
+  const courtHours = Math.round((matchRows.length * 90) / 60);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-8 px-4 pb-28 pt-6 md:pb-10">
+      <Link href="/admin/torneos" className="inline-flex items-center gap-1 text-sm font-medium text-[#0461C4] dark:text-sky-400">
+        <ChevronLeft size={18} />
+        Torneos
+      </Link>
+
+      <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{typeBadge}</p>
+        <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{tour.name}</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved.length}/{tour.max_pairs} parejas pagadas
+        </p>
+        {tour.description ? <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{tour.description}</p> : null}
+        <p className="mt-2 text-xs text-slate-500">
+          Categoría: {formatCategoryRange(tour.category_min, tour.category_max)} · Fee plataforma (no visible al jugador): $
+          {TOURNAMENT_PLATFORM_FEE_ARS} ARS por pareja
+        </p>
+      </header>
+
+      <section className="flex flex-wrap gap-2">
+        {tour.status === "open" ? (
+          <form action={startTournamentFormAction}>
+            <input type="hidden" name="tournament_id" value={id} />
+            <button
+              type="submit"
+              className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              Iniciar torneo
+            </button>
+          </form>
+        ) : null}
+        {tour.status === "in_progress" ? (
+          <form action={finishTournamentFormAction}>
+            <input type="hidden" name="tournament_id" value={id} />
+            <button type="submit" className="rounded-2xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-700">
+              Finalizar torneo
+            </button>
+          </form>
+        ) : null}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Inscriptos</h2>
+        <ul className="mt-2 space-y-2">
+          {approved.map((r) => (
+            <li
+              key={r.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+            >
+              <span>
+                {profileMap.get(r.player1_id)?.name ?? "Jugador"}
+                {r.player2_id ? ` + ${profileMap.get(r.player2_id)?.name ?? ""}` : " (individual)"}
+              </span>
+              <span className="text-xs font-medium text-emerald-700">Pagado</span>
+            </li>
+          ))}
+          {pending.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+              <span>
+                {profileMap.get(r.player1_id)?.name ?? "Jugador"}
+                {r.player2_id ? ` + ${profileMap.get(r.player2_id)?.name ?? ""}` : ""}
+              </span>
+              <span className="text-xs text-amber-800 dark:text-amber-200">Pago pendiente</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {waitlist.length > 0 ? (
+        <section>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Lista de espera</h2>
+          <ul className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            {waitlist.map((r) => (
+              <li key={r.id}>
+                {profileMap.get(r.player1_id)?.name}
+                {r.player2_id ? ` + ${profileMap.get(r.player2_id)?.name}` : ""}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fixture</h2>
+        <p className="text-xs text-slate-500">~{courtHours} h de cancha estimadas · {matchRows.length} partidos</p>
+        <ul className="mt-3 space-y-3">
+          {matchRows.map((m) => (
+            <li key={m.id} className="rounded-2xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
+              <p className="text-xs font-semibold text-slate-500">
+                Ronda {m.round} · {m.round_name ?? "—"}
+              </p>
+              <p className="mt-1 text-slate-800 dark:text-slate-100">
+                {m.pair1_id ? `Pareja ${m.pair1_id.slice(0, 6)}…` : "—"} vs {m.pair2_id ? `Pareja ${m.pair2_id.slice(0, 6)}…` : "—"}
+              </p>
+              <p className="text-xs text-slate-500">Estado: {m.status}</p>
+              {m.status !== "finished" && m.pair1_id && m.pair2_id ? (
+                <form action={saveTournamentMatchFormAction} className="mt-2 grid gap-2 sm:grid-cols-4">
+                  <input type="hidden" name="tournament_id" value={id} />
+                  <input type="hidden" name="match_id" value={m.id} />
+                  <input type="hidden" name="sets_json" value='[{"a":6,"b":4}]' />
+                  <input
+                    type="number"
+                    name="pair1_score"
+                    min={0}
+                    max={2}
+                    required
+                    placeholder="Sets P1"
+                    className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <input
+                    type="number"
+                    name="pair2_score"
+                    min={0}
+                    max={2}
+                    required
+                    placeholder="Sets P2"
+                    className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <button type="submit" className="rounded-lg bg-[#0461C4] px-2 py-1 text-xs font-semibold text-white">
+                    Guardar
+                  </button>
+                </form>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}

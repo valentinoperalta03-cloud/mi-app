@@ -7,6 +7,8 @@ import { getPaymentClient } from "@/lib/mercadopago";
 import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { createNotification } from "@/lib/notifications";
+import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -44,6 +46,114 @@ function parseExternalReference(ref: string): { matchId: string; userId: string 
     return { matchId, userId };
   }
   return { matchId: trimmed, userId: null };
+}
+
+async function handleTournamentPaymentIfPresent(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    paymentId: string;
+    extRef: string;
+    status: string;
+    now: string;
+    mpPayment: { status?: string; external_reference?: string | null; transaction_amount?: number | null };
+  }
+): Promise<boolean> {
+  const parsed = parseTournamentRegistrationRef(params.extRef);
+  if (params.extRef.startsWith("tournament_reg_") && !parsed) {
+    log.warn({ event: "mp.webhook.tournament_ref_invalid", requestId: params.requestId, extRef: params.extRef });
+    return true;
+  }
+  if (!parsed) return false;
+
+  const { registrationId, payerUserId } = parsed;
+  const { data: reg } = await admin
+    .from(DB_TABLES.tournamentRegistrations)
+    .select("id, player1_id, tournament_id, payment_status")
+    .eq("id", registrationId)
+    .maybeSingle();
+  const regRow = reg as {
+    id?: string;
+    player1_id?: string;
+    tournament_id?: string;
+    payment_status?: string | null;
+  } | null;
+  if (!regRow?.id || regRow.player1_id !== payerUserId) {
+    log.warn({
+      event: "mp.webhook.tournament_registration_mismatch",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+    });
+    return true;
+  }
+
+  const paidAmount = Number(params.mpPayment.transaction_amount ?? 0);
+
+  if (params.status === "approved") {
+    await admin
+      .from(DB_TABLES.tournamentRegistrations)
+      .update({
+        payment_status: "approved",
+        mp_payment_id: params.paymentId,
+        amount: Number.isFinite(paidAmount) ? paidAmount : null,
+      })
+      .eq("id", registrationId);
+
+    const { data: trow } = await admin
+      .from(DB_TABLES.tournaments)
+      .select("name, club_id")
+      .eq("id", String(regRow.tournament_id))
+      .maybeSingle();
+    const t = trow as { name?: string | null; club_id?: string | null } | null;
+    const { data: crow } = await admin
+      .from(DB_TABLES.clubs)
+      .select("owner_id, name")
+      .eq("id", String(t?.club_id ?? ""))
+      .maybeSingle();
+    const ownerId = String((crow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    if (ownerId) {
+      await createNotification(admin, {
+        user_id: ownerId,
+        type: "tournament_event",
+        title: "Inscripción pagada",
+        body: `Nueva inscripción pagada en el torneo "${String(t?.name ?? "Torneo").trim()}".`,
+      });
+    }
+    await createNotification(admin, {
+      user_id: payerUserId,
+      type: "payment_approved",
+      title: "¡Pago confirmado!",
+      body: "Tu inscripción al torneo fue confirmada.",
+    });
+    log.info({
+      event: "payment.tournament.approved",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+      mpPaymentId: params.paymentId,
+    });
+    return true;
+  }
+
+  if (params.status === "rejected" || params.status === "cancelled" || params.status === "expired") {
+    await admin
+      .from(DB_TABLES.tournamentRegistrations)
+      .update({
+        payment_status: "cancelled",
+        mp_payment_id: params.paymentId,
+      })
+      .eq("id", registrationId);
+    await createNotification(admin, {
+      user_id: payerUserId,
+      type: "payment_rejected",
+      title: "Pago no procesado",
+      body: "No se pudo confirmar el pago de tu inscripción al torneo.",
+    });
+    return true;
+  }
+
+  return true;
 }
 
 export async function POST(req: Request) {
@@ -118,13 +228,26 @@ async function handleNotification(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const { matchId, userId: payerUserId } = parseExternalReference(String(mpPayment.external_reference ?? ""));
-  if (!matchId) {
+  const extRef = String(mpPayment.external_reference ?? "").trim();
+  const status = String(mpPayment.status ?? "").toLowerCase();
+  const now = new Date().toISOString();
+
+  const tournamentHandled = await handleTournamentPaymentIfPresent(admin, {
+    requestId,
+    paymentId,
+    extRef,
+    status,
+    now,
+    mpPayment,
+  });
+  if (tournamentHandled) {
     return NextResponse.json({ ok: true });
   }
 
-  const status = String(mpPayment.status ?? "").toLowerCase();
-  const now = new Date().toISOString();
+  const { matchId, userId: payerUserId } = parseExternalReference(extRef);
+  if (!matchId) {
+    return NextResponse.json({ ok: true });
+  }
 
   if (status === "approved") {
     log.info({

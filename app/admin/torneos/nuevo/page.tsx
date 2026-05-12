@@ -1,0 +1,29 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { createClient } from "@/utils/supabase/server";
+import TorneoForm from "../torneo-form";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminTorneoNuevoPage() {
+  const supabase = await createClient();
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (ctx.clubIds.length === 0) redirect("/admin/club");
+
+  return (
+    <div className="mx-auto max-w-lg px-4 pb-28 pt-6 md:pb-10">
+      <Link
+        href="/admin/torneos"
+        className="inline-flex items-center gap-1 text-sm font-medium text-[#0461C4] dark:text-sky-400"
+      >
+        <ChevronLeft size={18} />
+        Volver
+      </Link>
+      <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Crear torneo</h1>
+      <TorneoForm clubId={ctx.clubIds[0]!} />
+    </div>
+  );
+}

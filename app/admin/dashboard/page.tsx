@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldAlert,
   SquareChartGantt,
+  Trophy,
   Users,
   Wallet,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const quickActions: Array<{
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }> = [
+  { href: "/admin/torneos", label: "Torneos", description: "Americanos, llaves y mixing", icon: Trophy },
   { href: "/admin/reservas", label: "Reservas", description: "Gestioná agenda y pagos", icon: CalendarDays },
   { href: "/admin/finanzas", label: "Finanzas", description: "Controlá ingresos y egresos", icon: Wallet },
   { href: "/admin/agenda", label: "Ocupación", description: "Estado de canchas y horarios", icon: SquareChartGantt },

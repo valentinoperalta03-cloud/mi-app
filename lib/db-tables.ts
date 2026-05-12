@@ -36,4 +36,7 @@ export const DB_TABLES = {
   fixedSlotExceptions: "fixed_slot_exceptions",
   notifications: "notifications",
   rateLimits: "rate_limits",
+  tournaments: "tournaments",
+  tournamentRegistrations: "tournament_registrations",
+  tournamentMatches: "tournament_matches",
 } as const;

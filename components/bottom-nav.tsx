@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { Home, UserCircle, Users } from "lucide-react";
+import { Home, Trophy, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -11,6 +11,7 @@ import { createClient } from "@/utils/supabase/client";
 
 const items = [
   { href: "/home", label: "Inicio", icon: Home },
+  { href: "/torneos", label: "Torneos", icon: Trophy },
   { href: "/comunidad", label: "Comunidad", icon: Users },
   { href: "/perfil", label: "Perfil", icon: UserCircle },
 ] as const;

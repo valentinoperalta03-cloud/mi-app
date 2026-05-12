@@ -11,6 +11,8 @@ export type EloParams = {
   setsWon: number;
   setsLost: number;
   totalMatchesPlayed: number;
+  /** Multiplicador extra (p. ej. 1.5 en torneos competitivos). */
+  deltaMultiplier?: number;
 };
 
 export function eloKForExperience(totalMatchesPlayed: number): number {
@@ -66,7 +68,8 @@ export function computeEloDelta(params: EloParams): number {
 
   const appliedCeiling = resultMultiplier > 0 ? ceilingFactor : 1.0;
 
-  const delta = k * difficulty * resultMultiplier * partnerFactor * appliedCeiling;
+  const mult = params.deltaMultiplier != null && Number.isFinite(params.deltaMultiplier) ? params.deltaMultiplier : 1;
+  const delta = k * difficulty * resultMultiplier * partnerFactor * appliedCeiling * mult;
 
   return Math.round(delta * 1000) / 1000;
 }
