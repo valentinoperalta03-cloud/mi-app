@@ -351,31 +351,10 @@ function NuevaReservaContent() {
             const total = precioCancha + comision;
             return (
               <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Resumen del pago</p>
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between gap-3 text-sm text-slate-600">
-                    <span>Precio de cancha</span>
-                    <span className="shrink-0 font-medium text-slate-700">${fmtAr(precioCancha)}</span>
-                  </div>
-                  <div className="flex justify-between gap-3 text-sm text-slate-600">
-                    <div className="min-w-0 leading-snug">
-                      <p>Servicio Padelibre</p>
-                      <p>e impuestos incluidos</p>
-                    </div>
-                    <span className="shrink-0 self-start font-medium text-slate-700">${fmtAr(comision)}</span>
-                  </div>
-                </div>
-                <div className="my-2 border-t border-slate-100" />
                 <div className="flex justify-between gap-3 text-base font-bold text-slate-900">
                   <span>Total a pagar</span>
-                  <span>${fmtAr(total)}</span>
+                  <span className="text-lg font-bold text-[#0585FC]">${fmtAr(total)}</span>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                  <span className="mr-1" aria-hidden>
-                    ℹ️
-                  </span>
-                  El precio ya incluye todos los impuestos y comisiones del servicio de Padelibre.
-                </p>
               </div>
             );
           })()}

@@ -837,16 +837,8 @@ export default function CrearPartidoForm({
               ))}
 
               <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
-                <div className="flex justify-between">
-                  <span className="text-sm text-slate-500">Precio de cancha</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.precioCanchaJugador)}</span>
-                </div>
-                <div className="mt-1.5 flex justify-between">
-                  <span className="text-sm text-slate-500">Servicio Padelibre</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.comisionPorJugador)}</span>
-                </div>
-                <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
-                  <span className="font-bold text-slate-900 dark:text-white">Total a pagar</span>
+                <div className="flex justify-between text-base font-bold text-slate-900 dark:text-white">
+                  <span>Total a pagar</span>
                   <span className="text-lg font-bold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
                 </div>
               </div>
