@@ -23,7 +23,7 @@ export function ProfileLevelingWizard() {
   const [busy, setBusy] = useState(false);
   const [autoAdvancing, setAutoAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ average: number; category: string } | null>(null);
+  const [result, setResult] = useState<{ level: number; category: string } | null>(null);
 
   const [phase, setPhase] = useState<"quiz" | "result">("quiz");
   const quizComplete = answers.every((a) => a !== null);
@@ -81,9 +81,9 @@ export function ProfileLevelingWizard() {
         setError(res.message);
         return;
       }
-      const average = res.level ?? Number((computation?.average ?? 0).toFixed(2));
-      const category = res.category ?? classifyCategory(average);
-      setResult({ average, category });
+      const level = res.level ?? computation?.mappedLevel ?? 0;
+      const category = res.category ?? classifyCategory(level);
+      setResult({ level, category });
       setPhase("result");
     } finally {
       setBusy(false);
@@ -209,8 +209,16 @@ export function ProfileLevelingWizard() {
             <div className="mt-4 rounded-3xl border border-slate-200 bg-[#F5F5F7] p-4">
               <p className="text-sm text-slate-600">Categoria estimada</p>
               <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{result.category}</p>
+              <p className="mt-1 text-sm font-medium text-slate-700">ELO {result.level.toFixed(1)}</p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80">
+                <div
+                  className="h-full rounded-full bg-[#0461C4]"
+                  style={{ width: `${Math.round((result.level - Math.floor(result.level)) * 100)}%` }}
+                />
+              </div>
               <p className="mt-2 text-sm text-slate-600">
-                Este valor sale del promedio de tus 10 respuestas ({result.average.toFixed(2)} / 5).
+                Tu ELO inicial es {result.level.toFixed(1)} (máx. 5,0 desde el cuestionario; lo subís jugando partidos
+                competitivos).
               </p>
             </div>
 

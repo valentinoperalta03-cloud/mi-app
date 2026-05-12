@@ -17,12 +17,13 @@ import { createClient } from "@/utils/supabase/client";
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 function categoryDescription(categoryLine: string): string {
-  if (categoryLine.includes("1ra/2da")) return "Nivel competitivo alto con lectura táctica y ejecución avanzada.";
-  if (categoryLine.includes("3ra")) return "Jugador avanzado con buena consistencia y definición.";
-  if (categoryLine.includes("4ta")) return "Buen nivel técnico y táctico en partidos exigentes.";
-  if (categoryLine.includes("5ta")) return "Intermedio alto con recursos para sostener ritmo.";
-  if (categoryLine.includes("6ta")) return "Intermedio sólido con base técnica estable.";
-  if (categoryLine.includes("7ma")) return "En desarrollo, consolidando fundamentos del juego.";
+  if (categoryLine.includes("1ra ·")) return "Nivel competitivo alto con lectura táctica y ejecución avanzada.";
+  if (categoryLine.includes("2da ·")) return "Elite de club con muy buena lectura y definición.";
+  if (categoryLine.includes("3ra ·")) return "Jugador avanzado con buena consistencia y definición.";
+  if (categoryLine.includes("4ta ·")) return "Buen nivel técnico y táctico en partidos exigentes.";
+  if (categoryLine.includes("5ta ·")) return "Intermedio alto con recursos para sostener ritmo.";
+  if (categoryLine.includes("6ta ·")) return "Intermedio sólido con base técnica estable.";
+  if (categoryLine.includes("7ma ·")) return "En desarrollo, consolidando fundamentos del juego.";
   return "Etapa inicial para construir técnica y táctica.";
 }
 
@@ -51,7 +52,8 @@ export default function OnboardingPage({ defaultName = "" }: { defaultName?: str
   const result = useMemo(() => {
     if (answers.some((a) => a == null)) return null;
     const numeric = answers as number[];
-    const level = Number(computeLevelFromAnswers(numeric).average.toFixed(2));
+    const { mappedLevel } = computeLevelFromAnswers(numeric);
+    const level = mappedLevel;
     const category = formatLevel(level);
     return { level, category, description: categoryDescription(category) };
   }, [answers]);
@@ -433,7 +435,15 @@ export default function OnboardingPage({ defaultName = "" }: { defaultName?: str
                 <p className="text-sm text-slate-500">Categoría</p>
                 <p className="text-2xl font-bold text-[#0461C4]">{result?.category ?? "Sin categoría"}</p>
                 <p className="mt-2 text-sm text-slate-500">Nivel ELO</p>
-                <p className="text-2xl font-bold text-slate-900">{result?.level.toFixed(2) ?? "0.00"}</p>
+                <p className="text-2xl font-bold text-slate-900">{result?.level.toFixed(1) ?? "0.0"}</p>
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/80">
+                  <div
+                    className="h-full rounded-full bg-[#0461C4]"
+                    style={{
+                      width: `${result ? Math.round((result.level - Math.floor(result.level)) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
                 <p className="mt-2 text-sm text-slate-600">{result?.description}</p>
               </motion.div>
 

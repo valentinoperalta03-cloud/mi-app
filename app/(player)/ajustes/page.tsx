@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import SettingsClient from "./settings-client";
-import { LEVEL_HIERARCHY } from "@/lib/match-level";
+import { LEVEL_HIERARCHY, getLevelIndex } from "@/lib/match-level";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -102,7 +102,7 @@ export default async function AjustesPage({
       .eq("user_id", user.id)
       .maybeSingle();
     const currentCategory = String((current as { category?: string | null } | null)?.category ?? "");
-    const idx = LEVEL_HIERARCHY.indexOf(currentCategory as (typeof LEVEL_HIERARCHY)[number]);
+    const idx = getLevelIndex(currentCategory);
     if (idx > 0) {
       const newCategory = LEVEL_HIERARCHY[idx - 1];
       await supabase.from(DB_TABLES.profiles).update({ category: newCategory }).eq("user_id", user.id);

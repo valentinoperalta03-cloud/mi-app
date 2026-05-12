@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { classifyCategory } from "@/lib/level-quiz-logic";
-import { computeEloDelta } from "@/lib/level-evolution-elo";
+import { computeEloDelta, eloKForExperience } from "@/lib/level-evolution-elo";
+import { createNotification } from "@/lib/notifications";
 import { validateBestOfThreeSets } from "@/lib/padel-set-score";
 import { createClient } from "@/utils/supabase/server";
 
@@ -11,7 +12,8 @@ export type RecordMatchResultState = { ok: boolean; message: string };
 
 const initialState: RecordMatchResultState = { ok: false, message: "" };
 const LOCK_MINUTES = 10;
-const DEFAULT_LEVEL = 2.5;
+/** ELO por defecto (0–8) si falta dato en perfil. */
+const DEFAULT_LEVEL = 3.0;
 
 function parseScore(raw: FormDataEntryValue | null): number | null {
   const n = Number.parseInt(String(raw ?? "").trim(), 10);
@@ -60,6 +62,57 @@ type ResultRow = {
   elo_applied_at: string | null;
 };
 
+function setsWonLostFromStored(
+  sets: unknown,
+  teamASetsWon: number,
+  teamBSetsWon: number
+): { teamA: { won: number; lost: number }; teamB: { won: number; lost: number } } {
+  if (Array.isArray(sets) && sets.length > 0) {
+    let aWon = 0;
+    let bWon = 0;
+    for (const raw of sets as { a?: number; b?: number }[]) {
+      const a = Number(raw?.a ?? 0);
+      const b = Number(raw?.b ?? 0);
+      if (a > b) aWon += 1;
+      else if (b > a) bWon += 1;
+    }
+    return {
+      teamA: { won: aWon, lost: bWon },
+      teamB: { won: bWon, lost: aWon },
+    };
+  }
+  return {
+    teamA: { won: teamASetsWon, lost: teamBSetsWon },
+    teamB: { won: teamBSetsWon, lost: teamASetsWon },
+  };
+}
+
+function eloChangeNotificationBody(prev: number, next: number): { title: string; body: string } {
+  const prevCat = classifyCategory(prev);
+  const nextCat = classifyCategory(next);
+  const d = next - prev;
+  const deltaStr = `${d >= 0 ? "+" : ""}${d.toFixed(2)}`;
+  if (prevCat !== nextCat && d > 0) {
+    return { title: "Nivel actualizado", body: `🎉 ¡Subiste a ${nextCat}!` };
+  }
+  if (prevCat !== nextCat && d < 0) {
+    return { title: "Nivel actualizado", body: `↓ Bajaste a ${nextCat}` };
+  }
+  if (d > 0) {
+    return {
+      title: "Nivel actualizado",
+      body: `↑ ${deltaStr} → seguís en ${nextCat} (${next.toFixed(1)})`,
+    };
+  }
+  if (d < 0) {
+    return {
+      title: "Nivel actualizado",
+      body: `↓ ${deltaStr} → seguís en ${nextCat} (${next.toFixed(1)})`,
+    };
+  }
+  return { title: "Nivel actualizado", body: `Tu nivel se mantuvo en ${nextCat} (${next.toFixed(1)})` };
+}
+
 async function applyEloForConfirmedMatch(params: {
   matchId: string;
   teamAIds: string[];
@@ -72,12 +125,15 @@ async function applyEloForConfirmedMatch(params: {
 
   const { data: already } = await supabase
     .from(DB_TABLES.matchResults)
-    .select("elo_applied_at")
+    .select("elo_applied_at, sets")
     .eq("match_id", matchId)
     .maybeSingle();
   if ((already as { elo_applied_at?: string | null } | null)?.elo_applied_at) {
     return { ok: true, message: "Resultado confirmado." };
   }
+
+  const setsStored = (already as { sets?: unknown } | null)?.sets;
+  const { teamA: aSets, teamB: bSets } = setsWonLostFromStored(setsStored, teamAScore, teamBScore);
 
   const ids = [...teamAIds, ...teamBIds];
   const { data: profiles, error: pErr } = await supabase
@@ -95,25 +151,70 @@ async function applyEloForConfirmedMatch(params: {
   }
   for (const id of ids) if (!levelById.has(id)) levelById.set(id, DEFAULT_LEVEL);
 
-  const avgA = (levelById.get(teamAIds[0]!)! + levelById.get(teamAIds[1]!)!) / 2;
-  const avgB = (levelById.get(teamBIds[0]!)! + levelById.get(teamBIds[1]!)!) / 2;
+  const { data: mpRows } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id, match_id")
+    .in("player_id", ids);
+  const matchIds = [...new Set((mpRows ?? []).map((r: { match_id: string }) => r.match_id))];
+  const { data: matchMetaRows } =
+    matchIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.matches)
+          .select("id, match_type, result_status")
+          .in("id", matchIds)
+      : { data: [] };
+  const competitiveConfirmedIds = new Set(
+    (matchMetaRows ?? [])
+      .filter(
+        (m: { match_type?: string | null; result_status?: string | null }) =>
+          String(m.match_type ?? "").toLowerCase() === "competitivo" &&
+          String(m.result_status ?? "").toLowerCase() === "confirmed"
+      )
+      .map((m: { id: string }) => m.id)
+  );
+  const countByPlayer = new Map<string, number>(ids.map((id) => [id, 0]));
+  for (const row of (mpRows ?? []) as { player_id: string; match_id: string }[]) {
+    if (!competitiveConfirmedIds.has(row.match_id)) continue;
+    countByPlayer.set(row.player_id, (countByPlayer.get(row.player_id) ?? 0) + 1);
+  }
+
+  const snapshot = new Map(levelById);
+  const avgA = (snapshot.get(teamAIds[0]!)! + snapshot.get(teamAIds[1]!)!) / 2;
+  const avgB = (snapshot.get(teamBIds[0]!)! + snapshot.get(teamBIds[1]!)!) / 2;
   const aWon = teamAScore > teamBScore;
 
-  for (const playerId of teamAIds) {
-    const prev = levelById.get(playerId) ?? DEFAULT_LEVEL;
-    const outcome = aWon ? "win" : "loss";
+  const partnerOf = (team: readonly [string, string], self: string) =>
+    team[0] === self ? team[1]! : team[0]!;
+
+  async function applyForPlayer(opts: {
+    playerId: string;
+    partnerId: string;
+    opponentAvg: number;
+    outcome: "win" | "loss";
+    setsWon: number;
+    setsLost: number;
+  }) {
+    const { playerId, partnerId, opponentAvg, outcome, setsWon, setsLost } = opts;
+    const prev = snapshot.get(playerId) ?? DEFAULT_LEVEL;
+    const partnerLevel = snapshot.get(partnerId) ?? DEFAULT_LEVEL;
+    const totalMatchesPlayed = countByPlayer.get(playerId) ?? 0;
     const delta = computeEloDelta({
       playerLevel: prev,
-      opponentLevel: avgB,
+      partnerLevel,
+      opponentAvgLevel: opponentAvg,
       outcome,
+      setsWon,
+      setsLost,
+      totalMatchesPlayed,
     });
-    const next = Number(Math.max(1, Math.min(5, prev + delta)).toFixed(3));
+    const next = Number(Math.max(0, Math.min(8, prev + delta)).toFixed(3));
+    const kUsed = eloKForExperience(totalMatchesPlayed);
 
     const { error: upErr } = await supabase
       .from(DB_TABLES.profiles)
-      .update({ level: next, level_of_play: classifyCategory(next) })
+      .update({ level: next, level_of_play: classifyCategory(next), category: classifyCategory(next) })
       .eq("user_id", playerId);
-    if (upErr) return { ok: false, message: upErr.message };
+    if (upErr) return { ok: false as const, message: upErr.message };
 
     const { error: evErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
       user_id: playerId,
@@ -123,46 +224,52 @@ async function applyEloForConfirmedMatch(params: {
       new_level: next,
       source: "match_result",
       result: outcome,
-      opponent_avg_level: avgB,
-      k_factor: 0.08,
+      opponent_avg_level: opponentAvg,
+      k_factor: kUsed,
       delta,
       previous_score: prev,
       new_score: next,
     });
-    if (evErr) return { ok: false, message: evErr.message };
+    if (evErr) return { ok: false as const, message: evErr.message };
+
+    const { title, body } = eloChangeNotificationBody(prev, next);
+    await createNotification(supabase, {
+      user_id: playerId,
+      type: "level_up",
+      title,
+      body,
+      match_id: matchId,
+    });
+
+    return { ok: true as const };
+  }
+
+  for (const playerId of teamAIds) {
+    const partnerId = partnerOf([teamAIds[0]!, teamAIds[1]!], playerId);
+    const outcome = aWon ? "win" : "loss";
+    const res = await applyForPlayer({
+      playerId,
+      partnerId,
+      opponentAvg: avgB,
+      outcome,
+      setsWon: aSets.won,
+      setsLost: aSets.lost,
+    });
+    if (!res.ok) return res;
   }
 
   for (const playerId of teamBIds) {
-    const prev = levelById.get(playerId) ?? DEFAULT_LEVEL;
+    const partnerId = partnerOf([teamBIds[0]!, teamBIds[1]!], playerId);
     const outcome = aWon ? "loss" : "win";
-    const delta = computeEloDelta({
-      playerLevel: prev,
-      opponentLevel: avgA,
+    const res = await applyForPlayer({
+      playerId,
+      partnerId,
+      opponentAvg: avgA,
       outcome,
+      setsWon: bSets.won,
+      setsLost: bSets.lost,
     });
-    const next = Number(Math.max(1, Math.min(5, prev + delta)).toFixed(3));
-
-    const { error: upErr } = await supabase
-      .from(DB_TABLES.profiles)
-      .update({ level: next, level_of_play: classifyCategory(next) })
-      .eq("user_id", playerId);
-    if (upErr) return { ok: false, message: upErr.message };
-
-    const { error: evErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
-      user_id: playerId,
-      score: next,
-      category: classifyCategory(next),
-      old_level: prev,
-      new_level: next,
-      source: "match_result",
-      result: outcome,
-      opponent_avg_level: avgA,
-      k_factor: 0.08,
-      delta,
-      previous_score: prev,
-      new_score: next,
-    });
-    if (evErr) return { ok: false, message: evErr.message };
+    if (!res.ok) return res;
   }
 
   const { error: markErr } = await supabase

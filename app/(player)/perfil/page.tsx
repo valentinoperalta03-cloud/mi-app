@@ -14,7 +14,7 @@ import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, getProfileLevelParts } from "@/lib/profile-display";
 import { fetchFinishedMatchActivity } from "@/lib/player-match-history";
 import {
   fetchLevelEvolutionSeries,
@@ -137,8 +137,8 @@ export default async function PerfilPage() {
     row.is_leveled === true ||
     hasTechnical;
   const displayName = row?.name?.trim() || "Tu perfil";
+  const levelParts = getProfileLevelParts(row);
   const nivelLine = formatProfileNivelFromRow(row);
-  const nivelParts = splitOfficialCategoryLine(nivelLine);
 
   if (!isLeveled) {
     return (
@@ -180,10 +180,20 @@ export default async function PerfilPage() {
             />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-[var(--text-primary)]">{displayName}</h1>
-          <p className="mt-1 text-sm font-semibold text-[#0585FC]">
-            {nivelParts.category || "—"}
-            {nivelParts.description ? ` — ${nivelParts.description}` : ""}
-          </p>
+          {levelParts ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-sm font-semibold text-[#0585FC]">{levelParts.category}</p>
+              <p className="text-xs font-medium text-[var(--text-tertiary)]">ELO {levelParts.elo}</p>
+              <div className="mx-auto h-1.5 w-full max-w-[200px] overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+                <div
+                  className="h-full rounded-full bg-[#0585FC] transition-[width]"
+                  style={{ width: `${levelParts.progressInEloUnit}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
+          )}
           <div className="mt-4 flex justify-center gap-3">
             <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
               <p className="text-sm font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>

@@ -1,4 +1,4 @@
-import { formatLevel } from "@/lib/level-quiz-logic";
+import { classifyCategory } from "@/lib/level-quiz-logic";
 
 /** Texto para tarjeta "Nivel": categoría + valor numérico. */
 export function formatProfileNivel(
@@ -22,25 +22,58 @@ type ProfileNivelRow = {
   level?: number | null;
 };
 
-export function formatOfficialCategoryFromLevel(level: number): string {
-  return formatLevel(level);
-}
+export type ProfileLevelParts = {
+  category: string;
+  elo: string;
+  /** Progreso dentro de la parte decimal del ELO (0–100). */
+  progressInEloUnit: number;
+};
 
-export function splitOfficialCategoryLine(line: string): { category: string; description: string } {
-  const [left, ...rest] = line.split(" - ");
+export function getProfileLevelParts(row: ProfileNivelRow | null | undefined): ProfileLevelParts | null {
+  if (!row || row.level == null || !Number.isFinite(Number(row.level))) return null;
+  const level = Math.max(0, Math.min(8, Number(row.level)));
+  const frac = level - Math.floor(level);
   return {
-    category: (left ?? "").trim(),
-    description: rest.join(" - ").trim(),
+    category: classifyCategory(level),
+    elo: level.toFixed(1),
+    progressInEloUnit: Math.round(frac * 100),
   };
 }
 
-/** `level` es la fuente canónica del nivel competitivo. */
-export function formatProfileNivelFromRow(row: ProfileNivelRow | null | undefined): string {
-  if (!row) return "Sin nivelar";
-  if (row.level != null && Number.isFinite(Number(row.level))) {
-    return formatOfficialCategoryFromLevel(Number(row.level));
+export function formatOfficialCategoryFromLevel(level: number): string {
+  return classifyCategory(level);
+}
+
+/**
+ * Parsea líneas tipo "6ta · Intermedio · 4.2" (categoría + ELO) o legacy "x - y".
+ */
+export function splitOfficialCategoryLine(line: string): { category: string; description: string } {
+  const trimmed = line.trim();
+  const lastSep = trimmed.lastIndexOf(" · ");
+  if (lastSep > 0) {
+    const maybeElo = trimmed.slice(lastSep + 3).trim();
+    if (/^\d+(\.\d+)?$/.test(maybeElo)) {
+      return { category: trimmed.slice(0, lastSep).trim(), description: maybeElo };
+    }
   }
-  return "Sin nivelar";
+  if (trimmed.includes(" - ")) {
+    const [left, ...rest] = trimmed.split(" - ");
+    return {
+      category: (left ?? "").trim(),
+      description: rest.join(" - ").trim(),
+    };
+  }
+  return {
+    category: trimmed,
+    description: "",
+  };
+}
+
+/** `level` es la fuente canónica del ELO competitivo (0–8). */
+export function formatProfileNivelFromRow(row: ProfileNivelRow | null | undefined): string {
+  const parts = getProfileLevelParts(row);
+  if (!parts) return "Sin nivelar";
+  return `${parts.category} · ${parts.elo}`;
 }
 
 export const PROFILE_CATEGORIES = [

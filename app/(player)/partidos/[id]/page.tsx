@@ -11,7 +11,7 @@ import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 import InviteFriendsSection from "./invite-friends-section";
@@ -474,7 +474,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     `Jugadores:`,
     ...Array.from({ length: 4 }, (_, i) => {
       const p = participants[i];
-      if (p) return `\u2705 ${p.name ?? "Jugador"} (${formatProfileNivelFromRow(p).split(" - ")[0] ?? "Sin nivel"})`;
+      if (p)
+        return `\u2705 ${p.name ?? "Jugador"} (${splitOfficialCategoryLine(formatProfileNivelFromRow(p)).category || "Sin nivel"})`;
       return `\u26AA Falta 1 jugador`;
     }),
     ``,

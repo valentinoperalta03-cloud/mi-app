@@ -78,7 +78,7 @@ export async function completeLevelingProfile(payload: {
     return { ok: false, message: "El cuestionario está incompleto o es inválido." };
   }
 
-  const finalLevel = Number(comp.average.toFixed(2));
+  const finalLevel = comp.mappedLevel;
   const category = classifyCategory(finalLevel);
 
   const { error: evoErr } = await supabase.from(DB_TABLES.levelEvolution).insert({

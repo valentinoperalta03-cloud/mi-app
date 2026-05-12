@@ -5,7 +5,7 @@ import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatProfileNivelFromRow, getProfileLevelParts } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 import ProfileSocialActions from "@/components/profile-social-actions";
 import ProfileStatsPanel from "./profile-stats-panel";
@@ -73,7 +73,11 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     isMutual = favorited && followsBack;
   }
   const nivelLine = formatProfileNivelFromRow(row);
-  const nivelParts = splitOfficialCategoryLine(nivelLine);
+  const levelParts = getProfileLevelParts(row);
+  const eloLabel =
+    row.level != null && Number.isFinite(Number(row.level))
+      ? Number(row.level).toFixed(1)
+      : "Sin nivel";
 
   const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
     supabase
@@ -156,10 +160,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const victoriasTotales = normalizedResults.filter((r) => r.resultado === "Victoria").length;
   const derrotasTotales = normalizedResults.filter((r) => r.resultado === "Derrota").length;
   const empatesTotales = normalizedResults.filter((r) => r.resultado === "Empate").length;
-  const eloLabel =
-    row.technical_score != null && Number.isFinite(Number(row.technical_score))
-      ? Number(row.technical_score).toFixed(2)
-      : "Sin ranking";
   const ultimosCinco = normalizedResults
     .sort((a, b) => new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime())
     .slice(0, 5);
@@ -264,12 +264,22 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
         {row.bio?.trim() ? (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
         ) : null}
-        <p className="mt-2 text-sm text-[#0461C4]">
-          <span className="font-bold">{nivelParts.category || "—"}</span>
-          {nivelParts.description ? (
-            <span className="font-medium text-[#0461C4]">{" - "}{nivelParts.description}</span>
-          ) : null}
-        </p>
+        {levelParts ? (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm font-bold text-[#0461C4]">{levelParts.category}</p>
+            <p className="text-xs font-medium text-slate-500">ELO {levelParts.elo}</p>
+            <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-[#0461C4]"
+                style={{ width: `${levelParts.progressInEloUnit}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-[#0461C4]">
+            <span className="font-bold">{nivelLine}</span>
+          </p>
+        )}
         <p className="mt-1 text-xs font-medium text-slate-500">Categoría: {categoriaLabel}</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
@@ -290,7 +300,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       <ProfileStatsPanel
         partidosJugados={partidosJugados}
         victoriasTotales={victoriasTotales}
-        nivelActual={nivelParts.category || "—"}
+        nivelActual={levelParts?.category ?? nivelLine}
         eloRanking={eloLabel}
       />
 

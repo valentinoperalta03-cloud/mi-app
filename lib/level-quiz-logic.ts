@@ -93,6 +93,8 @@ export const QUIZ_QUESTION_OPTIONS: QuizAnswerOption[][] = [
 export type LevelComputation = {
   average: number;
   total: number;
+  /** Nivel inicial en escala 0–8 (tope 5.0 desde el quiz). */
+  mappedLevel: number;
 };
 
 export function computeLevelFromAnswers(answers: number[]): LevelComputation {
@@ -105,30 +107,25 @@ export function computeLevelFromAnswers(answers: number[]): LevelComputation {
 
   const total = answers.reduce((acc, curr) => acc + curr, 0);
   const average = total / QUIZ_QUESTIONS.length;
-  return { average, total };
+  const raw = ((average - 1) / 4) * 4.5 + 0.5;
+  const mappedLevel = Math.round(Math.max(0.5, Math.min(5.0, raw)) * 1000) / 1000;
+  return { average, total, mappedLevel };
 }
 
 export function classifyCategory(level: number): string {
-  if (level >= 4.5) return "1ra/2da (Elite)";
-  if (level >= 4.0) return "3ra (Avanzado+)";
-  if (level >= 3.5) return "4ta (Avanzado)";
-  if (level >= 3.0) return "5ta (Intermedio+)";
-  if (level >= 2.5) return "6ta (Intermedio)";
-  if (level >= 2.0) return "7ma (Iniciacion+)";
-  return "8va (Principiante)";
+  if (level >= 7.0) return "1ra · Elite";
+  if (level >= 6.0) return "2da · Elite";
+  if (level >= 5.0) return "3ra · Avanzado+";
+  if (level >= 4.0) return "4ta · Avanzado";
+  if (level >= 3.0) return "5ta · Intermedio+";
+  if (level >= 2.0) return "6ta · Intermedio";
+  if (level >= 1.0) return "7ma · Iniciación";
+  return "8va · Principiante";
 }
 
-/**
- * Formato oficial visible en toda la app:
- * "{Categoria} - {Descripcion}" (ej: "5ta - Intermedio+").
- */
+/** Texto visible: solo categoría (sin número ELO). */
 export function formatLevel(level: number): string {
-  const label = classifyCategory(level);
-  const m = label.match(/^(.+?)\s*\((.+)\)$/);
-  if (!m) return label;
-  const category = (m[1] ?? "").trim();
-  const description = (m[2] ?? "").trim();
-  return `${category} - ${description}`;
+  return classifyCategory(level);
 }
 
 export type BaseLevelChoice = "principiante" | "intermedio" | "avanzado";
