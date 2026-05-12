@@ -273,12 +273,12 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt || !selectedSlot) return { precioCanchaJugador: 0, comisionPorJugador: 0, total: 0 };
+    if (!selectedCourt || !selectedSlot) return { total: 0 };
     const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
     const precioCanchaJugador = Math.round(turnPrice / 4);
     const comisionPorJugador = Math.round(precioCanchaJugador * 0.05);
     const total = precioCanchaJugador + comisionPorJugador;
-    return { precioCanchaJugador, comisionPorJugador, total };
+    return { total };
   }, [getTurnPrice, selectedCourt, selectedSlot]);
 
   function toggleFriend(friendId: string) {
@@ -837,10 +837,10 @@ export default function CrearPartidoForm({
               ))}
 
               <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
-                <div className="flex justify-between text-base font-bold text-slate-900 dark:text-white">
-                  <span>Total a pagar</span>
+                <p className="text-base font-bold text-slate-900 dark:text-white">
+                  Total a pagar:{" "}
                   <span className="text-lg font-bold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
-                </div>
+                </p>
               </div>
             </div>
           </div>

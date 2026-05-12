@@ -76,6 +76,13 @@ function NuevaReservaContent() {
   const [slots, setSlots] = useState<SlotView[]>([]);
   const [pendingConfirm, startConfirm] = useTransition();
 
+  /** Total mostrado al jugador; coincide con el monto cobrado en el flujo de pago. */
+  const totalPagar = useMemo(() => {
+    const precioCancha = Math.round(precioTurno / 4);
+    const comision = Math.round(precioCancha * 0.05);
+    return precioCancha + comision;
+  }, [precioTurno]);
+
   const dateChips = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -345,19 +352,12 @@ function NuevaReservaContent() {
             </dl>
           </div>
 
-          {(() => {
-            const precioCancha = Math.round(precioTurno / 4);
-            const comision = Math.round(precioCancha * 0.05);
-            const total = precioCancha + comision;
-            return (
-              <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
-                <div className="flex justify-between gap-3 text-base font-bold text-slate-900">
-                  <span>Total a pagar</span>
-                  <span className="text-lg font-bold text-[#0585FC]">${fmtAr(total)}</span>
-                </div>
-              </div>
-            );
-          })()}
+          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
+            <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Total a pagar:{" "}
+              <span className="text-lg font-bold text-[#0585FC]">${fmtAr(totalPagar)}</span>
+            </p>
+          </div>
 
           <form
             className="space-y-3"
