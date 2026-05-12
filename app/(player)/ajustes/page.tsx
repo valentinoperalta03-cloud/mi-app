@@ -4,6 +4,7 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import SettingsClient from "./settings-client";
 import { LEVEL_HIERARCHY, getLevelIndex } from "@/lib/match-level";
+import { classifyCategory } from "@/lib/level-quiz-logic";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -104,8 +105,21 @@ export default async function AjustesPage({
     const currentCategory = String((current as { category?: string | null } | null)?.category ?? "");
     const idx = getLevelIndex(currentCategory);
     if (idx > 0) {
-      const newCategory = LEVEL_HIERARCHY[idx - 1];
-      await supabase.from(DB_TABLES.profiles).update({ category: newCategory }).eq("user_id", user.id);
+      const newIdx = idx - 1;
+      const newCategory = LEVEL_HIERARCHY[newIdx];
+      // Centro de la banda [n, n+1) en 0–8 (mismos cortes que classifyCategory).
+      const newLevel = newIdx + 0.5;
+      if (classifyCategory(newLevel) !== newCategory) {
+        console.error("downgradeLevel: classifyCategory no coincide con la banda", {
+          newLevel,
+          newCategory,
+          derived: classifyCategory(newLevel),
+        });
+      }
+      await supabase
+        .from(DB_TABLES.profiles)
+        .update({ category: newCategory, level: newLevel })
+        .eq("user_id", user.id);
     }
     revalidatePath("/ajustes");
     redirect("/ajustes?success=nivel_bajado");
