@@ -19,10 +19,6 @@
     {
       "path": "/api/cron/generate-fixed-slot-reservations",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/fixed-slot-reminder",
-      "schedule": "0 * * * *"
     }
   ]
 }
