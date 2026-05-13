@@ -1,5 +1,8 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
+import { HomeSuggestionsSkeleton } from "@/components/home-loading-skeletons";
 import {
   fetchLatestMatchResultForUser,
   fetchPostsFeed,
@@ -8,7 +11,16 @@ import { fetchRankingsPreview } from "@/lib/rankings-data";
 import { createClient } from "@/utils/supabase/server";
 import { ComunidadClient } from "./comunidad-client";
 
-export default async function ComunidadPage() {
+type ComunidadPageProps = {
+  searchParams?: Promise<{ tab?: string | string[] }>;
+};
+
+export default async function ComunidadPage({ searchParams }: ComunidadPageProps) {
+  const sp = searchParams ? await searchParams : {};
+  const raw = sp.tab;
+  const tabParam = Array.isArray(raw) ? raw[0] : raw;
+  const activeTab = tabParam === "jugadores" ? "jugadores" : "para-ti";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,8 +75,19 @@ export default async function ComunidadPage() {
     (row) => row.user_id
   );
 
+  const suggestions =
+    activeTab === "para-ti" ? (
+      <section className="min-w-0 space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Sugerencias para vos</h2>
+        <Suspense fallback={<HomeSuggestionsSkeleton />}>
+          <HomeSuggestionsSection userId={user.id} />
+        </Suspense>
+      </section>
+    ) : null;
+
   return (
     <ComunidadClient
+      activeTab={activeTab}
       posts={posts}
       latestMatch={latestMatch}
       players={players}
@@ -72,6 +95,8 @@ export default async function ComunidadPage() {
       followsMeIds={followsMeIds}
       userId={user.id}
       rankingsPreview={rankingsPreview}
-    />
+    >
+      {suggestions}
+    </ComunidadClient>
   );
 }

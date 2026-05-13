@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { MessageCircle, Sparkles, Trophy, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ParaTiCreatePost } from "@/components/para-ti-create-post";
@@ -21,18 +21,16 @@ type PlayerCard = {
   technical_score?: number | null;
 };
 
-type GridTile = {
+type TileVisual = {
   id: string;
   label: string;
   Icon: typeof Sparkles;
   ringGradient: string;
   barGradient: string;
   iconClass: string;
-  href?: string;
-  tab?: "para-ti" | "jugadores";
 };
 
-const gridTiles: GridTile[] = [
+const tileVisuals: TileVisual[] = [
   {
     id: "para-ti",
     label: "Para Ti",
@@ -40,7 +38,6 @@ const gridTiles: GridTile[] = [
     ringGradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 40%, #0585FC 100%)",
     barGradient: "linear-gradient(90deg, #0585FC, #0461C4, #0585FC)",
     iconClass: "text-[#0585FC]",
-    tab: "para-ti",
   },
   {
     id: "jugadores",
@@ -49,7 +46,6 @@ const gridTiles: GridTile[] = [
     ringGradient: "linear-gradient(135deg, #16a34a 0%, #15803d 45%, #16a34a 100%)",
     barGradient: "linear-gradient(90deg, #16a34a, #15803d, #16a34a)",
     iconClass: "text-[#16a34a]",
-    tab: "jugadores",
   },
   {
     id: "mensajes",
@@ -58,7 +54,6 @@ const gridTiles: GridTile[] = [
     ringGradient: "linear-gradient(135deg, #a855f7 0%, #7c3aed 45%, #a855f7 100%)",
     barGradient: "linear-gradient(90deg, #a855f7, #7c3aed, #a855f7)",
     iconClass: "text-[#9333ea]",
-    href: "/comunidad/mensajes",
   },
   {
     id: "rankings",
@@ -67,27 +62,25 @@ const gridTiles: GridTile[] = [
     ringGradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 45%, #f59e0b 100%)",
     barGradient: "linear-gradient(90deg, #f59e0b, #d97706, #f59e0b)",
     iconClass: "text-[#d97706]",
-    href: "/comunidad/rankings",
   },
 ];
 
 const outerTileClass =
   "comunidad-gradient-animated block min-h-[112px] w-full min-w-0 rounded-3xl p-[2.5px] text-left shadow-[0_2px_12px_rgba(15,23,42,0.06)] outline-none transition-[transform,box-shadow] duration-200 hover:shadow-[0_8px_28px_rgba(15,23,42,0.1)] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[#0585FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] touch-manipulation dark:focus-visible:ring-offset-black";
 
-function ComunidadGridCard({
+function ComunidadNavTile({
   tile,
-  activeTab,
-  onTab,
+  href,
+  isActive,
 }: {
-  tile: GridTile;
-  activeTab: "para-ti" | "jugadores";
-  onTab: (t: "para-ti" | "jugadores") => void;
+  tile: TileVisual;
+  href: string;
+  isActive: boolean;
 }) {
-  const isActiveTab = tile.tab != null && activeTab === tile.tab;
   const inner = (
     <div
       className={`relative flex min-h-[106px] flex-col rounded-[20px] bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.05] transition-shadow duration-200 dark:bg-[var(--bg-card)] dark:ring-white/[0.08] ${
-        isActiveTab ? "ring-2 ring-[#0585FC]/40 shadow-[0_4px_20px_-4px_rgba(5,133,252,0.25)]" : ""
+        isActive ? "ring-2 ring-[#0585FC]/40 shadow-[0_4px_20px_-4px_rgba(5,133,252,0.25)]" : ""
       }`}
     >
       <div className="flex items-start gap-2.5">
@@ -108,37 +101,23 @@ function ComunidadGridCard({
     </div>
   );
 
-  if (tile.href) {
-    return (
-      <Link
-        href={tile.href}
-        prefetch
-        aria-label={`Ir a ${tile.label}`}
-        className={outerTileClass}
-        style={{ backgroundImage: tile.ringGradient }}
-      >
-        {inner}
-      </Link>
-    );
-  }
-
   return (
-    <button
-      type="button"
-      aria-pressed={isActiveTab}
-      aria-label={tile.label}
-      onClick={() => {
-        if (tile.tab) onTab(tile.tab);
-      }}
+    <Link
+      href={href}
+      prefetch
+      aria-label={`Ir a ${tile.label}`}
+      aria-current={isActive ? "page" : undefined}
       className={outerTileClass}
       style={{ backgroundImage: tile.ringGradient }}
     >
       {inner}
-    </button>
+    </Link>
   );
 }
 
 export function ComunidadClient({
+  activeTab,
+  children,
   posts,
   latestMatch,
   players,
@@ -147,6 +126,8 @@ export function ComunidadClient({
   userId,
   rankingsPreview,
 }: {
+  activeTab: "para-ti" | "jugadores";
+  children?: ReactNode;
   posts: PostFeedItem[];
   latestMatch: LatestMatchLink;
   players: PlayerCard[];
@@ -155,19 +136,19 @@ export function ComunidadClient({
   userId: string;
   rankingsPreview: RankingsPreview;
 }) {
-  const [activeTab, setActiveTab] = useState<"para-ti" | "jugadores">("para-ti");
-  const contentRef = useRef<HTMLDivElement>(null);
-  const prevTab = useRef(activeTab);
+  const hrefs: Record<string, string> = {
+    "para-ti": "/comunidad",
+    jugadores: "/comunidad?tab=jugadores#comunidad-contenido",
+    mensajes: "/comunidad/mensajes",
+    rankings: "/comunidad/rankings",
+  };
 
-  useEffect(() => {
-    if (prevTab.current === activeTab) return;
-    prevTab.current = activeTab;
-    const el = contentRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, [activeTab]);
+  const activeById: Record<string, boolean> = {
+    "para-ti": activeTab === "para-ti",
+    jugadores: activeTab === "jugadores",
+    mensajes: false,
+    rankings: false,
+  };
 
   return (
     <MotionPage
@@ -198,12 +179,21 @@ export function ComunidadClient({
       </header>
 
       <div className="mb-6 grid min-w-0 grid-cols-2 gap-3 px-4 sm:gap-3.5">
-        {gridTiles.map((tile) => (
-          <ComunidadGridCard key={tile.id} tile={tile} activeTab={activeTab} onTab={setActiveTab} />
+        {tileVisuals.map((tile) => (
+          <ComunidadNavTile
+            key={tile.id}
+            tile={tile}
+            href={hrefs[tile.id] ?? "/comunidad"}
+            isActive={activeById[tile.id] ?? false}
+          />
         ))}
       </div>
 
-      <div ref={contentRef} id="comunidad-contenido" className="scroll-mt-6 px-4">
+      {activeTab === "para-ti" && children ? (
+        <div className="mb-5 min-w-0 px-4">{children}</div>
+      ) : null}
+
+      <div id="comunidad-contenido" className="scroll-mt-6 px-4">
         <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
           {activeTab === "jugadores" ? (
             <FriendsSearchClient

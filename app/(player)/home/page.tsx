@@ -7,11 +7,9 @@ import { CompetitiveResultConfirmationCard } from "@/components/competitive-resu
 import { FriendRequestsSection } from "@/components/friend-requests-section";
 import HomeJoinRequestsSection from "@/components/home-join-requests-section";
 import { HomeReservationsSection } from "@/components/home-reservations-section";
-import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
 import {
   HomeReservationsSkeleton,
-  HomeSuggestionsSkeleton,
   HomeSummarySkeleton,
 } from "@/components/home-loading-skeletons";
 import OnboardingSlides from "@/components/onboarding-slides";
@@ -182,13 +180,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Suspense>
         <Suspense fallback={null}>
           <HomeJoinRequestsSection userId={user.id} />
-        </Suspense>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Sugerencias para vos</h2>
-        <Suspense fallback={<HomeSuggestionsSkeleton />}>
-          <HomeSuggestionsSection userId={user.id} />
         </Suspense>
       </section>
 
