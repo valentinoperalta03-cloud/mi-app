@@ -36,8 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Claude Code worktrees (no commitear como gitlink sin .gitmodules — git exit 128 en CI)
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
