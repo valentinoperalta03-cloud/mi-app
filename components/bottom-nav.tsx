@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, UserCircle, Users } from "lucide-react";
+import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -11,7 +11,6 @@ import { createClient } from "@/utils/supabase/client";
 
 const items = [
   { href: "/home", label: "Inicio", icon: Home },
-  { href: "/torneos", label: "Torneos", icon: Trophy },
   { href: "/comunidad", label: "Comunidad", icon: Users },
   { href: "/perfil", label: "Perfil", icon: UserCircle },
 ] as const;
@@ -62,7 +61,7 @@ export default function BottomNav() {
       aria-label="Navegación principal"
     >
       <div
-        className="pointer-events-auto flex w-full max-w-sm items-center justify-between gap-1 rounded-2xl px-2 py-2 backdrop-blur-[20px]"
+        className="pointer-events-auto flex w-full max-w-sm items-center justify-around gap-2 rounded-2xl px-3 py-2 backdrop-blur-[20px]"
         style={{
           background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
           boxShadow: "0 -4px 20px rgba(5,133,252,0.3)",

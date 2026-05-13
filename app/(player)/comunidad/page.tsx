@@ -4,6 +4,7 @@ import {
   fetchLatestMatchResultForUser,
   fetchPostsFeed,
 } from "@/lib/para-ti-posts";
+import { fetchRankingsPreview } from "@/lib/rankings-data";
 import { createClient } from "@/utils/supabase/server";
 import { ComunidadClient } from "./comunidad-client";
 
@@ -14,9 +15,10 @@ export default async function ComunidadPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [posts, latestMatch] = await Promise.all([
+  const [posts, latestMatch, rankingsPreview] = await Promise.all([
     fetchPostsFeed(supabase),
     fetchLatestMatchResultForUser(supabase, user.id),
+    fetchRankingsPreview(user.id),
   ]);
   const { data: rows } = await supabase
     .from(DB_TABLES.profiles)
@@ -69,6 +71,7 @@ export default async function ComunidadPage() {
       initialFollowingIds={initialFollowingIds}
       followsMeIds={followsMeIds}
       userId={user.id}
+      rankingsPreview={rankingsPreview}
     />
   );
 }
