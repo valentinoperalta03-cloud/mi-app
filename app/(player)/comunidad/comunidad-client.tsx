@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Sparkles, Trophy, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ParaTiCreatePost } from "@/components/para-ti-create-post";
@@ -71,6 +71,9 @@ const gridTiles: GridTile[] = [
   },
 ];
 
+const outerTileClass =
+  "comunidad-gradient-animated block min-h-[112px] w-full min-w-0 rounded-3xl p-[2.5px] text-left shadow-[0_2px_12px_rgba(15,23,42,0.06)] outline-none transition-[transform,box-shadow] duration-200 hover:shadow-[0_8px_28px_rgba(15,23,42,0.1)] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[#0585FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] touch-manipulation dark:focus-visible:ring-offset-black";
+
 function ComunidadGridCard({
   tile,
   activeTab,
@@ -83,23 +86,23 @@ function ComunidadGridCard({
   const isActiveTab = tile.tab != null && activeTab === tile.tab;
   const inner = (
     <div
-      className={`flex min-h-[100px] flex-col rounded-[22px] bg-white p-3 shadow-[0_4px_20px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.04] transition-transform duration-200 dark:bg-[var(--bg-card)] dark:ring-white/10 ${
-        isActiveTab ? "ring-2 ring-[#0585FC]/35" : ""
+      className={`relative flex min-h-[106px] flex-col rounded-[20px] bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.05] transition-shadow duration-200 dark:bg-[var(--bg-card)] dark:ring-white/[0.08] ${
+        isActiveTab ? "ring-2 ring-[#0585FC]/40 shadow-[0_4px_20px_-4px_rgba(5,133,252,0.25)]" : ""
       }`}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2.5">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-[2px]"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-[2.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
           style={{ backgroundImage: tile.ringGradient }}
         >
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-white dark:bg-[var(--bg-card)]">
+          <div className="flex h-full w-full items-center justify-center rounded-full bg-white shadow-inner dark:bg-[var(--bg-card)]">
             <tile.Icon className={tile.iconClass} size={22} strokeWidth={2.25} aria-hidden />
           </div>
         </div>
       </div>
-      <p className="mt-2 text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">{tile.label}</p>
+      <p className="mt-2.5 text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">{tile.label}</p>
       <div
-        className="comunidad-gradient-animated mt-auto h-1 w-full rounded-full opacity-90"
+        className="comunidad-gradient-animated mt-auto h-[3px] w-full rounded-full opacity-95"
         style={{ backgroundImage: tile.barGradient }}
       />
     </div>
@@ -109,7 +112,9 @@ function ComunidadGridCard({
     return (
       <Link
         href={tile.href}
-        className="comunidad-gradient-animated block min-w-0 rounded-3xl p-[2px] transition-transform active:scale-95"
+        prefetch
+        aria-label={`Ir a ${tile.label}`}
+        className={outerTileClass}
         style={{ backgroundImage: tile.ringGradient }}
       >
         {inner}
@@ -120,8 +125,12 @@ function ComunidadGridCard({
   return (
     <button
       type="button"
-      onClick={() => tile.tab && onTab(tile.tab)}
-      className="comunidad-gradient-animated block w-full min-w-0 rounded-3xl p-[2px] text-left transition-transform active:scale-95"
+      aria-pressed={isActiveTab}
+      aria-label={tile.label}
+      onClick={() => {
+        if (tile.tab) onTab(tile.tab);
+      }}
+      className={outerTileClass}
       style={{ backgroundImage: tile.ringGradient }}
     >
       {inner}
@@ -147,48 +156,65 @@ export function ComunidadClient({
   rankingsPreview: RankingsPreview;
 }) {
   const [activeTab, setActiveTab] = useState<"para-ti" | "jugadores">("para-ti");
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevTab = useRef(activeTab);
+
+  useEffect(() => {
+    if (prevTab.current === activeTab) return;
+    prevTab.current = activeTab;
+    const el = contentRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [activeTab]);
 
   return (
     <MotionPage
-      className="mx-auto min-h-screen w-full max-w-md bg-transparent pb-32 pt-6"
+      className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5"
       data-user-id={userId}
     >
-      <header className="mb-5 px-4">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
-        <p className="text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
+      <header className="mx-4 mb-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/90 px-4 py-4 shadow-[var(--shadow-card)] backdrop-blur-md dark:bg-[var(--bg-card)]/95">
+        <h1 className="text-[1.65rem] font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
+        <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
         {rankingsPreview.myGlobalPosition != null && rankingsPreview.totalRankedPlayers > 0 ? (
-          <p className="mt-2 text-xs font-medium text-[var(--text-secondary)]">
-            Tu ranking global:{" "}
-            <Link href="/comunidad/rankings" className="font-bold text-[#0585FC] underline-offset-2 hover:underline">
-              #{rankingsPreview.myGlobalPosition}
-            </Link>{" "}
-            de {rankingsPreview.totalRankedPlayers} jugadores
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--bg-subtle)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
+            <span>
+              Tu ranking global:{" "}
+              <Link
+                href="/comunidad/rankings"
+                prefetch
+                className="font-bold text-[#0585FC] underline-offset-2 hover:underline"
+              >
+                #{rankingsPreview.myGlobalPosition}
+              </Link>{" "}
+              de {rankingsPreview.totalRankedPlayers} jugadores
+            </span>
             {rankingsPreview.weeklyFirstName ? (
-              <span className="text-[var(--text-tertiary)]">
-                {" "}
-                · Líder de la semana: {rankingsPreview.weeklyFirstName}
-              </span>
+              <span className="text-[var(--text-tertiary)]">· Líder de la semana: {rankingsPreview.weeklyFirstName}</span>
             ) : null}
-          </p>
+          </div>
         ) : null}
       </header>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 px-4">
+      <div className="mb-6 grid min-w-0 grid-cols-2 gap-3 px-4 sm:gap-3.5">
         {gridTiles.map((tile) => (
           <ComunidadGridCard key={tile.id} tile={tile} activeTab={activeTab} onTab={setActiveTab} />
         ))}
       </div>
 
-      <div className="mt-2 px-4">
-        {activeTab === "jugadores" ? (
-          <FriendsSearchClient
-            players={players}
-            initialFollowingIds={initialFollowingIds}
-            followsMeIds={followsMeIds}
-          />
-        ) : (
-          <ParaTiPostsMotion posts={posts} />
-        )}
+      <div ref={contentRef} id="comunidad-contenido" className="scroll-mt-6 px-4">
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
+          {activeTab === "jugadores" ? (
+            <FriendsSearchClient
+              players={players}
+              initialFollowingIds={initialFollowingIds}
+              followsMeIds={followsMeIds}
+            />
+          ) : (
+            <ParaTiPostsMotion posts={posts} />
+          )}
+        </section>
       </div>
 
       {activeTab === "para-ti" ? <ParaTiCreatePost latestMatch={latestMatch} /> : null}

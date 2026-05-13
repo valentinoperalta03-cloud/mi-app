@@ -78,11 +78,11 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
   };
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-lg bg-[var(--bg-app)] px-4 pb-28 pt-6">
-      <header className="mb-6">
+    <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
+      <header className="mb-6 min-w-0">
         <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">Torneos</h1>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Inscribite en torneos de clubes y seguí el fixture.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex min-w-0 flex-wrap gap-2">
           {chip("all", "Todos")}
           {chip("open", "Abiertos")}
           {chip("in_progress", "En curso")}
@@ -90,7 +90,7 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
         </div>
       </header>
 
-      <ul className="space-y-4">
+      <ul className="min-w-0 space-y-4">
         {list.length === 0 ? (
           <li className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-10 text-center text-sm text-[var(--text-tertiary)]">
             No hay torneos para mostrar.
@@ -115,10 +115,10 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
             <li key={t.id}>
               <Link
                 href={`/torneos/${t.id}`}
-                className="block overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[0_8px_30px_-18px_rgba(15,23,42,0.15)] transition active:scale-[0.99]"
+                className="block min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[0_8px_30px_-18px_rgba(15,23,42,0.15)] transition active:scale-[0.99]"
               >
-                <div className="flex gap-4 p-4">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-subtle)] ring-1 ring-black/5 dark:ring-white/10">
+                <div className="flex min-w-0 gap-3 p-4 sm:gap-4">
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-subtle)] ring-1 ring-black/5 dark:ring-white/10 sm:h-16 sm:w-16">
                     {club?.logo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element -- URLs externas de storage
                       <img src={club.logo_url} alt="" className="h-full w-full object-cover" />
@@ -130,7 +130,7 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{club?.name ?? "Club"}</p>
-                    <h2 className="truncate text-lg font-bold text-[var(--text-primary)]">{t.name}</h2>
+                    <h2 className="line-clamp-2 text-lg font-bold leading-snug break-words text-[var(--text-primary)]">{t.name}</h2>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
                         {badge}
@@ -140,8 +140,9 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                     <p className="mt-2 text-xs capitalize text-[var(--text-secondary)]">
                       {dateLabel} · {timeLabel}hs
                     </p>
-                    <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                      ${Math.round(Number(t.price_per_pair))} / pareja · {n}/{t.max_pairs} parejas · {formatCategoryRange(t.category_min, t.category_max)}
+                    <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">
+                      ${Math.round(Number(t.price_per_pair))} / pareja · {n}/{t.max_pairs} parejas ·{" "}
+                      {formatCategoryRange(t.category_min, t.category_max)}
                     </p>
                     {t.prize ? (
                       <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">🏅 Premio: {t.prize}</p>

@@ -108,14 +108,14 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const timeLabel = format(dt, "HH:mm");
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-lg bg-[var(--bg-app)] px-4 pb-28 pt-6">
+    <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
       <Link href="/torneos" className="text-sm font-medium text-[#0461C4]">
         ← Torneos
       </Link>
 
-      <header className="mt-4 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-sm">
+      <header className="mt-4 min-w-0 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{tour.clubs?.name ?? "Club"}</p>
-        <h1 className="mt-1 text-2xl font-bold text-[var(--text-primary)]">{tour.name}</h1>
+        <h1 className="mt-1 break-words text-2xl font-bold leading-tight text-[var(--text-primary)]">{tour.name}</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">{badge}</p>
         <p className="mt-2 text-sm capitalize text-[var(--text-secondary)]">
           {dateLabel} · {timeLabel}hs
@@ -126,7 +126,9 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         </p>
         <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">${Math.round(Number(tour.price_per_pair))} por pareja</p>
         {tour.prize ? <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">🏅 Premio: {tour.prize}</p> : null}
-        {tour.description ? <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{tour.description}</p> : null}
+        {tour.description ? (
+          <p className="mt-3 break-words text-sm leading-relaxed text-[var(--text-secondary)]">{tour.description}</p>
+        ) : null}
       </header>
 
       <section className="mt-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
