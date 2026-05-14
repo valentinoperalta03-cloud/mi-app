@@ -116,11 +116,13 @@ function NuevaReservaContent() {
       const dow = getDay(dayDate);
 
       const [
+        { data: courtRow, error: courtErr },
         { data: schedRows, error: schedErr },
         { data: matchRows, error: matchErr },
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
       ] = await Promise.all([
+        supabase.from(DB_TABLES.courts).select("club_id").eq("id", courtId).maybeSingle(),
         supabase
           .from(DB_TABLES.courtSchedules)
           .select("court_id,day_of_week,open_time,close_time")
@@ -144,9 +146,10 @@ function NuevaReservaContent() {
           .eq("date", selectedDate),
       ]);
 
-      if (schedErr || matchErr || blockErrModern || blockErrLegacy) {
+      if (courtErr || schedErr || matchErr || blockErrModern || blockErrLegacy) {
         setError(
-          schedErr?.message ??
+          courtErr?.message ??
+            schedErr?.message ??
             matchErr?.message ??
             blockErrModern?.message ??
             blockErrLegacy?.message ??
@@ -156,10 +159,36 @@ function NuevaReservaContent() {
         return;
       }
 
+      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+      if (clubId) {
+        const { data: closedRow } = await supabase
+          .from(DB_TABLES.clubClosedDays)
+          .select("id")
+          .eq("club_id", clubId)
+          .eq("closed_date", selectedDate)
+          .maybeSingle();
+        if (closedRow?.id) {
+          setSlots([]);
+          setError("El club está cerrado este día");
+          return;
+        }
+      }
+
+      const { data: clubHoursRow } = clubId
+        ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle()
+        : { data: null };
+      const clubBounds =
+        clubId && clubHoursRow
+          ? {
+              open_time: String((clubHoursRow as { open_time?: string | null }).open_time ?? "").trim() || null,
+              close_time: String((clubHoursRow as { close_time?: string | null }).close_time ?? "").trim() || null,
+            }
+          : null;
+
       const schedules: ScheduleInput[] = (schedRows ?? []).filter(
         (r) => Number((r as ScheduleInput).day_of_week) === dow
       ) as ScheduleInput[];
-      const built = buildSlotsForDay([courtId], dayDate, schedules);
+      const built = buildSlotsForDay([courtId], dayDate, schedules, clubBounds);
 
       const matches = (matchRows ?? []) as MatchRow[];
       const blocksModern = (blockRowsModern ?? []) as BlockRowModern[];

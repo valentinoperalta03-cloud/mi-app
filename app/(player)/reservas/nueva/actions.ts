@@ -8,6 +8,8 @@ import {
   isReservationSlotBlockingPaymentStatus,
   normalizePlayerPaymentMethod,
 } from "@/lib/offline-payments";
+import { notifyClubOwner } from "@/lib/club-notify";
+import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createNotification } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -261,7 +263,7 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       duration_minutes: Number(durationMinutes),
       total_price: baseAmount,
       payment_status: payStatus,
-      match_status: "pending",
+      match_status: "reserved",
       match_type: "reservation",
       is_competitive: false,
       visibility: "privado",
@@ -273,7 +275,30 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     .single();
 
   if (error || !data) {
+    if (isMatchSlotConflictError(error)) {
+      return { error: "Este horario ya fue reservado. Elegí otro." };
+    }
     return { error: "No se pudo crear la reserva. Intentá de nuevo." };
+  }
+
+  const methodLabel =
+    paymentMethod === "mercadopago" ? "Mercado Pago" : paymentMethod === "cash" ? "Efectivo" : "Transferencia";
+  if (clubId) {
+    const title =
+      paymentMethod === "cash"
+        ? "💵 Cobro pendiente"
+        : paymentMethod === "transfer"
+          ? "📅 Nueva reserva"
+          : "📅 Nueva reserva";
+    const body =
+      paymentMethod === "cash"
+        ? `${payerName || "Un jugador"} debe pagar en efectivo para ${courtName || "Cancha"} el ${scheduledDate} a las ${timeNorm}.`
+        : `${payerName || "Un jugador"} reservó ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm}. Método: ${methodLabel}.`;
+    await notifyClubOwner(supabase, clubId, {
+      title,
+      body,
+      match_id: data.id,
+    });
   }
 
   const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({

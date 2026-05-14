@@ -1,10 +1,12 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
+import { notifyClubOwner } from "@/lib/club-notify";
 import { getPaymentRefundClient } from "@/lib/mercadopago";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
@@ -19,6 +21,27 @@ async function isLocalDevHost(): Promise<boolean> {
   const h = await headers();
   const host = (h.get("host") ?? "").toLowerCase();
   return host.startsWith("localhost") || host.startsWith("127.0.0.1");
+}
+
+async function notifyClubReservationReleased(
+  supabase: SupabaseClient,
+  courtId: string,
+  scheduledDate: string,
+  scheduledTime: string
+) {
+  const { data: court } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id,name")
+    .eq("id", courtId)
+    .maybeSingle();
+  const clubId = String((court as { club_id?: string | null } | null)?.club_id ?? "").trim();
+  if (!clubId) return;
+  const courtName = String((court as { name?: string | null } | null)?.name ?? "Cancha").trim() || "Cancha";
+  const t = scheduledTime.trim().slice(0, 5);
+  await notifyClubOwner(supabase, clubId, {
+    title: "❌ Reserva cancelada",
+    body: `${courtName} el ${scheduledDate} a las ${t} quedó libre.`,
+  });
 }
 
 export async function simulatePaymentApproved(formData: FormData) {
@@ -176,6 +199,9 @@ export async function cancelReservation(formData: FormData) {
             match_id: id,
           });
         }
+        if (courtId) {
+          await notifyClubReservationReleased(supabase, courtId, scheduledDate, scheduledTime);
+        }
         revalidatePath("/reservas");
         redirect("/reservas?info=sin_reembolso");
       }
@@ -213,6 +239,9 @@ export async function cancelReservation(formData: FormData) {
           match_id: id,
         });
       }
+      if (courtId) {
+        await notifyClubReservationReleased(supabase, courtId, scheduledDate, scheduledTime);
+      }
       revalidatePath("/reservas");
       redirect("/reservas");
     }
@@ -244,6 +273,10 @@ export async function cancelReservation(formData: FormData) {
       body: tpl.body,
       match_id: id,
     });
+  }
+
+  if (courtId) {
+    await notifyClubReservationReleased(supabase, courtId, scheduledDate, scheduledTime);
   }
 
   revalidatePath("/reservas");

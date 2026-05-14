@@ -10,6 +10,9 @@ export type ScheduleInput = {
 
 export type GeneratedSlot = { time: string; duration: 90 };
 
+/** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
+export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
+
 const FALLBACK_SLOTS: GeneratedSlot[] = [
   { time: "08:00", duration: 90 },
   { time: "09:30", duration: 90 },
@@ -46,15 +49,31 @@ function minutesToClock(total: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: number; hi: number } | null {
+  if (!bounds) return null;
+  const o = String(bounds.open_time ?? "").trim();
+  const c = String(bounds.close_time ?? "").trim();
+  if (!o || !c) return null;
+  const lo = parseClockToMinutes(o);
+  const hi = parseClockToMinutes(c);
+  if (!(hi > lo)) return null;
+  return { lo, hi };
+}
+
 /**
- * Une horarios de todas las canchas del club para el día y genera slots de 90 min.
+ * Une horarios de canchas para el día y genera slots de 90 min.
+ * Si `clubBounds` trae apertura/cierre del club, actúa como marco global;
+ * una cancha puede extender el cierre más allá del cierre general (ej. techada).
  */
 export function buildSlotsForDay(
   courtIds: string[],
   dayDate: Date,
-  schedules: ScheduleInput[]
+  schedules: ScheduleInput[],
+  clubBounds?: ClubHoursBounds | null
 ): GeneratedSlot[] {
   const dow = getDay(dayDate);
+  const cb = clubBoundsMinutes(clubBounds ?? null);
+
   let minM = 24 * 60;
   let maxM = 0;
 
@@ -62,10 +81,24 @@ export function buildSlotsForDay(
     const daySchedules = schedules.filter(
       (x) => String(x.court_id) === String(cid) && scheduleMatchesDay(x.day_of_week, dow)
     );
+
+    if (!daySchedules.length) {
+      if (cb) {
+        minM = Math.min(minM, cb.lo);
+        maxM = Math.max(maxM, cb.hi);
+      }
+      continue;
+    }
+
     for (const s of daySchedules) {
       if (!s.open_time || !s.close_time) continue;
-      const o = parseClockToMinutes(String(s.open_time));
-      const c = parseClockToMinutes(String(s.close_time));
+      let o = parseClockToMinutes(String(s.open_time));
+      let c = parseClockToMinutes(String(s.close_time));
+      if (!(c > o)) continue;
+      if (cb) {
+        o = Math.max(o, cb.lo);
+        c = c > cb.hi ? c : Math.min(c, cb.hi);
+      }
       if (c > o) {
         minM = Math.min(minM, o);
         maxM = Math.max(maxM, c);
@@ -80,7 +113,6 @@ export function buildSlotsForDay(
   const slots: GeneratedSlot[] = [];
   let cur = minM;
   const dur = 90;
-  /** El turno debe terminar a la hora de cierre: último inicio = close - duración */
   while (cur + dur <= maxM) {
     slots.push({ time: minutesToClock(cur), duration: dur });
     cur += dur;

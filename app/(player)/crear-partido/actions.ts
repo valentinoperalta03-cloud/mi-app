@@ -9,6 +9,8 @@ import { createMPPreference } from "@/lib/mp-preference";
 import {
   normalizePlayerPaymentMethod,
 } from "@/lib/offline-payments";
+import { notifyClubOwner } from "@/lib/club-notify";
+import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createNotification } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -308,6 +310,9 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       .single();
 
     if (error || !data) {
+      if (isMatchSlotConflictError(error)) {
+        return { error: "Este horario ya fue reservado. Elegí otro." };
+      }
       return { error: "No se pudo crear el partido." };
     }
 
@@ -318,7 +323,18 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     });
 
     if (participantError) {
+      await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
       return { error: "No se pudo crear el partido." };
+    }
+
+    const payLabel =
+      paymentMethod === "mercadopago" ? "Mercado Pago" : paymentMethod === "cash" ? "Efectivo" : "Transferencia";
+    if (clubIdStr) {
+      await notifyClubOwner(supabase, clubIdStr, {
+        title: "📅 Nuevo partido",
+        body: `${payerName || "Un jugador"} abrió un partido en ${courtName} el ${scheduledDate} a las ${timeNorm}. Método: ${payLabel}.`,
+        match_id: data.id,
+      });
     }
 
     const invitedPaymentRows = invitedFriendIds.map((friendId) => ({

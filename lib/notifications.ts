@@ -19,7 +19,8 @@ type NotificationType =
   | "new_message"
   | "group_message"
   | "added_to_group"
-  | "tournament_event";
+  | "tournament_event"
+  | "club_agenda";
 
 export async function createNotification(
   supabase: SupabaseClient,

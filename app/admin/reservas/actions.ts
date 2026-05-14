@@ -265,15 +265,59 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
       match_id: matchId,
     });
   }
-  await createNotification(supabase, {
-    user_id: ctx.userId,
-    type: "reservation_cancelled",
-    title: "Reserva cancelada",
-    body: "La reserva fue cancelada desde el panel admin y quedó en refund_requested.",
-    match_id: matchId,
-  });
 
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/finanzas/reembolsos");
   redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+}
+
+export async function addClubClosedDayAction(formData: FormData): Promise<void> {
+  const closedDate = getField(formData, "closed_date");
+  const reason = getField(formData, "reason");
+  const returnDate = getField(formData, "return_date") || closedDate;
+  if (!closedDate || !/^\d{4}-\d{2}-\d{2}$/.test(closedDate)) {
+    redirect(`/admin/reservas?date=${encodeURIComponent(returnDate)}`);
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !ctx.clubIds.length) redirect("/login");
+
+  const clubId = ctx.clubIds[0];
+  const { error } = await supabase.from(DB_TABLES.clubClosedDays).insert({
+    club_id: clubId,
+    closed_date: closedDate,
+    reason: reason || null,
+  });
+  if (error) {
+    redirect(`/admin/reservas?date=${encodeURIComponent(returnDate)}&closed_error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/reservas");
+  redirect(`/admin/reservas?date=${encodeURIComponent(returnDate)}`);
+}
+
+export async function removeClubClosedDayAction(formData: FormData): Promise<void> {
+  const id = getField(formData, "closed_day_id");
+  const returnDate = getField(formData, "return_date");
+  if (!id) redirect(`/admin/reservas?date=${encodeURIComponent(returnDate || "")}`);
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !ctx.clubIds.length) redirect("/login");
+
+  const clubId = ctx.clubIds[0];
+  const { data: row } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("id", id)
+    .eq("club_id", clubId)
+    .maybeSingle();
+  if (!row) {
+    redirect(`/admin/reservas?date=${encodeURIComponent(returnDate || "")}`);
+  }
+
+  await supabase.from(DB_TABLES.clubClosedDays).delete().eq("id", id).eq("club_id", clubId);
+  revalidatePath("/admin/reservas");
+  redirect(`/admin/reservas?date=${encodeURIComponent(returnDate || "")}`);
 }

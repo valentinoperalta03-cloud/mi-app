@@ -17,8 +17,8 @@
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/generate-fixed-slot-reservations",
-      "schedule": "0 8 * * *"
+      "path": "/api/cron/check-incomplete-matches",
+      "schedule": "0 * * * *"
     }
   ]
 }

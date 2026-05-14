@@ -56,10 +56,17 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
   const { data: court } = await supabase
     .from(DB_TABLES.courts)
-    .select("id,name,price")
+    .select("id,name,price,club_id")
     .eq("id", courtId)
     .maybeSingle();
   if (!court) notFound();
+
+  const clubIdForCourt = String((court as { club_id?: string | null }).club_id ?? "").trim();
+  const { data: clubHours } = clubIdForCourt
+    ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubIdForCourt).maybeSingle()
+    : { data: null };
+  const clubOpen = String((clubHours as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
+  const clubClose = String((clubHours as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
 
   const { data: schedData } = await supabase
     .from(DB_TABLES.courtSchedules)
@@ -84,6 +91,11 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/canchas" />
+      {clubOpen && clubClose ? (
+        <div className="rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-sm font-semibold text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
+          Horario del club: {clubOpen} a {clubClose}. Los horarios por cancha abajo son opcionales (p. ej. cancha techada con cierre distinto).
+        </div>
+      ) : null}
       <header className="space-y-2">
         <p className={`${adminKicker} text-[#0585FC]`}>Horarios y precios</p>
         <h1 className={adminTitle}>{court.name ?? "Cancha"}</h1>

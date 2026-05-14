@@ -8,11 +8,11 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import ClubForm from "../club/club-form";
-import { updateFinancePin } from "./actions";
+import { saveClubHours, updateFinancePin } from "./actions";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 
@@ -61,7 +61,11 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   let clubErr = firstFetch.error;
 
   // Compat: algunos entornos aún no tienen cancellation_hours en clubs.
-  if (clubErr?.message?.toLowerCase().includes("cancellation_hours")) {
+  if (
+    clubErr?.message?.toLowerCase().includes("cancellation_hours") ||
+    clubErr?.message?.toLowerCase().includes("open_time") ||
+    clubErr?.message?.toLowerCase().includes("close_time")
+  ) {
     const fallback = await supabase
       .from(DB_TABLES.clubs)
       .select(CLUB_ADMIN_COLUMNS_FALLBACK)
@@ -95,6 +99,8 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
     whatsapp: string | null;
     instagram: string | null;
     business_hours: string | null;
+    open_time?: string | null;
+    close_time?: string | null;
     logo_url: string | null;
     cover_image_url: string | null;
     gallery_image_1: string | null;
@@ -119,6 +125,8 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   const pinErr = sp.pin_error ? decodeURIComponent(sp.pin_error) : "";
   const clubName = club.name ?? "Club";
   const clubShortId = clubId.slice(0, 8);
+  const clubOpenDefault = String(club.open_time ?? "09:00:00").trim().slice(0, 5);
+  const clubCloseDefault = String(club.close_time ?? "22:30:00").trim().slice(0, 5);
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,6 +160,41 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
             <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">ID del club: {clubShortId}</p>
           </div>
         </div>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Horarios del club</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Apertura y cierre generales para todas las canchas. Al guardar se sincronizan los días activos de cada cancha.
+        </p>
+        <form action={saveClubHours} className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            Hora de apertura
+            <input
+              name="open_time"
+              type="time"
+              defaultValue={clubOpenDefault}
+              required
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            Hora de cierre
+            <input
+              name="close_time"
+              type="time"
+              defaultValue={clubCloseDefault}
+              required
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-xl bg-[#0585FC] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+          >
+            Guardar horarios
+          </button>
+        </form>
       </section>
 
       <section className={`${adminCard} p-6`}>

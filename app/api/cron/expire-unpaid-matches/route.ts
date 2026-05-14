@@ -30,9 +30,7 @@ export async function GET(req: Request) {
     .from(DB_TABLES.matches)
     .select("id,owner_id")
     .eq("payment_status", "pending")
-    .in("match_status", ["pending", "scheduled"])
-    .not("match_status", "eq", "reserved")
-    .not("match_status", "eq", "cancelled")
+    .in("match_status", ["pending", "scheduled", "reserved"])
     .in("match_type", ["reservation", "amistoso", "competitivo"])
     .lt("created_at", thresholdIso);
 
@@ -46,7 +44,7 @@ export async function GET(req: Request) {
       .from(DB_TABLES.matches)
       .update({ match_status: "cancelled", payment_status: "expired" })
       .eq("id", match.id)
-      .in("match_status", ["pending", "scheduled"]);
+      .in("match_status", ["pending", "scheduled", "reserved"]);
     if (updateMatchErr) {
       log.warn({ event: "cron.expire_unpaid.match_update_skipped", matchId: match.id, err: updateMatchErr });
       continue;

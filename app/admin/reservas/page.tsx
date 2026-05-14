@@ -9,7 +9,15 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { blockCourtSlotAction, cancelReservationAdmin, requestReservationRefundAction } from "./actions";
+import {
+  addClubClosedDayAction,
+  blockCourtSlotAction,
+  cancelReservationAdmin,
+  removeClubClosedDayAction,
+  requestReservationRefundAction,
+} from "./actions";
+import { confirmOfflineCobro } from "../cobros/actions";
+import { clubPadelibreDebtFromTurn } from "@/lib/offline-payments";
 
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
@@ -36,7 +44,7 @@ type BlockRow = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ date?: string; selected?: string }>;
+  searchParams: Promise<{ date?: string; selected?: string; closed_error?: string }>;
 };
 
 function getTimeFromMatch(m: MatchRow): string {
@@ -56,6 +64,17 @@ function getSlotBucket(m: MatchRow): string {
 
 function durationMin(m: MatchRow): number {
   return m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
+}
+
+function reservationMethodLabel(paymentStatus: string | null | undefined) {
+  const s = String(paymentStatus ?? "").toLowerCase();
+  if (s === "paid") return "Mercado Pago ✅";
+  if (s === "cash_pending") return "Efectivo ⏳";
+  if (s === "transfer_pending") return "Transferencia ⏳";
+  if (s === "pending") return "Mercado Pago ⏳";
+  if (s === "refund_requested") return "Reembolso solicitado ⏳";
+  if (s === "cancelled" || s === "expired") return "Cancelado";
+  return s || "—";
 }
 
 function buildSlots() {
@@ -97,6 +116,15 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     .in("court_id", ctx.courtIds)
     .eq("blocked_date", selectedDate);
   const blocks = (blocksRaw ?? []) as BlockRow[];
+
+  const mainClubId = ctx.clubIds[0];
+  const { data: closedDaysRaw } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id,closed_date,reason")
+    .eq("club_id", mainClubId)
+    .gte("closed_date", getTodayYmdInArgentina())
+    .order("closed_date", { ascending: true });
+  const closedDays = (closedDaysRaw ?? []) as Array<{ id: string; closed_date: string; reason: string | null }>;
 
   const creatorIds = Array.from(new Set(matches.map((m) => m.owner_id).filter(Boolean))) as string[];
   const { data: profilesData } = creatorIds.length
@@ -141,6 +169,41 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     };
   });
 
+  const selectedPaymentsRaw = selectedMatch
+    ? await supabase
+        .from(DB_TABLES.payments)
+        .select("user_id,status,payment_method,amount,marketplace_fee")
+        .eq("match_id", selectedMatch.id)
+    : { data: [] };
+  const selectedPayments = (selectedPaymentsRaw.data ?? []) as Array<{
+    user_id: string;
+    status: string | null;
+    payment_method: string | null;
+    amount: number | null;
+    marketplace_fee: number | null;
+  }>;
+
+  const { data: ownerProfileRow } =
+    selectedMatch?.owner_id
+      ? await supabase
+          .from(DB_TABLES.profiles)
+          .select("name,avatar_url")
+          .eq("user_id", selectedMatch.owner_id)
+          .maybeSingle()
+      : { data: null };
+  const ownerProfile = ownerProfileRow as { name: string | null; avatar_url: string | null } | null;
+  const ownerDisplayName =
+    ownerProfile?.name?.trim() ||
+    (selectedMatch?.owner_id ? nameByUser.get(selectedMatch.owner_id) : undefined) ||
+    "Jugador";
+
+  const selectedPaySt = selectedMatch ? String(selectedMatch.payment_status ?? "").toLowerCase() : "";
+  const selectedIsReservation = selectedMatch
+    ? String(selectedMatch.match_type ?? "").toLowerCase() === "reservation"
+    : false;
+  const padelibreFee =
+    selectedMatch?.total_price != null ? clubPadelibreDebtFromTurn(Number(selectedMatch.total_price)) : null;
+
   const reservationMatches = matches.filter((m) => String(m.match_type ?? "").toLowerCase() === "reservation");
   const totalReservas = reservationMatches.length;
   const paidReservas = reservationMatches.filter((m) => String(m.payment_status ?? "").toLowerCase() === "paid").length;
@@ -148,6 +211,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const slots = buildSlots();
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
+  const closedErr = sp.closed_error ? decodeURIComponent(sp.closed_error.replace(/\+/g, " ")) : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -185,6 +249,74 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             </button>
           </form>
         </div>
+      </section>
+
+      <section className={`${adminCard} flex flex-col gap-4`}>
+        <div>
+          <p className={adminKicker}>Días cerrados</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            El club no ofrecerá turnos en esas fechas (jugadores verán el día cerrado al reservar).
+          </p>
+        </div>
+        {closedErr ? (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+            {closedErr}
+          </p>
+        ) : null}
+        <form action={addClubClosedDayAction} className="flex flex-wrap items-end gap-3">
+          <input type="hidden" name="return_date" value={selectedDate} />
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Fecha
+            <input
+              type="date"
+              name="closed_date"
+              required
+              min={getTodayYmdInArgentina()}
+              className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Motivo (opcional)
+            <input
+              name="reason"
+              type="text"
+              placeholder="Ej: feriado, torneo interno"
+              className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+          >
+            Marcar como cerrado
+          </button>
+        </form>
+        {closedDays.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">No hay días cerrados futuros cargados.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200/80 rounded-xl border border-slate-200/80 dark:divide-slate-700 dark:border-slate-700">
+            {closedDays.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    {format(parseISO(`${row.closed_date}T12:00:00`), "EEEE d MMM yyyy", { locale: es })}
+                  </p>
+                  {row.reason ? <p className="text-slate-500 dark:text-slate-400">{row.reason}</p> : null}
+                </div>
+                <form action={removeClubClosedDayAction}>
+                  <input type="hidden" name="closed_day_id" value={row.id} />
+                  <input type="hidden" name="return_date" value={selectedDate} />
+                  <button
+                    type="submit"
+                    className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                  >
+                    Eliminar
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
@@ -327,14 +459,22 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         <section className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-slate-900/40`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <PlayerAvatar
-                name={selectedMatch.owner_id ? nameByUser.get(selectedMatch.owner_id) ?? "Jugador" : "Sin asignar"}
-              />
+              {ownerProfile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+                <img
+                  src={ownerProfile.avatar_url}
+                  alt={ownerDisplayName}
+                  className="h-12 w-12 rounded-full object-cover ring-2 ring-white/30"
+                />
+              ) : (
+                <PlayerAvatar name={ownerDisplayName} />
+              )}
               <div>
-                <p className={adminKicker}>Detalle de reserva</p>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {selectedMatch.owner_id ? nameByUser.get(selectedMatch.owner_id) ?? "Jugador" : "Sin asignar"}
-                </h2>
+                <p className={adminKicker}>{selectedIsReservation ? "Detalle de reserva" : "Detalle del turno"}</p>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{ownerDisplayName}</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Contacto en perfil: el jugador puede completar datos desde la app.
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -363,18 +503,52 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{durationMin(selectedMatch)} min</dd>
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-              <dt className={adminKicker}>Monto</dt>
+              <dt className={adminKicker}>Método de pago (reserva)</dt>
+              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                {selectedIsReservation ? reservationMethodLabel(selectedMatch.payment_status) : "—"}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+              <dt className={adminKicker}>Estado del pago</dt>
+              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                {String(selectedMatch.payment_status ?? "—")}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+              <dt className={adminKicker}>Precio total del turno</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
                 {selectedMatch.total_price != null ? `$${Number(selectedMatch.total_price).toFixed(2)}` : "—"}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-              <dt className={adminKicker}>Precio por jugador</dt>
+              <dt className={adminKicker}>PadeLibre (5% del turno)</dt>
+              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                {padelibreFee != null ? `$${padelibreFee.toFixed(2)}` : "—"}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+              <dt className={adminKicker}>Precio por jugador (aprox.)</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
                 {selectedMatch.total_price != null ? `$${(Number(selectedMatch.total_price) / 4).toFixed(2)}` : "—"}
               </dd>
             </div>
           </dl>
+
+          {selectedPayments.length > 0 ? (
+            <div className="mt-4 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+              <p className={adminKicker}>Pagos registrados</p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700 dark:text-slate-200">
+                {selectedPayments.map((p, i) => (
+                  <li key={`${p.user_id}-${i}`} className="flex flex-wrap justify-between gap-2">
+                    <span className="font-medium">{p.payment_method ?? "—"}</span>
+                    <span>
+                      {String(p.status ?? "")} · ${Number(p.amount ?? 0).toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="mt-4 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
             <p className={adminKicker}>Jugadores</p>
@@ -399,8 +573,30 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
           <div className="mt-4">
             <div className="flex flex-wrap items-center gap-2">
-              {["paid", "pending"].includes(String(selectedMatch.payment_status ?? "").toLowerCase()) &&
-              String(selectedMatch.match_type ?? "").toLowerCase() === "reservation" ? (
+              {selectedIsReservation && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
+                <form action={confirmOfflineCobro}>
+                  <input type="hidden" name="match_id" value={selectedMatch.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  >
+                    {selectedPaySt === "cash_pending" ? "Confirmar cobro en efectivo" : "Confirmar transferencia recibida"}
+                  </button>
+                </form>
+              ) : null}
+              {selectedIsReservation && selectedPaySt === "paid" ? (
+                <form action={requestReservationRefundAction}>
+                  <input type="hidden" name="match_id" value={selectedMatch.id} />
+                  <input type="hidden" name="date" value={selectedDate} />
+                  <button
+                    type="submit"
+                    className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Reembolsar
+                  </button>
+                </form>
+              ) : null}
+              {selectedIsReservation ? (
                 <form action={cancelReservationAdmin}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
                   <input type="hidden" name="date" value={selectedDate} />
@@ -409,19 +605,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     className="inline-flex rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
                   >
                     Cancelar reserva
-                  </button>
-                </form>
-              ) : null}
-              {String(selectedMatch.payment_status ?? "").toLowerCase() === "paid" &&
-              String(selectedMatch.match_type ?? "").toLowerCase() === "reservation" ? (
-                <form action={requestReservationRefundAction}>
-                  <input type="hidden" name="match_id" value={selectedMatch.id} />
-                  <input type="hidden" name="date" value={selectedDate} />
-                  <button
-                    type="submit"
-                    className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
-                  >
-                    Solicitar reembolso
                   </button>
                 </form>
               ) : null}

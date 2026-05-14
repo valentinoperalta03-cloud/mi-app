@@ -51,6 +51,8 @@ export type ClubRow = {
   whatsapp?: string | null;
   instagram?: string | null;
   business_hours?: string | null;
+  open_time?: string | null;
+  close_time?: string | null;
   cancellation_policy?: string | null;
   gallery_image_1?: string | null;
   gallery_image_2?: string | null;
