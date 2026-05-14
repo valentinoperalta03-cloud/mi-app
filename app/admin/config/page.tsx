@@ -12,9 +12,9 @@ import { updateFinancePin } from "./actions";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 
 async function signOutAction() {
   "use server";
@@ -106,6 +106,10 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
     mp_access_token: string | null;
     mp_user_id: string | null;
     finance_pin: string | null;
+    accepts_cash?: boolean | null;
+    accepts_transfer?: boolean | null;
+    bank_alias?: string | null;
+    bank_cbu?: string | null;
   };
 
   const isMpConnected = Boolean(club.mp_access_token);
@@ -166,6 +170,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
         <div className="mt-4">
           <ClubForm
             clubId={clubId}
+            isMpConnected={isMpConnected}
             initial={{
               name: club.name ?? "",
               location: club.location ?? "",
@@ -184,6 +189,10 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
               cancellation_policy: club.cancellation_policy ?? "",
               cancellation_hours:
                 typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours) ? club.cancellation_hours : null,
+              accepts_cash: Boolean(club.accepts_cash),
+              accepts_transfer: Boolean(club.accepts_transfer),
+              bank_alias: club.bank_alias ?? "",
+              bank_cbu: club.bank_cbu ?? "",
             }}
           />
         </div>

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import type { ScheduleInput } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,11 @@ export type ClubOption = {
   imageUrl?: string | null;
   coverImageUrl?: string | null;
   logoUrl?: string | null;
+  acceptsCash?: boolean;
+  acceptsTransfer?: boolean;
+  bankAlias?: string | null;
+  bankCbu?: string | null;
+  mpConnected?: boolean;
 };
 
 export type CourtOption = {
@@ -147,6 +153,7 @@ export default function CrearPartidoForm({
   const [levelRestricted, setLevelRestricted] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [isSubmitting, startSubmit] = useTransition();
+  const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
 
   const dates = useMemo(() => {
     const start = new Date();
@@ -275,11 +282,20 @@ export default function CrearPartidoForm({
   const resumenPago = useMemo(() => {
     if (!selectedCourt || !selectedSlot) return { total: 0 };
     const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
-    const precioCanchaJugador = Math.round(turnPrice / 4);
-    const comisionPorJugador = Math.round(precioCanchaJugador * 0.05);
-    const total = precioCanchaJugador + comisionPorJugador;
+    const { total } = playerShareWithMarketplaceFee(turnPrice);
     return { total };
   }, [getTurnPrice, selectedCourt, selectedSlot]);
+
+  useEffect(() => {
+    if (currentStep !== "payment" || !selectedClub) return;
+    if (selectedClub.mpConnected) setPayMethod("mercadopago");
+    else if (selectedClub.acceptsCash) setPayMethod("cash");
+    else if (selectedClub.acceptsTransfer) setPayMethod("transfer");
+  }, [currentStep, selectedClub]);
+
+  const payAvailable = Boolean(
+    selectedClub && (selectedClub.mpConnected || selectedClub.acceptsCash || selectedClub.acceptsTransfer)
+  );
 
   function toggleFriend(friendId: string) {
     setSelectedFriendIds((prev) => {
@@ -845,14 +861,114 @@ export default function CrearPartidoForm({
             </div>
           </div>
 
-          <p className="text-center text-xs text-slate-400">💳 Los otros jugadores pagarán su parte al unirse</p>
+          {!payAvailable ? (
+            <p className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+              Este club no tiene medios de pago habilitados.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Medio de pago</p>
+              <div className="grid gap-2.5">
+                {selectedClub?.mpConnected ? (
+                  <button
+                    type="button"
+                    onClick={() => setPayMethod("mercadopago")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "mercadopago"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      💳
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Mercado Pago</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pago instantáneo</span>
+                  </button>
+                ) : null}
+                {selectedClub?.acceptsCash ? (
+                  <button
+                    type="button"
+                    onClick={() => setPayMethod("cash")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "cash"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      💵
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Efectivo en el club</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pagás cuando llegás</span>
+                  </button>
+                ) : null}
+                {selectedClub?.acceptsTransfer ? (
+                  <button
+                    type="button"
+                    onClick={() => setPayMethod("transfer")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "transfer"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      🏦
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Transferencia</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                      CBU: {selectedClub.bankAlias ?? "—"}
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {payMethod === "transfer" && selectedClub?.bankAlias ? (
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">Datos para transferir</p>
+              <p className="text-slate-700 dark:text-slate-200">
+                <span className="font-medium text-slate-500 dark:text-slate-400">Alias: </span>
+                {selectedClub.bankAlias}
+              </p>
+              {selectedClub.bankCbu ? (
+                <p className="text-slate-700 dark:text-slate-200">
+                  <span className="font-medium text-slate-500 dark:text-slate-400">CBU: </span>
+                  {selectedClub.bankCbu}
+                </p>
+              ) : null}
+              <p className="text-slate-700 dark:text-slate-200">
+                <span className="font-medium text-slate-500 dark:text-slate-400">Monto exacto: </span>$
+                {fmtAr(resumenPago.total)}
+              </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Enviá el comprobante al club.</p>
+            </div>
+          ) : null}
+
+          <p className="text-center text-xs text-slate-400 dark:text-slate-500">💳 Los otros jugadores pagarán su parte al unirse</p>
 
           {error ? (
             <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{error}</p>
           ) : null}
 
-          <Button type="submit" variant="primary" size="lg" disabled={isSubmitting || !canSubmit}>
-            {isSubmitting ? "Procesando..." : "Confirmar y pagar 🎾"}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={
+              isSubmitting ||
+              !canSubmit ||
+              !payAvailable ||
+              (payMethod === "transfer" && !selectedClub?.bankAlias)
+            }
+          >
+            {isSubmitting
+              ? "Procesando..."
+              : payMethod === "mercadopago"
+                ? "Confirmar y pagar 🎾"
+                : "Confirmar partido"}
           </Button>
         </div>
       ) : null}
@@ -867,6 +983,7 @@ export default function CrearPartidoForm({
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />
       <input type="hidden" name="invited_friend_ids" value={selectedFriendIds.join(",")} />
+      <input type="hidden" name="payment_method" value={payMethod} />
     </form>
   );
 }

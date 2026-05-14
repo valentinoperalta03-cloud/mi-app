@@ -148,6 +148,7 @@ export async function POST(req: Request) {
       status: "pending",
       amount: total,
       marketplace_fee: marketplaceFee,
+      payment_method: "mercadopago",
     });
 
     if (payErr) {

@@ -27,7 +27,7 @@ function normalizePayState(
   collectionStatus: string | undefined,
   status: string | undefined,
   dbPaid: boolean
-): "approved" | "pending" | "failure" {
+): "approved" | "pending" | "failure" | "offline" {
   const c = (collectionStatus ?? "").toLowerCase();
   const s = (status ?? "").toLowerCase();
 
@@ -97,8 +97,12 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
       .eq("user_id", user.id);
   }
 
-  const payDb = String(match.payment_status ?? "").toLowerCase() === "paid";
-  const payState = normalizePayState(params.collection_status, params.status, payDb);
+  const payNorm = String(match.payment_status ?? "").toLowerCase();
+  const payDb = payNorm === "paid";
+  const offlinePending = payNorm === "cash_pending" || payNorm === "transfer_pending";
+  const payState = offlinePending
+    ? "offline"
+    : normalizePayState(params.collection_status, params.status, payDb);
 
   const courtLabel = params.court ?? "Cancha";
   const clubLabel = params.club ?? "Club";
@@ -128,6 +132,23 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
           {isReservation ? "¡Reserva confirmada!" : "¡Pago registrado!"}
         </h1>
         <p className="text-center text-sm font-medium text-slate-600">El pago se acreditó correctamente.</p>
+      </div>
+    );
+  } else if (payState === "offline") {
+    const isCash = payNorm === "cash_pending";
+    headerBlock = (
+      <div className="flex flex-col items-center gap-3 pt-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl text-emerald-700 shadow-inner dark:bg-emerald-950/50 dark:text-emerald-300">
+          ✓
+        </div>
+        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-100">
+          {isCash ? "Reserva registrada" : "Reserva con transferencia"}
+        </h1>
+        <p className="text-center text-sm font-medium text-slate-600 dark:text-slate-300">
+          {isCash
+            ? "Pagás en efectivo cuando llegues al club. El club confirmará el cobro."
+            : "Realizá la transferencia por el monto indicado y enviá el comprobante al club. Te avisaremos cuando confirmen el pago."}
+        </p>
       </div>
     );
   } else if (payState === "pending") {

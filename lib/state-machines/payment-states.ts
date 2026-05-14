@@ -84,7 +84,17 @@ export function assertPaymentRowTransition(
 }
 
 /** `matches.payment_status` (nivel partido / reserva). */
-export const MATCH_PAYMENT_STATUSES = ["pending", "paid", "expired", "rejected", "cancelled", "refunded"] as const;
+export const MATCH_PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "expired",
+  "rejected",
+  "cancelled",
+  "refunded",
+  "cash_pending",
+  "transfer_pending",
+  "no_show",
+] as const;
 
 const MATCH_PAY_ALLOWED: Record<string, Set<string>> = {
   pending: new Set(["paid", "expired", "rejected", "cancelled", "refunded"]),
@@ -93,6 +103,9 @@ const MATCH_PAY_ALLOWED: Record<string, Set<string>> = {
   rejected: new Set(["pending"]),
   cancelled: new Set([]),
   refunded: new Set([]),
+  cash_pending: new Set(["paid", "no_show", "cancelled"]),
+  transfer_pending: new Set(["paid", "no_show", "cancelled"]),
+  no_show: new Set([]),
 };
 
 export function assertMatchPaymentStatusTransition(

@@ -42,6 +42,10 @@ export async function updateClubInfo(formData: FormData) {
     gallery_image_3: getField(formData, "gallery_image_3") || null,
     gallery_image_4: getField(formData, "gallery_image_4") || null,
     cancellation_policy: getField(formData, "cancellation_policy") || null,
+    accepts_cash: formData.get("accepts_cash") === "on",
+    accepts_transfer: formData.get("accepts_transfer") === "on",
+    bank_alias: getField(formData, "bank_alias") || null,
+    bank_cbu: getField(formData, "bank_cbu") || null,
   };
 
   const { error } = await supabaseAction

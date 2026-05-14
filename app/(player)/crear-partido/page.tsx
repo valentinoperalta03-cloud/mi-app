@@ -36,7 +36,9 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.clubs)
-      .select("id, name, location, description, image_url, cover_image_url, logo_url")
+      .select(
+        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token"
+      )
       .order("name", { ascending: true }),
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
     supabase
@@ -69,6 +71,11 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     image_url?: string | null;
     cover_image_url?: string | null;
     logo_url?: string | null;
+    accepts_cash?: boolean | null;
+    accepts_transfer?: boolean | null;
+    bank_alias?: string | null;
+    bank_cbu?: string | null;
+    mp_access_token?: string | null;
   }>).map((club) => ({
     id: club.id,
     name: club.name ?? "Club sin nombre",
@@ -77,6 +84,11 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     imageUrl: club.image_url ?? null,
     coverImageUrl: club.cover_image_url ?? null,
     logoUrl: club.logo_url ?? null,
+    acceptsCash: Boolean(club.accepts_cash),
+    acceptsTransfer: Boolean(club.accepts_transfer),
+    bankAlias: club.bank_alias?.trim() || null,
+    bankCbu: club.bank_cbu?.trim() || null,
+    mpConnected: Boolean(club.mp_access_token),
   }));
   const courtsDeduped = Array.from(
     new Map(

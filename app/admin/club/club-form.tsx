@@ -63,6 +63,7 @@ function extFromFile(file: File): string {
 
 type Props = {
   clubId: string;
+  isMpConnected: boolean;
   initial: {
     name: string;
     location: string;
@@ -80,6 +81,10 @@ type Props = {
     gallery_image_4: string;
     cancellation_policy: string;
     cancellation_hours: number | null;
+    accepts_cash: boolean;
+    accepts_transfer: boolean;
+    bank_alias: string;
+    bank_cbu: string;
   };
 };
 
@@ -91,7 +96,7 @@ type ImageSlot = {
   previewClass: string;
 };
 
-export default function ClubForm({ clubId, initial }: Props) {
+export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
   const initialHours = parseBusinessHours(initial.business_hours);
   const [hoursOpen, setHoursOpen] = useState(initialHours.open);
   const [hoursClose, setHoursClose] = useState(initialHours.close);
@@ -342,6 +347,51 @@ export default function ClubForm({ clubId, initial }: Props) {
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Política de cancelación (opcional)</span>
         <textarea name="cancellation_policy" defaultValue={initial.cancellation_policy} rows={3} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
       </label>
+
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Métodos de pago aceptados</p>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Mercado Pago</span>
+          <span
+            className={`text-xs font-semibold ${isMpConnected ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}
+          >
+            {isMpConnected ? "Conectado" : "No conectado"}
+          </span>
+        </div>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
+          <input type="checkbox" name="accepts_cash" defaultChecked={initial.accepts_cash} className="h-4 w-4 rounded border-slate-300" />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Efectivo en el club</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
+          <input
+            type="checkbox"
+            name="accepts_transfer"
+            defaultChecked={initial.accepts_transfer}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Transferencia bancaria</span>
+        </label>
+        <div className="space-y-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Alias CBU</span>
+            <input
+              name="bank_alias"
+              defaultValue={initial.bank_alias}
+              placeholder="Ej. mi.alias.mp"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">CBU (opcional)</span>
+            <input
+              name="bank_cbu"
+              defaultValue={initial.bank_cbu}
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={uploading !== null}

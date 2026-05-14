@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { Suspense } from "react";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
+import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/client";
 import { createReservation, type CreateReservationResult } from "./actions";
@@ -45,6 +46,13 @@ type MatchRow = {
 type BlockRow = {
   start_time: string | null;
 };
+type ClubPayLoad = {
+  accepts_mp: boolean;
+  accepts_cash: boolean;
+  accepts_transfer: boolean;
+  bank_alias: string | null;
+  bank_cbu: string | null;
+};
 type BlockRowModern = {
   blocked_time: string | null;
 };
@@ -75,12 +83,13 @@ function NuevaReservaContent() {
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState<SlotView[]>([]);
   const [pendingConfirm, startConfirm] = useTransition();
+  const [clubPay, setClubPay] = useState<ClubPayLoad | null>(null);
+  const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
 
   /** Total mostrado al jugador; coincide con el monto cobrado en el flujo de pago. */
   const totalPagar = useMemo(() => {
-    const precioCancha = Math.round(precioTurno / 4);
-    const comision = Math.round(precioCancha * 0.05);
-    return precioCancha + comision;
+    const { total } = playerShareWithMarketplaceFee(precioTurno);
+    return total;
   }, [precioTurno]);
 
   const dateChips = useMemo(() => {
@@ -176,7 +185,11 @@ function NuevaReservaContent() {
           const matchStatus = String(m.match_status ?? "").toLowerCase();
           const shouldBlockSlot =
             matchStatus !== "cancelled" &&
-            (!isReservation || paymentStatus === "paid" || paymentStatus === "pending");
+            (!isReservation ||
+              paymentStatus === "paid" ||
+              paymentStatus === "pending" ||
+              paymentStatus === "cash_pending" ||
+              paymentStatus === "transfer_pending");
           if (!shouldBlockSlot) continue;
           const mStart = clockToMinutes(normalizeDbTime(m.scheduled_time));
           const mDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
@@ -192,6 +205,64 @@ function NuevaReservaContent() {
       setLoading(false);
     }
   }, [courtId, selectedDate]);
+
+  useEffect(() => {
+    if (step !== 3 || !courtId) return;
+    let cancelled = false;
+    void (async () => {
+      const supabase = createClient();
+      const { data, error: err } = await supabase
+        .from(DB_TABLES.courts)
+        .select("clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token)")
+        .eq("id", courtId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (err || !data) {
+        setClubPay({
+          accepts_mp: false,
+          accepts_cash: false,
+          accepts_transfer: false,
+          bank_alias: null,
+          bank_cbu: null,
+        });
+        return;
+      }
+      const row = data as {
+        clubs?:
+          | {
+              accepts_cash?: boolean | null;
+              accepts_transfer?: boolean | null;
+              bank_alias?: string | null;
+              bank_cbu?: string | null;
+              mp_access_token?: string | null;
+            }
+          | Array<{
+              accepts_cash?: boolean | null;
+              accepts_transfer?: boolean | null;
+              bank_alias?: string | null;
+              bank_cbu?: string | null;
+              mp_access_token?: string | null;
+            }>
+          | null;
+      };
+      const c = Array.isArray(row.clubs) ? row.clubs[0] ?? null : row.clubs;
+      const accepts_mp = Boolean(c?.mp_access_token);
+      const next: ClubPayLoad = {
+        accepts_mp,
+        accepts_cash: Boolean(c?.accepts_cash),
+        accepts_transfer: Boolean(c?.accepts_transfer),
+        bank_alias: c?.bank_alias?.trim() ? c.bank_alias.trim() : null,
+        bank_cbu: c?.bank_cbu?.trim() ? c.bank_cbu.trim() : null,
+      };
+      setClubPay(next);
+      if (accepts_mp) setPayMethod("mercadopago");
+      else if (next.accepts_cash) setPayMethod("cash");
+      else if (next.accepts_transfer) setPayMethod("transfer");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, courtId]);
 
   useEffect(() => {
     if (step === 2 && selectedDate) {
@@ -327,37 +398,129 @@ function NuevaReservaContent() {
           <StepIndicator active={3} />
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Confirmá tu reserva</h1>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <dl className="space-y-2 text-sm text-slate-600">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <dl className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
               <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Club</dt>
-                <dd className="min-w-0 break-words text-right font-semibold text-slate-900">{clubName || "—"}</dd>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">Club</dt>
+                <dd className="min-w-0 break-words text-right font-semibold text-slate-900 dark:text-slate-100">{clubName || "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Cancha</dt>
-                <dd className="min-w-0 break-words text-right font-semibold text-slate-900">{courtName || "—"}</dd>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">Cancha</dt>
+                <dd className="min-w-0 break-words text-right font-semibold text-slate-900 dark:text-slate-100">{courtName || "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Fecha</dt>
-                <dd className="text-right font-semibold text-slate-900">{selectedDateLabel}</dd>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">Fecha</dt>
+                <dd className="text-right font-semibold text-slate-900 dark:text-slate-100">{selectedDateLabel}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Hora</dt>
-                <dd className="text-right font-semibold text-slate-900">{selectedSlot.time}</dd>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">Hora</dt>
+                <dd className="text-right font-semibold text-slate-900 dark:text-slate-100">{selectedSlot.time}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-500">Duración</dt>
-                <dd className="text-right font-semibold text-slate-900">{selectedSlot.duration} min</dd>
+                <dt className="font-medium text-slate-500 dark:text-slate-400">Duración</dt>
+                <dd className="text-right font-semibold text-slate-900 dark:text-slate-100">{selectedSlot.duration} min</dd>
               </div>
             </dl>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60">
+          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700">
             <p className="text-base font-bold text-slate-900 dark:text-slate-100">
               Total a pagar:{" "}
-              <span className="text-lg font-bold text-[#0585FC]">${fmtAr(totalPagar)}</span>
+              <span className="text-lg font-bold text-[#0585FC] dark:text-sky-400">${fmtAr(totalPagar)}</span>
             </p>
           </div>
+
+          {clubPay === null ? (
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400">Cargando medios de pago…</p>
+          ) : null}
+          {clubPay && !clubPay.accepts_mp && !clubPay.accepts_cash && !clubPay.accepts_transfer ? (
+            <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+              Este club no tiene medios de pago habilitados. Contactá al administrador.
+            </p>
+          ) : null}
+          {clubPay && (clubPay.accepts_mp || clubPay.accepts_cash || clubPay.accepts_transfer) ? (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Medio de pago</p>
+              <div className="grid gap-2.5">
+                {clubPay.accepts_mp ? (
+                  <button
+                    key="mp"
+                    type="button"
+                    onClick={() => setPayMethod("mercadopago")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "mercadopago"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      💳
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Mercado Pago</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pago instantáneo</span>
+                  </button>
+                ) : null}
+                {clubPay.accepts_cash ? (
+                  <button
+                    key="cash"
+                    type="button"
+                    onClick={() => setPayMethod("cash")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "cash"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      💵
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Efectivo en el club</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pagás cuando llegás</span>
+                  </button>
+                ) : null}
+                {clubPay.accepts_transfer ? (
+                  <button
+                    key="tr"
+                    type="button"
+                    onClick={() => setPayMethod("transfer")}
+                    className={`rounded-2xl border px-4 py-3.5 text-left transition ${
+                      payMethod === "transfer"
+                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="text-lg" aria-hidden>
+                      🏦
+                    </span>
+                    <span className="ml-2 font-bold text-slate-900 dark:text-slate-100">Transferencia</span>
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                      CBU: {clubPay.bank_alias ?? "—"}
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {payMethod === "transfer" && clubPay?.bank_alias ? (
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/90 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">Datos para transferir</p>
+              <p className="text-slate-700 dark:text-slate-200">
+                <span className="font-medium text-slate-500 dark:text-slate-400">Alias: </span>
+                {clubPay.bank_alias}
+              </p>
+              {clubPay.bank_cbu ? (
+                <p className="text-slate-700 dark:text-slate-200">
+                  <span className="font-medium text-slate-500 dark:text-slate-400">CBU: </span>
+                  {clubPay.bank_cbu}
+                </p>
+              ) : null}
+              <p className="text-slate-700 dark:text-slate-200">
+                <span className="font-medium text-slate-500 dark:text-slate-400">Monto exacto: </span>${fmtAr(totalPagar)}
+              </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Enviá el comprobante al club.</p>
+            </div>
+          ) : null}
 
           <form
             className="space-y-3"
@@ -383,13 +546,23 @@ function NuevaReservaContent() {
             <input type="hidden" name="duration_minutes" value={String(selectedSlot.duration)} />
             <input type="hidden" name="club_name" value={clubName} />
             <input type="hidden" name="court_name" value={courtName} />
+            <input type="hidden" name="payment_method" value={payMethod} />
 
             <button
               type="submit"
-              disabled={pendingConfirm}
+              disabled={
+                pendingConfirm ||
+                !clubPay ||
+                (!clubPay.accepts_mp && !clubPay.accepts_cash && !clubPay.accepts_transfer) ||
+                (payMethod === "transfer" && !clubPay.bank_alias)
+              }
               className={`w-full ${PLAYER_PRIMARY_BUTTON} py-3.5 text-base disabled:opacity-60`}
             >
-              {pendingConfirm ? "Reservando…" : "Confirmar reserva"}
+              {pendingConfirm
+                ? "Reservando…"
+                : payMethod === "mercadopago"
+                  ? "Pagar con Mercado Pago"
+                  : "Confirmar reserva"}
             </button>
           </form>
 

@@ -137,6 +137,7 @@ export async function createParticipantMercadoPagoCheckout(params: {
     status: "pending",
     amount: mp.total,
     marketplace_fee: mp.marketplaceFee,
+    payment_method: "mercadopago",
     team_preference:
       params.requestedTeam === 1 || params.requestedTeam === 2 ? params.requestedTeam : null,
   });

@@ -76,6 +76,7 @@ export async function simulatePaymentApproved(formData: FormData) {
       mp_payment_id: "dev_simulated",
       amount,
       marketplace_fee: marketplaceFee,
+      payment_method: "mercadopago",
     });
   }
 
@@ -226,7 +227,7 @@ export async function cancelReservation(formData: FormData) {
 
   const { error } = await supabase
     .from(DB_TABLES.matches)
-    .update({ match_status: "cancelled" })
+    .update({ match_status: "cancelled", payment_status: "cancelled" })
     .eq("id", id);
 
   if (error) {

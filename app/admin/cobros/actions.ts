@@ -1,0 +1,188 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { DB_TABLES } from "@/lib/db-tables";
+import {
+  clubPadelibreDebtFromTurn,
+  playerShareWithMarketplaceFee,
+} from "@/lib/offline-payments";
+import { assertMatchTransition } from "@/lib/state-machines/match-states";
+import { assertMatchPaymentStatusTransition } from "@/lib/state-machines/payment-states";
+import { createNotification } from "@/lib/notifications";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+
+function getMatchId(formData: FormData) {
+  return String(formData.get("match_id") ?? "").trim();
+}
+
+export async function confirmOfflineCobro(formData: FormData) {
+  const matchId = getMatchId(formData);
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !matchId || !ctx.courtIds.length) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const { data: match, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (mErr || !match) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se encontró el turno."));
+  }
+
+  const courtId = String((match as { court_id: string }).court_id);
+  if (!ctx.courtIds.includes(courtId)) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
+  if (pay !== "cash_pending" && pay !== "transfer_pending") {
+    redirect("/admin/cobros?error=" + encodeURIComponent("Este cobro ya no está pendiente."));
+  }
+
+  const method = pay === "cash_pending" ? "cash" : "transfer";
+  const totalPrice = Number((match as { total_price: number | null }).total_price ?? 0);
+  const { total: payAmount, marketplaceFee } = playerShareWithMarketplaceFee(totalPrice);
+  const ownerId = String((match as { owner_id: string }).owner_id);
+  const matchType = String((match as { match_type?: string | null }).match_type ?? "");
+  const prevMs = String((match as { match_status: string | null }).match_status ?? "").toLowerCase();
+  const nextMatchStatus = matchType === "reservation" ? "reserved" : prevMs || "scheduled";
+
+  try {
+    assertMatchPaymentStatusTransition(pay, "paid", { matchId, trigger: "admin.cobros.confirm" });
+    assertMatchTransition((match as { match_status: string | null }).match_status, nextMatchStatus, {
+      matchId,
+      trigger: "admin.cobros.confirm",
+    });
+  } catch {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo actualizar el estado del turno."));
+  }
+
+  const { data: courtRow } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id")
+    .eq("id", courtId)
+    .maybeSingle();
+  const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+  if (!clubId) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("Cancha inválida."));
+  }
+
+  const svc = createServiceClient();
+
+  const { error: upMatchErr } = await svc
+    .from(DB_TABLES.matches)
+    .update({ payment_status: "paid", match_status: nextMatchStatus })
+    .eq("id", matchId);
+  if (upMatchErr) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo confirmar el cobro."));
+  }
+
+  const { error: payInsErr } = await svc.from(DB_TABLES.payments).insert({
+    match_id: matchId,
+    user_id: ownerId,
+    status: "approved",
+    amount: payAmount,
+    marketplace_fee: marketplaceFee,
+    payment_method: method,
+    mp_preference_id: null,
+    mp_payment_id: "club_counter",
+    updated_at: new Date().toISOString(),
+  });
+  if (payInsErr) {
+    console.error("[cobros] payment insert", payInsErr);
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo registrar el pago."));
+  }
+
+  const debtAmount = clubPadelibreDebtFromTurn(totalPrice);
+  const { error: debtErr } = await svc.from(DB_TABLES.clubDebts).insert({
+    club_id: clubId,
+    match_id: matchId,
+    amount: debtAmount,
+    payment_method: method,
+    status: "pending",
+  });
+  if (debtErr) {
+    console.error("[cobros] club_debts insert", debtErr);
+  }
+
+  await createNotification(svc, {
+    user_id: ownerId,
+    type: "payment_approved",
+    title: "Tu pago fue confirmado ✓",
+    body: "El club confirmó tu pago. ¡Nos vemos en la cancha!",
+    match_id: matchId,
+  });
+
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/reservas");
+  revalidatePath("/admin/finanzas");
+  redirect("/admin/cobros?ok=1");
+}
+
+export async function markOfflineNoShow(formData: FormData) {
+  const matchId = getMatchId(formData);
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !matchId || !ctx.courtIds.length) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const { data: match, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id, owner_id, court_id, payment_status, match_status")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (mErr || !match) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se encontró el turno."));
+  }
+
+  const courtId = String((match as { court_id: string }).court_id);
+  if (!ctx.courtIds.includes(courtId)) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
+  if (pay !== "cash_pending" && pay !== "transfer_pending") {
+    redirect("/admin/cobros?error=" + encodeURIComponent("Este turno ya no está pendiente de cobro."));
+  }
+
+  try {
+    assertMatchPaymentStatusTransition(pay, "no_show", { matchId, trigger: "admin.cobros.no_show" });
+    assertMatchTransition((match as { match_status: string | null }).match_status, "cancelled", {
+      matchId,
+      trigger: "admin.cobros.no_show",
+    });
+  } catch {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo actualizar el estado."));
+  }
+
+  const svc = createServiceClient();
+  const ownerId = String((match as { owner_id: string }).owner_id);
+
+  const { error: upErr } = await svc
+    .from(DB_TABLES.matches)
+    .update({ payment_status: "no_show", match_status: "cancelled" })
+    .eq("id", matchId);
+  if (upErr) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo registrar la ausencia."));
+  }
+
+  await createNotification(svc, {
+    user_id: ownerId,
+    type: "reservation_cancelled",
+    title: "Turno cancelado",
+    body: "El club indicó que no te presentaste al turno y se canceló la reserva.",
+    match_id: matchId,
+  });
+
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/reservas");
+  redirect("/admin/cobros?ok=1");
+}

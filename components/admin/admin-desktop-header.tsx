@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Activity, CalendarCheck, CreditCard, DollarSign, House, LayoutGrid, Settings, Target, Trophy, Users } from "lucide-react";
+import { Activity, Banknote, CalendarCheck, CreditCard, DollarSign, House, LayoutGrid, Settings, Target, Trophy, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,7 @@ const desktopLinks = [
   { href: "/admin/reservas", label: "Reservas", icon: Target },
   { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
   { href: "/admin/pagos", label: "Pagos", icon: CreditCard },
+  { href: "/admin/cobros", label: "Cobros", icon: Banknote },
   { href: "/admin/analytics", label: "Ocupación", icon: Activity },
   { href: "/admin/turnos-fijos", label: "Turnos", icon: CalendarCheck },
   { href: "/admin/torneos", label: "Torneos", icon: Trophy },

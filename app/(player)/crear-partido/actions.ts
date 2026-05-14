@@ -6,6 +6,9 @@ import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
+import {
+  normalizePlayerPaymentMethod,
+} from "@/lib/offline-payments";
 import { createNotification } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
@@ -140,7 +143,9 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
-      .select("price, name, clubs!inner(name, mp_access_token, mp_user_id)")
+      .select(
+        "price, name, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu)"
+      )
       .eq("id", courtId)
       .maybeSingle();
 
@@ -187,11 +192,31 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       (courtData as { clubs?: { mp_access_token?: string | null } | null }).clubs?.mp_access_token ?? null;
     const clubMpUserId =
       (courtData as { clubs?: { mp_user_id?: string | null } | null }).clubs?.mp_user_id ?? null;
+    const acceptsCash = Boolean(
+      (courtData as { clubs?: { accepts_cash?: boolean | null } | null }).clubs?.accepts_cash
+    );
+    const acceptsTransfer = Boolean(
+      (courtData as { clubs?: { accepts_transfer?: boolean | null } | null }).clubs?.accepts_transfer
+    );
+    const bankAlias = String(
+      (courtData as { clubs?: { bank_alias?: string | null } | null }).clubs?.bank_alias ?? ""
+    ).trim();
     const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
-    if (!clubAccessToken) {
+
+    const paymentMethodRaw = normalizePlayerPaymentMethod(getField(formData, "payment_method"));
+    const paymentMethod = paymentMethodRaw ?? "mercadopago";
+
+    if (paymentMethod === "mercadopago" && !clubAccessToken) {
       return {
-        error: "Este club aún no tiene Mercado Pago configurado. No es posible crear partidos en este club por el momento.",
+        error: "Este club aún no tiene Mercado Pago configurado. No es posible crear partidos con MP en este club por el momento.",
       };
+    }
+    if (paymentMethod === "cash" && !acceptsCash) {
+      return { error: "Este club no acepta pago en efectivo." };
+    }
+    if (paymentMethod === "transfer") {
+      if (!acceptsTransfer) return { error: "Este club no acepta transferencia bancaria." };
+      if (!bankAlias) return { error: "El club no cargó un alias CBU para transferencias." };
     }
 
     const slotStart = clockToMinutes(scheduledTime);
@@ -224,7 +249,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id)
       .in("match_status", ["scheduled", "reserved", "full"])
-      .eq("payment_status", "paid");
+      .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
     if ((activeMatchesCount ?? 0) >= 3) {
       return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
     }
@@ -248,6 +273,9 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       }
     }
 
+    const matchPayStatus =
+      paymentMethod === "cash" ? "cash_pending" : paymentMethod === "transfer" ? "transfer_pending" : "pending";
+
     const { data, error } = await supabase
       .from(DB_TABLES.matches)
       .insert({
@@ -257,7 +285,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
         scheduled_time: timeNorm,
         duration_minutes: Number(durationMinutes),
         total_price: totalPrice,
-        payment_status: "pending",
+        payment_status: matchPayStatus,
         match_status: "scheduled",
         match_type: matchType,
         is_competitive: matchType === "competitivo",
@@ -290,9 +318,50 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       status: "invited",
       amount: perPlayerTotal,
       marketplace_fee: perPlayerFee,
+      payment_method: "mercadopago",
     }));
     if (invitedPaymentRows.length > 0) {
       await supabase.from(DB_TABLES.payments).insert(invitedPaymentRows);
+    }
+
+    if (paymentMethod === "cash" || paymentMethod === "transfer") {
+      const friendlyDate = scheduledDate.split("-").reverse().join("/");
+      const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
+      const genderLabel =
+        genderCategory === "femenino"
+          ? "Partido femenino"
+          : genderCategory === "mixto"
+            ? "Partido mixto"
+            : "Partido masculino";
+      const groupRes = await createGroupChat(
+        supabase,
+        user.id,
+        `Partido en ${clubName} el ${friendlyDate}`,
+        `• ${competitiveLabel}\n• ${genderLabel}`,
+        [],
+        data.id
+      );
+      if (!groupRes.ok) {
+        console.error("[crearPartido] group chat", groupRes.message);
+      }
+
+      const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+      const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
+      if (invitedFriendIds.length > 0) {
+        await Promise.all(
+          invitedFriendIds.map((friendId) =>
+            createNotification(supabase, {
+              user_id: friendId,
+              type: "join_request",
+              title: "¡Te invitaron a un partido!",
+              body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
+              match_id: data.id,
+            })
+          )
+        );
+      }
+
+      redirect(`/partidos/${data.id}`);
     }
 
     const mp = await createMPPreference({
@@ -323,6 +392,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       status: "pending",
       amount: mp.total,
       marketplace_fee: mp.marketplaceFee,
+      payment_method: "mercadopago",
     });
 
     if (ownerPayErr) {

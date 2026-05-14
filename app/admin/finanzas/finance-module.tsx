@@ -30,6 +30,18 @@ type FinanceRow = MatchMoneyRow & {
   scheduled_date: string | null;
 };
 
+type ClubDebtUiRow = {
+  id: string;
+  amount: number | null;
+  payment_method: string | null;
+  confirmed_at: string;
+  match_id: string | null;
+  matches:
+    | { scheduled_date: string | null; scheduled_time: string | null }
+    | { scheduled_date: string | null; scheduled_time: string | null }[]
+    | null;
+};
+
 const inflightByKey = new Map<string, Promise<{ rows: FinanceRow[]; error: string | null }>>();
 
 function cacheKey(courtIds: string[]) {
@@ -129,8 +141,13 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [debtRows, setDebtRows] = useState<ClubDebtUiRow[]>([]);
+  const [debtLoadError, setDebtLoadError] = useState<string | null>(null);
   const courtIdsRef = useRef(courtIds);
-  courtIdsRef.current = courtIds;
+
+  useEffect(() => {
+    courtIdsRef.current = courtIds;
+  }, [courtIds]);
 
   const fetchPaid = useCallback(async () => {
     const ids = courtIdsRef.current;
@@ -159,8 +176,51 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchPaid hidrata el módulo tras desbloquear PIN
     if (unlocked) void fetchPaid();
   }, [unlocked, fetchPaid]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    let cancelled = false;
+    void (async () => {
+      const ids = courtIdsRef.current;
+      if (!ids.length) {
+        setDebtRows([]);
+        return;
+      }
+      const supabase = createClient();
+      const { data: courtRow } = await supabase
+        .from(DB_TABLES.courts)
+        .select("club_id")
+        .in("id", ids)
+        .limit(1)
+        .maybeSingle();
+      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
+      if (!clubId) {
+        if (!cancelled) setDebtRows([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from(DB_TABLES.clubDebts)
+        .select("id, amount, payment_method, confirmed_at, match_id, matches(scheduled_date, scheduled_time)")
+        .eq("club_id", clubId)
+        .eq("status", "pending")
+        .order("confirmed_at", { ascending: false })
+        .limit(20);
+      if (cancelled) return;
+      if (error) {
+        setDebtLoadError(error.message);
+        setDebtRows([]);
+        return;
+      }
+      setDebtLoadError(null);
+      setDebtRows((data ?? []) as ClubDebtUiRow[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [unlocked, courtIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,6 +313,10 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           return d >= thisMonthStart && d <= thisMonthEnd;
         }).length,
     [rows, thisMonthEnd, thisMonthStart]
+  );
+  const debtTotal = useMemo(
+    () => debtRows.reduce((s, r) => s + Number(r.amount ?? 0), 0),
+    [debtRows]
   );
 
   if (!unlocked) {
@@ -448,6 +512,62 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             >
               Ver panel de reembolsos →
             </Link>
+          </section>
+
+          <section className={adminCard}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Saldo deudor con PadeLibre</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Comisión del 5% sobre turnos cobrados en efectivo o transferencia en el club.
+            </p>
+            {debtLoadError ? (
+              <p className="mt-3 text-sm font-medium text-rose-600 dark:text-rose-400">{debtLoadError}</p>
+            ) : null}
+            <p className="mt-4 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
+              ${debtTotal.toFixed(2)}
+            </p>
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Total deuda pendiente</p>
+            <ul className="mt-5 flex flex-col gap-2">
+              {debtRows.map((row) => {
+                const rel = row.matches;
+                const m = Array.isArray(rel) ? rel[0] ?? null : rel;
+                const d = m?.scheduled_date ?? "";
+                const t = (m?.scheduled_time ?? "").toString().trim().slice(0, 5);
+                const partidoLabel =
+                  d.length >= 10
+                    ? `${format(parseISO(`${d}T12:00:00`), "d MMM yyyy", { locale: es })}${t ? ` · ${t}` : ""}`
+                    : "—";
+                const met = String(row.payment_method ?? "").toLowerCase();
+                const metLabel = met === "cash" ? "Efectivo" : met === "transfer" ? "Transferencia" : met || "—";
+                return (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100/90 bg-slate-50/50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">
+                        {format(new Date(row.confirmed_at), "d MMM yyyy, HH:mm", { locale: es })}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Partido {partidoLabel} · {metLabel}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-bold text-rose-700 dark:text-rose-300">
+                      ${Number(row.amount ?? 0).toFixed(2)}
+                    </span>
+                  </li>
+                );
+              })}
+              {debtRows.length === 0 && !debtLoadError ? (
+                <li className="text-sm font-medium text-slate-500 dark:text-slate-400">Sin deuda pendiente.</li>
+              ) : null}
+            </ul>
+            <p className="mt-5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              Este saldo corresponde al 5% de reservas cobradas en efectivo o transferencia. Contactá a PadeLibre
+              para saldar:{" "}
+              <a className="font-semibold text-[#0585FC] hover:underline" href="mailto:soporte.padelibre@gmail.com">
+                soporte.padelibre@gmail.com
+              </a>
+            </p>
           </section>
         </>
       ) : null}
