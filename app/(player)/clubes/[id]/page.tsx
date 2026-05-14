@@ -5,6 +5,7 @@ import ClubGalleryLightbox from "@/components/club-gallery-lightbox";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
+import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import type { ClubRow, CourtRow } from "@/lib/database.types";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
@@ -57,7 +58,8 @@ export default async function ClubDetailPage({ params }: PageProps) {
   }
 
   const club = { id, ...(clubRow as Omit<ClubRow, "id">) } as ClubRow;
-  const hasMpConfigured = Boolean(String((clubRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? "").trim());
+  const bookingReadiness = await checkOnboardingStatus(supabase, id);
+  const canReserve = bookingReadiness.canReceiveReservations;
 
   const { data: courtsData } = await supabase
     .from(DB_TABLES.courts)
@@ -128,9 +130,9 @@ export default async function ClubDetailPage({ params }: PageProps) {
         </div>
 
         <div className="space-y-6 px-4 pt-6">
-          {!hasMpConfigured ? (
-            <section className="rounded-2xl border border-amber-200/70 bg-amber-50/90 p-4 text-sm font-semibold text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-              Este club aún no tiene pagos configurados. Las reservas no están disponibles por el momento.
+          {!canReserve ? (
+            <section className="rounded-2xl border border-rose-200/70 bg-rose-50/90 p-4 text-sm font-semibold text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-100">
+              Este club no está disponible por el momento.
             </section>
           ) : null}
           {location ? (
@@ -246,9 +248,9 @@ export default async function ClubDetailPage({ params }: PageProps) {
                         </div>
                         <Link
                           href={href}
-                          aria-disabled={!hasMpConfigured}
+                          aria-disabled={!canReserve}
                           className={`inline-flex shrink-0 justify-center ${PLAYER_PRIMARY_BUTTON} ${
-                            !hasMpConfigured ? "pointer-events-none opacity-50 grayscale" : ""
+                            !canReserve ? "pointer-events-none opacity-50 grayscale" : ""
                           }`}
                         >
                           Reservar
@@ -267,9 +269,9 @@ export default async function ClubDetailPage({ params }: PageProps) {
         <div className="pointer-events-auto w-full max-w-md px-4">
           <Link
             href={`/crear-partido?clubId=${encodeURIComponent(id)}`}
-            aria-disabled={!hasMpConfigured}
+            aria-disabled={!canReserve}
             className={`flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-[#0585FC]/25 transition hover:brightness-105 active:scale-[0.99] ${
-              !hasMpConfigured ? "pointer-events-none opacity-50 grayscale" : ""
+              !canReserve ? "pointer-events-none opacity-50 grayscale" : ""
             }`}
           >
             Crear partido aquí

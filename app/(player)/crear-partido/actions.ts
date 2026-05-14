@@ -10,6 +10,7 @@ import {
   normalizePlayerPaymentMethod,
 } from "@/lib/offline-payments";
 import { createNotification } from "@/lib/notifications";
+import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
@@ -144,13 +145,21 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select(
-        "price, name, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu)"
+        "club_id, price, name, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu)"
       )
       .eq("id", courtId)
       .maybeSingle();
 
     if (courtError || !courtData) {
       return { error: "No se pudo obtener la información de la cancha." };
+    }
+
+    const clubIdStr = String((courtData as { club_id?: string | null }).club_id ?? "").trim();
+    if (clubIdStr) {
+      const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubIdStr);
+      if (!canReceiveReservations) {
+        return { error: "Este club no está disponible para reservas en este momento." };
+      }
     }
 
     const { data: favRows } = invitedFriendIdsRaw.length

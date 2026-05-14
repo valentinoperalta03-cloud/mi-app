@@ -9,6 +9,7 @@ import {
   normalizePlayerPaymentMethod,
 } from "@/lib/offline-payments";
 import { createNotification } from "@/lib/notifications";
+import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
@@ -141,6 +142,14 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     } | null;
   } | null;
   const clubId = String(courtClubTyped?.club_id ?? "").trim();
+  if (clubId) {
+    const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubId);
+    if (!canReceiveReservations) {
+      return {
+        error: "Este club no está disponible para reservas en este momento.",
+      };
+    }
+  }
   const clubAccessToken = courtClubTyped?.clubs?.mp_access_token ?? null;
   const clubMpUserId = courtClubTyped?.clubs?.mp_user_id ?? null;
   const acceptsCash = Boolean(courtClubTyped?.clubs?.accepts_cash);

@@ -15,7 +15,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import OnboardingChecklist from "@/components/admin/onboarding-checklist";
 import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -89,12 +91,12 @@ export default async function AdminDashboardPage() {
 
   const { data: clubInfoRaw } = await supabase
     .from(DB_TABLES.clubs)
-    .select("id,name,logo_url")
+    .select("id,name,logo_url,onboarding_completed")
     .in("id", ctx.clubIds)
     .order("name", { ascending: true })
     .limit(1);
   const club = ((clubInfoRaw ?? [])[0] ?? null) as
-    | { id: string; name: string | null; logo_url: string | null }
+    | { id: string; name: string | null; logo_url: string | null; onboarding_completed?: boolean | null }
     | null;
   const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
   const clubInitials = clubName
@@ -312,6 +314,19 @@ export default async function AdminDashboardPage() {
       : null,
   ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
 
+  const clubOnboardingCompletedFromDb = Boolean(club?.onboarding_completed);
+  const onboardingStatus = club?.id ? await checkOnboardingStatus(supabase, club.id) : null;
+  if (club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && onboardingStatus.allCompleted) {
+    await supabase
+      .from(DB_TABLES.clubs)
+      .update({ onboarding_completed: true })
+      .eq("id", club.id)
+      .eq("owner_id", ctx.userId);
+  }
+  const showOnboardingChecklist = Boolean(
+    club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && !onboardingStatus.allCompleted
+  );
+
   const totalAlerts = criticalAlerts.length + importantAlerts.length + infoAlerts.length;
   const nextCourtRel = Array.isArray(nextMatch?.courts) ? nextMatch?.courts[0] : nextMatch?.courts;
   const nextOwnerName = nextMatch?.owner_id ? ownerNameById.get(nextMatch.owner_id) ?? "Jugador" : "Jugador";
@@ -325,6 +340,15 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {showOnboardingChecklist && onboardingStatus ? (
+        <OnboardingChecklist
+          items={onboardingStatus.items}
+          completedCount={onboardingStatus.completedCount}
+          totalCount={onboardingStatus.totalCount}
+          canReceiveReservations={onboardingStatus.canReceiveReservations}
+          allCompleted={onboardingStatus.allCompleted}
+        />
+      ) : null}
       <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#031733] to-[#0461C4] p-5 shadow-[0_10px_30px_rgba(3,23,51,0.35)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
