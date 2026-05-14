@@ -3,8 +3,10 @@ import {
   isAdminPanelPath,
   isJugadorAppPath,
   isPublicAuthPath,
+  isSuperadminPath,
   resolveHomePath,
 } from "@/lib/auth-redirect";
+import { SUPERADMIN_EMAILS } from "@/lib/superadmin/constants";
 import { createMiddlewareClient } from "@/utils/supabase/middleware";
 
 /**
@@ -60,8 +62,13 @@ export async function proxy(request: NextRequest) {
     return redirectPreservingSupabaseCookies(request, `${loginUrl.pathname}${loginUrl.search}`, response);
   }
 
-  // Never redirect API routes
-  if (pathname.startsWith("/api/")) {
+  if (isSuperadminPath(pathname)) {
+    const email = (user.email ?? "").trim().toLowerCase();
+    if (!SUPERADMIN_EMAILS.has(email)) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return redirectPreservingSupabaseCookies(request, `${loginUrl.pathname}${loginUrl.search}`, response);
+    }
     return response;
   }
 

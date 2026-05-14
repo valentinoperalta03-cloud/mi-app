@@ -22,6 +22,10 @@ export function isAdminPanelPath(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+export function isSuperadminPath(pathname: string): boolean {
+  return pathname === "/superadmin" || pathname.startsWith("/superadmin/");
+}
+
 export function isJugadorAppPath(pathname: string): boolean {
   const roots = [
     "/home",

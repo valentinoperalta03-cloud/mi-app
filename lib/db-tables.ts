@@ -32,6 +32,8 @@ export const DB_TABLES = {
   levelEvolution: "level_evolution",
   payments: "payments",
   clubDebts: "club_debts",
+  superadmins: "superadmins",
+  supportTickets: "support_tickets",
   blockedUsers: "blocked_users",
   fixedSlots: "fixed_slots",
   fixedSlotPlayers: "fixed_slot_players",
