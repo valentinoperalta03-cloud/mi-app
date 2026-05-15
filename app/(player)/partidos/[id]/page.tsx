@@ -274,18 +274,20 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     .limit(1)
     .maybeSingle();
 
-  const myPaymentStatus = (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? "none";
-  const hasInvitedPayment = String(myPaymentStatus).toLowerCase() === "invited";
+  const myPaymentStatus = String(
+    (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? ""
+  ).toLowerCase();
+  const hasInvitedPayment = myPaymentStatus === "invited";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
-  const hasPaid = myPaymentStatus === "approved";
+  const hasPaid = myPaymentStatus === "approved" || myPaymentStatus === "paid";
   const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
   const paymentRowId = String((myPayment as { id?: string | null } | null)?.id ?? "").trim();
   /** Preferencia vencida en MP: estado explícito en DB (evita Date.now en render por react-hooks/purity). */
   const needsPaymentRegenerate = String(myPaymentStatus).toLowerCase() === "expired";
   const payRegenErr = sp.pay_regen_error === "1";
   const myPaymentBanner = (() => {
-    const s = String(myPaymentStatus).toLowerCase();
-    if (s === "approved") return "approved" as const;
+    const s = myPaymentStatus;
+    if (s === "approved" || s === "paid") return "approved" as const;
     if (s === "pending") return "pending" as const;
     if (s === "rejected" || s === "expired") return "rejected" as const;
     if (s === "invited") return "invited" as const;
@@ -305,11 +307,21 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const alreadySubmitted = Boolean(myResult);
 
-  // Check how many of 4 players confirmed
-  const { count: confirmCount } = await supabase
-    .from(DB_TABLES.matchResultConfirmations)
-    .select("id", { count: "exact", head: true })
-    .eq("match_id", id);
+  const { data: matchResultRow } = await supabase
+    .from(DB_TABLES.matchResults)
+    .select("id")
+    .eq("match_id", id)
+    .maybeSingle();
+
+  const matchResultId = (matchResultRow as { id?: string } | null)?.id;
+
+  const { count: confirmCount } = matchResultId
+    ? await supabase
+        .from(DB_TABLES.matchResultConfirmations)
+        .select("id", { count: "exact", head: true })
+        .eq("match_result_id", matchResultId)
+        .eq("decision", "confirm")
+    : { count: 0 };
 
   const { data: favoritesRows } = await supabase
     .from(DB_TABLES.userFavorites)
@@ -390,7 +402,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     !isOwner &&
     freeSlots > 0 &&
     matchStatusNorm !== "full" &&
-    matchStatusNorm !== "cancelled";
+    matchStatusNorm !== "cancelled" &&
+    matchStatusNorm !== "finished";
   const isLevelRestricted = Boolean(match.level_restricted);
   let userLevelDiff = 0;
 
@@ -467,7 +480,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const shareWhatsText = [
     `\u{1F3BE} \u00BFQui\u00E9n se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}`,
     ``,
-    `\u{1F4C5} ${longDateAr} \u00B7 ${hourAr} \u00B7 90 min`,
+    `\u{1F4C5} ${longDateAr} \u00B7 ${scheduledTimeStr} \u00B7 90 min`,
     `\u26A7\uFE0F ${genderLabel}`,
     `\u{1F4CA} Nivel ${nivelText}`,
     ``,

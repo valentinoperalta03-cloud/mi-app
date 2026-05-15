@@ -204,9 +204,13 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     gender_category: string | null;
   };
 
-  const matchStatus = String(m.match_status ?? "").toLowerCase();
-  if (matchStatus === "cancelled" || matchStatus === "full") {
-    redirect("/buscar-partido");
+  const matchStatusCheck = String(m.match_status ?? "").toLowerCase();
+  if (
+    matchStatusCheck === "cancelled" ||
+    matchStatusCheck === "full" ||
+    matchStatusCheck === "finished"
+  ) {
+    redirect(`/partidos/${matchId}?join_error=no_disponible`);
   }
   const isPrivate = String(m.visibility ?? "").toLowerCase() === "privado";
   const isLevelRestricted = Boolean(m.level_restricted);
@@ -640,7 +644,8 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?cancel_error=rpc`);
   }
   const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
-  const delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
+  const rpcCancelled = Boolean((resultRow as { cancelled?: boolean | null } | null)?.cancelled);
+  let delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
 
   await supabase
     .from(DB_TABLES.payments)
@@ -655,7 +660,33 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     .eq("match_id", matchId);
 
   const remaining = remainingCount ?? 0;
-  let matchCancelled = false;
+  let matchCancelled = rpcCancelled;
+
+  if (!delegatedOwner && remaining > 0) {
+    const { data: firstRemaining } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id")
+      .eq("match_id", matchId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const newOwner = String((firstRemaining as { player_id?: string } | null)?.player_id ?? "").trim();
+
+    if (newOwner) {
+      await supabase.from(DB_TABLES.matches).update({ owner_id: newOwner }).eq("id", matchId);
+      delegatedOwner = newOwner;
+
+      await createNotification(supabase, {
+        user_id: newOwner,
+        type: "match_owner_changed",
+        title: "Ahora organizás el partido",
+        body: "El creador salió del partido. Ahora vos sos el organizador.",
+        match_id: matchId,
+      });
+    }
+  }
+
   if (remaining === 0) {
     await supabase
       .from(DB_TABLES.matches)
@@ -681,12 +712,33 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
         });
       }
     }
-  } else if (remaining < 4) {
+  } else if (remaining < 4 && !matchCancelled) {
     await supabase.from(DB_TABLES.matches).update({ match_status: "scheduled" }).eq("id", matchId);
   }
 
+  if (matchCancelled) {
+    const { data: paidPayments } = await supabase
+      .from(DB_TABLES.payments)
+      .select("id, user_id")
+      .eq("match_id", matchId)
+      .eq("status", "approved");
+
+    for (const payment of paidPayments ?? []) {
+      const row = payment as { id: string; user_id: string };
+      await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("id", row.id);
+
+      await createNotification(supabase, {
+        user_id: row.user_id,
+        type: "reservation_cancelled",
+        title: "Partido cancelado - Reembolso en proceso",
+        body: "El partido fue cancelado. Tu reembolso se procesará en 48hs.",
+        match_id: matchId,
+      });
+    }
+  }
+
   const isOwnerLeaving = ownerId === user.id;
-  if (isOwnerLeaving && delegatedOwner) {
+  if (isOwnerLeaving && delegatedOwner && delegatedOwner !== user.id) {
     const tplOwner = NOTIFICATION_TEMPLATES.match_owner_changed(locationLabel);
     await createNotification(supabase, {
       user_id: delegatedOwner,
