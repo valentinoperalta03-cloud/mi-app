@@ -59,7 +59,59 @@ export async function saveClubHours(formData: FormData) {
   revalidatePath("/admin/config");
   revalidatePath("/admin/canchas");
   revalidatePath("/admin/reservas");
-  redirect("/admin/config?saved=1");
+  redirect("/admin/config?hours_saved=1");
+}
+
+function getField(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+export async function savePaymentMethods(formData: FormData) {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/config?payments_error=no_club");
+
+  const clubId = ctx.clubIds[0];
+  const payload = {
+    accepts_cash: formData.get("accepts_cash") === "on",
+    accepts_transfer: formData.get("accepts_transfer") === "on",
+    bank_alias: getField(formData, "bank_alias") || null,
+    bank_cbu: getField(formData, "bank_cbu") || null,
+  };
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?payments_error=${enc(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  redirect("/admin/config?payments_saved=1");
+}
+
+export async function saveCancellationPolicy(formData: FormData) {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/config?policy_error=no_club");
+
+  const clubId = ctx.clubIds[0];
+  const policy = getField(formData, "cancellation_policy");
+  const hoursRaw = getField(formData, "cancellation_hours");
+  const hours = hoursRaw === "" ? null : Number(hoursRaw);
+
+  const payload: { cancellation_policy: string | null; cancellation_hours?: number | null } = {
+    cancellation_policy: policy || null,
+    cancellation_hours: Number.isFinite(hours) ? hours : null,
+  };
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?policy_error=${enc(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  redirect("/admin/config?policy_saved=1");
 }
 
 export async function updateFinancePin(formData: FormData) {
@@ -88,8 +140,13 @@ export async function updateFinancePin(formData: FormData) {
     .maybeSingle();
   const storedPin = String((clubRow as { finance_pin?: string | null } | null)?.finance_pin ?? "").trim();
 
-  if (storedPin && currentPin !== storedPin) {
-    redirect(`/admin/config?pin_error=${enc("El PIN actual es incorrecto.")}`);
+  if (storedPin) {
+    if (!currentPin) {
+      redirect(`/admin/config?pin_error=${enc("Ingresá el PIN actual.")}`);
+    }
+    if (currentPin !== storedPin) {
+      redirect(`/admin/config?pin_error=${enc("El PIN actual es incorrecto.")}`);
+    }
   }
 
   const { error } = await supabase

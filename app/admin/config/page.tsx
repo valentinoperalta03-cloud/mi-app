@@ -1,13 +1,15 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertCircle, CheckCircle, Lock, LogOut, Mail, MessageCircle, Settings2 } from "lucide-react";
+import { Lock, LogOut, Mail, MessageCircle, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import ThemeToggleButton from "@/components/theme-toggle-button";
-import { adminCard, adminKicker, adminPressable, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import ClubForm from "../club/club-form";
+import ConfigCancellationForm from "./config-cancellation-form";
+import ConfigClubDataForm from "./config-club-data-form";
+import ConfigClubPhotosForm from "./config-club-photos-form";
+import ConfigPaymentMethodsForm from "./config-payment-methods-form";
 import { saveClubHours, updateFinancePin } from "./actions";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
@@ -23,8 +25,41 @@ async function signOutAction() {
   redirect("/login");
 }
 
+function flash(ok: boolean, err: string) {
+  if (ok) {
+    return (
+      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+        Cambios guardados correctamente.
+      </p>
+    );
+  }
+  if (err) {
+    return (
+      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+        {err}
+      </p>
+    );
+  }
+  return null;
+}
+
 type PageProps = {
-  searchParams?: Promise<{ saved?: string; error?: string; pin_saved?: string; pin_error?: string }>;
+  searchParams?: Promise<{
+    hours_saved?: string;
+    hours_error?: string;
+    data_saved?: string;
+    data_error?: string;
+    photos_saved?: string;
+    photos_error?: string;
+    payments_saved?: string;
+    payments_error?: string;
+    policy_saved?: string;
+    policy_error?: string;
+    pin_saved?: string;
+    pin_error?: string;
+    saved?: string;
+    error?: string;
+  }>;
 };
 
 export default async function AdminConfigPage({ searchParams }: PageProps) {
@@ -60,7 +95,6 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   let clubRaw: Record<string, unknown> | null = (firstFetch.data as Record<string, unknown> | null) ?? null;
   let clubErr = firstFetch.error;
 
-  // Compat: algunos entornos aún no tienen cancellation_hours en clubs.
   if (
     clubErr?.message?.toLowerCase().includes("cancellation_hours") ||
     clubErr?.message?.toLowerCase().includes("open_time") ||
@@ -92,7 +126,6 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
 
   const club = clubRaw as {
     name: string | null;
-    location: string | null;
     description: string | null;
     address: string | null;
     contact_phone: string | null;
@@ -108,7 +141,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
     gallery_image_3: string | null;
     gallery_image_4: string | null;
     cancellation_policy: string | null;
-    cancellation_hours: number | null;
+    cancellation_hours?: number | null;
     mp_access_token: string | null;
     mp_user_id: string | null;
     finance_pin: string | null;
@@ -119,14 +152,32 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   };
 
   const isMpConnected = Boolean(club.mp_access_token);
-  const saved = sp.saved === "1";
-  const pinSaved = sp.pin_saved === "1";
-  const actionErr = sp.error ? decodeURIComponent(sp.error) : "";
-  const pinErr = sp.pin_error ? decodeURIComponent(sp.pin_error) : "";
+  const hasFinancePin = Boolean(String(club.finance_pin ?? "").trim());
   const clubName = club.name ?? "Club";
   const clubShortId = clubId.slice(0, 8);
   const clubOpenDefault = String(club.open_time ?? "09:00:00").trim().slice(0, 5);
   const clubCloseDefault = String(club.close_time ?? "22:30:00").trim().slice(0, 5);
+  const businessHoursDisplay = club.business_hours ?? `${clubOpenDefault} - ${clubCloseDefault}`;
+
+  const decode = (key?: string) => (key ? decodeURIComponent(key) : "");
+
+  const hoursOk = sp.hours_saved === "1" || sp.saved === "1";
+  const hoursErr = decode(sp.hours_error) || decode(sp.error);
+  const dataOk = sp.data_saved === "1";
+  const dataErr = decode(sp.data_error);
+  const photosOk = sp.photos_saved === "1";
+  const photosErr = decode(sp.photos_error);
+  const paymentsOk = sp.payments_saved === "1";
+  const paymentsErr = decode(sp.payments_error);
+  const policyOk = sp.policy_saved === "1";
+  const policyErr = decode(sp.policy_error);
+  const pinOk = sp.pin_saved === "1";
+  const pinErr = decode(sp.pin_error);
+
+  const cancellationHours =
+    typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours)
+      ? club.cancellation_hours
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -143,11 +194,11 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </header>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Cuenta</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">1. Cuenta</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Datos principales de tu club y sesión.</p>
         <div className="mt-4 flex items-center gap-4 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           {club.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- imagen pública de club
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={club.logo_url} alt={clubName} className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
           ) : (
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0585FC]/20 text-lg font-bold text-[#0461C4] dark:text-sky-300">
@@ -163,10 +214,11 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Horarios del club</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">2. Horarios del club</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Apertura y cierre generales para todas las canchas. Al guardar se sincronizan los días activos de cada cancha.
+          Apertura y cierre generales. Al guardar se sincronizan los días activos de cada cancha.
         </p>
+        {flash(hoursOk, hoursErr)}
         <form action={saveClubHours} className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
             Hora de apertura
@@ -198,40 +250,52 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Información del club</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Editá nombre, fotos, contacto y política de cancelación.</p>
-        {saved ? (
-          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-            Cambios guardados correctamente.
-          </p>
-        ) : null}
-        {actionErr ? (
-          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
-            {actionErr}
-          </p>
-        ) : null}
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">3. Datos del club</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Nombre, descripción, dirección y contacto.</p>
+        {flash(dataOk, dataErr)}
         <div className="mt-4">
-          <ClubForm
-            clubId={clubId}
-            isMpConnected={isMpConnected}
+          <ConfigClubDataForm
             initial={{
               name: club.name ?? "",
-              location: club.location ?? "",
               description: club.description ?? "",
               address: club.address ?? "",
               contact_phone: club.contact_phone ?? "",
               whatsapp: club.whatsapp ?? "",
               instagram: club.instagram ?? "",
-              business_hours: club.business_hours ?? "",
+              business_hours: businessHoursDisplay,
+            }}
+          />
+        </div>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">4. Fotos</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Logo, portada y galería visible para jugadores.</p>
+        {flash(photosOk, photosErr)}
+        <div className="mt-4">
+          <ConfigClubPhotosForm
+            clubId={clubId}
+            initial={{
               logo_url: club.logo_url ?? "",
               cover_image_url: club.cover_image_url ?? "",
               gallery_image_1: club.gallery_image_1 ?? "",
               gallery_image_2: club.gallery_image_2 ?? "",
               gallery_image_3: club.gallery_image_3 ?? "",
               gallery_image_4: club.gallery_image_4 ?? "",
-              cancellation_policy: club.cancellation_policy ?? "",
-              cancellation_hours:
-                typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours) ? club.cancellation_hours : null,
+            }}
+          />
+        </div>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">5. Métodos de pago</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Mercado Pago, efectivo y transferencia.</p>
+        {flash(paymentsOk, paymentsErr)}
+        <div className="mt-4">
+          <ConfigPaymentMethodsForm
+            isMpConnected={isMpConnected}
+            mpUserId={club.mp_user_id}
+            initial={{
               accepts_cash: Boolean(club.accepts_cash),
               accepts_transfer: Boolean(club.accepts_transfer),
               bank_alias: club.bank_alias ?? "",
@@ -242,69 +306,79 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Mercado Pago</h2>
-        <Link
-          href="/admin/config/mp-connect"
-          className={`mt-4 block rounded-2xl border p-5 transition ${adminPressable} ${
-            isMpConnected
-              ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
-              : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {isMpConnected ? <CheckCircle size={18} className="text-emerald-600" /> : <AlertCircle size={18} className="text-amber-600" />}
-            <p className={`text-sm font-semibold ${isMpConnected ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
-              {isMpConnected ? "Conectado" : "Desconectado"}
-            </p>
-          </div>
-          <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
-            {isMpConnected ? `MP User ID: ${club.mp_user_id ?? "—"}` : "Conectá tu cuenta para cobrar reservas."}
-          </p>
-          <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-            {isMpConnected ? "Reconectar" : "Conectar ahora"}
-          </span>
-        </Link>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">6. Política de cancelación</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Definí hasta cuándo los jugadores pueden cancelar con reembolso.</p>
+        {flash(policyOk, policyErr)}
+        <div className="mt-4">
+          <ConfigCancellationForm
+            initialPolicy={club.cancellation_policy ?? ""}
+            initialHours={cancellationHours}
+          />
+        </div>
       </section>
 
       <section className={`${adminCard} p-6`}>
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
           <Lock size={18} />
-          PIN de finanzas
+          7. PIN de finanzas
         </h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Protegé el módulo financiero con un PIN de 4 a 6 dígitos.</p>
-        {pinSaved ? (
-          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-            PIN actualizado correctamente.
-          </p>
-        ) : null}
-        {pinErr ? (
-          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
-            {pinErr}
-          </p>
-        ) : null}
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {hasFinancePin
+            ? "Protegé el módulo financiero con un PIN de 4 a 6 dígitos."
+            : "Creá un PIN de 4 a 6 dígitos para acceder a finanzas."}
+        </p>
+        {flash(pinOk, pinErr)}
         <form action={updateFinancePin} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="sm:col-span-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">PIN actual</span>
-            <input name="current_pin" type="password" inputMode="numeric" maxLength={6} pattern="\d{4,6}" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
-          </label>
+          {hasFinancePin ? (
+            <label className="sm:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">PIN actual</span>
+              <input
+                name="current_pin"
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                pattern="\d{4,6}"
+                required
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </label>
+          ) : null}
           <label>
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nuevo PIN</span>
-            <input name="new_pin" type="password" inputMode="numeric" maxLength={6} pattern="\d{4,6}" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {hasFinancePin ? "Nuevo PIN" : "PIN"}
+            </span>
+            <input
+              name="new_pin"
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              pattern="\d{4,6}"
+              required
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
           </label>
           <label>
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Confirmar PIN</span>
-            <input name="confirm_pin" type="password" inputMode="numeric" maxLength={6} pattern="\d{4,6}" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+            <input
+              name="confirm_pin"
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              pattern="\d{4,6}"
+              required
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
           </label>
           <div className="sm:col-span-2">
             <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
-              Cambiar PIN
+              {hasFinancePin ? "Cambiar PIN" : "Crear PIN"}
             </button>
           </div>
         </form>
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Apariencia</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">8. Apariencia</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Elegí modo claro u oscuro para el panel.</p>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
           <ThemeToggleButton />
@@ -312,15 +386,23 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Soporte</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">9. Soporte</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">¿Necesitás ayuda con PadeLibre?</p>
         <div className="mt-4 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           <div className="flex flex-wrap gap-2">
-            <a href="mailto:soporte.padelibre@gmail.com" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <a
+              href="mailto:soporte.padelibre@gmail.com"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            >
               <Mail size={16} />
               soporte.padelibre@gmail.com
             </a>
-            <a href="https://wa.me/5493412571953" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <a
+              href="https://wa.me/5493412571953"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            >
               <MessageCircle size={16} />
               +54 9 341 257-1953
             </a>
@@ -329,10 +411,15 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Sesión</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Conectado como {clubName} ({userEmail})</p>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">10. Sesión</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Conectado como {clubName} ({userEmail})
+        </p>
         <form action={signOutAction} className="mt-4">
-          <button type="submit" className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+          >
             <LogOut size={16} />
             Cerrar sesión
           </button>

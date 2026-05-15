@@ -15,16 +15,63 @@ function normalizeInstagram(raw: string) {
   return s || null;
 }
 
+async function ownerClubContext() {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/config?data_error=no_club");
+  return { supabase, ctx, clubId: ctx.clubIds[0]! };
+}
+
+export async function saveClubData(formData: FormData) {
+  const { supabase, ctx, clubId } = await ownerClubContext();
+
+  const payload = {
+    name: getField(formData, "name") || null,
+    description: getField(formData, "description") || null,
+    address: getField(formData, "address") || null,
+    contact_phone: getField(formData, "contact_phone") || null,
+    whatsapp: getField(formData, "whatsapp") || null,
+    instagram: normalizeInstagram(getField(formData, "instagram")),
+    business_hours: getField(formData, "business_hours") || null,
+  };
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?data_error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  redirect("/admin/config?data_saved=1");
+}
+
+export async function saveClubPhotos(formData: FormData) {
+  const { supabase, ctx, clubId } = await ownerClubContext();
+
+  const payload = {
+    logo_url: getField(formData, "logo_url") || null,
+    cover_image_url: getField(formData, "cover_image_url") || null,
+    gallery_image_1: getField(formData, "gallery_image_1") || null,
+    gallery_image_2: getField(formData, "gallery_image_2") || null,
+    gallery_image_3: getField(formData, "gallery_image_3") || null,
+    gallery_image_4: getField(formData, "gallery_image_4") || null,
+  };
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?photos_error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  redirect("/admin/config?photos_saved=1");
+}
+
+/** @deprecated Usar saveClubData / saveClubPhotos desde Config. */
 export async function updateClubInfo(formData: FormData) {
   const supabaseAction = await createClient({ allowCookieWrites: true });
   const actionCtx = await getOwnerAdminContext(supabaseAction);
-  if (!actionCtx?.userId) {
-    redirect("/login");
-  }
-  if (!actionCtx.clubIds.length) {
-    redirect("/admin/config?error=no_club");
-  }
-  const ownClubId = actionCtx.clubIds[0];
+  if (!actionCtx?.userId) redirect("/login");
+  if (!actionCtx.clubIds.length) redirect("/admin/config?data_error=no_club");
 
   const payload = {
     name: getField(formData, "name") || null,
@@ -51,13 +98,12 @@ export async function updateClubInfo(formData: FormData) {
   const { error } = await supabaseAction
     .from(DB_TABLES.clubs)
     .update(payload)
-    .eq("id", ownClubId)
+    .eq("id", actionCtx.clubIds[0])
     .eq("owner_id", actionCtx.userId);
   if (error) {
-    console.error("[admin/club] update error", error);
-    redirect(`/admin/config?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/config?data_error=${encodeURIComponent(error.message)}`);
   }
 
   revalidatePath("/admin/config");
-  redirect("/admin/config?saved=1");
+  redirect("/admin/config?data_saved=1");
 }
