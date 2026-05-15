@@ -1,4 +1,4 @@
-yamlworkflows:
+workflows:
   ios-distribution:
     name: iOS Distribution
     environment:
