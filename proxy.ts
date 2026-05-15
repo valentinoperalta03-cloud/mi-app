@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  fetchIsGloballyBlocked,
+  GLOBAL_BLOCK_LOGIN_MESSAGE,
   isAdminPanelPath,
+  isGlobalBlockExemptPath,
   isJugadorAppPath,
   isPublicAuthPath,
   isSuperadminPath,
@@ -27,16 +30,23 @@ function redirectPreservingSupabaseCookies(
   return redirect;
 }
 
+function redirectGloballyBlocked(request: NextRequest, sessionResponse: NextResponse) {
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("message", GLOBAL_BLOCK_LOGIN_MESSAGE);
+  loginUrl.searchParams.set("kind", "error");
+  return redirectPreservingSupabaseCookies(request, `${loginUrl.pathname}${loginUrl.search}`, sessionResponse);
+}
+
+const API_PUBLIC_PREFIXES = ["/api/mp/webhook", "/api/cron/"] as const;
+
+function isApiPublicPath(pathname: string): boolean {
+  return API_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = new URL(request.url).pathname;
-  
-  // Never intercept API routes
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-  
-  // Public landing page
-  if (pathname === "/") {
+
+  if (isApiPublicPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -45,6 +55,27 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (user) {
+    const blocked = await fetchIsGloballyBlocked(supabase, user.id);
+    if (blocked) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+      }
+      if (!isGlobalBlockExemptPath(pathname)) {
+        return redirectGloballyBlocked(request, response);
+      }
+      return response;
+    }
+  }
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
 
   if (user && !user.email_confirmed_at) {
     if (pathname === "/verificar-email" || pathname.startsWith("/auth/")) {

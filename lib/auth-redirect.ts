@@ -51,3 +51,23 @@ export function isPublicAuthPath(pathname: string): boolean {
   if (pathname.startsWith("/auth/")) return true;
   return false;
 }
+
+/** Rutas permitidas con sesión activa pero cuenta suspendida globalmente. */
+export function isGlobalBlockExemptPath(pathname: string): boolean {
+  return pathname === "/login" || pathname.startsWith("/auth/");
+}
+
+export const GLOBAL_BLOCK_LOGIN_MESSAGE =
+  "Tu cuenta fue suspendida. Contactá a soporte.padelibre@gmail.com";
+
+export async function fetchIsGloballyBlocked(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("is_globally_blocked")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean((data as { is_globally_blocked?: boolean | null } | null)?.is_globally_blocked);
+}
