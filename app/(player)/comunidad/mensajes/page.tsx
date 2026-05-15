@@ -4,7 +4,7 @@ import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { fetchConversationPreviews } from "@/lib/chat-partners";
 import { fetchGroupPreviews } from "@/lib/group-chats";
-import { createClient, createServiceClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 import { MensajesClient } from "./mensajes-client";
 
 export default async function MensajesPage() {
@@ -13,7 +13,7 @@ export default async function MensajesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const service = createServiceClient();
+  const service = await getAdminClient();
 
   const conversations = await fetchConversationPreviews(service, user.id);
   const groups = await fetchGroupPreviews(service, user.id);

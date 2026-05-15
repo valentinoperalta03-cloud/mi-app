@@ -138,7 +138,7 @@ export function ComunidadClient({
 }) {
   const hrefs: Record<string, string> = {
     "para-ti": "/comunidad",
-    jugadores: "/comunidad?tab=jugadores#comunidad-contenido",
+    jugadores: "/comunidad?tab=jugadores",
     mensajes: "/comunidad/mensajes",
     rankings: "/comunidad/rankings",
   };
@@ -193,7 +193,7 @@ export function ComunidadClient({
         <div className="mb-5 min-w-0 px-4">{children}</div>
       ) : null}
 
-      <div id="comunidad-contenido" className="scroll-mt-6 px-4">
+      <div className="px-4">
         <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
           {activeTab === "jugadores" ? (
             <FriendsSearchClient

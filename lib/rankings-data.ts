@@ -1,11 +1,6 @@
 import { DB_TABLES } from "@/lib/db-tables";
 import { classifyCategory } from "@/lib/level-quiz-logic";
-import { createServiceClient } from "@/utils/supabase/server";
-
-function getServiceOrNull() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  return createServiceClient();
-}
+import { getAdminClient } from "@/utils/supabase/server";
 
 export type WeeklyTopPlayer = {
   user_id: string;
@@ -53,8 +48,7 @@ function accentFromLevel(level: number | null): GlobalRankingRow["accent"] {
  * (decisión confirm) creada en la ventana, y resultado final `confirmed` con ganador claro.
  */
 export async function fetchWeeklyTopWinners(limit = 10): Promise<WeeklyTopPlayer[]> {
-  const admin = getServiceOrNull();
-  if (!admin) return [];
+  const admin = await getAdminClient();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: confRows, error: confErr } = await admin
@@ -147,8 +141,7 @@ export async function fetchWeeklyTopWinners(limit = 10): Promise<WeeklyTopPlayer
 }
 
 export async function fetchGlobalRanking(limit = 50): Promise<GlobalRankingRow[]> {
-  const admin = getServiceOrNull();
-  if (!admin) return [];
+  const admin = await getAdminClient();
   const { data, error } = await admin
     .from(DB_TABLES.profiles)
     .select("user_id, name, avatar_url, level, level_of_play")
@@ -181,8 +174,7 @@ export async function fetchGlobalRanking(limit = 50): Promise<GlobalRankingRow[]
 }
 
 export async function fetchMyGlobalRank(userId: string): Promise<MyRankInfo | null> {
-  const admin = getServiceOrNull();
-  if (!admin) return null;
+  const admin = await getAdminClient();
 
   const { data: me, error: meErr } = await admin
     .from(DB_TABLES.profiles)

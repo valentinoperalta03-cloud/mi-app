@@ -48,3 +48,11 @@ export function createServiceClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 }
+
+/** Service role si está configurado; si no, cliente con sesión del usuario (Server Components). */
+export async function getAdminClient() {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return createServiceClient();
+  }
+  return createClient();
+}

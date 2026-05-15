@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { fetchGroupMessages } from "@/lib/group-chats";
-import { createClient, createServiceClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 import { GroupChatClient } from "./group-chat-client";
 
 type PageProps = { params: Promise<{ groupId: string }> };
@@ -13,7 +13,7 @@ export default async function GroupChatPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const service = createServiceClient();
+  const service = await getAdminClient();
 
   const [{ data: group }, { data: memberRow }] = await Promise.all([
     service

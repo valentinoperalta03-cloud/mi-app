@@ -7,7 +7,7 @@ import { canOpenChatWithPeer } from "@/lib/chat-partners";
 import { createNotification } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
-import { createClient, createServiceClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 
 export type SendMessageState = { ok: boolean; message: string; row?: ChatMessageRow };
 
@@ -101,7 +101,7 @@ export async function createGroupChatAction(params: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
-  const service = createServiceClient();
+  const service = await getAdminClient();
 
   const res = await createGroupChat(
     service,
@@ -125,7 +125,7 @@ export async function sendGroupChatMessageAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Iniciá sesión." };
-  const service = createServiceClient();
+  const service = await getAdminClient();
   const chatRateAllowed = await checkRateLimit(`group_chat:${user.id}`, 30, 60);
   if (!chatRateAllowed) {
     return { ok: false, message: "Enviás mensajes muy rápido. Esperá un momento." };
