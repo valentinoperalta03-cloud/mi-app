@@ -4,11 +4,21 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import SettingsClient from "./settings-client";
 import { LEVEL_HIERARCHY, getLevelIndex } from "@/lib/match-level";
-import { classifyCategory } from "@/lib/level-quiz-logic";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
 type ActionState = { ok: boolean; message: string };
+
+function levelFromCategory(category: string): number {
+  if (category.includes("1ra")) return 7.5;
+  if (category.includes("2da")) return 6.5;
+  if (category.includes("3ra")) return 5.5;
+  if (category.includes("4ta")) return 4.5;
+  if (category.includes("5ta")) return 3.5;
+  if (category.includes("6ta")) return 2.5;
+  if (category.includes("7ma")) return 1.5;
+  return 0.5;
+}
 
 export default async function AjustesPage({
   searchParams,
@@ -107,18 +117,15 @@ export default async function AjustesPage({
     if (idx > 0) {
       const newIdx = idx - 1;
       const newCategory = LEVEL_HIERARCHY[newIdx];
-      // Centro de la banda [n, n+1) en 0–8 (mismos cortes que classifyCategory).
-      const newLevel = newIdx + 0.5;
-      if (classifyCategory(newLevel) !== newCategory) {
-        console.error("downgradeLevel: classifyCategory no coincide con la banda", {
-          newLevel,
-          newCategory,
-          derived: classifyCategory(newLevel),
-        });
-      }
+      const newLevel = levelFromCategory(newCategory);
       await supabase
         .from(DB_TABLES.profiles)
-        .update({ category: newCategory, level: newLevel })
+        .update({
+          category: newCategory,
+          level: newLevel,
+          level_of_play: newCategory,
+          technical_score: newLevel,
+        })
         .eq("user_id", user.id);
     }
     revalidatePath("/ajustes");

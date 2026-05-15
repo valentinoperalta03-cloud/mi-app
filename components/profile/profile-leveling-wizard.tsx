@@ -94,7 +94,7 @@ export function ProfileLevelingWizard() {
     <div className="flex flex-col gap-5 pb-8" suppressHydrationWarning>
       <header className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-[0_8px_30px_-18px_rgba(15,23,42,0.22)]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0461C4]">
-          FaltaUno
+          PadeLibre
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
           Nivelacion paso a paso

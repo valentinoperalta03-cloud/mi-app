@@ -129,14 +129,10 @@ export default async function PerfilPage() {
   if (row.onboarding_completed !== true) {
     redirect("/onboarding");
   }
-  const hasTechnical =
-    row.technical_score != null && Number.isFinite(Number(row.technical_score));
   const isLeveled =
-    (row.level != null && Number.isFinite(Number(row.level))) ||
-    Boolean((row.level_of_play ?? "").trim()) ||
-    Boolean((row.category ?? "").trim()) ||
-    row.is_leveled === true ||
-    hasTechnical;
+    (row?.level != null && Number.isFinite(Number(row.level))) ||
+    Boolean(row?.level_of_play?.trim()) ||
+    row?.is_leveled === true;
   const displayName = row?.name?.trim() || "Tu perfil";
   const levelParts = getProfileLevelParts(row);
   const nivelLine = formatProfileNivelFromRow(row);

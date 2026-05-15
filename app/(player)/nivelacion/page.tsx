@@ -19,7 +19,7 @@ export default async function NivelacionPage() {
 
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
-    .select("level_of_play, technical_score")
+    .select("level, level_of_play, is_leveled")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -27,11 +27,16 @@ export default async function NivelacionPage() {
     redirect("/perfil");
   }
 
-  const row = profile as { level_of_play?: string | null; technical_score?: number | null } | null;
-  const hasTech =
-    row?.technical_score != null && Number.isFinite(Number(row.technical_score));
-  const hasLegacy = Boolean(row?.level_of_play?.trim());
-  if (hasTech || hasLegacy) {
+  const row = profile as {
+    level?: number | null;
+    level_of_play?: string | null;
+    is_leveled?: boolean | null;
+  } | null;
+  const hasLevel =
+    (row?.level != null && Number.isFinite(Number(row.level))) ||
+    Boolean(row?.level_of_play?.trim()) ||
+    row?.is_leveled === true;
+  if (hasLevel) {
     redirect("/perfil");
   }
 

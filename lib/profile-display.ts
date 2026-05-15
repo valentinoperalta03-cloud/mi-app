@@ -20,6 +20,7 @@ export function formatProfileNivel(
 
 type ProfileNivelRow = {
   level?: number | null;
+  level_of_play?: string | null;
 };
 
 export type ProfileLevelParts = {
@@ -33,8 +34,9 @@ export function getProfileLevelParts(row: ProfileNivelRow | null | undefined): P
   if (!row || row.level == null || !Number.isFinite(Number(row.level))) return null;
   const level = Math.max(0, Math.min(8, Number(row.level)));
   const frac = level - Math.floor(level);
+  const levelOfPlay = typeof row.level_of_play === "string" ? row.level_of_play.trim() : "";
   return {
-    category: classifyCategory(level),
+    category: levelOfPlay || classifyCategory(level),
     elo: level.toFixed(1),
     progressInEloUnit: Math.round(frac * 100),
   };

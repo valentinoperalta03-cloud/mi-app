@@ -108,6 +108,7 @@ export async function completeLevelingProfile(payload: {
       level: finalLevel,
       level_of_play: category,
       category: category,
+      technical_score: finalLevel,
       is_leveled: true,
     })
     .eq("user_id", user.id);
