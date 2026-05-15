@@ -10,6 +10,7 @@ import {
   regenerateParticipantMercadoPagoLink,
 } from "@/lib/match-payments";
 import { log } from "@/lib/logger";
+import { notifyClubOwner } from "@/lib/club-notify";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -587,7 +588,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,location_name,match_status")
+    .select("id,owner_id,location_name,match_status,court_id,scheduled_time")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr || !matchRow) {
@@ -598,6 +599,8 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     owner_id: string | null;
     location_name: string | null;
     match_status: string | null;
+    court_id: string | null;
+    scheduled_time: string | null;
   };
   const matchStatusNorm = String(m.match_status ?? "").toLowerCase();
   if (matchStatusNorm === "cancelled") {
@@ -650,7 +653,35 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     .from(DB_TABLES.matchParticipants)
     .select("player_id", { count: "exact", head: true })
     .eq("match_id", matchId);
-  if ((remainingCount ?? 0) < 4) {
+
+  const remaining = remainingCount ?? 0;
+  let matchCancelled = false;
+  if (remaining === 0) {
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: "cancelled", payment_status: "cancelled" })
+      .eq("id", matchId);
+    matchCancelled = true;
+
+    const courtId = String(m.court_id ?? "").trim();
+    if (courtId) {
+      const { data: courtRow } = await supabase
+        .from(DB_TABLES.courts)
+        .select("club_id")
+        .eq("id", courtId)
+        .maybeSingle();
+      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+      const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";
+      if (clubId) {
+        const service = createServiceClient();
+        await notifyClubOwner(service, clubId, {
+          title: "Partido cancelado",
+          body: `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
+          match_id: matchId,
+        });
+      }
+    }
+  } else if (remaining < 4) {
     await supabase.from(DB_TABLES.matches).update({ match_status: "scheduled" }).eq("id", matchId);
   }
 
@@ -666,7 +697,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     });
   }
 
-  if (ownerId && ownerId !== user.id) {
+  if (!matchCancelled && ownerId && ownerId !== user.id) {
     await createNotification(supabase, {
       user_id: ownerId,
       type: "player_joined",
