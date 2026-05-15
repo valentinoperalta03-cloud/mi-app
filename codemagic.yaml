@@ -1,4 +1,4 @@
-workflows:
+yamlworkflows:
   ios-distribution:
     name: iOS Distribution
     environment:
@@ -14,18 +14,9 @@ workflows:
       - name: Capacitor sync
         script: npx cap sync ios
       - name: Build iOS
-        script: |
-          xcodebuild -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Release \
-            -archivePath build/App.xcarchive \
-            archive
+        script: xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -archivePath build/App.xcarchive archive
       - name: Export IPA
-        script: |
-          xcodebuild -exportArchive \
-            -archivePath build/App.xcarchive \
-            -exportOptionsPlist ios/App/ExportOptions.plist \
-            -exportPath build/
+        script: xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist ios/App/ExportOptions.plist -exportPath build/
     artifacts:
       - build/*.ipa
     publishing:
