@@ -220,17 +220,32 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     }
   }
 
-  const { data: blocks } = await supabase
-    .from(DB_TABLES.courtBlocks)
-    .select("start_time")
-    .eq("court_id", courtId)
-    .eq("date", scheduledDate);
+  const [{ data: blocksModern }, { data: blocksLegacy }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.courtBlocks)
+      .select("blocked_time")
+      .eq("court_id", courtId)
+      .eq("blocked_date", scheduledDate),
+    supabase
+      .from(DB_TABLES.courtBlocks)
+      .select("start_time")
+      .eq("court_id", courtId)
+      .eq("date", scheduledDate),
+  ]);
 
-  for (const b of blocks ?? []) {
-    const bt = String((b as { start_time: string | null }).start_time ?? "").trim();
-    if (bt && clockToMinutes(bt) === slotStart) {
-      return { error: "Este horario no está disponible." };
-    }
+  const blockStarts = new Set(
+    [
+      ...(blocksModern ?? []).map((b) =>
+        String((b as { blocked_time: string | null }).blocked_time ?? "").trim().slice(0, 5)
+      ),
+      ...(blocksLegacy ?? []).map((b) =>
+        String((b as { start_time: string | null }).start_time ?? "").trim().slice(0, 5)
+      ),
+    ].filter(Boolean)
+  );
+  const slotTimeNorm = timeNorm.slice(0, 5);
+  if (blockStarts.has(slotTimeNorm)) {
+    return { error: "Este horario no está disponible." };
   }
 
   const dateIso = toIsoDateTime(scheduledDate, timeNorm);

@@ -5,7 +5,13 @@ import { es } from "date-fns/locale";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { Suspense } from "react";
-import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
+import {
+  buildSlotsForDay,
+  courtBlockStartsFromRows,
+  normalizeSlotTime,
+  type GeneratedSlot,
+  type ScheduleInput,
+} from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -28,11 +34,6 @@ function overlapsSlot(
   const slotEnd = slotStartMin + slotDur;
   const otherEnd = otherStartMin + otherDur;
   return slotStartMin < otherEnd && otherStartMin < slotEnd;
-}
-
-function normalizeDbTime(t: string | null | undefined): string {
-  if (!t) return "";
-  return String(t).trim().slice(0, 5);
 }
 
 type MatchRow = {
@@ -191,20 +192,16 @@ function NuevaReservaContent() {
       const built = buildSlotsForDay([courtId], dayDate, schedules, clubBounds);
 
       const matches = (matchRows ?? []) as MatchRow[];
-      const blocksModern = (blockRowsModern ?? []) as BlockRowModern[];
-      const blocksLegacy = (blockRowsLegacy ?? []) as BlockRow[];
-      const blockStarts = new Set(
-        [
-          ...blocksModern.map((b) => normalizeDbTime((b as { blocked_time: string | null }).blocked_time)),
-          ...blocksLegacy.map((b) => normalizeDbTime((b as { start_time: string | null }).start_time)),
-        ].filter(Boolean)
+      const blockStarts = courtBlockStartsFromRows(
+        blockRowsModern as BlockRowModern[] | null,
+        blockRowsLegacy as BlockRow[] | null
       );
 
       const resolvedSlots = built.map((slot) => {
         const slotStart = clockToMinutes(slot.time);
         const slotDur = slot.duration;
 
-        if (blockStarts.has(normalizeDbTime(slot.time))) {
+        if (blockStarts.has(normalizeSlotTime(slot.time))) {
           return { ...slot, available: false, reason: "Bloqueado por el club" } satisfies SlotView;
         }
 
@@ -220,7 +217,7 @@ function NuevaReservaContent() {
               paymentStatus === "cash_pending" ||
               paymentStatus === "transfer_pending");
           if (!shouldBlockSlot) continue;
-          const mStart = clockToMinutes(normalizeDbTime(m.scheduled_time));
+          const mStart = clockToMinutes(normalizeSlotTime(m.scheduled_time));
           const mDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
           if (overlapsSlot(slotStart, slotDur, mStart, mDur)) {
             return { ...slot, available: false, reason: "Ya reservado" } satisfies SlotView;

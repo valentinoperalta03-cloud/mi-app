@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import type { ScheduleInput } from "@/lib/court-slots";
+import { courtBlockStartsFromRows, normalizeSlotTime, type ScheduleInput } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
@@ -227,22 +227,36 @@ export default function CrearPartidoForm({
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
       const dayOfWeek = getDay(dayDate);
 
-      const [{ data: scheduleRows, error: scheduleError }, { data: matchRows, error: matchError }] =
-        await Promise.all([
-          supabase
-            .from(DB_TABLES.courtSchedules)
-            .select("court_id,day_of_week,open_time,close_time")
-            .eq("court_id", selectedCourtId)
-            .not("day_of_week", "is", null),
-          supabase
-            .from(DB_TABLES.matches)
-            .select("scheduled_time,duration_minutes")
-            .eq("court_id", selectedCourtId)
-            .eq("scheduled_date", selectedDate)
-            .neq("match_status", "cancelled"),
-        ]);
+      const [
+        { data: scheduleRows, error: scheduleError },
+        { data: matchRows, error: matchError },
+        { data: blockRowsModern, error: blockErrModern },
+        { data: blockRowsLegacy, error: blockErrLegacy },
+      ] = await Promise.all([
+        supabase
+          .from(DB_TABLES.courtSchedules)
+          .select("court_id,day_of_week,open_time,close_time")
+          .eq("court_id", selectedCourtId)
+          .not("day_of_week", "is", null),
+        supabase
+          .from(DB_TABLES.matches)
+          .select("scheduled_time,duration_minutes")
+          .eq("court_id", selectedCourtId)
+          .eq("scheduled_date", selectedDate)
+          .neq("match_status", "cancelled"),
+        supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("blocked_time")
+          .eq("court_id", selectedCourtId)
+          .eq("blocked_date", selectedDate),
+        supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("start_time")
+          .eq("court_id", selectedCourtId)
+          .eq("date", selectedDate),
+      ]);
 
-      if (scheduleError || matchError) {
+      if (scheduleError || matchError || blockErrModern || blockErrLegacy) {
         setSlots([]);
         setError("No se pudieron cargar los horarios disponibles.");
         return;
@@ -252,9 +266,14 @@ export default function CrearPartidoForm({
         (r) => Number((r as ScheduleInput).day_of_week) === dayOfWeek
       ) as ScheduleInput[];
       const matches = (matchRows ?? []) as MatchRow[];
+      const blockStarts = courtBlockStartsFromRows(
+        blockRowsModern as { blocked_time: string | null }[] | null,
+        blockRowsLegacy as { start_time: string | null }[] | null
+      );
 
       const available = COURT_TURNS.filter((slot) => {
         if (!slotFitsInWindows(slot, schedules)) return false;
+        if (blockStarts.has(normalizeSlotTime(slot.time))) return false;
         const slotStart = clockToMinutes(slot.time);
         for (const match of matches) {
           const otherStart = clockToMinutes(String(match.scheduled_time ?? ""));

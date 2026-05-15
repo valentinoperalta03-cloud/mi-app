@@ -10,8 +10,32 @@ export type ScheduleInput = {
 
 export type GeneratedSlot = { time: string; duration: 90 };
 
+export type CourtBlockModernRow = { blocked_time: string | null };
+export type CourtBlockLegacyRow = { start_time: string | null };
+
 /** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
+
+/** Normaliza HH:MM desde columnas `blocked_time` o `start_time`. */
+export function normalizeSlotTime(t: string | null | undefined): string {
+  if (!t) return "";
+  return String(t).trim().slice(0, 5);
+}
+
+/** Une bloqueos modernos (`blocked_time`) y legacy (`start_time`) en un Set de inicios de turno. */
+export function courtBlockStartsFromRows(
+  modern: CourtBlockModernRow[] | null | undefined,
+  legacy: CourtBlockLegacyRow[] | null | undefined
+): Set<string> {
+  return new Set([
+    ...(modern ?? [])
+      .map((b) => normalizeSlotTime(b.blocked_time))
+      .filter(Boolean),
+    ...(legacy ?? [])
+      .map((b) => normalizeSlotTime(b.start_time))
+      .filter(Boolean),
+  ]);
+}
 
 const FALLBACK_SLOTS: GeneratedSlot[] = [
   { time: "08:00", duration: 90 },
