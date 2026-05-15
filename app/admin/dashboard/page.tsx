@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import OnboardingChecklist from "@/components/admin/onboarding-checklist";
+import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -471,6 +472,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="space-y-3">
+        <SuperadminEntryLink variant="admin" />
         <div className="flex items-center gap-2">
           <LayoutGrid size={16} className="text-[#0585FC]" />
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Accesos rápidos</h2>

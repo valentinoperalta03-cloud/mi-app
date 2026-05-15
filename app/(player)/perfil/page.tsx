@@ -23,6 +23,7 @@ import {
   fetchTopCoplayers,
 } from "@/lib/profile-insights";
 import { ensureProfileRowExists } from "@/lib/profiles";
+import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -215,6 +216,8 @@ export default async function PerfilPage() {
           </Link>
         </div>
       </ProfileMotionSurface>
+
+      <SuperadminEntryLink />
 
       {isAdmin ? (
         <section className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)] dark:border-slate-800">
