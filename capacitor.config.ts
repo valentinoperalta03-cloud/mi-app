@@ -1,17 +1,11 @@
-type CapacitorConfig = {
-  appId: string;
-  appName: string;
-  webDir: string;
-  server?: { url?: string; cleartext?: boolean };
-};
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.padelibre.app',
   appName: 'PadeLibre',
   webDir: 'public',
-  server: {
-    url: 'https://www.padelibre.online',
-    cleartext: false
+  ios: {
+    minVersion: '14.0'
   }
 };
 
