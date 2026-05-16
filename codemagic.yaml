@@ -9,13 +9,14 @@ workflows:
     scripts:
       - name: Install dependencies
         script: npm install
-      - name: Capacitor sync
+      - name: Remove ios folder
+        script: rm -rf ios
+      - name: Add iOS platform
         script: |
           npm install @capacitor/core @capacitor/ios
-          npm install -g @capacitor/cli
           npx cap add ios
-          npx cap sync ios
-          cd ios/App && pod install
+      - name: Pod install
+        script: cd ios/App && pod install
       - name: Set up code signing
         script: |
           keychain initialize
