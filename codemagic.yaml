@@ -16,8 +16,8 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          @keychain add-certificates --certificate $CM_CERTIFICATE --certificate-password $CM_CERTIFICATE_PASSWORD
-          @profiles apply-from-environment
+          keychain add-certificates --certificate $CM_CERTIFICATE --certificate-password $CM_CERTIFICATE_PASSWORD
+          profiles apply-from-environment
       - name: Build iOS
         script: |
           xcodebuild -workspace ios/App/App.xcworkspace \
