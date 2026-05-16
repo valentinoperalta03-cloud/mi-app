@@ -3,6 +3,8 @@ workflows:
     name: iOS Distribution
     instance_type: mac_mini_m2
     environment:
+      groups:
+        - ios
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.padelibre.app
