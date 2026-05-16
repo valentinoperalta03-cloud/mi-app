@@ -11,8 +11,9 @@ workflows:
         script: npm install
       - name: Capacitor sync
         script: |
-          npm install -g @capacitor/cli
           npm install @capacitor/core @capacitor/ios
+          npm install -g @capacitor/cli
+          npx cap add ios
           npx cap sync ios
           cd ios/App && pod install
       - name: Set up code signing
