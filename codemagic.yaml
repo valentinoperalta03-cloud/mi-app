@@ -1,24 +1,34 @@
 workflows:
   ios-distribution:
     name: iOS Distribution
+    instance_type: mac_mini_m2
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.padelibre.app
-      vars:
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
-        XCODE_SCHEME: App
+      node: 18
     scripts:
       - name: Install dependencies
         script: npm install
       - name: Capacitor sync
         script: npx cap sync ios
       - name: Build iOS
-        script: xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -archivePath build/App.xcarchive archive
+        script: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual
       - name: Export IPA
-        script: xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist ios/App/ExportOptions.plist -exportPath build/
+        script: |
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportOptionsPlist ios/App/ExportOptions.plist \
+            -exportPath build/
     artifacts:
       - build/*.ipa
     publishing:
       app_store_connect:
         auth: integration
+        submit_to_testflight: false
