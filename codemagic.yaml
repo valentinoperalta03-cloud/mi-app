@@ -13,8 +13,8 @@ workflows:
         script: rm -rf ios
       - name: Add iOS platform
         script: |
-          npm install @capacitor/core @capacitor/ios
-          npx cap add ios
+          npm install @capacitor/core @capacitor/ios @capacitor/cli
+          ./node_modules/.bin/cap add ios
       - name: Pod install
         script: cd ios/App && pod install
       - name: Set up code signing
