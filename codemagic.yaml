@@ -15,21 +15,13 @@ workflows:
           echo '<html><body></body></html>' > capacitor-dist/index.html
           npm install @capacitor/core @capacitor/ios @capacitor/cli
           ./node_modules/.bin/cap sync ios
-      - name: Set up code signing
-        script: |
-          keychain initialize
-          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
-          keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CM_CERTIFICATE_PASSWORD
-          echo $CM_PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
-          PROFILE_UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
       - name: Build iOS
         script: |
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
             archive
       - name: Export IPA
         script: |
