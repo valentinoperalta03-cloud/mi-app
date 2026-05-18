@@ -8,16 +8,15 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.padelibre.app
-      node: 20
+      node: 22
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: npm ci
       - name: Capacitor sync
         script: |
           mkdir -p capacitor-dist
           echo '<html><body></body></html>' > capacitor-dist/index.html
-          npm install @capacitor/core @capacitor/ios @capacitor/cli
-          ./node_modules/.bin/cap sync ios
+          npx cap sync ios
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
@@ -55,17 +54,16 @@ workflows:
       vars:
         PACKAGE_NAME: com.padelibre.app
         CM_KEYSTORE_PATH: /tmp/upload-keystore.jks
-      node: 20
+      node: 22
       java: 17
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: npm ci
       - name: Capacitor sync
         script: |
           mkdir -p capacitor-dist
           echo '<html><body></body></html>' > capacitor-dist/index.html
-          npm install @capacitor/core @capacitor/android @capacitor/cli
-          ./node_modules/.bin/cap sync android
+          npx cap sync android
       - name: Set up Android keystore
         script: |
           echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
