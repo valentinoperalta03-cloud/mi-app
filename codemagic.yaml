@@ -20,22 +20,13 @@ workflows:
           ./node_modules/.bin/cap sync ios
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
-      - name: Build iOS
+      - name: Build ipa for distribution
         script: |
-          xcodebuild -project ios/App/App.xcodeproj \
-            -scheme App \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/App.xcarchive \
-            archive
-      - name: Export IPA
-        script: |
-          xcodebuild -exportArchive \
-            -archivePath build/App.xcarchive \
-            -exportOptionsPlist ios/App/ExportOptions.plist \
-            -exportPath build/
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App
     artifacts:
-      - build/*.ipa
+      - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
