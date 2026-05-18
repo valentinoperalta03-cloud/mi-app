@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Padelibre",
+    statusBarStyle: "black-translucent",
   },
   openGraph: {
     title: "PadeLibre — Que organizar no sea un problema.",
