@@ -14,12 +14,8 @@ workflows:
           mkdir -p capacitor-dist
           echo '<html><body></body></html>' > capacitor-dist/index.html
           npm install @capacitor/core @capacitor/ios @capacitor/cli
-          ./node_modules/.bin/cap add ios || true
-          sed -i '' "s/platform :ios, '13.0'/platform :ios, '16.0'/" ios/App/Podfile
-          cat ios/App/Podfile
-          cd ios/App && pod install --repo-update
-      - name: Capacitor sync
-        script: ./node_modules/.bin/cap sync ios
+          ./node_modules/.bin/cap add ios
+          ./node_modules/.bin/cap sync ios
       - name: Set up code signing
         script: |
           keychain initialize
@@ -30,7 +26,7 @@ workflows:
           cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
       - name: Build iOS
         script: |
-          xcodebuild -workspace ios/App/App.xcworkspace \
+          xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath build/App.xcarchive \
