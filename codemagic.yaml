@@ -11,6 +11,8 @@ workflows:
         script: npm install
       - name: Add iOS platform
         script: |
+          mkdir -p capacitor-dist
+          echo '<html><body></body></html>' > capacitor-dist/index.html
           npm install @capacitor/core @capacitor/ios @capacitor/cli
           ./node_modules/.bin/cap add ios
           sed -i '' "s/platform :ios, '13.0'/platform :ios, '16.0'/" ios/App/Podfile
