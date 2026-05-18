@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { DB_TABLES } from "@/lib/db-tables";
-import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
+import { HEADER_GRADIENT } from "@/lib/status-bar-color";
 import { createClient } from "@/utils/supabase/client";
 
 type DrawerItem = {
@@ -117,13 +117,13 @@ export default function TopNav() {
         className="fixed left-0 right-0 top-0 z-50 flex justify-center"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
-          backgroundColor: STATUS_BAR_COLOR,
+          background: HEADER_GRADIENT,
         }}
       >
         <div className="w-full max-w-md">
           <div
-            className="flex h-14 items-center justify-between border-b border-white/20 px-4 backdrop-blur-[20px]"
-            style={{ backgroundColor: STATUS_BAR_COLOR }}
+            className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
+            style={{ background: HEADER_GRADIENT }}
           >
             <div className="flex items-center gap-2">
               <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
