@@ -18,13 +18,15 @@ workflows:
           echo '<html><body></body></html>' > capacitor-dist/index.html
           npm install @capacitor/core @capacitor/ios @capacitor/cli
           ./node_modules/.bin/cap sync ios
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
       - name: Build iOS
         script: |
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
+            -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
-            -allowProvisioningUpdates \
             archive
       - name: Export IPA
         script: |
