@@ -20,6 +20,17 @@ workflows:
           ./node_modules/.bin/cap sync ios
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          set -e
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          PBXPROJ="$CM_BUILD_DIR/ios/App/App.xcodeproj/project.pbxproj"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*/CURRENT_PROJECT_VERSION = $NEW_BUILD_NUMBER/g" "$PBXPROJ"
+          echo "iOS build number (CFBundleVersion): $NEW_BUILD_NUMBER"
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
