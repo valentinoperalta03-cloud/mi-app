@@ -7,7 +7,6 @@ const config: CapacitorConfig = {
   appName: 'PadeLibre',
   webDir: 'capacitor-dist',
   ios: {
-    minVersion: '16.0',
     backgroundColor: STATUS_BAR_COLOR,
   },
   server: {
