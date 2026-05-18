@@ -7,7 +7,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-transparent">
       <TopNav />
-      <div className="pt-14">{children}</div>
+      <div className="pt-[calc(3.5rem+env(safe-area-inset-top,0px))]">{children}</div>
       <BottomNav />
     </div>
   );

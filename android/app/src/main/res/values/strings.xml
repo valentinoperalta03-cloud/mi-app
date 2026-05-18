@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PadeLibre</string>
+    <string name="title_activity_main">PadeLibre</string>
+    <string name="package_name">com.padelibre.app</string>
+    <string name="custom_url_scheme">com.padelibre.app</string>
+</resources>

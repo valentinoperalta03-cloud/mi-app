@@ -33,3 +33,47 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: false
+
+  android-production:
+    name: Android Production
+    max_build_duration: 120
+    instance_type: linux_x2
+    environment:
+      groups:
+        - android
+      vars:
+        PACKAGE_NAME: com.padelibre.app
+        CM_KEYSTORE_PATH: /tmp/upload-keystore.jks
+      node: 20
+      java: 17
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Capacitor sync
+        script: |
+          mkdir -p capacitor-dist
+          echo '<html><body></body></html>' > capacitor-dist/index.html
+          npm install @capacitor/core @capacitor/android @capacitor/cli
+          ./node_modules/.bin/cap sync android
+      - name: Set up Android keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
+      - name: Set Android SDK location
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build Android release
+        script: |
+          LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME")
+          if [ -z "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" ]; then
+            LATEST_GOOGLE_PLAY_BUILD_NUMBER=0
+          fi
+          UPDATED_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
+          cd android
+          ./gradlew bundleRelease \
+            -PversionCode=$UPDATED_BUILD_NUMBER \
+            -PversionName=1.0.$UPDATED_BUILD_NUMBER
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: production

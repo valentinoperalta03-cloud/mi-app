@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
 import "./globals.css";
 
 const inter = Inter({
@@ -56,13 +58,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+    { media: "(prefers-color-scheme: light)", color: STATUS_BAR_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: STATUS_BAR_COLOR },
   ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -80,6 +83,7 @@ export default function RootLayout({
         <link rel="canonical" href="https://www.padelibre.online" />
       </head>
       <body suppressHydrationWarning className="min-h-full">
+        <CapacitorStatusBarInit />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

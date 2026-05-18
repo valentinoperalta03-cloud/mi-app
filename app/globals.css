@@ -51,6 +51,14 @@
 *, *::before, *::after { box-sizing: border-box; }
 html { height: 100%; }
 
+html.capacitor-native {
+  background-color: #1a6bc4;
+}
+
+html.capacitor-native body {
+  background-color: var(--bg-app);
+}
+
 body {
   margin: 0;
   min-height: 100%;
