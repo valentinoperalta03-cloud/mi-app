@@ -14,6 +14,7 @@ workflows:
           mkdir -p capacitor-dist
           echo '<html><body></body></html>' > capacitor-dist/index.html
           npm install @capacitor/core @capacitor/ios @capacitor/cli
+          rm -rf ios
           ./node_modules/.bin/cap add ios
           ./node_modules/.bin/cap sync ios
       - name: Set up code signing
