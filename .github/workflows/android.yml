@@ -1,6 +1,8 @@
-# Compila y publica el AAB de Android en Google Play (track production).
+# Compila y publica el AAB de Android en Google Play.
 #
-# Secrets requeridos: ver comentario al final del archivo o la documentación del repo.
+# Secrets: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+#          ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD,
+#          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
 
 name: Android release (Google Play)
 
@@ -81,18 +83,44 @@ jobs:
             -PversionCode="$VERSION_CODE" \
             -PversionName="$VERSION_NAME"
 
-      - name: Upload AAB to Google Play (production)
-        uses: r0adkll/upload-google-play@v1.1.3
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.padelibre.app
-          releaseFiles: android/app/build/outputs/bundle/release/*.aab
-          track: production
-          status: completed
-
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
+
+      - name: Validate Google Play service account JSON
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Missing secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, sys
+          raw = os.environ["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"].strip()
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError as e:
+              print(f"::error::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON: {e}")
+              sys.exit(1)
+          for key in ("type", "project_id", "private_key", "client_email"):
+              if key not in data:
+                  print(f"::error::Missing field in service account JSON: {key}")
+                  sys.exit(1)
+          print(f"Service account OK: {data['client_email']}")
+          PY
+
+      # Primera publicación: internal + draft (Google suele rechazar production si la ficha no está completa).
+      # Cuando la app esté lista, cambiá track a production y status a completed.
+      - name: Upload AAB to Google Play (internal draft)
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.padelibre.app
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: internal
+          status: draft
+          changesNotSentForReview: true
