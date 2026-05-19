@@ -84,18 +84,24 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
       - name: Build Android release
         script: |
-          LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME")
-          if [ -z "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" ]; then
-            LATEST_GOOGLE_PLAY_BUILD_NUMBER=0
-          fi
+          set -e
+          LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" || true)
+          LATEST_GOOGLE_PLAY_BUILD_NUMBER=${LATEST_GOOGLE_PLAY_BUILD_NUMBER:-0}
           UPDATED_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
+          if [ -n "${CM_BUILD_NUMBER:-}" ] && [ "$UPDATED_BUILD_NUMBER" -le "$CM_BUILD_NUMBER" ]; then
+            UPDATED_BUILD_NUMBER=$((CM_BUILD_NUMBER + 1))
+          fi
+          echo "Android versionCode: $UPDATED_BUILD_NUMBER"
           cd android
           ./gradlew bundleRelease \
             -PversionCode=$UPDATED_BUILD_NUMBER \
-            -PversionName=1.0.$UPDATED_BUILD_NUMBER
+            -PversionName=1.0.0
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
     publishing:
       google_play:
         credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
-        track: production
+        # Primera vez: usar internal + draft. Luego podés cambiar a production en Play Console.
+        track: internal
+        submit_as_draft: true
+        changes_not_sent_for_review: true
