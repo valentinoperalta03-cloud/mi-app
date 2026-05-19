@@ -5,6 +5,7 @@ import {
 } from "@/app/superadmin/actions";
 import CreateClubForm from "@/components/superadmin/create-club-form";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
+import DeleteClubForm from "@/components/superadmin/delete-club-form";
 import { moneyArs, type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
 
@@ -27,7 +28,7 @@ const errorMessages: Record<string, string> = {
 export default async function SuperadminClubesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string; error?: string; email?: string; created?: string }>;
+  searchParams: Promise<{ f?: string; error?: string; email?: string; created?: string; deleted?: string; delete_error?: string }>;
 }) {
   const { svc } = await requireSuperadminAction();
   const sp = await searchParams;
@@ -68,6 +69,18 @@ export default async function SuperadminClubesPage({
       {sp.created === "1" ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
           Club creado correctamente.
+        </p>
+      ) : null}
+
+      {sp.deleted === "1" ? (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+          Club eliminado correctamente.
+        </p>
+      ) : null}
+
+      {sp.delete_error === "1" ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          No se pudo eliminar el club.
         </p>
       ) : null}
 
@@ -193,6 +206,12 @@ export default async function SuperadminClubesPage({
                             </button>
                           </form>
                         ) : null}
+                        <DeleteClubForm
+                          clubId={c.id}
+                          clubName={c.name ?? "Club"}
+                          returnTo="/superadmin/clubes"
+                          variant="inline"
+                        />
                       </div>
                     </td>
                   </tr>

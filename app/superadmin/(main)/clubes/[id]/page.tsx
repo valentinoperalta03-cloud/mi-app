@@ -8,6 +8,7 @@ import {
 } from "@/app/superadmin/actions";
 import ClubAnalyticsGrid from "@/components/superadmin/club-analytics-grid";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
+import DeleteClubForm from "@/components/superadmin/delete-club-form";
 import { DB_TABLES } from "@/lib/db-tables";
 import { type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
@@ -16,7 +17,10 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ notif?: string; created?: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notif?: string; created?: string; delete_error?: string }>;
+};
 
 export default async function SuperadminClubDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
@@ -113,6 +117,12 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
       {sp.notif === "1" ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
           Notificación enviada al owner del club.
+        </p>
+      ) : null}
+
+      {sp.delete_error === "1" ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          No se pudo eliminar el club. Puede haber datos vinculados que impiden el borrado.
         </p>
       ) : null}
 
@@ -314,6 +324,21 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
             Enviar notificación
           </button>
         </form>
+      </section>
+
+      <section className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-6">
+        <h2 className="text-lg font-bold text-rose-100">Zona peligrosa</h2>
+        <p className="mt-2 text-sm text-rose-200/90">
+          Eliminar el club borra de forma permanente canchas, reservas, partidos, torneos y chats asociados.
+          No se puede deshacer.
+        </p>
+        <div className="mt-4">
+          <DeleteClubForm
+            clubId={id}
+            clubName={overview.name ?? "Club"}
+            returnTo={`/superadmin/clubes/${id}`}
+          />
+        </div>
       </section>
     </div>
   );

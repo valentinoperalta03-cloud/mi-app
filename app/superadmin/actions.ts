@@ -144,6 +144,28 @@ export async function createClubAction(formData: FormData) {
   redirect(`/superadmin/clubes/${clubId}?created=1`);
 }
 
+export async function deleteClubAction(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  const returnTo = String(formData.get("return_to") ?? "").trim();
+  if (!clubId) redirect("/superadmin/clubes");
+
+  const s = await svc();
+  const { error } = await s.rpc("superadmin_delete_club", { p_club_id: clubId });
+
+  if (error) {
+    console.error("[superadmin] deleteClub", error.message);
+    if (returnTo.startsWith("/superadmin/clubes/")) {
+      redirect(`${returnTo}?delete_error=1`);
+    }
+    redirect("/superadmin/clubes?delete_error=1");
+  }
+
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  revalidatePath("/superadmin/finanzas");
+  redirect("/superadmin/clubes?deleted=1");
+}
+
 export async function sendDebtReminderAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/finanzas");
