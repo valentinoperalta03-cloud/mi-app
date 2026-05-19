@@ -6,14 +6,17 @@ import {
   notifyClubOwnerAction,
   toggleClubActiveAction,
 } from "@/app/superadmin/actions";
+import ClubAnalyticsGrid from "@/components/superadmin/club-analytics-grid";
+import ClubHealthBadge from "@/components/superadmin/club-health-badge";
 import { DB_TABLES } from "@/lib/db-tables";
+import { type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
 
 function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ notif?: string }> };
+type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ notif?: string; created?: string }> };
 
 export default async function SuperadminClubDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
@@ -33,15 +36,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
 
   if (!ov || !club) notFound();
 
-  const overview = ov as {
-    id: string;
-    name: string | null;
-    location: string | null;
-    owner_email: string | null;
-    club_created_at: string;
-    is_active: boolean;
-    mp_access_token: string | null;
-  };
+  const overview = ov as SuperadminClubOverview;
 
   const c = club as {
     description: string | null;
@@ -78,7 +73,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
     .order("confirmed_at", { ascending: false })
     .limit(100);
 
-  const mpOk = Boolean(overview.mp_access_token);
+  const mpOk = overview.mp_connected;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -109,11 +104,32 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </div>
       </div>
 
+      {sp.created === "1" ? (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+          Club dado de alta correctamente. El dueño puede completar onboarding desde el panel admin.
+        </p>
+      ) : null}
+
       {sp.notif === "1" ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
           Notificación enviada al owner del club.
         </p>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <ClubHealthBadge row={overview} />
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            overview.onboarding_completed
+              ? "bg-emerald-500/15 text-emerald-200"
+              : "bg-amber-500/15 text-amber-200"
+          }`}
+        >
+          {overview.onboarding_completed ? "Onboarding completo" : "Onboarding pendiente"}
+        </span>
+      </div>
+
+      <ClubAnalyticsGrid row={overview} />
 
       <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
         <h2 className="text-lg font-bold text-white">Información</h2>

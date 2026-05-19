@@ -11,13 +11,13 @@ import {
 } from "@/lib/offline-payments";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
+import { normalizeMatchVisibility, type MatchVisibility } from "@/lib/match-visibility";
 import { createNotification } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchType = "amistoso" | "competitivo";
-type Visibility = "publico" | "privado";
 type GenderCategory = "masculino" | "femenino" | "mixto";
 
 type ConflictRow = {
@@ -42,10 +42,6 @@ function parseFriendIds(raw: string, max = 3): string[] {
 
 function normalizeMatchType(raw: string): MatchType {
   return raw.toLowerCase().trim() === "competitivo" ? "competitivo" : "amistoso";
-}
-
-function normalizeVisibility(raw: string): Visibility {
-  return raw.toLowerCase().trim() === "privado" ? "privado" : "publico";
 }
 
 function normalizeGenderCategory(raw: string): GenderCategory {
@@ -94,7 +90,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
   const scheduledTime = getField(formData, "scheduled_time");
   const durationMinutesRaw = getField(formData, "duration_minutes");
   const matchType = normalizeMatchType(getField(formData, "match_type"));
-  const visibility = normalizeVisibility(getField(formData, "visibility"));
+  const visibility: MatchVisibility = normalizeMatchVisibility(getField(formData, "visibility"));
   const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
   const levelRestricted = getField(formData, "level_restricted") === "true";
   const invitedFriendIdsRaw = parseFriendIds(getField(formData, "invited_friend_ids"));

@@ -3,6 +3,7 @@ import MatchesFilterBoard, { type MatchCardData } from "@/components/matches-fil
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatLevel } from "@/lib/level-quiz-logic";
+import { isMatchPrivate } from "@/lib/match-visibility";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
@@ -146,8 +147,7 @@ export default async function OpenMatchesBoard({
   const rawMatches = (data ?? []) as unknown as MatchFeedRow[];
   const matches = rawMatches
     .filter((match) => {
-      const vis = String(match.visibility ?? "publico").toLowerCase();
-      if (vis !== "privado") return true;
+      if (!isMatchPrivate(match.visibility)) return true;
       if (user?.id && match.owner_id && user.id === match.owner_id) return true;
       if (!match.owner_id) return true;
       return favoriteIds.includes(match.owner_id);

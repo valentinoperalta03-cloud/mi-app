@@ -98,6 +98,52 @@ export async function toggleUserGlobalBlockAction(formData: FormData) {
   redirect("/superadmin/usuarios");
 }
 
+export async function createClubAction(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim();
+  const ownerEmail = String(formData.get("owner_email") ?? "").trim().toLowerCase();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const isActive = formData.get("is_active") === "1";
+
+  if (!name || !location || !ownerEmail) {
+    redirect("/superadmin/clubes?error=datos");
+  }
+
+  const s = await svc();
+  const { data: ownerLookup, error: ownerErr } = await s.auth.admin.listUsers({ perPage: 1000 });
+  if (ownerErr) redirect("/superadmin/clubes?error=owner");
+
+  const owner = (ownerLookup?.users ?? []).find(
+    (u) => String(u.email ?? "").toLowerCase() === ownerEmail
+  );
+  if (!owner?.id) {
+    redirect(`/superadmin/clubes?error=owner&email=${encodeURIComponent(ownerEmail)}`);
+  }
+  const ownerId = owner.id;
+
+  const { data: created, error } = await s
+    .from(DB_TABLES.clubs)
+    .insert({
+      name,
+      location,
+      description,
+      owner_id: ownerId,
+      is_active: isActive,
+      onboarding_completed: false,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    redirect("/superadmin/clubes?error=create");
+  }
+
+  const clubId = String((created as { id: string }).id);
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  redirect(`/superadmin/clubes/${clubId}?created=1`);
+}
+
 export async function sendDebtReminderAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/finanzas");

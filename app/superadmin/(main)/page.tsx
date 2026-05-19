@@ -145,9 +145,17 @@ export default async function SuperadminDashboardPage() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10">
-      <header>
-        <h1 className="text-3xl font-bold text-white">Dashboard global</h1>
-        <p className="mt-1 text-sm text-slate-400">Métricas en tiempo real de la plataforma.</p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Dashboard global</h1>
+          <p className="mt-1 text-sm text-slate-400">Métricas en tiempo real de la plataforma.</p>
+        </div>
+        <Link
+          href="/superadmin/clubes"
+          className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20"
+        >
+          Gestionar clubes →
+        </Link>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -39,6 +39,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .select(
         "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token"
       )
+      .eq("is_active", true)
       .order("name", { ascending: true }),
     supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
     supabase

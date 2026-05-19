@@ -11,13 +11,12 @@ import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
-import InviteFriendsSection from "./invite-friends-section";
 import JoinWithTeamForm from "./join-with-team-form";
 import PartidoEditSection from "./partido-edit-section";
-import PrivateInviteBlock from "./private-invite-block";
 import RequestJoinButton from "./request-join-button";
 import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
@@ -297,6 +296,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
 
+  const { data: groupChatRow } = await supabase
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", id)
+    .maybeSingle();
+  const groupChatId = String((groupChatRow as { id?: string } | null)?.id ?? "").trim() || null;
+  const groupChatHref = groupChatId ? `/comunidad/mensajes/grupo/${groupChatId}` : null;
+  const showGroupChat = Boolean(groupChatHref && (isOwner || isParticipant));
+
   // Check if current user already submitted result
   const { data: myResult } = await supabase
     .from(DB_TABLES.matchResults)
@@ -329,7 +337,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     .eq("user_id", user.id);
   const favoriteIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
 
-  const isPrivate = String(match.visibility ?? "").toLowerCase() === "privado";
+  const isPrivate = isMatchPrivate(match.visibility);
   const inviteOpen = sp.invite === "true";
   const ownerId = match.owner_id ?? "";
   const isFriendOfOwner = Boolean(ownerId && favoriteIds.includes(ownerId));
@@ -342,7 +350,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   }
 
   const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  const inviteUrl = siteOrigin ? `${siteOrigin}/partidos/${id}?invite=true` : `/partidos/${id}?invite=true`;
 
   const { data: myPendingAccess } =
     isPrivate && !isOwner && !isParticipant && inviteOpen
@@ -477,56 +484,31 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     ? `restringido · ${ownerLevelLabel}`
     : "abierto a todos";
 
-  const shareWhatsText = [
-    `\u{1F3BE} \u00BFQui\u00E9n se anima? PARTIDO EN ${(detail.club_name ?? "").toUpperCase()}`,
-    ``,
-    `\u{1F4C5} ${longDateAr} \u00B7 ${scheduledTimeStr} \u00B7 90 min`,
-    `\u26A7\uFE0F ${genderLabel}`,
-    `\u{1F4CA} Nivel ${nivelText}`,
-    ``,
-    `Jugadores:`,
-    ...Array.from({ length: 4 }, (_, i) => {
-      const p = participants[i];
-      if (p)
-        return `\u2705 ${p.name ?? "Jugador"} (${splitOfficialCategoryLine(formatProfileNivelFromRow(p)).category || "Sin nivel"})`;
-      return `\u26AA Falta 1 jugador`;
-    }),
-    ``,
-    `\u{1F517} ${sharePath}`,
-    ``,
-    `\u00A1Sumate antes de que se llene! \u{1F525}`,
-  ].join("\n");
+  const sharePlayerLines = Array.from({ length: 4 }, (_, i) => {
+    const p = participants[i];
+    if (p) {
+      const category =
+        splitOfficialCategoryLine(formatProfileNivelFromRow(p)).category || "Sin nivel";
+      return `*${p.name ?? "Jugador"}* _(${category})_`;
+    }
+    return "Falta 1 jugador";
+  });
 
-  const participantIds = new Set(participants.map((p) => p.player_id));
-  const pendingRequestIds = new Set(accessRequesterIds);
-  const followingIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
-  const { data: followedByRows } =
-    isOwner && followingIds.length > 0
-      ? await supabase
-          .from(DB_TABLES.userFavorites)
-          .select("user_id")
-          .eq("favorite_user_id", user.id)
-          .in("user_id", followingIds)
-      : { data: [] };
-  const mutualIds = ((followedByRows ?? []) as Array<{ user_id: string }>)
-    .map((r) => r.user_id)
-    .filter((friendId) => !participantIds.has(friendId) && !pendingRequestIds.has(friendId));
-  const { data: mutualProfiles } =
-    isOwner && mutualIds.length > 0
-      ? await supabase
-          .from(DB_TABLES.profiles)
-          .select("user_id,name,technical_score")
-          .in("user_id", mutualIds)
-      : { data: [] };
-  const inviteCandidates = ((mutualProfiles ?? []) as Array<{
-    user_id: string;
-    name: string | null;
-    technical_score: number | null;
-  }>).map((row) => ({
-    user_id: row.user_id,
-    name: row.name?.trim() || "Jugador",
-    technical_score: row.technical_score ?? null,
-  }));
+  const shareWhatsText = [
+    `*¿Quién se anima?*`,
+    `*PARTIDO EN ${(detail.club_name ?? "CLUB").toUpperCase()}*`,
+    ``,
+    `_Fecha:_ *${longDateAr} · ${scheduledTimeStr} · ${roundedDuration} min*`,
+    `_Género:_ *${genderLabel}*`,
+    `_Nivel:_ *${nivelText}*`,
+    ``,
+    `_Jugadores:_`,
+    ...sharePlayerLines,
+    ``,
+    sharePath,
+    ``,
+    `*¡Sumate antes de que se llene!*`,
+  ].join("\n");
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
@@ -716,7 +698,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <p className="text-xl font-bold text-[#0461C4]">${detail.total_price ?? 0}</p>
           </div>
           {isOwner ? (
-            <VisibilityToggle matchId={id} initialVisibility={detail.visibility === "privado" ? "privado" : "publico"} />
+            <VisibilityToggle matchId={id} initialVisibility={normalizeMatchVisibility(detail.visibility)} />
           ) : null}
         </div>
       </article>
@@ -744,12 +726,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               <MessageCircle size={18} aria-hidden />
               Compartir por WhatsApp
             </a>
-            {freeSlots > 0 ? (
+            {showGroupChat && groupChatHref ? (
               <Link
-                href="#invitar-amigos"
-                className="flex w-full items-center justify-center rounded-2xl border border-[#0585FC]/30 bg-white py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/5 dark:border-[#0585FC]/40 dark:bg-slate-800 dark:text-sky-300"
+                href={groupChatHref}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10 dark:text-sky-400"
               >
-                Invitar amigos
+                <MessageCircle size={16} aria-hidden />
+                Chat del grupo
               </Link>
             ) : null}
             {(pendingRequestsCount ?? 0) > 0 ? (
@@ -758,15 +741,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 className="text-center text-sm font-semibold text-[#0461C4] underline-offset-2 hover:underline dark:text-sky-400"
               >
                 Ver solicitudes ({pendingRequestsCount})
-              </Link>
-            ) : null}
-            {isParticipant && hasPaid ? (
-              <Link
-                href={`/partidos/${id}/chat`}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10 dark:text-sky-400"
-              >
-                <MessageCircle size={16} aria-hidden />
-                Chat del partido
               </Link>
             ) : null}
           </div>
@@ -876,8 +850,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <RequestJoinButton matchId={id} levelOverride={true} submitLabel="Solicitar revisión" />
         </div>
       ) : null}
-
-      {isOwner && isPrivate ? <PrivateInviteBlock inviteUrl={inviteUrl} /> : null}
 
       {isPrivate && !isOwner && !isParticipant && inviteOpen ? (
         <section className="rounded-2xl border border-[#0585FC]/20/80 bg-white p-5 shadow-sm">
@@ -1006,10 +978,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isOwner && freeSlots > 0 ? (
-        <InviteFriendsSection matchId={id} friends={inviteCandidates} sectionId="invitar-amigos" />
-      ) : null}
-
       {isParticipant && isMatchFinished ? (
         <section className="space-y-3">
           <div
@@ -1108,16 +1076,18 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isParticipant && !isOwner && hasPaid && !isMatchFinished ? (
+      {isParticipant && !isOwner && !isMatchFinished ? (
         <section className="space-y-3 rounded-2xl border border-emerald-200/80 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900/40">
-          <Link
-            href={`/partidos/${id}/chat`}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95 active:scale-[0.99]"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-          >
-            <MessageCircle size={18} aria-hidden />
-            Chat del partido
-          </Link>
+          {showGroupChat && groupChatHref ? (
+            <Link
+              href={groupChatHref}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95 active:scale-[0.99]"
+              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            >
+              <MessageCircle size={18} aria-hidden />
+              Chat del grupo
+            </Link>
+          ) : null}
           <div className="flex w-full justify-center">
             <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
           </div>
@@ -1148,12 +1118,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {canJoinAsNewPlayer && !isMatchFinished && match.level_restricted && !isOwner ? (
         <div className="space-y-2">
-          <Link
-            href={`/partidos/${id}/chat`}
-            className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0585FC]"
-          >
-            Ver chat del partido
-          </Link>
+          {showGroupChat && groupChatHref ? (
+            <Link
+              href={groupChatHref}
+              className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0585FC]"
+            >
+              Chat del grupo
+            </Link>
+          ) : null}
           <JoinWithTeamForm
             matchId={id}
             team1Count={team1Count}

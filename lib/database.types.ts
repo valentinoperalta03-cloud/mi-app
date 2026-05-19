@@ -91,6 +91,8 @@ export type MatchRow = {
   is_competitive?: boolean | null;
   /** `amistoso` | `competitivo` (minúsculas). Solo competitivo afecta `technical_score`. */
   match_type?: string | null;
+  /** `publico` | `privado` */
+  visibility?: "publico" | "privado" | null;
 };
 
 export type MatchPlayerRow = {

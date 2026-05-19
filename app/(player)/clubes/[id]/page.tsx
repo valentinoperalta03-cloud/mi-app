@@ -48,9 +48,10 @@ export default async function ClubDetailPage({ params }: PageProps) {
   const { data: clubRow, error: clubError } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "name,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,mp_access_token"
+      "name,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,mp_access_token,is_active"
     )
     .eq("id", id)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (clubError || !clubRow) {

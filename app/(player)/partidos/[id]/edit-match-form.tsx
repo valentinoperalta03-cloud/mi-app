@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
+import { normalizeMatchVisibility, type MatchVisibility } from "@/lib/match-visibility";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/client";
 import { updateMatch } from "./actions";
@@ -107,8 +108,8 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
   const [matchType, setMatchType] = useState<"amistoso" | "competitivo">(
     initialData.match_type?.toLowerCase() === "competitivo" ? "competitivo" : "amistoso"
   );
-  const [visibility, setVisibility] = useState<"publico" | "privado">(
-    initialData.visibility?.toLowerCase() === "privado" ? "privado" : "publico"
+  const [visibility, setVisibility] = useState<MatchVisibility>(() =>
+    normalizeMatchVisibility(initialData.visibility)
   );
   const [genderCategory, setGenderCategory] = useState<"masculino" | "femenino" | "mixto">(() => {
     const g = initialData.gender_category?.toLowerCase();

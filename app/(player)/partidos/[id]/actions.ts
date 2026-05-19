@@ -9,6 +9,7 @@ import {
   createParticipantMercadoPagoPreference,
   regenerateParticipantMercadoPagoLink,
 } from "@/lib/match-payments";
+import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { log } from "@/lib/logger";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
@@ -57,7 +58,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
   const scheduledTimeRaw = getField(formData, "scheduled_time");
   const matchType = getField(formData, "match_type").toLowerCase() === "competitivo" ? "competitivo" : "amistoso";
-  const visibility = getField(formData, "visibility").toLowerCase() === "privado" ? "privado" : "publico";
+  const visibility = normalizeMatchVisibility(getField(formData, "visibility"));
   const genderRaw = getField(formData, "gender_category").toLowerCase();
   const genderCategory =
     genderRaw === "femenino" ? "femenino" : genderRaw === "mixto" ? "mixto" : "masculino";
@@ -212,7 +213,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
   ) {
     redirect(`/partidos/${matchId}?join_error=no_disponible`);
   }
-  const isPrivate = String(m.visibility ?? "").toLowerCase() === "privado";
+  const isPrivate = isMatchPrivate(m.visibility);
   const isLevelRestricted = Boolean(m.level_restricted);
 
   if (m.owner_id === user.id) {

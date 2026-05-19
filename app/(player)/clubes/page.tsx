@@ -38,7 +38,10 @@ async function ClubesContent() {
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.from(DB_TABLES.clubs).select(CLUBS_LIST_SELECT);
+    const { data, error } = await supabase
+      .from(DB_TABLES.clubs)
+      .select(CLUBS_LIST_SELECT)
+      .eq("is_active", true);
 
     console.log("[clubes] Supabase response", { data, error });
 
