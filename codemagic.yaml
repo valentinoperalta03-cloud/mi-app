@@ -22,14 +22,27 @@ workflows:
       - name: Increment build number
         script: |
           set -e
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID")
-          if [ -z "$LATEST_BUILD_NUMBER" ]; then
-            LATEST_BUILD_NUMBER=0
+          cd "$CM_BUILD_DIR/ios/App"
+          VERSION_STRING=$(grep -m1 'MARKETING_VERSION =' App.xcodeproj/project.pbxproj | sed 's/.*= //;s/;//;s/ //g')
+          echo "Marketing version (CFBundleShortVersionString): $VERSION_STRING"
+
+          LATEST_ASC=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID" --version-string "$VERSION_STRING" || true)
+          LATEST_TF=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" --version-string "$VERSION_STRING" || true)
+          LATEST_ASC=${LATEST_ASC:-0}
+          LATEST_TF=${LATEST_TF:-0}
+          LATEST_BUILD_NUMBER=$LATEST_ASC
+          if [ "$LATEST_TF" -gt "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=$LATEST_TF
           fi
+
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-          PBXPROJ="$CM_BUILD_DIR/ios/App/App.xcodeproj/project.pbxproj"
-          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*/CURRENT_PROJECT_VERSION = $NEW_BUILD_NUMBER/g" "$PBXPROJ"
-          echo "iOS build number (CFBundleVersion): $NEW_BUILD_NUMBER"
+          # Evita colisión si App Store Connect aún no refleja un upload reciente
+          if [ -n "${CM_BUILD_NUMBER:-}" ] && [ "$NEW_BUILD_NUMBER" -le "$CM_BUILD_NUMBER" ]; then
+            NEW_BUILD_NUMBER=$((CM_BUILD_NUMBER + 1))
+          fi
+
+          agvtool new-version -all "$NEW_BUILD_NUMBER"
+          echo "iOS build number (CFBundleVersion) for $VERSION_STRING: $NEW_BUILD_NUMBER"
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
