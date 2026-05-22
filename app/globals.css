@@ -53,8 +53,19 @@
 
 /* Base */
 *, *::before, *::after { box-sizing: border-box; }
+
+html,
+body,
+#__next {
+  width: 100%;
+  max-width: 100%;
+}
+
 html {
   height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
   background-color: var(--bg-app);
 }
 
@@ -84,10 +95,53 @@ html.capacitor-native::after {
 body {
   margin: 0;
   min-height: 100%;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg-app);
   color: var(--text-primary);
+}
+
+/* Shell principal (player): ocupa todo el ancho del viewport */
+.player-app-shell,
+.player-route-root,
+.player-route-screen {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Columna de contenido centrada; en tablet/iPad crece con la pantalla */
+.player-shell-inner {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 768px) {
+  .player-shell-inner {
+    max-width: min(48rem, calc(100% - 2rem));
+  }
+
+  /* Capacitor en iPad: evita franja angosta con bandas negras a los lados */
+  html.capacitor-native .max-w-md {
+    max-width: min(48rem, calc(100% - 2rem)) !important;
+  }
+
+  html.capacitor-native .max-w-sm {
+    max-width: min(36rem, calc(100% - 2rem)) !important;
+  }
+
+  html.capacitor-native .max-w-xl {
+    max-width: min(56rem, calc(100% - 2rem)) !important;
+  }
+
+  html.capacitor-native .max-w-2xl {
+    max-width: min(64rem, calc(100% - 2rem)) !important;
+  }
 }
 
 /* Evita flash blanco entre rutas (Capacitor / navegación) */

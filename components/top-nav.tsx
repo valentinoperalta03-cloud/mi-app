@@ -120,7 +120,7 @@ export default function TopNav() {
           background: HEADER_GRADIENT,
         }}
       >
-        <div className="w-full max-w-md">
+        <div className="player-shell-inner w-full px-4">
           <div
             className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
             style={{ background: HEADER_GRADIENT }}
@@ -178,7 +178,7 @@ export default function TopNav() {
             />
 
             <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
-              <div className="pointer-events-none relative w-full max-w-md">
+              <div className="player-shell-inner pointer-events-none relative w-full px-4">
                 <motion.aside
                   className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
                   style={{

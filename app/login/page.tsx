@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <main className="relative isolate flex min-h-dvh flex-col justify-center bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
-      <div className="mx-auto w-full max-w-md md:max-w-lg">
+      <div className="player-shell-inner mx-auto w-full px-4 md:max-w-2xl">
         <div className="rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
           <div className="mb-8 flex flex-col items-center text-center">
             <LoginMark />

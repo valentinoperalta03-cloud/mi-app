@@ -79,12 +79,12 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full w-full max-w-full antialiased`}
     >
       <head>
         <link rel="canonical" href="https://www.padelibre.online" />
       </head>
-      <body suppressHydrationWarning className="min-h-full">
+      <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
         <CapacitorStatusBarInit />
         <CapacitorSplashHide />
         <ThemeProvider>{children}</ThemeProvider>
