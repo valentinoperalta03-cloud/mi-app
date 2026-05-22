@@ -2,8 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
- * Supabase client for Route Handlers: PKCE y sesión se leen/escriben en cookies
- * de la misma respuesta HTTP (evita el fallo con Server Actions + window.location).
+ * Supabase client for Route Handlers: PKCE y sesión en cookies de la respuesta HTTP.
  */
 export function createSupabaseRouteHandlerClient(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -18,6 +17,7 @@ export function createSupabaseRouteHandlerClient(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -26,8 +26,14 @@ export function createSupabaseRouteHandlerClient(request: NextRequest) {
     }
   );
 
+  /** Solo copia Set-Cookie (no headers internos de Next.js → evita 500 en redirect externo). */
   function redirectWithCookies(url: URL | string) {
-    return NextResponse.redirect(url, { headers: response.headers });
+    const redirectResponse = NextResponse.redirect(url);
+    const setCookies = response.headers.getSetCookie?.() ?? [];
+    for (const cookie of setCookies) {
+      redirectResponse.headers.append("Set-Cookie", cookie);
+    }
+    return redirectResponse;
   }
 
   return { supabase, redirectWithCookies };

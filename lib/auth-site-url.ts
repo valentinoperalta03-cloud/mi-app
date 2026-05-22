@@ -1,4 +1,6 @@
-/** Origen canónico para redirects de auth (web + Capacitor cargan el mismo dominio). */
+import type { NextRequest } from "next/server";
+
+/** Origen canónico para redirects de auth (web + Capacitor). */
 export function getAuthSiteOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
@@ -6,6 +8,20 @@ export function getAuthSiteOrigin(): string {
     return window.location.origin.replace(/\/$/, "");
   }
   return "http://localhost:3000";
+}
+
+/**
+ * Origen para OAuth: en previews de Vercel usa el host actual para que PKCE y callback coincidan.
+ */
+export function getAuthOriginFromRequest(request: NextRequest): string {
+  const requestOrigin = new URL(request.url).origin.replace(/\/$/, "");
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+  if (requestOrigin.includes("vercel.app") || requestOrigin.includes("localhost")) {
+    return requestOrigin;
+  }
+
+  return fromEnv || requestOrigin;
 }
 
 export function getAuthCallbackPath(): string {
