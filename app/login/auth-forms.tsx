@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
+import { FaApple } from "react-icons/fa";
 import {
   resendOtpCode,
   signInWithEmail,
@@ -14,13 +15,13 @@ const inputClass =
 
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
 
+const oauthButtonClass =
+  "flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]";
+
 export function GoogleAuthForm() {
   return (
     <div className="space-y-2">
-      <a
-        href="/auth/google"
-        className="flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]"
-      >
+      <a href="/auth/google" className={oauthButtonClass}>
         Continuar con Google
       </a>
       {Capacitor.isNativePlatform() ? (
@@ -29,6 +30,36 @@ export function GoogleAuthForm() {
         </p>
       ) : null}
     </div>
+  );
+}
+
+function useShowAppleSignIn() {
+  const [show, setShow] = useState(true);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      setShow(true);
+      return;
+    }
+    setShow(Capacitor.getPlatform() === "ios");
+  }, []);
+
+  return show;
+}
+
+export function AppleAuthForm() {
+  const show = useShowAppleSignIn();
+
+  if (!show) return null;
+
+  return (
+    <a
+      href="/auth/apple"
+      className={`${oauthButtonClass} bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100`}
+    >
+      <FaApple className="h-5 w-5 shrink-0" aria-hidden />
+      Continuar con Apple
+    </a>
   );
 }
 

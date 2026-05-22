@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
-import { EmailAuthForm, GoogleAuthForm } from "./auth-forms";
+import { AppleAuthForm, EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
 type LoginPageProps = {
   searchParams: Promise<{ message?: string; kind?: string }>;
@@ -29,15 +29,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
   return (
-    <main className="relative isolate min-h-dvh bg-[#F2F2F7] px-4 py-10 sm:py-14 dark:bg-black">
-      <div className="mx-auto w-full max-w-[26rem]">
+    <main className="relative isolate flex min-h-dvh flex-col justify-center bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
+      <div className="mx-auto w-full max-w-md md:max-w-lg">
         <div className="rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
           <div className="mb-8 flex flex-col items-center text-center">
             <LoginMark />
-            <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
               Crear cuenta
             </h1>
-            <p className="mt-2 text-sm font-medium text-slate-500">
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
               Unite a la comunidad de pádel
             </p>
           </div>
@@ -47,8 +47,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               role="alert"
               className={
                 isError
-                  ? "mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800"
-                  : "mb-6 rounded-2xl border border-[#0585FC]/20/80 bg-[#0585FC]/5/90 px-4 py-3 text-sm font-medium text-[#0585FC]"
+                  ? "mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+                  : "mb-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-medium text-[#0585FC] dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
               }
             >
               {text}
@@ -56,20 +56,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           ) : null}
 
           <div className="space-y-3">
+            <AppleAuthForm />
             <GoogleAuthForm />
-            <button
-              type="button"
-              className="w-full rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-              disabled
-            >
-              Continuar con Apple
-            </button>
           </div>
 
           <div className="my-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <span className="h-px flex-1 bg-slate-200/90" />
+            <span className="h-px flex-1 bg-slate-200/90 dark:bg-slate-700" />
             <span className="shrink-0">o con email</span>
-            <span className="h-px flex-1 bg-slate-200/90" />
+            <span className="h-px flex-1 bg-slate-200/90 dark:bg-slate-700" />
           </div>
 
           <EmailAuthForm />
