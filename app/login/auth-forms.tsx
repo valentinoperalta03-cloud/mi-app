@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
-import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import {
-  beginGoogleSignIn,
   resendOtpCode,
   signInWithEmail,
   signUpWithEmail,
@@ -17,49 +15,14 @@ const inputClass =
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
 
 export function GoogleAuthForm() {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleGoogleSignIn() {
-    setError(null);
-    setPending(true);
-
-    try {
-      const { url, message } = await beginGoogleSignIn();
-      if (message) {
-        setError(message);
-        setPending(false);
-        return;
-      }
-      if (!url) {
-        setError("No se pudo iniciar sesión con Google.");
-        setPending(false);
-        return;
-      }
-
-      window.location.assign(url);
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : "Error inesperado";
-      setError(formatAuthErrorMessage(raw));
-      setPending(false);
-    }
-  }
-
   return (
     <div className="space-y-2">
-      <button
-        type="button"
-        onClick={() => void handleGoogleSignIn()}
-        disabled={pending}
-        className="w-full rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]"
+      <a
+        href="/auth/google"
+        className="flex w-full items-center justify-center rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]"
       >
-        {pending ? "Abriendo Google..." : "Continuar con Google"}
-      </button>
-      {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-          {error}
-        </p>
-      ) : null}
+        Continuar con Google
+      </a>
       {Capacitor.isNativePlatform() ? (
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           Si Google falla en la app, usá email y contraseña.

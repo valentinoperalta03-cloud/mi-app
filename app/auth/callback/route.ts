@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { getAuthSiteOrigin } from "@/lib/auth-site-url";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseRouteHandlerClient } from "@/utils/supabase/route-handler";
 
 type EmailOtpType =
   | "signup"
@@ -12,11 +12,15 @@ type EmailOtpType =
   | "email_change"
   | "magiclink";
 
-function redirectToLogin(origin: string, message: string) {
+function redirectToLogin(
+  origin: string,
+  message: string,
+  redirectWithCookies: (url: URL | string) => NextResponse
+) {
   const url = new URL("/login", origin);
   url.searchParams.set("kind", "error");
   url.searchParams.set("message", message);
-  return NextResponse.redirect(url);
+  return redirectWithCookies(url);
 }
 
 export async function GET(request: NextRequest) {
@@ -27,20 +31,20 @@ export async function GET(request: NextRequest) {
   const oauthDescription =
     requestUrl.searchParams.get("error_description")?.replace(/\+/g, " ") ?? null;
 
+  const { supabase, redirectWithCookies } = createSupabaseRouteHandlerClient(request);
+
   if (oauthError) {
     const text =
       oauthDescription ??
       (oauthError === "access_denied"
         ? "Inicio de sesion cancelado."
         : "No se pudo completar el login.");
-    return redirectToLogin(origin, text);
+    return redirectToLogin(origin, text, redirectWithCookies);
   }
 
   const code = requestUrl.searchParams.get("code");
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
-
-  const supabase = await createClient({ allowCookieWrites: true });
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -50,7 +54,8 @@ export async function GET(request: NextRequest) {
         origin,
         formatAuthErrorMessage(
           error.message || "No se pudo completar el inicio de sesion."
-        )
+        ),
+        redirectWithCookies
       );
     }
 
@@ -58,11 +63,11 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return redirectToLogin(origin, "No se pudo obtener la sesion.");
+      return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
     }
 
     const home = await resolveHomePath(supabase, user.id);
-    return NextResponse.redirect(new URL(home, origin));
+    return redirectWithCookies(new URL(home, origin));
   }
 
   if (token_hash && type) {
@@ -76,7 +81,8 @@ export async function GET(request: NextRequest) {
         origin,
         formatAuthErrorMessage(
           error.message || "El enlace de verificacion no es valido o expiro."
-        )
+        ),
+        redirectWithCookies
       );
     }
 
@@ -84,15 +90,16 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return redirectToLogin(origin, "No se pudo obtener la sesion.");
+      return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
     }
 
     const home = await resolveHomePath(supabase, user.id);
-    return NextResponse.redirect(new URL(home, origin));
+    return redirectWithCookies(new URL(home, origin));
   }
 
   return redirectToLogin(
     origin,
-    "Enlace de autenticacion invalido o incompleto. Solicita uno nuevo desde login."
+    "Enlace de autenticacion invalido o incompleto. Solicita uno nuevo desde login.",
+    redirectWithCookies
   );
 }

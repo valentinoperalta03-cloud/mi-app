@@ -79,36 +79,6 @@ export async function signInWithEmail(
   redirect(await resolveHomePath(supabase, user.id));
 }
 
-export type GoogleSignInResult = {
-  url: string | null;
-  message: string | null;
-};
-
-/** Inicia OAuth en el servidor para que las cookies PKCE coincidan con /auth/callback. */
-export async function beginGoogleSignIn(): Promise<GoogleSignInResult> {
-  const origin = await getAppOrigin();
-  const supabase = await createClient({ allowCookieWrites: true });
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${origin}/auth/callback`,
-      queryParams: {
-        access_type: "offline",
-        prompt: "select_account",
-      },
-    },
-  });
-
-  if (error) {
-    return { url: null, message: formatAuthErrorMessage(error.message) };
-  }
-  if (!data.url) {
-    return { url: null, message: "No se pudo iniciar sesión con Google." };
-  }
-  return { url: data.url, message: null };
-}
-
 export type SignUpWithEmailResult =
   | { step: "otp"; email: string }
   | { step: "error"; message: string; needsLogin?: boolean };
