@@ -47,6 +47,7 @@ export function isJugadorAppPath(pathname: string): boolean {
 
 export function isPublicAuthPath(pathname: string): boolean {
   if (pathname === "/login") return true;
+  if (pathname === "/verificar-email") return true;
   if (pathname === "/privacidad") return true;
   if (pathname.startsWith("/auth/")) return true;
   return false;

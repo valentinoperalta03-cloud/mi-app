@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
+import { getAuthSiteOrigin } from "@/lib/auth-site-url";
 import { createClient } from "@/utils/supabase/server";
 
 type EmailOtpType =
@@ -20,7 +21,7 @@ function redirectToLogin(origin: string, message: string) {
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const origin = requestUrl.origin;
+  const origin = getAuthSiteOrigin() || requestUrl.origin;
 
   const oauthError = requestUrl.searchParams.get("error");
   const oauthDescription =

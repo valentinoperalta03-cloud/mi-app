@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveHomePath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
+import { getAuthSiteOrigin } from "@/lib/auth-site-url";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
 import { createClient } from "@/utils/supabase/server";
@@ -16,8 +17,8 @@ async function getAppOrigin(): Promise<string> {
   const h = await headers();
   return (
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    h.get("origin") ??
-    "http://localhost:3000"
+    h.get("origin")?.replace(/\/$/, "") ??
+    getAuthSiteOrigin()
   );
 }
 
@@ -28,39 +29,89 @@ function loginRedirect(message: string, isError = true): never {
   redirect(`/login?${params.toString()}`);
 }
 
-export async function signInWithEmail(formData: FormData) {
+export type SignInWithEmailResult = {
+  ok: false;
+  message: string;
+  needsEmailVerification?: boolean;
+  email?: string;
+};
+
+export async function signInWithEmail(
+  formData: FormData
+): Promise<SignInWithEmailResult> {
   const email = sanitizeText(getStringField(formData, "email"), 320).toLowerCase();
   const password = getStringField(formData, "password");
 
   if (!email || !password) {
-    loginRedirect("Completa email y contrasena.");
+    return { ok: false, message: "Completá email y contraseña." };
   }
 
   const allowed = await checkRateLimit(`login:${email}`, 10, 300);
   if (!allowed) {
-    loginRedirect("Demasiados intentos. Esperá 5 minutos.");
+    return { ok: false, message: "Demasiados intentos. Esperá 5 minutos." };
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    loginRedirect(formatAuthErrorMessage(error.message));
+    const msg = formatAuthErrorMessage(error.message);
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      await supabase.auth.resend({ type: "signup", email }).catch(() => undefined);
+      return {
+        ok: false,
+        message:
+          "Tu email no está confirmado. Te enviamos un código nuevo — revisá tu bandeja (y spam).",
+        needsEmailVerification: true,
+        email,
+      };
+    }
+    return { ok: false, message: msg };
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    loginRedirect("No se pudo obtener la sesion. Volve a intentar.");
+    return { ok: false, message: "No se pudo obtener la sesión. Volvé a intentar." };
   }
 
   redirect(await resolveHomePath(supabase, user.id));
 }
 
+export type GoogleSignInResult = {
+  url: string | null;
+  message: string | null;
+};
+
+/** Inicia OAuth en el servidor para que las cookies PKCE coincidan con /auth/callback. */
+export async function beginGoogleSignIn(): Promise<GoogleSignInResult> {
+  const origin = await getAppOrigin();
+  const supabase = await createClient({ allowCookieWrites: true });
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "select_account",
+      },
+    },
+  });
+
+  if (error) {
+    return { url: null, message: formatAuthErrorMessage(error.message) };
+  }
+  if (!data.url) {
+    return { url: null, message: "No se pudo iniciar sesión con Google." };
+  }
+  return { url: data.url, message: null };
+}
+
 export type SignUpWithEmailResult =
   | { step: "otp"; email: string }
-  | { step: "error"; message: string };
+  | { step: "error"; message: string; needsLogin?: boolean };
 
 export type OtpActionResult = {
   success: boolean;
@@ -73,7 +124,7 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
   const password = getStringField(formData, "password");
 
   if (!fullName || !email || !password) {
-    return { step: "error", message: "Completa nombre, email y contrasena." };
+    return { step: "error", message: "Completá nombre, email y contraseña." };
   }
 
   const origin = await getAppOrigin();
@@ -91,7 +142,17 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
   });
 
   if (error) {
-    return { step: "error", message: formatAuthErrorMessage(error.message) };
+    const msg = formatAuthErrorMessage(error.message);
+    if (error.message.toLowerCase().includes("already registered")) {
+      await supabase.auth.resend({ type: "signup", email }).catch(() => undefined);
+      return {
+        step: "error",
+        message:
+          "Ese email ya está registrado. Te enviamos un código de verificación — revisá tu bandeja o iniciá sesión.",
+        needsLogin: true,
+      };
+    }
+    return { step: "error", message: msg };
   }
 
   if (data.session) {
@@ -103,11 +164,40 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
     }
   }
 
+  if (!data.user) {
+    return {
+      step: "error",
+      message:
+        "No se pudo crear la cuenta. Revisá el email o intentá de nuevo en unos minutos.",
+    };
+  }
+
   return { step: "otp", email };
 }
 
+async function verifyOtpWithFallback(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  email: string,
+  token: string
+) {
+  const signupAttempt = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "signup",
+  });
+  if (!signupAttempt.error) {
+    return signupAttempt;
+  }
+
+  return supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "email",
+  });
+}
+
 export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult> {
-  const email = getStringField(formData, "email");
+  const email = getStringField(formData, "email").toLowerCase();
   const token = getStringField(formData, "token");
 
   if (!email || !token) {
@@ -118,13 +208,14 @@ export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
-  const { error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: "signup",
-  });
+  const { error } = await verifyOtpWithFallback(supabase, email, token);
   if (error) {
-    return { success: false, message: "Código incorrecto o expirado. Revisá tu email." };
+    return {
+      success: false,
+      message: formatAuthErrorMessage(
+        error.message || "Código incorrecto o expirado. Revisá tu email."
+      ),
+    };
   }
 
   const {
@@ -138,9 +229,14 @@ export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult
 }
 
 export async function resendOtpCode(formData: FormData): Promise<OtpActionResult> {
-  const email = getStringField(formData, "email");
+  const email = getStringField(formData, "email").toLowerCase();
   if (!email) {
     return { success: false, message: "Ingresá un email válido para reenviar el código." };
+  }
+
+  const allowed = await checkRateLimit(`otp-resend:${email}`, 5, 300);
+  if (!allowed) {
+    return { success: false, message: "Demasiados reenvíos. Esperá 5 minutos." };
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -152,6 +248,8 @@ export async function resendOtpCode(formData: FormData): Promise<OtpActionResult
     return { success: false, message: formatAuthErrorMessage(error.message) };
   }
 
-  return { success: true, message: "Código reenviado. Revisá tu bandeja de entrada." };
+  return {
+    success: true,
+    message: "Código reenviado. Revisá tu bandeja de entrada y la carpeta de spam.",
+  };
 }
-

@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { Capacitor } from "@capacitor/core";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
-import { createClient } from "@/utils/supabase/client";
-import { resendOtpCode, signInWithEmail, signUpWithEmail, verifyOtpCode } from "./actions";
+import {
+  beginGoogleSignIn,
+  resendOtpCode,
+  signInWithEmail,
+  signUpWithEmail,
+  verifyOtpCode,
+} from "./actions";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0585FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-[#1c1c1e]";
@@ -18,32 +23,26 @@ export function GoogleAuthForm() {
   async function handleGoogleSignIn() {
     setError(null);
     setPending(true);
-    const supabase = createClient();
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? window.location.origin}/auth/callback`;
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
-    });
 
-    if (oauthError) {
-      setError(formatAuthErrorMessage(oauthError.message));
+    try {
+      const { url, message } = await beginGoogleSignIn();
+      if (message) {
+        setError(message);
+        setPending(false);
+        return;
+      }
+      if (!url) {
+        setError("No se pudo iniciar sesión con Google.");
+        setPending(false);
+        return;
+      }
+
+      window.location.assign(url);
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Error inesperado";
+      setError(formatAuthErrorMessage(raw));
       setPending(false);
-      return;
     }
-
-    if (data.url) {
-      window.location.assign(data.url);
-      return;
-    }
-
-    setError("No se pudo iniciar sesion con Google.");
-    setPending(false);
   }
 
   return (
@@ -61,88 +60,20 @@ export function GoogleAuthForm() {
           {error}
         </p>
       ) : null}
+      {Capacitor.isNativePlatform() ? (
+        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+          Si Google falla en la app, usá email y contraseña.
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function EmailSubmitButton({
-  formAction,
-  idleLabel,
-  busyLabel,
-  variant,
+function LoginForm({
+  onOtpRequired,
 }: {
-  formAction: (formData: FormData) => void;
-  idleLabel: string;
-  busyLabel: string;
-  variant: "primary" | "ghost";
+  onOtpRequired: (email: string) => void;
 }) {
-  const { pending } = useFormStatus();
-  const base =
-    "w-full rounded-2xl py-4 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55";
-  const primary =
-    "rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99]";
-  const ghost =
-    "mt-1 text-[#0585FC] hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800";
-
-  return (
-    <button
-      type="submit"
-      formAction={formAction}
-      disabled={pending}
-      className={`${base} ${variant === "primary" ? primary : ghost}`}
-    >
-      {pending ? busyLabel : idleLabel}
-    </button>
-  );
-}
-
-function LoginForm() {
-  return (
-    <form className="space-y-4">
-      <div>
-        <label htmlFor="login-email" className={labelClass}>
-          Correo electrónico
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          name="email"
-          placeholder="tu@email.com"
-          required
-          autoComplete="email"
-          className={inputClass}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="login-password" className={labelClass}>
-          Contraseña
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          name="password"
-          placeholder="Mínimo 6 caracteres"
-          required
-          minLength={6}
-          autoComplete="current-password"
-          className={inputClass}
-        />
-      </div>
-
-      <div className="pt-2">
-        <EmailSubmitButton
-          formAction={signInWithEmail}
-          idleLabel="Iniciar sesión"
-          busyLabel="Iniciando sesión..."
-          variant="primary"
-        />
-      </div>
-    </form>
-  );
-}
-
-function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -154,30 +85,16 @@ function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => voi
         const formData = new FormData(event.currentTarget);
         setError(null);
         startTransition(async () => {
-          const result = await signUpWithEmail(formData);
-          if (result.step === "otp") {
-            onOtpRequired(result.email);
-            return;
+          const result = await signInWithEmail(formData);
+          if (!result.ok) {
+            setError(result.message);
+            if (result.needsEmailVerification && result.email) {
+              onOtpRequired(result.email);
+            }
           }
-          setError(result.message);
         });
       }}
     >
-      <div>
-        <label htmlFor="login-full-name" className={labelClass}>
-          Nombre
-        </label>
-        <input
-          id="login-full-name"
-          type="text"
-          name="full_name"
-          placeholder="Tu nombre"
-          required
-          autoComplete="name"
-          className={inputClass}
-        />
-      </div>
-
       <div>
         <label htmlFor="login-email" className={labelClass}>
           Correo electrónico
@@ -215,12 +132,102 @@ function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => voi
           disabled={pending}
           className="w-full rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
         >
+          {pending ? "Iniciando sesión..." : "Iniciar sesión"}
+        </button>
+      </div>
+
+      {error ? (
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => void }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        setError(null);
+        startTransition(async () => {
+          const result = await signUpWithEmail(formData);
+          if (result.step === "otp") {
+            onOtpRequired(result.email);
+            return;
+          }
+          setError(result.message);
+          if (result.needsLogin) {
+            const email = String(formData.get("email") ?? "");
+            if (email) onOtpRequired(email);
+          }
+        });
+      }}
+    >
+      <div>
+        <label htmlFor="login-full-name" className={labelClass}>
+          Nombre
+        </label>
+        <input
+          id="login-full-name"
+          type="text"
+          name="full_name"
+          placeholder="Tu nombre"
+          required
+          autoComplete="name"
+          className={inputClass}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="register-email" className={labelClass}>
+          Correo electrónico
+        </label>
+        <input
+          id="register-email"
+          type="email"
+          name="email"
+          placeholder="tu@email.com"
+          required
+          autoComplete="email"
+          className={inputClass}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="register-password" className={labelClass}>
+          Contraseña
+        </label>
+        <input
+          id="register-password"
+          type="password"
+          name="password"
+          placeholder="Mínimo 6 caracteres"
+          required
+          minLength={6}
+          autoComplete="new-password"
+          className={inputClass}
+        />
+      </div>
+
+      <div className="pt-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full rounded-2xl bg-gradient-to-b from-[#0585FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0585FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
+        >
           {pending ? "Creando cuenta..." : "Crear mi cuenta"}
         </button>
       </div>
 
       {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800">
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
           {error}
         </p>
       ) : null}
@@ -270,7 +277,9 @@ function OtpForm({
     >
       <div className="space-y-1">
         <h3 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Revisá tu email</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Te enviamos un código de 6 dígitos a {email}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Te enviamos un código de 6 dígitos a {email}. Si no llega, revisá spam o reenviá.
+        </p>
       </div>
 
       <div>
@@ -361,7 +370,7 @@ export function EmailAuthForm() {
           onBack={() => setOtpState({ active: false, email: "" })}
         />
       ) : isLogin ? (
-        <LoginForm />
+        <LoginForm onOtpRequired={(email) => setOtpState({ active: true, email })} />
       ) : (
         <RegisterForm onOtpRequired={(email) => setOtpState({ active: true, email })} />
       )}

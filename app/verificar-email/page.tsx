@@ -21,10 +21,17 @@ export default function VerificarEmailPage() {
 
   useEffect(() => {
     let mounted = true;
+    const fromQuery =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("email")?.trim().toLowerCase() ?? ""
+        : "";
+    if (fromQuery) {
+      setEmail(fromQuery);
+    }
     const supabase = createClient();
     void supabase.auth.getUser().then(({ data }) => {
-      if (mounted) {
-        setEmail(data.user?.email ?? "");
+      if (mounted && data.user?.email) {
+        setEmail(data.user.email);
       }
     });
     return () => {
