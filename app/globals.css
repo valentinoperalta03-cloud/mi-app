@@ -10,6 +10,8 @@
 
 /* CSS Variables for theming */
 :root {
+  --skeleton-base: var(--bg-subtle);
+  --skeleton-shine: var(--bg-card);
   --color-brand: #0585fc;
   --color-brand-dark: #0461c4;
   --color-brand-light: rgba(5, 133, 252, 0.12);
@@ -29,6 +31,8 @@
 }
 
 .dark {
+  --skeleton-base: var(--bg-subtle);
+  --skeleton-shine: #2c2c2e;
   --color-brand: #38bdf8;
   --color-brand-dark: #7dd3fc;
   --color-brand-light: rgba(56, 189, 248, 0.15);
@@ -49,7 +53,10 @@
 
 /* Base */
 *, *::before, *::after { box-sizing: border-box; }
-html { height: 100%; }
+html {
+  height: 100%;
+  background-color: var(--bg-app);
+}
 
 html.capacitor-native {
   background-color: #1a6bc4;
@@ -79,10 +86,20 @@ body {
   min-height: 100%;
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
-  -webkit-font-smoothing: antialiased;
   background-color: var(--bg-app);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Evita flash blanco entre rutas (Capacitor / navegación) */
+.player-route-root,
+.player-route-screen {
+  background-color: var(--bg-app);
+  will-change: transform;
+}
+
+.player-route-screen {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .dark body { background-color: #000000; }
@@ -153,6 +170,22 @@ input::placeholder, textarea::placeholder {
 @keyframes shimmerMove {
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
+}
+
+/* Skeleton loaders (tema claro / oscuro) */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-shine) 45%,
+    var(--skeleton-base) 90%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.35s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 /* Glass card */
