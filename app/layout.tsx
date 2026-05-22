@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
@@ -85,6 +86,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="min-h-full">
         <CapacitorStatusBarInit />
+        <CapacitorSplashHide />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

@@ -52,11 +52,13 @@
 html { height: 100%; }
 
 html.capacitor-native {
-  background-color: #0585fc;
+  background-color: #1a6bc4;
+  overscroll-behavior: none;
 }
 
 html.capacitor-native body {
   background-color: var(--bg-app);
+  overscroll-behavior: none;
 }
 
 /* Fill status-bar safe area (iOS does not support StatusBar.setBackgroundColor) */
@@ -67,7 +69,7 @@ html.capacitor-native::after {
   left: 0;
   right: 0;
   height: env(safe-area-inset-top, 0px);
-  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  background: linear-gradient(135deg, #1a6bc4 0%, #0461c4 100%);
   z-index: 49;
   pointer-events: none;
 }
