@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
 
+const SPLASH_MAX_MS = 4000;
+
 function hideSplash() {
   void SplashScreen.hide().catch(() => {
     // Splash may already be hidden on some platforms.
@@ -14,8 +16,15 @@ export default function CapacitorSplashHide() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const hideOnReady = () => hideSplash();
-    const failSafe = window.setTimeout(hideSplash, 8000);
+    let hidden = false;
+    const hideOnce = () => {
+      if (hidden) return;
+      hidden = true;
+      hideSplash();
+    };
+
+    const hideOnReady = () => hideOnce();
+    const hardMax = window.setTimeout(hideOnce, SPLASH_MAX_MS);
 
     if (document.readyState === "complete") {
       window.setTimeout(hideOnReady, 300);
@@ -24,7 +33,7 @@ export default function CapacitorSplashHide() {
     }
 
     return () => {
-      window.clearTimeout(failSafe);
+      window.clearTimeout(hardMax);
       window.removeEventListener("load", hideOnReady);
     };
   }, []);

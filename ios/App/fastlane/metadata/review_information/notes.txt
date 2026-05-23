@@ -1,0 +1,9 @@
+Demo account: valentino.peralta@icloud.com / valentino123
+
+The app requires an active internet connection to load content.
+
+Sign in with Apple and Sign in with email are fully functional.
+
+Sign in with Google may open an external browser on iPad — this is expected behavior for OAuth on WebView-based apps.
+
+Main features: create matches, find players, book courts, tournaments.

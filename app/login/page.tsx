@@ -29,9 +29,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
   return (
-    <main className="relative isolate flex min-h-dvh flex-col justify-center bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
-      <div className="player-shell-inner mx-auto w-full px-4 md:max-w-2xl">
-        <div className="rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
+    <main className="login-page-main relative isolate flex min-h-dvh flex-col justify-center overflow-y-auto bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
+      <div className="login-page-inner player-shell-inner mx-auto w-full px-4 md:max-w-2xl">
+        <div className="login-page-card rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
           <div className="mb-8 flex flex-col items-center text-center">
             <LoginMark />
             <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">

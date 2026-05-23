@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
+import { isCapacitorIosIpad } from "@/lib/capacitor-device";
 import {
   EXISTING_ACCOUNT_LOGIN_MESSAGE,
   resendOtpCode,
@@ -19,13 +20,31 @@ const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0
 const oauthButtonClass =
   "flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]";
 
+function useCapacitorIosIpad() {
+  const [isIpad, setIsIpad] = useState(false);
+
+  useEffect(() => {
+    setIsIpad(isCapacitorIosIpad());
+  }, []);
+
+  return isIpad;
+}
+
 export function GoogleAuthForm() {
+  const isIpadNative = useCapacitorIosIpad();
+
   return (
     <div className="space-y-2">
+      {isIpadNative ? (
+        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-xs font-medium leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          En iPad, «Continuar con Google» puede abrir Safari para iniciar sesión. Si no volvés a la
+          app, usá <strong>Continuar con Apple</strong> o <strong>email y contraseña</strong>.
+        </p>
+      ) : null}
       <a href="/auth/google" className={oauthButtonClass}>
         Continuar con Google
       </a>
-      {Capacitor.isNativePlatform() ? (
+      {Capacitor.isNativePlatform() && !isIpadNative ? (
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           Si Google falla en la app, usá email y contraseña.
         </p>
@@ -78,7 +97,7 @@ function LoginForm({
 
   return (
     <form
-      className="space-y-4"
+      className="auth-email-form space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
@@ -164,7 +183,7 @@ function RegisterForm({
 
   return (
     <form
-      className="space-y-4"
+      className="auth-email-form space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
@@ -273,7 +292,7 @@ function OtpForm({
 
   return (
     <form
-      className="space-y-4"
+      className="auth-email-form space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);

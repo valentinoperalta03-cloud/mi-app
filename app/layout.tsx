@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import CapacitorIpadEnhancements from "@/components/capacitor-ipad-enhancements";
 import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -68,6 +69,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -86,6 +88,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
         <CapacitorStatusBarInit />
+        <CapacitorIpadEnhancements />
         <CapacitorSplashHide />
         <ThemeProvider>{children}</ThemeProvider>
       </body>

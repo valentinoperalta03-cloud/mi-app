@@ -367,3 +367,65 @@ button.bg-red-600 {
   background-size: 200% 200%;
   animation: comunidad-gradient-shift 3s ease infinite;
 }
+
+/* ── iPad nativo (Capacitor): teclado flotante ───────────────── */
+html.capacitor-native.capacitor-ipad {
+  --keyboard-inset: 0px;
+}
+
+html.capacitor-native.capacitor-ipad .login-page-main {
+  justify-content: flex-start;
+  min-height: 100dvh;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--keyboard-inset, 0px) + 24px);
+}
+
+html.capacitor-native.capacitor-ipad .login-page-inner {
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--keyboard-inset, 0px) + 1rem);
+}
+
+html.capacitor-native.capacitor-ipad .auth-email-form {
+  scroll-margin-bottom: calc(var(--keyboard-inset, 0px) + 80px);
+}
+
+/* ── iPad nativo: landscape (revisión App Store) ─────────────── */
+@media (orientation: landscape) and (min-width: 768px) {
+  html.capacitor-native.capacitor-ipad .login-page-main {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  html.capacitor-native.capacitor-ipad .login-page-card {
+    max-width: min(40rem, calc(100vw - 2rem));
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.25rem 1.5rem;
+  }
+
+  html.capacitor-native.capacitor-ipad .login-page-card h1 {
+    font-size: 1.125rem;
+  }
+
+  html.capacitor-native.capacitor-ipad .home-page-shell {
+    min-height: auto;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(5rem, env(safe-area-inset-bottom, 0px) + 4rem);
+    overflow-y: visible;
+  }
+
+  html.capacitor-native.capacitor-ipad .home-page-shell > section:first-of-type h1 {
+    font-size: 1.125rem;
+  }
+
+  html.capacitor-native.capacitor-ipad .home-page-shell .grid.grid-cols-2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  html.capacitor-native.capacitor-ipad .home-page-shell .grid.grid-cols-2 a {
+    min-height: 5.5rem;
+    padding: 0.75rem;
+  }
+}

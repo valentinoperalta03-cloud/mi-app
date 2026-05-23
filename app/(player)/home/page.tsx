@@ -100,7 +100,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   return (
-    <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
+    <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-100">
           <p className="text-sm font-semibold">Perfil guardado con éxito.</p>
