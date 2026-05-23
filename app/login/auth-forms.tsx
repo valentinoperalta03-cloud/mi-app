@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
 import {
+  EXISTING_ACCOUNT_LOGIN_MESSAGE,
   resendOtpCode,
   signInWithEmail,
   signUpWithEmail,
@@ -65,8 +66,12 @@ export function AppleAuthForm() {
 
 function LoginForm({
   onOtpRequired,
+  notice,
+  defaultEmail = "",
 }: {
   onOtpRequired: (email: string) => void;
+  notice?: string | null;
+  defaultEmail?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -89,14 +94,22 @@ function LoginForm({
         });
       }}
     >
+      {notice ? (
+        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          {notice}
+        </p>
+      ) : null}
+
       <div>
         <label htmlFor="login-email" className={labelClass}>
           Correo electrónico
         </label>
         <input
           id="login-email"
+          key={defaultEmail || "login-email-empty"}
           type="email"
           name="email"
+          defaultValue={defaultEmail}
           placeholder="tu@email.com"
           required
           autoComplete="email"
@@ -139,7 +152,13 @@ function LoginForm({
   );
 }
 
-function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => void }) {
+function RegisterForm({
+  onOtpRequired,
+  onExistingAccount,
+}: {
+  onOtpRequired: (email: string) => void;
+  onExistingAccount: (email: string) => void;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -156,11 +175,12 @@ function RegisterForm({ onOtpRequired }: { onOtpRequired: (email: string) => voi
             onOtpRequired(result.email);
             return;
           }
-          setError(result.message);
           if (result.needsLogin) {
-            const email = String(formData.get("email") ?? "");
-            if (email) onOtpRequired(email);
+            const email = String(formData.get("email") ?? "").trim().toLowerCase();
+            if (email) onExistingAccount(email);
+            return;
           }
+          setError(result.message);
         });
       }}
     >
@@ -351,6 +371,8 @@ function OtpForm({
 
 export function EmailAuthForm() {
   const [isLogin, setIsLogin] = useState(true);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+  const [loginEmailPrefill, setLoginEmailPrefill] = useState("");
   const [otpState, setOtpState] = useState<{ active: boolean; email: string }>({
     active: false,
     email: "",
@@ -364,15 +386,33 @@ export function EmailAuthForm() {
           onBack={() => setOtpState({ active: false, email: "" })}
         />
       ) : isLogin ? (
-        <LoginForm onOtpRequired={(email) => setOtpState({ active: true, email })} />
+        <LoginForm
+          notice={loginNotice}
+          defaultEmail={loginEmailPrefill}
+          onOtpRequired={(email) => {
+            setLoginNotice(null);
+            setOtpState({ active: true, email });
+          }}
+        />
       ) : (
-        <RegisterForm onOtpRequired={(email) => setOtpState({ active: true, email })} />
+        <RegisterForm
+          onOtpRequired={(email) => setOtpState({ active: true, email })}
+          onExistingAccount={(email) => {
+            setIsLogin(true);
+            setLoginEmailPrefill(email);
+            setLoginNotice(EXISTING_ACCOUNT_LOGIN_MESSAGE);
+          }}
+        />
       )}
 
       {!otpState.active ? (
         <button
           type="button"
-          onClick={() => setIsLogin((prev) => !prev)}
+          onClick={() => {
+            setIsLogin((prev) => !prev);
+            setLoginNotice(null);
+            setLoginEmailPrefill("");
+          }}
           className="w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0585FC] transition-all duration-200 hover:bg-[#0585FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
         >
           {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}

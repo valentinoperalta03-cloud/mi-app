@@ -83,10 +83,28 @@ export type SignUpWithEmailResult =
   | { step: "otp"; email: string }
   | { step: "error"; message: string; needsLogin?: boolean };
 
+export const EXISTING_ACCOUNT_LOGIN_MESSAGE =
+  "Ya tenés una cuenta con este email. Iniciá sesión con tu contraseña (abajo «¿Ya tenés cuenta?»).";
+
 export type OtpActionResult = {
   success: boolean;
   message: string;
 };
+
+function isAlreadyRegisteredError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("already registered") ||
+    m.includes("user already registered") ||
+    m.includes("already been registered")
+  );
+}
+
+/** Supabase anti-enumeración: user sin identities = email ya registrado, sin mail nuevo. */
+function isDuplicateSignupWithoutEmail(user: { identities?: { id: string }[] | null } | null): boolean {
+  if (!user) return false;
+  return (user.identities?.length ?? 0) === 0;
+}
 
 export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEmailResult> {
   const fullName = sanitizeText(getStringField(formData, "full_name"), 120);
@@ -112,17 +130,14 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
   });
 
   if (error) {
-    const msg = formatAuthErrorMessage(error.message);
-    if (error.message.toLowerCase().includes("already registered")) {
-      await supabase.auth.resend({ type: "signup", email }).catch(() => undefined);
+    if (isAlreadyRegisteredError(error.message)) {
       return {
         step: "error",
-        message:
-          "Ese email ya está registrado. Te enviamos un código de verificación — revisá tu bandeja o iniciá sesión.",
+        message: EXISTING_ACCOUNT_LOGIN_MESSAGE,
         needsLogin: true,
       };
     }
-    return { step: "error", message: msg };
+    return { step: "error", message: formatAuthErrorMessage(error.message) };
   }
 
   if (data.session) {
@@ -139,6 +154,14 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
       step: "error",
       message:
         "No se pudo crear la cuenta. Revisá el email o intentá de nuevo en unos minutos.",
+    };
+  }
+
+  if (isDuplicateSignupWithoutEmail(data.user)) {
+    return {
+      step: "error",
+      message: EXISTING_ACCOUNT_LOGIN_MESSAGE,
+      needsLogin: true,
     };
   }
 

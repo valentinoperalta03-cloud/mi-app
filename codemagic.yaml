@@ -14,8 +14,7 @@ workflows:
         script: npm ci
       - name: Capacitor sync
         script: |
-          mkdir -p capacitor-dist
-          echo '<html><body></body></html>' > capacitor-dist/index.html
+          test -f capacitor-dist/index.html || { echo "Missing capacitor-dist/index.html"; exit 1; }
           npx cap sync ios
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
@@ -74,8 +73,7 @@ workflows:
         script: npm ci
       - name: Capacitor sync
         script: |
-          mkdir -p capacitor-dist
-          echo '<html><body></body></html>' > capacitor-dist/index.html
+          test -f capacitor-dist/index.html || { echo "Missing capacitor-dist/index.html"; exit 1; }
           npx cap sync android
       - name: Set up Android keystore
         script: |

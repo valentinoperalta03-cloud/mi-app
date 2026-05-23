@@ -10,15 +10,24 @@ const config: CapacitorConfig = {
   ios: {
     backgroundColor: STATUS_BAR_COLOR,
     contentInset: 'never',
+    /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
+    limitsNavigationsToAppBoundDomains: false,
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,
   },
   server: {
     url: 'https://www.padelibre.online',
-    cleartext: true,
+    cleartext: false,
     /** Ruta inicial en la URL remota (Capacitor 8: appStartPath, no errorPath). */
     appStartPath: '/login',
+    allowNavigation: [
+      'padelibre.online',
+      '*.padelibre.online',
+      'www.padelibre.online',
+      'vercel.app',
+      '*.vercel.app',
+    ],
   },
   plugins: {
     StatusBar: {
@@ -27,7 +36,8 @@ const config: CapacitorConfig = {
       backgroundColor: STATUS_BAR_COLOR,
     },
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 0,
+      launchAutoHide: false,
       backgroundColor: STATUS_BAR_COLOR,
       androidSplashResourceName: 'splash',
       showSpinner: false,
