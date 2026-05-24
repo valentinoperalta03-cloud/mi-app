@@ -8,6 +8,7 @@ import { getAuthSiteOrigin } from "@/lib/auth-site-url";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
 import { createClient } from "@/utils/supabase/server";
+import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
 
 function getStringField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -82,9 +83,6 @@ export async function signInWithEmail(
 export type SignUpWithEmailResult =
   | { step: "otp"; email: string }
   | { step: "error"; message: string; needsLogin?: boolean };
-
-export const EXISTING_ACCOUNT_LOGIN_MESSAGE =
-  "Ya tenés una cuenta con este email. Iniciá sesión con tu contraseña (abajo «¿Ya tenés cuenta?»).";
 
 export type OtpActionResult = {
   success: boolean;

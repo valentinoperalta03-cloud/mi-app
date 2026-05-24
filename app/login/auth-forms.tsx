@@ -4,8 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
 import { isCapacitorIosIpad } from "@/lib/capacitor-device";
+import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
 import {
-  EXISTING_ACCOUNT_LOGIN_MESSAGE,
   resendOtpCode,
   signInWithEmail,
   signUpWithEmail,
