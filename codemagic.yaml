@@ -71,10 +71,12 @@ workflows:
     scripts:
       - name: Install dependencies
         script: npm ci
+      - name: Build Next.js
+        script: npm run build
+      - name: Prepare Capacitor web directory
+        script: npm run capacitor:prepare
       - name: Capacitor sync
-        script: |
-          test -f capacitor-dist/index.html || { echo "Missing capacitor-dist/index.html"; exit 1; }
-          npx cap sync android
+        script: npx cap sync android
       - name: Set up Android keystore
         script: |
           echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
