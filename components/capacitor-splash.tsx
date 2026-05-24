@@ -12,9 +12,20 @@ function hideSplash() {
   });
 }
 
+function prefetchHomeData() {
+  void fetch("/api/prefetch", {
+    credentials: "include",
+    cache: "no-store",
+  }).catch(() => {
+    // Prefetch is best-effort; home still loads normally on miss.
+  });
+}
+
 export default function CapacitorSplashHide() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+
+    prefetchHomeData();
 
     let hidden = false;
     const hideOnce = () => {

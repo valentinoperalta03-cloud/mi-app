@@ -26,15 +26,22 @@ export function createSupabaseRouteHandlerClient(request: NextRequest) {
     }
   );
 
-  /** Solo copia Set-Cookie (no headers internos de Next.js → evita 500 en redirect externo). */
-  function redirectWithCookies(url: URL | string) {
-    const redirectResponse = NextResponse.redirect(url);
+  function appendPkceCookies(target: NextResponse) {
     const setCookies = response.headers.getSetCookie?.() ?? [];
     for (const cookie of setCookies) {
-      redirectResponse.headers.append("Set-Cookie", cookie);
+      target.headers.append("Set-Cookie", cookie);
     }
-    return redirectResponse;
+    return target;
   }
 
-  return { supabase, redirectWithCookies };
+  /** Solo copia Set-Cookie (no headers internos de Next.js → evita 500 en redirect externo). */
+  function redirectWithCookies(url: URL | string) {
+    return appendPkceCookies(NextResponse.redirect(url));
+  }
+
+  function jsonWithCookies(body: unknown, init?: ResponseInit) {
+    return appendPkceCookies(NextResponse.json(body, init));
+  }
+
+  return { supabase, redirectWithCookies, jsonWithCookies };
 }

@@ -10,9 +10,13 @@ import { HomeReservationsSection } from "@/components/home-reservations-section"
 import { HomeSummarySection } from "@/components/home-summary-section";
 import {
   HomeReservationsSkeleton,
+  HomeSectionLineSkeleton,
   HomeSummarySkeleton,
 } from "@/components/home-loading-skeletons";
-import { DB_TABLES } from "@/lib/db-tables";
+import {
+  getCachedPendingResultsForUser,
+  getCachedProfileDisplayName,
+} from "@/lib/home-cache";
 import { createClient } from "@/utils/supabase/server";
 
 type HomePageProps = {
@@ -66,38 +70,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from(DB_TABLES.profiles)
-    .select("name")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const displayName =
-    (profile as { name?: string | null } | null)?.name?.trim() || "Jugador";
-
-  const { data: pendingRows } = await supabase
-    .from(DB_TABLES.matchResults)
-    .select("match_id, team_a_score, team_b_score, proposed_by, status")
-    .eq("status", "pending_confirmation");
-  const pending = (pendingRows ?? []) as Array<{
-    match_id: string;
-    team_a_score: number | null;
-    team_b_score: number | null;
-    proposed_by?: string | null;
-    status?: string | null;
-  }>;
-
-  let pendingForMe: typeof pending = [];
-  if (pending.length > 0) {
-    const matchIds = pending.map((r) => r.match_id);
-    const { data: myParticipations } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("match_id, player_id")
-      .eq("player_id", user.id)
-      .in("match_id", matchIds);
-    const mine = new Set((myParticipations ?? []).map((r: { match_id: string }) => r.match_id));
-    pendingForMe = pending.filter((r) => mine.has(r.match_id) && r.proposed_by !== user.id);
-  }
+  const [displayName, pendingForMe] = await Promise.all([
+    getCachedProfileDisplayName(user.id),
+    getCachedPendingResultsForUser(user.id),
+  ]);
 
   return (
     <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
@@ -173,10 +149,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ) : null}
 
       <section className="space-y-4">
-        <Suspense fallback={null}>
+        <Suspense fallback={<HomeSectionLineSkeleton />}>
           <FriendRequestsSection userId={user.id} />
         </Suspense>
-        <Suspense fallback={null}>
+        <Suspense fallback={<HomeSectionLineSkeleton />}>
           <HomeJoinRequestsSection userId={user.id} />
         </Suspense>
       </section>

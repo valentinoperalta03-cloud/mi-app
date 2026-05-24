@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
 import { isCapacitorIosIpad } from "@/lib/capacitor-device";
@@ -30,8 +31,46 @@ function useCapacitorIosIpad() {
   return isIpad;
 }
 
+function useCapacitorAndroidNative() {
+  const [isAndroidNative, setIsAndroidNative] = useState(false);
+
+  useEffect(() => {
+    setIsAndroidNative(
+      Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
+    );
+  }, []);
+
+  return isAndroidNative;
+}
+
 export function GoogleAuthForm() {
   const isIpadNative = useCapacitorIosIpad();
+  const isAndroidNative = useCapacitorAndroidNative();
+  const [googlePending, setGooglePending] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  async function openGoogleOnAndroid() {
+    setGooglePending(true);
+    setGoogleError(null);
+
+    try {
+      const response = await fetch("/auth/google?getUrl=true", {
+        credentials: "include",
+      });
+      const payload = (await response.json()) as { url?: string; message?: string };
+
+      if (!response.ok || !payload.url) {
+        setGoogleError(payload.message ?? "No se pudo iniciar sesión con Google.");
+        return;
+      }
+
+      await Browser.open({ url: payload.url });
+    } catch {
+      setGoogleError("No se pudo abrir Google. Intentá de nuevo.");
+    } finally {
+      setGooglePending(false);
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -41,9 +80,25 @@ export function GoogleAuthForm() {
           app, usá <strong>Continuar con Apple</strong> o <strong>email y contraseña</strong>.
         </p>
       ) : null}
-      <a href="/auth/google" className={oauthButtonClass}>
-        Continuar con Google
-      </a>
+      {isAndroidNative ? (
+        <button
+          type="button"
+          onClick={() => void openGoogleOnAndroid()}
+          disabled={googlePending}
+          className={oauthButtonClass}
+        >
+          {googlePending ? "Abriendo Google..." : "Continuar con Google"}
+        </button>
+      ) : (
+        <a href="/auth/google" className={oauthButtonClass}>
+          Continuar con Google
+        </a>
+      )}
+      {googleError ? (
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+          {googleError}
+        </p>
+      ) : null}
       {Capacitor.isNativePlatform() && !isIpadNative ? (
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           Si Google falla en la app, usá email y contraseña.

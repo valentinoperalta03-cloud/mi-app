@@ -1,3 +1,12 @@
+export function HomeSectionLineSkeleton() {
+  return (
+    <div
+      className="h-14 w-full animate-pulse rounded-2xl bg-slate-200/50 dark:bg-slate-800/50"
+      aria-hidden
+    />
+  );
+}
+
 export function HomeSuggestionsSkeleton() {
   return (
     <div className="flex gap-3 overflow-hidden">

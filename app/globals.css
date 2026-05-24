@@ -28,6 +28,15 @@
   --border-subtle: rgba(0,0,0,0.08);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
   --glass-bg: rgba(255,255,255,0.85);
+  --player-bottom-nav-inner-height: 5.75rem;
+  --player-bottom-nav-edge-padding: 0.75rem;
+  --player-bottom-nav-safe-padding: max(
+    var(--player-bottom-nav-edge-padding),
+    env(safe-area-inset-bottom, 0px)
+  );
+  --player-bottom-nav-offset: calc(
+    var(--player-bottom-nav-inner-height) + var(--player-bottom-nav-safe-padding)
+  );
 }
 
 .dark {
@@ -99,7 +108,7 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Roboto", var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg-app);
   color: var(--text-primary);
@@ -111,6 +120,28 @@ body {
 .player-route-screen {
   width: 100%;
   max-width: 100%;
+}
+
+/* Barra inferior fija: respeta home indicator (iOS) y gestos (Android immersive) */
+.player-bottom-nav {
+  padding-bottom: var(--player-bottom-nav-safe-padding);
+}
+
+/* Contenido principal: espacio para la barra inferior + safe area */
+.player-app-shell > div:has(+ nav.player-bottom-nav) {
+  padding-bottom: var(--player-bottom-nav-offset);
+}
+
+/* Android/iPhone nativo: mínimo extra si env(safe-area-inset-bottom) es 0 */
+html.capacitor-native:not(.capacitor-ipad) {
+  --player-bottom-nav-safe-padding: max(
+    var(--player-bottom-nav-edge-padding),
+    env(safe-area-inset-bottom, 0px),
+    1.25rem
+  );
+  --player-bottom-nav-offset: calc(
+    var(--player-bottom-nav-inner-height) + var(--player-bottom-nav-safe-padding)
+  );
 }
 
 /* Columna de contenido centrada; en tablet/iPad crece con la pantalla */

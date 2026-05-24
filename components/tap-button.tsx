@@ -2,6 +2,7 @@
 
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
+import { lightTap } from "@/lib/haptics";
 
 type TapButtonProps = HTMLMotionProps<"button"> & {
   children?: ReactNode;
@@ -26,6 +27,7 @@ export function TapButton({
   className,
   transition,
   whileTap,
+  onTapStart,
   ...props
 }: TapButtonProps) {
   const isTouch = useIsTouchDevice();
@@ -43,6 +45,10 @@ export function TapButton({
           mass: 0.6,
         }
       }
+      onTapStart={(event, info) => {
+        void lightTap();
+        onTapStart?.(event, info);
+      }}
       {...props}
     >
       {children}
