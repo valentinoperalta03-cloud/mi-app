@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
+import { startAndroidGoogleOAuth } from "@/lib/android-google-oauth";
 import { isCapacitorIosIpad } from "@/lib/capacitor-device";
 import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
 import {
@@ -54,17 +54,10 @@ export function GoogleAuthForm() {
     setGoogleError(null);
 
     try {
-      const response = await fetch("/auth/google?getUrl=true", {
-        credentials: "include",
-      });
-      const payload = (await response.json()) as { url?: string; message?: string };
-
-      if (!response.ok || !payload.url) {
-        setGoogleError(payload.message ?? "No se pudo iniciar sesión con Google.");
-        return;
+      const result = await startAndroidGoogleOAuth();
+      if (!result.ok) {
+        setGoogleError(result.message);
       }
-
-      await Browser.open({ url: payload.url });
     } catch {
       setGoogleError("No se pudo abrir Google. Intentá de nuevo.");
     } finally {
