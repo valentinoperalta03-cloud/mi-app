@@ -54,34 +54,44 @@ export default function TopNav() {
     const supabase = createClient();
     let active = true;
 
-    void supabase.auth.getUser().then(async ({ data }) => {
-      const userId = data.user?.id;
-      if (!userId) return;
-      const { data: profile } = await supabase
-        .from(DB_TABLES.profiles)
-        .select("name, avatar_url, category")
-        .eq("user_id", userId)
-        .maybeSingle();
+    async function load() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const userId = data.user?.id;
+        if (!userId) return;
+        const { data: profile } = await supabase
+          .from(DB_TABLES.profiles)
+          .select("name, avatar_url, category")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-      if (!active) return;
-      const typed = profile as {
-        name?: string | null;
-        avatar_url?: string | null;
-        category?: string | null;
-      } | null;
-      setName(typed?.name?.trim() || "Jugador");
-      setAvatarUrl(typed?.avatar_url ?? null);
-      setCategory(typed?.category ?? null);
+        if (!active) return;
+        const typed = profile as {
+          name?: string | null;
+          avatar_url?: string | null;
+          category?: string | null;
+        } | null;
+        setName(typed?.name?.trim() || "Jugador");
+        setAvatarUrl(typed?.avatar_url ?? null);
+        setCategory(typed?.category ?? null);
 
-      const { count } = await supabase
-        .from(DB_TABLES.notifications)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("read", false);
-      if (!active) return;
-      setUnreadCount(count ?? 0);
-    });
+        const { count } = await supabase
+          .from(DB_TABLES.notifications)
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("read", false);
+        if (!active) return;
+        setUnreadCount(count ?? 0);
+      } catch (err) {
+        console.error("[TopNav] profile load failed", err);
+        if (!active) return;
+        setName("Jugador");
+        setAvatarUrl(null);
+        setUnreadCount(0);
+      }
+    }
 
+    void load();
     return () => {
       active = false;
     };
@@ -104,11 +114,20 @@ export default function TopNav() {
 
   async function handleSignOut() {
     setBusy(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    closeDrawer();
-    router.replace("/login");
-    router.refresh();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      closeDrawer();
+      router.replace("/login");
+      router.refresh();
+    } catch (err) {
+      console.error("[TopNav] sign out failed", err);
+      closeDrawer();
+      router.replace("/login");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

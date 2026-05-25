@@ -24,19 +24,30 @@ export default function BottomNav() {
   useEffect(() => {
     const supabase = createClient();
     let active = true;
-    void supabase.auth.getUser().then(async ({ data }) => {
-      const userId = data.user?.id;
-      if (!userId) return;
-      const { data: profile } = await supabase
-        .from(DB_TABLES.profiles)
-        .select("name, avatar_url")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (!active) return;
-      const typed = profile as { name?: string | null; avatar_url?: string | null } | null;
-      setMyAvatarUrl(typed?.avatar_url ?? null);
-      setMyName(typed?.name?.trim() || "Perfil");
-    });
+
+    async function load() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const userId = data.user?.id;
+        if (!userId) return;
+        const { data: profile } = await supabase
+          .from(DB_TABLES.profiles)
+          .select("name, avatar_url")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (!active) return;
+        const typed = profile as { name?: string | null; avatar_url?: string | null } | null;
+        setMyAvatarUrl(typed?.avatar_url ?? null);
+        setMyName(typed?.name?.trim() || "Perfil");
+      } catch (err) {
+        console.error("[BottomNav] profile load failed", err);
+        if (!active) return;
+        setMyAvatarUrl(null);
+        setMyName("Perfil");
+      }
+    }
+
+    void load();
     return () => {
       active = false;
     };
