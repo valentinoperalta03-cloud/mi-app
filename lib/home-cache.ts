@@ -23,23 +23,22 @@ async function fetchProfileDisplayName(userId: string): Promise<string> {
 
 async function fetchPendingResultsForUser(userId: string): Promise<PendingResultForHome[]> {
   const supabase = await createClient();
+
+  const { data: participations } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("match_id")
+    .eq("player_id", userId);
+
+  const matchIds = [...new Set((participations ?? []).map((r: { match_id: string }) => r.match_id))];
+  if (matchIds.length === 0) return [];
+
   const { data: pendingRows } = await supabase
     .from(DB_TABLES.matchResults)
     .select("match_id, team_a_score, team_b_score, proposed_by, status")
-    .eq("status", "pending_confirmation");
-
-  const pending = (pendingRows ?? []) as PendingResultForHome[];
-  if (pending.length === 0) return [];
-
-  const matchIds = pending.map((r) => r.match_id);
-  const { data: myParticipations } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("match_id, player_id")
-    .eq("player_id", userId)
+    .eq("status", "pending_confirmation")
     .in("match_id", matchIds);
 
-  const mine = new Set((myParticipations ?? []).map((r: { match_id: string }) => r.match_id));
-  return pending.filter((r) => mine.has(r.match_id) && r.proposed_by !== userId);
+  return ((pendingRows ?? []) as PendingResultForHome[]).filter((r) => r.proposed_by !== userId);
 }
 
 export function getCachedProfileDisplayName(userId: string) {

@@ -6,10 +6,29 @@ import { createClient } from "@/utils/supabase/server";
 export default async function HomeJoinRequestsSection({ userId }: { userId: string }) {
   const supabase = await createClient();
 
+  const [{ data: ownedMatches }, { data: participations }] = await Promise.all([
+    supabase.from(DB_TABLES.matches).select("id").eq("owner_id", userId),
+    supabase.from(DB_TABLES.matchParticipants).select("match_id").eq("player_id", userId),
+  ]);
+
+  const ownerMatchIds = new Set((ownedMatches ?? []).map((row: { id: string }) => row.id));
+  const matchIds = [
+    ...new Set([
+      ...ownerMatchIds,
+      ...(participations ?? []).map((row: { match_id: string }) => row.match_id),
+    ]),
+  ];
+
+  if (matchIds.length === 0) return null;
+
   const { data: rows } = await supabase
     .from(DB_TABLES.matchJoinRequests)
     .select("id, match_id, player_id, created_at")
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .in("match_id", matchIds)
+    .neq("player_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const pending = (rows ?? []) as Array<{
     id: string;
@@ -19,28 +38,15 @@ export default async function HomeJoinRequestsSection({ userId }: { userId: stri
   }>;
   if (pending.length === 0) return null;
 
-  const matchIds = [...new Set(pending.map((item) => item.match_id))];
   const requesterIds = [...new Set(pending.map((item) => item.player_id))];
-
-  const [{ data: myParticipations }, { data: myOwnedMatches }, { data: requesterProfiles }] = await Promise.all([
-    supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("match_id, player_id")
-      .in("match_id", matchIds)
-      .eq("player_id", userId),
-    matchIds.length > 0
-      ? supabase.from(DB_TABLES.matches).select("id").eq("owner_id", userId).in("id", matchIds)
-      : Promise.resolve({ data: [] as { id: string }[] }),
+  const { data: requesterProfiles } =
     requesterIds.length > 0
-      ? supabase
+      ? await supabase
           .from(DB_TABLES.profiles)
           .select("user_id, name, category, avatar_url")
           .in("user_id", requesterIds)
-      : Promise.resolve({ data: [] as Array<{ user_id: string; name: string | null; category: string | null; avatar_url: string | null }> }),
-  ]);
+      : { data: [] as Array<{ user_id: string; name: string | null; category: string | null; avatar_url: string | null }> };
 
-  const allowedMatchIds = new Set((myParticipations ?? []).map((row: { match_id: string }) => row.match_id));
-  const ownerMatchIds = new Set((myOwnedMatches ?? []).map((row: { id: string }) => row.id));
   const profileMap = new Map(
     ((requesterProfiles ?? []) as Array<{
       user_id: string;
@@ -50,23 +56,17 @@ export default async function HomeJoinRequestsSection({ userId }: { userId: stri
     }>).map((profile) => [profile.user_id, profile])
   );
 
-  const visible = pending
-    .filter(
-      (row) =>
-        row.player_id !== userId &&
-        (allowedMatchIds.has(row.match_id) || ownerMatchIds.has(row.match_id))
-    )
-    .map((row) => {
-      const prof = profileMap.get(row.player_id);
-      return {
-        id: row.id,
-        matchId: row.match_id,
-        requesterName: prof?.name?.trim() || "Jugador",
-        requesterCategory: prof?.category?.trim() || "Sin nivel",
-        avatarUrl: prof?.avatar_url ?? null,
-        isOwnerRequest: ownerMatchIds.has(row.match_id),
-      };
-    });
+  const visible = pending.map((row) => {
+    const prof = profileMap.get(row.player_id);
+    return {
+      id: row.id,
+      matchId: row.match_id,
+      requesterName: prof?.name?.trim() || "Jugador",
+      requesterCategory: prof?.category?.trim() || "Sin nivel",
+      avatarUrl: prof?.avatar_url ?? null,
+      isOwnerRequest: ownerMatchIds.has(row.match_id),
+    };
+  });
 
   if (visible.length === 0) return null;
 
