@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   Bell,
   CircleHelp,
@@ -17,6 +16,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 import { DB_TABLES } from "@/lib/db-tables";
 import { HEADER_GRADIENT } from "@/lib/status-bar-color";
 import { createClient } from "@/utils/supabase/client";
@@ -41,6 +41,129 @@ const supportItems: DrawerItem[] = [
   { href: "/legal/privacidad", label: "Política de privacidad", icon: FileText },
 ];
 
+function PlayerDrawer({
+  open,
+  onClose,
+  busy,
+  onSignOut,
+  name,
+  avatarUrl,
+  category,
+  initial,
+}: {
+  open: boolean;
+  onClose: () => void;
+  busy: boolean;
+  onSignOut: () => void;
+  name: string;
+  avatarUrl: string | null;
+  category: string | null;
+  initial: string;
+}) {
+  if (!open) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Cerrar menú"
+        className="fixed inset-0 z-[75] bg-black/40"
+        onClick={onClose}
+      />
+
+      <aside
+        role="dialog"
+        aria-modal="true"
+        id="player-account-drawer"
+        aria-label="Menú de cuenta"
+        className="fixed right-0 top-0 z-[76] flex h-dvh w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
+        style={{
+          boxShadow: "var(--shadow-card)",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+        }}
+      >
+        <div
+          className="border-b border-white/15 p-5"
+          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        >
+          <div className="flex items-center gap-3">
+            {avatarUrl?.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
+              <img
+                src={avatarUrl}
+                alt=""
+                width={44}
+                height={44}
+                className="h-11 w-11 rounded-full object-cover ring-2 ring-white/50"
+              />
+            ) : (
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/50">
+                {initial}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate font-bold text-white">{name}</p>
+              <div className="mt-1">
+                <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">
+                  {category ? `Nivel ${category}` : "Sin nivel asignado"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">TU CUENTA</p>
+        {accountItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+            >
+              <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
+                <Icon size={16} />
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+
+        <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">SOPORTE</p>
+        {supportItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+            >
+              <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
+                <Icon size={16} />
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={onSignOut}
+          disabled={busy}
+          className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-400/25 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-900/30"
+        >
+          <span className="rounded-full bg-red-100 p-2 text-red-500 dark:bg-red-950/30 dark:text-red-300">
+            <LogOut size={16} />
+          </span>
+          <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
+        </button>
+      </aside>
+    </>
+  );
+}
+
 export default function TopNav() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -49,6 +172,11 @@ export default function TopNav() {
   const [name, setName] = useState("Jugador");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -99,9 +227,11 @@ export default function TopNav() {
 
   useEffect(() => {
     document.body.classList.toggle("player-drawer-open", open);
+    document.body.style.overflow = open ? "hidden" : "";
     window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open } }));
     return () => {
       document.body.classList.remove("player-drawer-open");
+      document.body.style.overflow = "";
       window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open: false } }));
     };
   }, [open]);
@@ -139,10 +269,27 @@ export default function TopNav() {
     }
   }
 
+  const drawer =
+    portalReady && typeof document !== "undefined"
+      ? createPortal(
+          <PlayerDrawer
+            open={open}
+            onClose={closeDrawer}
+            busy={busy}
+            onSignOut={() => void handleSignOut()}
+            name={name}
+            avatarUrl={avatarUrl}
+            category={category}
+            initial={initial}
+          />,
+          document.body
+        )
+      : null;
+
   return (
     <>
       <header
-        className="fixed inset-x-0 top-0 z-[70] flex justify-center"
+        className="fixed inset-x-0 top-0 z-[80] flex justify-center"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
           background: HEADER_GRADIENT,
@@ -175,13 +322,11 @@ export default function TopNav() {
               </Link>
               <button
                 type="button"
-                className="relative z-[71] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setOpen(true);
-                }}
+                className="relative z-[81] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
+                onClick={() => setOpen(true)}
                 aria-label="Abrir menú lateral"
                 aria-expanded={open}
+                aria-controls="player-account-drawer"
               >
                 <Menu size={20} className="text-white" />
               </button>
@@ -194,108 +339,7 @@ export default function TopNav() {
         </div>
       </header>
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            aria-label="Cerrar menú"
-            className="fixed inset-0 z-[68] bg-black/40"
-            onClick={closeDrawer}
-          />
-
-          <motion.aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menú de cuenta"
-            className="fixed right-0 top-0 z-[69] flex h-dvh w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
-            style={{
-              boxShadow: "var(--shadow-card)",
-              paddingTop: "env(safe-area-inset-top, 0px)",
-            }}
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-                  <div
-                    className="border-b border-white/15 p-5"
-                    style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-                  >
-                    <div className="flex items-center gap-3">
-                      {avatarUrl?.trim() ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- avatar externo desde Supabase
-                        <img
-                          src={avatarUrl}
-                          alt=""
-                          width={44}
-                          height={44}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-white/50"
-                        />
-                      ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/50">
-                          {initial}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-white">{name}</p>
-                        <div className="mt-1">
-                          <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">
-                            {category ? `Nivel ${category}` : "Sin nivel asignado"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">TU CUENTA</p>
-                  {accountItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
-                      >
-                        <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
-                          <Icon size={16} />
-                        </span>
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-
-                  <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">SOPORTE</p>
-                  {supportItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.label}
-                        href={item.href}
-                        onClick={closeDrawer}
-                        className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
-                      >
-                        <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
-                          <Icon size={16} />
-                        </span>
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-
-                  <button
-                    type="button"
-                    onClick={() => void handleSignOut()}
-                    disabled={busy}
-                    className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-400/25 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-900/30"
-                  >
-                    <span className="rounded-full bg-red-100 p-2 text-red-500 dark:bg-red-950/30 dark:text-red-300">
-                      <LogOut size={16} />
-                    </span>
-                    <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
-                  </button>
-          </motion.aside>
-        </>
-      ) : null}
+      {drawer}
     </>
   );
 }

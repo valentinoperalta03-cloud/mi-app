@@ -221,12 +221,20 @@ html.capacitor-native:not(.capacitor-ipad) {
 .player-route-root,
 .player-route-screen {
   background-color: var(--bg-app);
-  will-change: transform;
 }
 
-.player-route-screen {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+/* En nativo: sin transform en el contenedor de ruta (rompe fixed/touch en WKWebView) */
+html.capacitor-native .player-route-root,
+html.capacitor-native .player-route-screen {
+  transform: none !important;
+  will-change: auto;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+}
+
+/* Web: solo fade opcional; no forzar capa de composición por transform */
+html:not(.capacitor-native) .player-route-screen {
+  will-change: opacity;
 }
 
 .dark body { background-color: #000000; }
