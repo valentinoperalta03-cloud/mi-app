@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 const PLAYER_TAB_ROOTS = new Set(["/home", "/comunidad", "/perfil", "/clubes", "/inicio"]);
 
 function closePlayerDrawer() {
-  window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open: false } }));
+  window.dispatchEvent(new CustomEvent("player-drawer-close"));
 }
 
 export default function CapacitorNativeBackButton() {

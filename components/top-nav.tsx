@@ -229,20 +229,19 @@ export default function TopNav() {
     document.body.classList.toggle("player-drawer-open", open);
     document.body.style.overflow = open ? "hidden" : "";
     window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open } }));
-    return () => {
-      document.body.classList.remove("player-drawer-open");
-      document.body.style.overflow = "";
-      window.dispatchEvent(new CustomEvent("player-drawer-toggle", { detail: { open: false } }));
-    };
   }, [open]);
 
   useEffect(() => {
-    const onDrawerToggle = (event: Event) => {
-      const custom = event as CustomEvent<{ open?: boolean }>;
-      if (custom.detail?.open === false) setOpen(false);
+    return () => {
+      document.body.classList.remove("player-drawer-open");
+      document.body.style.overflow = "";
     };
-    window.addEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
-    return () => window.removeEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const onCloseRequest = () => setOpen(false);
+    window.addEventListener("player-drawer-close", onCloseRequest);
+    return () => window.removeEventListener("player-drawer-close", onCloseRequest);
   }, []);
 
   const initial = useMemo(() => (name.trim()[0] ?? "J").toUpperCase(), [name]);
@@ -323,8 +322,11 @@ export default function TopNav() {
               <button
                 type="button"
                 className="relative z-[81] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
-                onClick={() => setOpen(true)}
-                aria-label="Abrir menú lateral"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen((current) => !current);
+                }}
+                aria-label={open ? "Cerrar menú lateral" : "Abrir menú lateral"}
                 aria-expanded={open}
                 aria-controls="player-account-drawer"
               >
