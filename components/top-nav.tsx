@@ -106,6 +106,15 @@ export default function TopNav() {
     };
   }, [open]);
 
+  useEffect(() => {
+    const onDrawerToggle = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      if (custom.detail?.open === false) setOpen(false);
+    };
+    window.addEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+    return () => window.removeEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+  }, []);
+
   const initial = useMemo(() => (name.trim()[0] ?? "J").toUpperCase(), [name]);
 
   function closeDrawer() {

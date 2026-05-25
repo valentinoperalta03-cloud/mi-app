@@ -34,18 +34,33 @@ export default function CapacitorSplashHide() {
       hideSplash();
     };
 
-    const hideOnReady = () => hideOnce();
     const hardMax = window.setTimeout(hideOnce, SPLASH_MAX_MS);
 
+    const onShellReady = () => {
+      window.requestAnimationFrame(() => hideOnce());
+    };
+
+    window.addEventListener("capacitor-shell-ready", onShellReady, { once: true });
+
     if (document.readyState === "complete") {
-      window.setTimeout(hideOnReady, 300);
+      window.setTimeout(() => {
+        if (!hidden) hideOnce();
+      }, 600);
     } else {
-      window.addEventListener("load", hideOnReady, { once: true });
+      window.addEventListener(
+        "load",
+        () => {
+          window.setTimeout(() => {
+            if (!hidden) hideOnce();
+          }, 600);
+        },
+        { once: true }
+      );
     }
 
     return () => {
       window.clearTimeout(hardMax);
-      window.removeEventListener("load", hideOnReady);
+      window.removeEventListener("capacitor-shell-ready", onShellReady);
     };
   }, []);
 

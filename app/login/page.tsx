@@ -1,4 +1,5 @@
 import Image from "next/image";
+import CapacitorShellReady from "@/components/capacitor-shell-ready";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { AppleAuthForm, EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
@@ -30,6 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <main className="login-page-main relative isolate flex min-h-dvh flex-col justify-center overflow-y-auto bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
+      <CapacitorShellReady />
       <div className="login-page-inner player-shell-inner mx-auto w-full px-4 md:max-w-2xl">
         <div className="login-page-card rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
           <div className="mb-8 flex flex-col items-center text-center">

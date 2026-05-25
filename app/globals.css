@@ -86,6 +86,34 @@ html.capacitor-native {
 html.capacitor-native body {
   background-color: var(--bg-app);
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch nativo: sin hover de escritorio, inputs ≥16px (evita zoom iOS) */
+@media (hover: none) and (pointer: coarse) {
+  html.capacitor-native a:hover,
+  html.capacitor-native button:hover {
+    background-color: inherit;
+  }
+}
+
+html.capacitor-native input,
+html.capacitor-native select,
+html.capacitor-native textarea {
+  font-size: 16px;
+}
+
+html.capacitor-native .player-bottom-nav a,
+html.capacitor-native .player-bottom-nav button,
+html.capacitor-native header button,
+html.capacitor-native header a {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.capacitor-native button,
+html.capacitor-native [role="button"] {
+  cursor: default;
 }
 
 /* Fill status-bar safe area (iOS does not support StatusBar.setBackgroundColor) */

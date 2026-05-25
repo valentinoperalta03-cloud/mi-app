@@ -7,6 +7,7 @@ import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { lightTap } from "@/lib/haptics";
 import { createClient } from "@/utils/supabase/client";
 
 const items = [
@@ -91,6 +92,9 @@ export default function BottomNav() {
               href={item.href}
               aria-label={`Ir a ${item.label}`}
               aria-current={active ? "page" : undefined}
+              onClick={() => {
+                if (!active) void lightTap();
+              }}
               className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-full py-2.5 text-[11px] font-semibold transition-colors ${
                 active ? "text-white" : "text-white/55"
               }`}
