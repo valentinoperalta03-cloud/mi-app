@@ -39,7 +39,7 @@ export default function CapacitorOfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 z-[60] flex h-0 touch-none justify-center overflow-visible px-4"
+      className="pointer-events-none fixed inset-x-0 z-[60] flex h-0 justify-center overflow-visible px-4"
       style={{ top: "calc(env(safe-area-inset-top, 0px) + 3.75rem)" }}
     >
       <p className="rounded-full bg-slate-900/90 px-4 py-2 text-center text-xs font-semibold text-white shadow-lg backdrop-blur-sm">

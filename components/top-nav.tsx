@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Bell,
   CircleHelp,
@@ -142,13 +142,13 @@ export default function TopNav() {
   return (
     <>
       <header
-        className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex touch-none justify-center"
+        className="fixed inset-x-0 top-0 z-[70] flex justify-center"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
           background: HEADER_GRADIENT,
         }}
       >
-        <div className="player-shell-inner pointer-events-auto w-full px-4">
+        <div className="player-shell-inner w-full px-4">
           <div
             className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
             style={{ background: HEADER_GRADIENT }}
@@ -175,9 +175,13 @@ export default function TopNav() {
               </Link>
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
-                onClick={() => setOpen(true)}
+                className="relative z-[71] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen(true);
+                }}
                 aria-label="Abrir menú lateral"
+                aria-expanded={open}
               >
                 <Menu size={20} className="text-white" />
               </button>
@@ -190,36 +194,28 @@ export default function TopNav() {
         </div>
       </header>
 
-      <AnimatePresence>
-        {open ? (
-          <>
-            <motion.button
-              key="player-drawer-backdrop"
-              type="button"
-              aria-label="Cerrar menú"
-              className="fixed inset-0 z-[55] bg-black/40"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, pointerEvents: "none" }}
-              transition={{ duration: 0.2 }}
-              onClick={closeDrawer}
-            />
+      {open ? (
+        <>
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            className="fixed inset-0 z-[68] bg-black/40"
+            onClick={closeDrawer}
+          />
 
-            <div
-              key="player-drawer-panel"
-              className="pointer-events-none fixed inset-0 z-[56] flex justify-center"
-            >
-              <div className="player-shell-inner pointer-events-none relative w-full px-4">
-                <motion.aside
-                  className="pointer-events-auto absolute right-0 top-0 z-[57] flex h-full w-80 max-w-[85%] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
-                  style={{
-                    boxShadow: "var(--shadow-card)",
-                  }}
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%", pointerEvents: "none" }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                >
+          <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú de cuenta"
+            className="fixed right-0 top-0 z-[69] flex h-dvh w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
+            style={{
+              boxShadow: "var(--shadow-card)",
+              paddingTop: "env(safe-area-inset-top, 0px)",
+            }}
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
                   <div
                     className="border-b border-white/15 p-5"
                     style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
@@ -297,12 +293,9 @@ export default function TopNav() {
                     </span>
                     <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
                   </button>
-                </motion.aside>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </AnimatePresence>
+          </motion.aside>
+        </>
+      ) : null}
     </>
   );
 }
