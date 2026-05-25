@@ -37,6 +37,11 @@
   --player-bottom-nav-offset: calc(
     var(--player-bottom-nav-inner-height) + var(--player-bottom-nav-safe-padding)
   );
+  /* TopNav: h-14 (3.5rem) + línea 0.5 (0.125rem) + safe area */
+  --player-top-chrome-height: calc(3.5rem + 0.125rem);
+  --player-top-chrome-offset: calc(
+    env(safe-area-inset-top, 0px) + var(--player-top-chrome-height)
+  );
 }
 
 .dark {

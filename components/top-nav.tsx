@@ -10,6 +10,7 @@ import {
   FileText,
   LogOut,
   Menu,
+  X,
   Settings,
   Shield,
   User,
@@ -76,10 +77,12 @@ function PlayerDrawer({
         aria-modal="true"
         id="player-account-drawer"
         aria-label="Menú de cuenta"
-        className="fixed right-0 top-0 z-[76] flex h-dvh w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
+        className="player-account-drawer fixed right-0 z-[76] flex w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white shadow-2xl dark:bg-[#1C1C1E]"
         style={{
           boxShadow: "var(--shadow-card)",
-          paddingTop: "env(safe-area-inset-top, 0px)",
+          top: "var(--player-top-chrome-offset)",
+          height: "calc(100dvh - var(--player-top-chrome-offset))",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)",
         }}
       >
         <div
@@ -152,9 +155,9 @@ function PlayerDrawer({
           type="button"
           onClick={onSignOut}
           disabled={busy}
-          className="mx-4 mb-0 mt-auto flex items-center gap-3 rounded-2xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-400/25 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-900/30"
+          className="mx-4 mb-4 mt-auto flex items-center gap-3 rounded-2xl border border-red-700/25 bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-500/30 dark:bg-red-700 dark:hover:bg-red-600"
         >
-          <span className="rounded-full bg-red-100 p-2 text-red-500 dark:bg-red-950/30 dark:text-red-300">
+          <span className="rounded-full bg-white/20 p-2 text-white">
             <LogOut size={16} />
           </span>
           <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
@@ -330,7 +333,11 @@ export default function TopNav() {
                 aria-expanded={open}
                 aria-controls="player-account-drawer"
               >
-                <Menu size={20} className="text-white" />
+                {open ? (
+                  <X size={20} className="text-white" aria-hidden />
+                ) : (
+                  <Menu size={20} className="text-white" aria-hidden />
+                )}
               </button>
             </div>
           </div>
