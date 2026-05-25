@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import "leaflet/dist/leaflet.css";
 import BottomNav from "@/components/bottom-nav";
 import TopNav from "@/components/top-nav";
 
