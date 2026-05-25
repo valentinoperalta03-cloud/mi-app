@@ -108,6 +108,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <Link
             key={title}
             href={href}
+            prefetch
             className="group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-white transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
             style={{ background: gradient, boxShadow: shadow }}
           >
@@ -124,6 +125,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <Link
         href="/clubes"
+        prefetch
         className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition hover:opacity-95 active:scale-[0.99]"
       >
         <Building2 size={20} className="shrink-0 text-[#0585FC]" aria-hidden />

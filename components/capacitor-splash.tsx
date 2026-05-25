@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
+import { prefetchPlayerHomeData } from "@/lib/player-route-prefetch";
 
 const SPLASH_MAX_MS = 4000;
 
@@ -12,20 +13,11 @@ function hideSplash() {
   });
 }
 
-function prefetchHomeData() {
-  void fetch("/api/prefetch", {
-    credentials: "include",
-    cache: "no-store",
-  }).catch(() => {
-    // Prefetch is best-effort; home still loads normally on miss.
-  });
-}
-
 export default function CapacitorSplashHide() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    prefetchHomeData();
+    prefetchPlayerHomeData();
 
     let hidden = false;
     const hideOnce = () => {

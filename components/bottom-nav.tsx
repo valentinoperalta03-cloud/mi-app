@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, UserCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProfileAvatar } from "@/components/profile-avatar";
@@ -17,6 +17,7 @@ const items = [
 ] as const;
 
 export default function BottomNav() {
+  const router = useRouter();
   const pathname = usePathname();
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
   const [myName, setMyName] = useState<string>("Perfil");
@@ -90,8 +91,16 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               aria-label={`Ir a ${item.label}`}
               aria-current={active ? "page" : undefined}
+              onPointerEnter={() => {
+                try {
+                  router.prefetch(item.href);
+                } catch {
+                  // ignore
+                }
+              }}
               onClick={() => {
                 if (!active) void lightTap();
               }}

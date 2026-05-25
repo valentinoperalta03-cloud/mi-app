@@ -116,6 +116,20 @@ html.capacitor-native [role="button"] {
   cursor: default;
 }
 
+@keyframes player-nav-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.player-nav-progress-bar {
+  animation: player-nav-progress 0.85s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, #38bdf8, #0585fc, transparent);
+}
+
 /* Fill status-bar safe area (iOS does not support StatusBar.setBackgroundColor) */
 html.capacitor-native::after {
   content: "";

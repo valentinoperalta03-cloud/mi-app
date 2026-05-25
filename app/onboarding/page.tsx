@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { AppleToast } from "@/components/apple-toast";
 import {
@@ -28,6 +29,7 @@ function categoryDescription(categoryLine: string): string {
 }
 
 export default function OnboardingPage({ defaultName = "" }: { defaultName?: string }) {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [quizIndex, setQuizIndex] = useState(0);
@@ -146,7 +148,8 @@ export default function OnboardingPage({ defaultName = "" }: { defaultName?: str
           return;
         }
       }
-      window.location.replace("/perfil");
+      router.replace("/perfil");
+      router.refresh();
     });
   }
 

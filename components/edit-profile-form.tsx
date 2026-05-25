@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -39,6 +40,7 @@ export function EditProfileForm({
   /** Solo lectura: nivel competitivo (no editable acá). */
   competitiveLevelLine: string;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(updateMyProfile, initial);
   const [deletePending, startDelete] = useTransition();
   const [previewUrl, setPreviewUrl] = useState(defaultAvatarUrl);
@@ -100,7 +102,8 @@ export function EditProfileForm({
       }
       const supabase = createClient();
       await supabase.auth.signOut();
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     });
   }
 
