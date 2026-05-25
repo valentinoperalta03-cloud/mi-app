@@ -17,11 +17,11 @@ export default function PlayerNavigationProgress() {
 
   return (
     <div
-      className="player-nav-progress pointer-events-none fixed left-0 right-0 z-[55] h-0.5 overflow-hidden"
+      className="player-nav-progress pointer-events-none fixed inset-x-0 z-40 h-0.5 max-h-0.5 touch-none overflow-hidden"
       style={{ top: "calc(env(safe-area-inset-top, 0px) + 3.5rem)" }}
       aria-hidden
     >
-      <div className="player-nav-progress-bar h-full w-2/5 rounded-full bg-sky-300" />
+      <div className="player-nav-progress-bar pointer-events-none h-full w-2/5 rounded-full bg-sky-300" />
     </div>
   );
 }

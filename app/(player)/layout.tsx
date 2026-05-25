@@ -11,9 +11,9 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
     <div className="player-app-shell min-h-dvh w-full max-w-full bg-transparent">
       <CapacitorShellReady />
       <PlayerRoutePrefetch />
-      <PlayerNavigationProgress />
       <CapacitorNativeBackButton />
       <TopNav />
+      <PlayerNavigationProgress />
       <div className="w-full max-w-full pt-[calc(3.5rem+env(safe-area-inset-top,0px))]">
         {children}
       </div>

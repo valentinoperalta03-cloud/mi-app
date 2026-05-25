@@ -142,13 +142,13 @@ export default function TopNav() {
   return (
     <>
       <header
-        className="fixed left-0 right-0 top-0 z-50 flex justify-center"
+        className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex touch-none justify-center"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
           background: HEADER_GRADIENT,
         }}
       >
-        <div className="player-shell-inner w-full px-4">
+        <div className="player-shell-inner pointer-events-auto w-full px-4">
           <div
             className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
             style={{ background: HEADER_GRADIENT }}
@@ -192,29 +192,32 @@ export default function TopNav() {
 
       <AnimatePresence>
         {open ? (
-          <motion.div
-            className="fixed inset-0 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <button
+          <>
+            <motion.button
+              key="player-drawer-backdrop"
               type="button"
-              className="fixed inset-0 z-40 bg-black/40"
-              onClick={closeDrawer}
               aria-label="Cerrar menú"
+              className="fixed inset-0 z-[55] bg-black/40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, pointerEvents: "none" }}
+              transition={{ duration: 0.2 }}
+              onClick={closeDrawer}
             />
 
-            <div className="pointer-events-none fixed inset-0 z-40 flex justify-center">
+            <div
+              key="player-drawer-panel"
+              className="pointer-events-none fixed inset-0 z-[56] flex justify-center"
+            >
               <div className="player-shell-inner pointer-events-none relative w-full px-4">
                 <motion.aside
-                  className="pointer-events-auto absolute right-0 top-0 z-50 flex h-full w-80 max-w-[85%] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
+                  className="pointer-events-auto absolute right-0 top-0 z-[57] flex h-full w-80 max-w-[85%] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white pb-[calc(env(safe-area-inset-bottom)+6.5rem)] shadow-2xl dark:bg-[#1C1C1E]"
                   style={{
                     boxShadow: "var(--shadow-card)",
                   }}
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
+                  exit={{ x: "100%", pointerEvents: "none" }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
                   <div
@@ -297,7 +300,7 @@ export default function TopNav() {
                 </motion.aside>
               </div>
             </div>
-          </motion.div>
+          </>
         ) : null}
       </AnimatePresence>
     </>
