@@ -12,8 +12,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     ) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // Main.storyboard (CAPBridgeViewController) is loaded via UISceneStoryboardFile in Info.plist.
-        window = windowScene.windows.first { $0.isKeyWindow } ?? windowScene.windows.first
+        let bridge = CAPBridgeViewController()
+        let window = UIWindow(windowScene: windowScene)
+        window.rootViewController = bridge
+        window.makeKeyAndVisible()
+        self.window = window
 
         if let urlContext = connectionOptions.urlContexts.first {
             _ = ApplicationDelegateProxy.shared.application(
