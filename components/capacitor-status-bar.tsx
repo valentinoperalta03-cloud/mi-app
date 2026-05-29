@@ -3,18 +3,24 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { isCapacitorIosIpad } from "@/lib/capacitor-device";
+import { applyNativeSafeAreaCssVars } from "@/lib/native-safe-area";
 import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
 
 export default function CapacitorStatusBarInit() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    document.documentElement.classList.add("capacitor-native");
-    document.documentElement.style.setProperty("--status-bar-height", "env(safe-area-inset-top, 0px)");
+    const root = document.documentElement;
+    root.classList.add("capacitor-native");
+    if (Capacitor.getPlatform() === "ios" && isCapacitorIosIpad()) {
+      root.classList.add("capacitor-ipad");
+    }
+
+    applyNativeSafeAreaCssVars(root);
 
     void (async () => {
       try {
-        // iOS ignores setBackgroundColor; overlay + CSS safe-area paints the blue chrome.
         await StatusBar.setOverlaysWebView({ overlay: true });
         await StatusBar.setStyle({ style: Style.Light });
         if (Capacitor.getPlatform() === "android") {
@@ -22,9 +28,19 @@ export default function CapacitorStatusBarInit() {
         }
         await StatusBar.show();
       } catch {
-        // Plugin may be unavailable during web preview; native shell still uses Info.plist.
+        // Plugin unavailable in preview; CSS ::after covers safe area on iOS.
+      } finally {
+        applyNativeSafeAreaCssVars(root);
       }
     })();
+
+    const onResize = () => applyNativeSafeAreaCssVars(root);
+    window.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+    };
   }, []);
 
   return null;

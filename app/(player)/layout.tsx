@@ -14,7 +14,7 @@ export default function PlayerLayout({ children }: { children: ReactNode }) {
       <CapacitorNativeBackButton />
       <TopNav />
       <PlayerNavigationProgress />
-      <div className="w-full max-w-full pt-[calc(3.5rem+env(safe-area-inset-top,0px))]">
+      <div className="w-full max-w-full pt-[var(--player-top-chrome-offset)]">
         {children}
       </div>
       <BottomNav />

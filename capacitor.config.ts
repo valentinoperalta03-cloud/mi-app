@@ -12,8 +12,8 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
-    // iOS 26: solo plugins mínimos para OAuth (Browser + deep link App).
-    includePlugins: ["@capacitor/app", "@capacitor/browser"],
+    // OAuth + chrome nativo (StatusBar no crashea al launch; evitar SplashScreen).
+    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/status-bar"],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,

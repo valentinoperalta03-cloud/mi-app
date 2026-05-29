@@ -32,15 +32,17 @@
   --player-bottom-nav-edge-padding: 0.75rem;
   --player-bottom-nav-safe-padding: max(
     var(--player-bottom-nav-edge-padding),
-    env(safe-area-inset-bottom, 0px)
+    var(--cap-safe-bottom, env(safe-area-inset-bottom, 0px))
   );
   --player-bottom-nav-offset: calc(
     var(--player-bottom-nav-inner-height) + var(--player-bottom-nav-safe-padding)
   );
   /* TopNav: h-14 (3.5rem) + línea 0.5 (0.125rem) + safe area */
+  --cap-safe-top: env(safe-area-inset-top, 0px);
+  --cap-safe-bottom: env(safe-area-inset-bottom, 0px);
   --player-top-chrome-height: calc(3.5rem + 0.125rem);
   --player-top-chrome-offset: calc(
-    env(safe-area-inset-top, 0px) + var(--player-top-chrome-height)
+    var(--cap-safe-top) + var(--player-top-chrome-height)
   );
 }
 
@@ -84,14 +86,23 @@ html {
 }
 
 html.capacitor-native {
-  background-color: #1a6bc4;
+  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
   overscroll-behavior: none;
 }
 
 html.capacitor-native body {
   background-color: var(--bg-app);
+  background-image: linear-gradient(
+    180deg,
+    #0585fc 0%,
+    #0461c4 var(--cap-safe-top),
+    var(--bg-app) var(--cap-safe-top)
+  );
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Touch nativo: sin hover de escritorio, inputs ≥16px (evita zoom iOS) */
@@ -100,6 +111,17 @@ html.capacitor-native body {
   html.capacitor-native button:hover {
     background-color: inherit;
   }
+}
+
+html.capacitor-native input,
+html.capacitor-native select,
+html.capacitor-native textarea,
+html.capacitor-native [contenteditable="true"],
+html.capacitor-native .selectable,
+html.capacitor-native .select-text {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 html.capacitor-native input,
@@ -119,6 +141,7 @@ html.capacitor-native header a {
 html.capacitor-native button,
 html.capacitor-native [role="button"] {
   cursor: default;
+  touch-action: manipulation;
 }
 
 @keyframes player-nav-progress {
@@ -135,17 +158,59 @@ html.capacitor-native [role="button"] {
   background: linear-gradient(90deg, transparent, #38bdf8, #0585fc, transparent);
 }
 
-/* Fill status-bar safe area (iOS does not support StatusBar.setBackgroundColor) */
+/* Franja superior = mismo azul que TopNav / LaunchScreen (iconos claros en status bar) */
 html.capacitor-native::after {
   content: "";
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: env(safe-area-inset-top, 0px);
-  background: linear-gradient(135deg, #1a6bc4 0%, #0461c4 100%);
-  z-index: 49;
+  height: var(--cap-safe-top);
+  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  z-index: 9998;
   pointer-events: none;
+}
+
+/* TopNav edge-to-edge: el azul llega hasta el borde físico de la pantalla */
+.player-top-chrome {
+  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
+}
+
+.player-top-chrome-bar {
+  min-height: 3.5rem;
+}
+
+html.capacitor-native .player-top-chrome {
+  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  padding-top: var(--cap-safe-top);
+}
+
+html.capacitor-native .player-top-chrome-bar {
+  min-height: 3.5rem;
+  padding-left: max(1rem, var(--cap-safe-left, env(safe-area-inset-left, 0px)));
+  padding-right: max(1rem, var(--cap-safe-right, env(safe-area-inset-right, 0px)));
+}
+
+html.capacitor-native .login-page-main {
+  padding-top: max(2.5rem, calc(var(--cap-safe-top) + 1rem));
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    transparent var(--cap-safe-top),
+    #f2f2f7 var(--cap-safe-top),
+    #f2f2f7 100%
+  ) !important;
+}
+
+html.capacitor-native.dark .login-page-main {
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    transparent var(--cap-safe-top),
+    #000 var(--cap-safe-top),
+    #000 100%
+  ) !important;
 }
 
 body {
@@ -183,7 +248,7 @@ body {
 html.capacitor-native:not(.capacitor-ipad) {
   --player-bottom-nav-safe-padding: max(
     var(--player-bottom-nav-edge-padding),
-    env(safe-area-inset-bottom, 0px),
+    var(--cap-safe-bottom, env(safe-area-inset-bottom, 0px)),
     1.25rem
   );
   --player-bottom-nav-offset: calc(

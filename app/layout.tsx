@@ -86,6 +86,11 @@ export default function RootLayout({
     >
       <head>
         <link rel="canonical" href="https://www.padelibre.online" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var ua=navigator.userAgent||"";if(/Capacitor|cordova|ionic/i.test(ua)||location.protocol==="capacitor:"||location.protocol==="ionic:"){document.documentElement.classList.add("capacitor-native")}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
         <CapacitorStatusBarInit />

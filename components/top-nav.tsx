@@ -19,7 +19,6 @@ import {
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { DB_TABLES } from "@/lib/db-tables";
-import { HEADER_GRADIENT } from "@/lib/status-bar-color";
 import { createClient } from "@/utils/supabase/client";
 
 type DrawerItem = {
@@ -290,62 +289,51 @@ export default function TopNav() {
 
   return (
     <>
-      <header
-        className="fixed inset-x-0 top-0 z-[80] flex justify-center"
-        style={{
-          paddingTop: "env(safe-area-inset-top, 0px)",
-          background: HEADER_GRADIENT,
-        }}
-      >
-        <div className="player-shell-inner w-full px-4">
-          <div
-            className="flex h-14 items-center justify-between border-b border-[#0585FC]/25 px-4 backdrop-blur-[20px]"
-            style={{ background: HEADER_GRADIENT }}
-          >
-            <div className="flex items-center gap-2">
-              <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
-              <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
-                Padelibre
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Link
-                href="/notificaciones"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
-                aria-label="Ir a notificaciones"
-              >
-                <Bell size={20} className="text-white" />
-                {unreadCount > 0 ? (
-                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                ) : null}
-              </Link>
-              <button
-                type="button"
-                className="relative z-[81] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/14"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setOpen((current) => !current);
-                }}
-                aria-label={open ? "Cerrar menú lateral" : "Abrir menú lateral"}
-                aria-expanded={open}
-                aria-controls="player-account-drawer"
-              >
-                {open ? (
-                  <X size={20} className="text-white" aria-hidden />
-                ) : (
-                  <Menu size={20} className="text-white" aria-hidden />
-                )}
-              </button>
-            </div>
+      <header className="player-top-chrome fixed inset-x-0 top-0 z-[80]">
+        <div className="player-top-chrome-bar flex items-center justify-between border-b border-white/15 px-4">
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
+            <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
+              Padelibre
+            </span>
           </div>
-          <div
-            className="h-0.5 w-full"
-            style={{ background: "linear-gradient(90deg, #0585FC, #38bdf8, #0585FC)" }}
-          />
+
+          <div className="flex items-center gap-1">
+            <Link
+              href="/notificaciones"
+              className="relative flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+              aria-label="Ir a notificaciones"
+            >
+              <Bell size={20} className="text-white" />
+              {unreadCount > 0 ? (
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              ) : null}
+            </Link>
+            <button
+              type="button"
+              className="relative z-[81] flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen((current) => !current);
+              }}
+              aria-label={open ? "Cerrar menú lateral" : "Abrir menú lateral"}
+              aria-expanded={open}
+              aria-controls="player-account-drawer"
+            >
+              {open ? (
+                <X size={20} className="text-white" aria-hidden />
+              ) : (
+                <Menu size={20} className="text-white" aria-hidden />
+              )}
+            </button>
+          </div>
         </div>
+        <div
+          className="h-0.5 w-full"
+          style={{ background: "linear-gradient(90deg, #0585FC, #38bdf8, #0585FC)" }}
+        />
       </header>
 
       {drawer}

@@ -17,7 +17,7 @@ const SHELL_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="refresh" content="0;url=https://www.padelibre.online/login">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 </head>
 <body>
   <script>window.location.replace('https://www.padelibre.online/login');</script>
