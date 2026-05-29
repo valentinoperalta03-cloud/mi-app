@@ -12,24 +12,17 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
-    // SplashScreen nativo crashea al launch en iOS 26 con SceneDelegate programático.
-    // LaunchScreen.storyboard cubre el arranque; SplashScreen.hide() en JS es no-op seguro.
-    includePlugins: [
-      '@capacitor/app',
-      '@capacitor/browser',
-      '@capacitor/haptics',
-      '@capacitor/network',
-      '@capacitor/status-bar',
-    ],
+    // iOS 26: plugins nativos en load() crashean al launch con SceneDelegate programático.
+    // El JS usa try/catch; LaunchScreen + CSS cubren chrome nativo.
+    includePlugins: [],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,
   },
+  // iOS 26: server.url carga remoto en el bridge al instante y crashea en cold start.
+  // Shell local (capacitor-dist/index.html) redirige a /login; allowNavigation mantiene el dominio.
   server: {
-    url: 'https://www.padelibre.online',
     cleartext: false,
-    /** Ruta inicial en la URL remota (Capacitor 8: appStartPath, no errorPath). */
-    appStartPath: '/login',
     allowNavigation: [
       'padelibre.online',
       '*.padelibre.online',
