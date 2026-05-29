@@ -12,9 +12,8 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
-    // iOS 26: plugins nativos en load() crashean al launch con SceneDelegate programático.
-    // El JS usa try/catch; LaunchScreen + CSS cubren chrome nativo.
-    includePlugins: [],
+    // iOS 26: solo plugins mínimos para OAuth (Browser + deep link App).
+    includePlugins: ["@capacitor/app", "@capacitor/browser"],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
 import { FaApple } from "react-icons/fa";
-import { startAndroidGoogleOAuth } from "@/lib/android-google-oauth";
+import { startNativeAppleOAuth, startNativeGoogleOAuth } from "@/lib/native-oauth";
 import { isCapacitorIosIpad } from "@/lib/capacitor-device";
 import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
 import {
@@ -31,30 +31,31 @@ function useCapacitorIosIpad() {
   return isIpad;
 }
 
-function useCapacitorAndroidNative() {
-  const [isAndroidNative, setIsAndroidNative] = useState(false);
+function useCapacitorNativeOAuth() {
+  const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    setIsAndroidNative(
-      Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android"
+    setEnabled(
+      Capacitor.isNativePlatform() &&
+        (Capacitor.getPlatform() === "android" || Capacitor.getPlatform() === "ios")
     );
   }, []);
 
-  return isAndroidNative;
+  return enabled;
 }
 
 export function GoogleAuthForm() {
   const isIpadNative = useCapacitorIosIpad();
-  const isAndroidNative = useCapacitorAndroidNative();
+  const useNativeOAuth = useCapacitorNativeOAuth();
   const [googlePending, setGooglePending] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
 
-  async function openGoogleOnAndroid() {
+  async function openGoogleNative() {
     setGooglePending(true);
     setGoogleError(null);
 
     try {
-      const result = await startAndroidGoogleOAuth();
+      const result = await startNativeGoogleOAuth();
       if (!result.ok) {
         setGoogleError(result.message);
       }
@@ -73,10 +74,10 @@ export function GoogleAuthForm() {
           app, usá <strong>Continuar con Apple</strong> o <strong>email y contraseña</strong>.
         </p>
       ) : null}
-      {isAndroidNative ? (
+      {useNativeOAuth ? (
         <button
           type="button"
-          onClick={() => void openGoogleOnAndroid()}
+          onClick={() => void openGoogleNative()}
           disabled={googlePending}
           className={oauthButtonClass}
         >
@@ -117,8 +118,48 @@ function useShowAppleSignIn() {
 
 export function AppleAuthForm() {
   const show = useShowAppleSignIn();
+  const useNativeOAuth = useCapacitorNativeOAuth();
+  const [applePending, setApplePending] = useState(false);
+  const [appleError, setAppleError] = useState<string | null>(null);
 
   if (!show) return null;
+
+  async function openAppleNative() {
+    setApplePending(true);
+    setAppleError(null);
+
+    try {
+      const result = await startNativeAppleOAuth();
+      if (!result.ok) {
+        setAppleError(result.message);
+      }
+    } catch {
+      setAppleError("No se pudo abrir Apple. Intentá de nuevo.");
+    } finally {
+      setApplePending(false);
+    }
+  }
+
+  if (useNativeOAuth) {
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => void openAppleNative()}
+          disabled={applePending}
+          className={`${oauthButtonClass} bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100`}
+        >
+          <FaApple className="h-5 w-5 shrink-0" aria-hidden />
+          {applePending ? "Abriendo Apple..." : "Continuar con Apple"}
+        </button>
+        {appleError ? (
+          <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+            {appleError}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <a

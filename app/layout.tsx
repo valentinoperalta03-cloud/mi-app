@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import CapacitorAndroidAuthCallback from "@/components/capacitor-android-auth-callback";
+import CapacitorNativeAuthCallback from "@/components/capacitor-native-auth-callback";
 import CapacitorOfflineBanner from "@/components/capacitor-offline-banner";
 import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
@@ -89,7 +89,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
         <CapacitorStatusBarInit />
-        <CapacitorAndroidAuthCallback />
+        <CapacitorNativeAuthCallback />
         <CapacitorOfflineBanner />
         <CapacitorSplashHide />
         <ThemeProvider>{children}</ThemeProvider>

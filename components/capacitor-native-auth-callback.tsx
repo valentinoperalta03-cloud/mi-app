@@ -1,0 +1,74 @@
+"use client";
+
+import { useEffect } from "react";
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+import {
+  completeNativeOAuthFromDeepLink,
+  parseNativeOAuthCallback,
+} from "@/lib/native-oauth";
+
+function redirectToLoginError(message: string) {
+  const params = new URLSearchParams({
+    kind: "error",
+    message,
+  });
+  window.location.href = `/login?${params.toString()}`;
+}
+
+async function handleOAuthDeepLink(url: string) {
+  if (!parseNativeOAuthCallback(url)) {
+    return;
+  }
+
+  try {
+    await Browser.close();
+  } catch {
+    // Browser sheet already closed
+  }
+
+  const result = await completeNativeOAuthFromDeepLink(url);
+  window.location.href = result.redirectTo;
+}
+
+export default function CapacitorNativeAuthCallback() {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    let removeListener: (() => void) | undefined;
+
+    void App.getLaunchUrl()
+      .then((launch) => {
+        if (launch?.url) {
+          return handleOAuthDeepLink(launch.url);
+        }
+      })
+      .catch((err) => {
+        console.error("[CapacitorNativeAuthCallback] getLaunchUrl failed", err);
+      });
+
+    void App.addListener("appUrlOpen", async (event) => {
+      try {
+        await handleOAuthDeepLink(event.url);
+      } catch (err) {
+        console.error("[CapacitorNativeAuthCallback] OAuth callback failed", err);
+        const message =
+          err instanceof Error ? err.message : "No se pudo completar el inicio de sesión.";
+        redirectToLoginError(message);
+      }
+    })
+      .then((listener) => {
+        removeListener = () => listener.remove();
+      })
+      .catch((err) => {
+        console.error("[CapacitorNativeAuthCallback] failed to register appUrlOpen listener", err);
+      });
+
+    return () => removeListener?.();
+  }, []);
+
+  return null;
+}
