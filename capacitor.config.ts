@@ -12,6 +12,15 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
+    // SplashScreen nativo crashea al launch en iOS 26 con SceneDelegate programático.
+    // LaunchScreen.storyboard cubre el arranque; SplashScreen.hide() en JS es no-op seguro.
+    includePlugins: [
+      '@capacitor/app',
+      '@capacitor/browser',
+      '@capacitor/haptics',
+      '@capacitor/network',
+      '@capacitor/status-bar',
+    ],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,
