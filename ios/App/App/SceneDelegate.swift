@@ -14,7 +14,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let bridge = CAPBridgeViewController()
         let window = UIWindow(windowScene: windowScene)
-        window.backgroundColor = UIColor(red: 26 / 255, green: 107 / 255, blue: 196 / 255, alpha: 1)
+        window.backgroundColor = UIColor(red: 5 / 255, green: 133 / 255, blue: 252 / 255, alpha: 1)
         window.rootViewController = bridge
         window.makeKeyAndVisible()
         self.window = window

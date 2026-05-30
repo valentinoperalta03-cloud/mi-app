@@ -28,7 +28,7 @@ export default function CapacitorStatusBarInit() {
         }
         await StatusBar.show();
       } catch {
-        // Plugin unavailable in preview; CSS ::after covers safe area on iOS.
+        // Plugin unavailable in preview; header CSS covers safe area on iOS.
       } finally {
         applyNativeSafeAreaCssVars(root);
       }

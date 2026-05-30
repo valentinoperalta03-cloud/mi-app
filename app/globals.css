@@ -86,7 +86,7 @@ html {
 }
 
 html.capacitor-native {
-  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  background-color: #0585fc;
   overscroll-behavior: none;
 }
 
@@ -95,7 +95,7 @@ html.capacitor-native body {
   background-image: linear-gradient(
     180deg,
     #0585fc 0%,
-    #0461c4 var(--cap-safe-top),
+    #0585fc var(--cap-safe-top),
     var(--bg-app) var(--cap-safe-top)
   );
   overscroll-behavior: none;
@@ -158,22 +158,9 @@ html.capacitor-native [role="button"] {
   background: linear-gradient(90deg, transparent, #38bdf8, #0585fc, transparent);
 }
 
-/* Franja superior = mismo azul que TopNav / LaunchScreen (iconos claros en status bar) */
-html.capacitor-native::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--cap-safe-top);
-  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
-  z-index: 9998;
-  pointer-events: none;
-}
-
-/* TopNav edge-to-edge: el azul llega hasta el borde físico de la pantalla */
+/* TopNav edge-to-edge: un solo bloque azul (status bar + barra) sin capas duplicadas */
 .player-top-chrome {
-  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  background-color: #0585fc;
   padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
 }
 
@@ -182,7 +169,7 @@ html.capacitor-native::after {
 }
 
 html.capacitor-native .player-top-chrome {
-  background: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  background-color: #0585fc;
   padding-top: var(--cap-safe-top);
 }
 

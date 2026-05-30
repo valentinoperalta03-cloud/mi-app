@@ -290,7 +290,7 @@ export default function TopNav() {
   return (
     <>
       <header className="player-top-chrome fixed inset-x-0 top-0 z-[80]">
-        <div className="player-top-chrome-bar flex items-center justify-between border-b border-white/15 px-4">
+        <div className="player-top-chrome-bar flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
             <span className="text-lg font-bold tracking-tight text-white" style={{ letterSpacing: "-0.02em" }}>
