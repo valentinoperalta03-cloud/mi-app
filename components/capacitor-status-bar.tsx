@@ -34,13 +34,9 @@ export default function CapacitorStatusBarInit() {
       }
     })();
 
-    const onResize = () => applyNativeSafeAreaCssVars(root);
-    window.addEventListener("resize", onResize);
-    window.visualViewport?.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("resize", onResize);
-    };
+    const onOrientationChange = () => applyNativeSafeAreaCssVars(root);
+    window.addEventListener("orientationchange", onOrientationChange);
+    return () => window.removeEventListener("orientationchange", onOrientationChange);
   }, []);
 
   return null;

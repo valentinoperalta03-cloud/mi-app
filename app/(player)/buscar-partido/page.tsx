@@ -15,9 +15,10 @@ export default function BuscarPartidoPage({ searchParams }: PageProps) {
     <div className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] pb-24">
       <OpenMatchesBoard
         searchParams={searchParams}
-        kicker="Comunidad"
         title="Buscar partido"
-        description="Revisa partidos disponibles y crea uno nuevo en segundos."
+        description="Revisá partidos disponibles y unite en segundos."
+        backHref="/home"
+        backLabel="Volver al inicio"
         emptyTitle="No hay partidos abiertos cerca tuyo"
         emptySubtitle="Todavía no hay partidos disponibles en este momento."
         emptyCtaLabel=""

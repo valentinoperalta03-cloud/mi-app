@@ -109,6 +109,7 @@ export async function acceptFriendRequest(
     body: `${receiverName} aceptó tu solicitud de amistad.`,
   });
 
+  revalidatePath("/comunidad/para-ti");
   revalidatePath("/comunidad");
   revalidatePath("/home");
   return { ok: true, message: "¡Ahora son amigos!" };
@@ -127,6 +128,7 @@ export async function rejectFriendRequest(requestId: string): Promise<{ ok: bool
     .eq("id", requestId)
     .eq("receiver_id", user.id);
 
+  revalidatePath("/comunidad/para-ti");
   revalidatePath("/comunidad");
   return { ok: true, message: "Solicitud rechazada." };
 }

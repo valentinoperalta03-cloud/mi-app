@@ -23,12 +23,6 @@ export function applyNativeSafeAreaCssVars(root: HTMLElement): void {
 
   if (top > 0) {
     root.style.setProperty("--cap-safe-top", `${top}px`);
-  } else if (root.classList.contains("capacitor-native") && !root.classList.contains("capacitor-ipad")) {
-    // WKWebView a veces reporta 0 hasta que overlay + viewport-fit=cover aplican.
-    const inset = Math.max(0, window.screen.height - window.innerHeight);
-    if (inset > 20 && inset < 100) {
-      root.style.setProperty("--cap-safe-top", `${inset}px`);
-    }
   }
   if (bottom > 0) {
     root.style.setProperty("--cap-safe-bottom", `${bottom}px`);

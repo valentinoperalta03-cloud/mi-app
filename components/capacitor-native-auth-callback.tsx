@@ -9,6 +9,34 @@ import {
   parseNativeOAuthCallback,
 } from "@/lib/native-oauth";
 
+const HANDLED_OAUTH_URLS_KEY = "padelibre:handled-oauth-urls";
+
+function getHandledOAuthUrls(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(HANDLED_OAUTH_URLS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((item): item is string => typeof item === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function markOAuthUrlHandled(url: string): void {
+  try {
+    const handled = getHandledOAuthUrls();
+    handled.add(url);
+    sessionStorage.setItem(HANDLED_OAUTH_URLS_KEY, JSON.stringify([...handled]));
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
+function wasOAuthUrlHandled(url: string): boolean {
+  return getHandledOAuthUrls().has(url);
+}
+
 function redirectToLoginError(message: string) {
   const params = new URLSearchParams({
     kind: "error",
@@ -21,6 +49,12 @@ async function handleOAuthDeepLink(url: string) {
   if (!parseNativeOAuthCallback(url)) {
     return;
   }
+
+  // getLaunchUrl() persiste en iOS y se re-ejecuta en cada recarga del WebView.
+  if (wasOAuthUrlHandled(url)) {
+    return;
+  }
+  markOAuthUrlHandled(url);
 
   try {
     await Browser.close();

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function FeedPage() {
-  redirect("/comunidad");
+  redirect("/comunidad/para-ti");
 }

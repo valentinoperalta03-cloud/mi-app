@@ -150,7 +150,7 @@ export async function joinMatchAction(
   await addPlayerToMatchGroup(supabase, matchId, userId);
 
   revalidatePath("/buscar-partido");
-  revalidatePath("/comunidad/feed");
+  revalidatePath("/comunidad/para-ti");
   revalidatePath("/feed");
   revalidatePath("/home");
   return { success: true, message: "Te uniste al partido con exito." };

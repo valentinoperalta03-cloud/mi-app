@@ -1,25 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { MessageCircle, Sparkles, Trophy, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
-import { ParaTiCreatePost } from "@/components/para-ti-create-post";
-import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
-import type { LatestMatchLink, PostFeedItem } from "@/lib/para-ti-posts";
 import type { RankingsPreview } from "@/lib/rankings-data";
-import FriendsSearchClient from "./buscar/friends-search-client";
-
-type PlayerCard = {
-  user_id: string;
-  name: string | null;
-  avatar_url: string | null;
-  bio?: string | null;
-  category?: string | null;
-  level?: number | null;
-  level_of_play?: string | null;
-  technical_score?: number | null;
-};
 
 type TileVisual = {
   id: string;
@@ -65,24 +49,19 @@ const tileVisuals: TileVisual[] = [
   },
 ];
 
+const hrefs: Record<string, string> = {
+  "para-ti": "/comunidad/para-ti",
+  jugadores: "/comunidad/jugadores",
+  mensajes: "/comunidad/mensajes",
+  rankings: "/comunidad/rankings",
+};
+
 const outerTileClass =
   "comunidad-gradient-animated block min-h-[112px] w-full min-w-0 rounded-3xl p-[2.5px] text-left shadow-[0_2px_12px_rgba(15,23,42,0.06)] outline-none transition-[transform,box-shadow] duration-200 hover:shadow-[0_8px_28px_rgba(15,23,42,0.1)] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[#0585FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] touch-manipulation dark:focus-visible:ring-offset-black";
 
-function ComunidadNavTile({
-  tile,
-  href,
-  isActive,
-}: {
-  tile: TileVisual;
-  href: string;
-  isActive: boolean;
-}) {
+function ComunidadNavTile({ tile, href }: { tile: TileVisual; href: string }) {
   const inner = (
-    <div
-      className={`relative flex min-h-[106px] flex-col rounded-[20px] bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.05] transition-shadow duration-200 dark:bg-[var(--bg-card)] dark:ring-white/[0.08] ${
-        isActive ? "ring-2 ring-[#0585FC]/40 shadow-[0_4px_20px_-4px_rgba(5,133,252,0.25)]" : ""
-      }`}
-    >
+    <div className="relative flex min-h-[106px] flex-col rounded-[20px] bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.05] transition-shadow duration-200 dark:bg-[var(--bg-card)] dark:ring-white/[0.08]">
       <div className="flex items-start gap-2.5">
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-[2.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
@@ -106,7 +85,6 @@ function ComunidadNavTile({
       href={href}
       prefetch
       aria-label={`Ir a ${tile.label}`}
-      aria-current={isActive ? "page" : undefined}
       className={outerTileClass}
       style={{ backgroundImage: tile.ringGradient }}
     >
@@ -116,45 +94,12 @@ function ComunidadNavTile({
 }
 
 export function ComunidadClient({
-  activeTab,
-  children,
-  posts,
-  latestMatch,
-  players,
-  initialFollowingIds,
-  followsMeIds,
-  userId,
   rankingsPreview,
 }: {
-  activeTab: "para-ti" | "jugadores";
-  children?: ReactNode;
-  posts: PostFeedItem[];
-  latestMatch: LatestMatchLink;
-  players: PlayerCard[];
-  initialFollowingIds: string[];
-  followsMeIds: string[];
-  userId: string;
   rankingsPreview: RankingsPreview;
 }) {
-  const hrefs: Record<string, string> = {
-    "para-ti": "/comunidad",
-    jugadores: "/comunidad?tab=jugadores",
-    mensajes: "/comunidad/mensajes",
-    rankings: "/comunidad/rankings",
-  };
-
-  const activeById: Record<string, boolean> = {
-    "para-ti": activeTab === "para-ti",
-    jugadores: activeTab === "jugadores",
-    mensajes: false,
-    rankings: false,
-  };
-
   return (
-    <MotionPage
-      className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5"
-      data-user-id={userId}
-    >
+    <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
       <header className="mx-4 mb-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/90 px-4 py-4 shadow-[var(--shadow-card)] backdrop-blur-md dark:bg-[var(--bg-card)]/95">
         <h1 className="text-[1.65rem] font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
         <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
@@ -178,36 +123,11 @@ export function ComunidadClient({
         ) : null}
       </header>
 
-      <div className="mb-6 grid min-w-0 grid-cols-2 gap-3 px-4 sm:gap-3.5">
+      <div className="grid min-w-0 grid-cols-2 gap-3 px-4 sm:gap-3.5">
         {tileVisuals.map((tile) => (
-          <ComunidadNavTile
-            key={tile.id}
-            tile={tile}
-            href={hrefs[tile.id] ?? "/comunidad"}
-            isActive={activeById[tile.id] ?? false}
-          />
+          <ComunidadNavTile key={tile.id} tile={tile} href={hrefs[tile.id] ?? "/comunidad"} />
         ))}
       </div>
-
-      {activeTab === "para-ti" && children ? (
-        <div className="mb-5 min-w-0 px-4">{children}</div>
-      ) : null}
-
-      <div className="px-4">
-        <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
-          {activeTab === "jugadores" ? (
-            <FriendsSearchClient
-              players={players}
-              initialFollowingIds={initialFollowingIds}
-              followsMeIds={followsMeIds}
-            />
-          ) : (
-            <ParaTiPostsMotion posts={posts} />
-          )}
-        </section>
-      </div>
-
-      {activeTab === "para-ti" ? <ParaTiCreatePost latestMatch={latestMatch} /> : null}
     </MotionPage>
   );
 }

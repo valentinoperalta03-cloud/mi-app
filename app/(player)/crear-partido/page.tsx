@@ -1,5 +1,5 @@
-import Link from "next/link";
 import MotionPage from "@/components/motion-page";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import CrearPartidoForm, {
@@ -133,15 +133,13 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
-      <header className="space-y-2">
-        <Link href="/home" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
-          ← Volver al inicio
-        </Link>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">Crear partido</h1>
-        <p className="text-sm text-slate-500">
-          Reserva tu cancha en pocos pasos y publica el partido para la comunidad.
-        </p>
-      </header>
+      <PlayerStackHeader
+        backHref="/home"
+        backLabel="Volver al inicio"
+        title="Crear partido"
+        subtitle="Reservá tu cancha en pocos pasos y publicá el partido para la comunidad."
+        className="mb-2"
+      />
 
       {clubsError || courtsError ? (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">

@@ -1,6 +1,7 @@
 import EmptyStateCard from "@/components/empty-state-card";
 import MatchesFilterBoard, { type MatchCardData } from "@/components/matches-filter-board";
 import MotionPage from "@/components/motion-page";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatLevel } from "@/lib/level-quiz-logic";
 import { isMatchPrivate } from "@/lib/match-visibility";
@@ -78,6 +79,8 @@ type OpenMatchesBoardProps = {
   emptyCtaLabel?: string;
   emptyCtaHref?: string;
   mobileFirst?: boolean;
+  backHref?: string;
+  backLabel?: string;
 };
 
 export default async function OpenMatchesBoard({
@@ -90,6 +93,8 @@ export default async function OpenMatchesBoard({
   emptyCtaLabel = "Armar el primer partido",
   emptyCtaHref = "/partidos/nuevo",
   mobileFirst = false,
+  backHref,
+  backLabel = "Volver al inicio",
 }: OpenMatchesBoardProps) {
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
@@ -210,11 +215,21 @@ export default async function OpenMatchesBoard({
         mobileFirst ? "max-w-md" : "max-w-2xl"
       }`}
     >
-      <header className="space-y-2">
-        <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
-        <p className="text-sm text-slate-500">{description}</p>
-      </header>
+      {backHref ? (
+        <PlayerStackHeader
+          backHref={backHref}
+          backLabel={backLabel}
+          title={title}
+          subtitle={description}
+          className="mb-2"
+        />
+      ) : (
+        <header className="space-y-2">
+          <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
+          <p className="text-sm text-slate-500">{description}</p>
+        </header>
+      )}
 
       {flashMessage ? (
         <section

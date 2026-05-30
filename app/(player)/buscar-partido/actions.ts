@@ -147,7 +147,7 @@ export async function toggleMatchParticipationAction(
 
     revalidatePath("/buscar-partido");
     revalidatePath("/feed");
-    revalidatePath("/comunidad/feed");
+    revalidatePath("/comunidad/para-ti");
     revalidatePath("/partidos");
     revalidatePath("/home");
     return { success: true, message: "Saliste del partido." };
@@ -316,7 +316,7 @@ export async function toggleMatchParticipationAction(
 
   revalidatePath("/buscar-partido");
   revalidatePath("/feed");
-  revalidatePath("/comunidad/feed");
+  revalidatePath("/comunidad/para-ti");
   revalidatePath("/partidos");
   revalidatePath("/home");
   return { success: true, message: "Te uniste al partido con exito." };

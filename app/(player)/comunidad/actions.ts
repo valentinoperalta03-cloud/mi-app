@@ -94,6 +94,6 @@ export async function createPostAction(
     return { ok: false, message: "No se pudo confirmar la publicación. Intentá de nuevo." };
   }
 
-  revalidatePath("/comunidad/feed", "page");
+  revalidatePath("/comunidad/para-ti", "page");
   return { ok: true, message: "Publicación creada." };
 }

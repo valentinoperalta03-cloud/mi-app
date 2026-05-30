@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { fetchGlobalRanking, fetchMyGlobalRank, fetchWeeklyTopWinners } from "@/lib/rankings-data";
 import { createClient } from "@/utils/supabase/server";
@@ -41,19 +41,12 @@ export default async function RankingsPage() {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-transparent px-4 pb-32 pt-5">
-      <header className="mb-6 flex items-center gap-3">
-        <Link
-          href="/comunidad"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--bg-card)] text-[#0585FC] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition active:scale-95 dark:ring-white/10"
-          aria-label="Volver a Comunidad"
-        >
-          <ChevronLeft size={22} aria-hidden />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Rankings</h1>
-          <p className="text-sm text-[var(--text-tertiary)]">ELO y victorias recientes</p>
-        </div>
-      </header>
+      <PlayerStackHeader
+        backHref="/comunidad"
+        backLabel="Volver a Comunidad"
+        title="Rankings"
+        subtitle="ELO y victorias recientes"
+      />
 
       <section className="mb-8 rounded-3xl bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] dark:ring-white/10">
         <h2 className="text-lg font-bold text-[var(--text-primary)]">🏆 Top 10 de la semana</h2>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 
 export type ClubRow = {
@@ -62,12 +63,13 @@ export default function ClubsListClient({
 
   return (
     <>
-      <header className="space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-[#0585FC]">Clubes</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Clubes disponibles</h1>
-        </div>
-      </header>
+      <PlayerStackHeader
+        backHref="/home"
+        backLabel="Volver al inicio"
+        title="Clubes disponibles"
+        subtitle="Explorá clubes cerca tuyo"
+        className="mb-1"
+      />
 
       {errorMessage ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { fetchConversationPreviews } from "@/lib/chat-partners";
 import { fetchGroupPreviews } from "@/lib/group-chats";
@@ -44,16 +44,12 @@ export default async function MensajesPage() {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-32 pt-6">
-      <header className="mb-6 space-y-2">
-        <Link
-          href="/comunidad"
-          className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]"
-        >
-          ← Comunidad
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Mensajes</h1>
-        <p className="text-sm text-slate-500">Chats directos y grupos.</p>
-      </header>
+      <PlayerStackHeader
+        backHref="/comunidad"
+        backLabel="Volver a Comunidad"
+        title="Mensajes"
+        subtitle="Chats directos y grupos"
+      />
       <MensajesClient
         conversations={conversations}
         groups={groups}

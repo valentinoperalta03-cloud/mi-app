@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import MotionPage from "@/components/motion-page";
+import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { formatCategoryRange } from "@/lib/tournament-utils";
@@ -79,16 +80,20 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
-      <header className="mb-6 min-w-0">
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">Torneos</h1>
-        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Inscribite en torneos de clubes y seguí el fixture.</p>
-        <div className="mt-4 flex min-w-0 flex-wrap gap-2">
+      <PlayerStackHeader
+        backHref="/home"
+        backLabel="Volver al inicio"
+        title="Torneos"
+        subtitle="Inscribite en torneos de clubes y seguí el fixture."
+      />
+      <div className="mb-6 min-w-0">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {chip("all", "Todos")}
           {chip("open", "Abiertos")}
           {chip("in_progress", "En curso")}
           {chip("finished", "Finalizados")}
         </div>
-      </header>
+      </div>
 
       <ul className="min-w-0 space-y-4">
         {list.length === 0 ? (
