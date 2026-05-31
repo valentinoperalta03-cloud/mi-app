@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 import {
   completeNativeOAuthFromDeepLink,
   parseNativeOAuthCallback,
@@ -66,6 +67,18 @@ async function handleOAuthDeepLink(url: string) {
   window.location.href = result.redirectTo;
 }
 
+async function consumePendingOAuthCallback(): Promise<string | null> {
+  try {
+    const { value } = await Preferences.get({ key: "pendingOAuthCallback" });
+    if (value) {
+      await Preferences.remove({ key: "pendingOAuthCallback" });
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 export default function CapacitorNativeAuthCallback() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -74,6 +87,14 @@ export default function CapacitorNativeAuthCallback() {
 
     let removeListener: (() => void) | undefined;
 
+    // 1. Pending OAuth callback (guardado por SceneDelegate antes de que React estuviera listo)
+    void consumePendingOAuthCallback().then((pendingUrl) => {
+      if (pendingUrl) {
+        return handleOAuthDeepLink(pendingUrl);
+      }
+    });
+
+    // 2. Cold start deep link
     void App.getLaunchUrl()
       .then((launch) => {
         if (launch?.url) {
@@ -84,6 +105,7 @@ export default function CapacitorNativeAuthCallback() {
         console.error("[CapacitorNativeAuthCallback] getLaunchUrl failed", err);
       });
 
+    // 3. Warm return while app is running
     void App.addListener("appUrlOpen", async (event) => {
       try {
         await handleOAuthDeepLink(event.url);

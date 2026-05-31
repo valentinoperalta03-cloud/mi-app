@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
     // OAuth + chrome nativo (StatusBar no crashea al launch; evitar SplashScreen).
-    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/status-bar"],
+    includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/status-bar", "@capacitor/preferences"],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,

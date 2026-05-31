@@ -20,9 +20,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
 
         if let urlContext = connectionOptions.urlContexts.first {
+            let url = urlContext.url
+            storePendingOAuthCallbackIfNeeded(url)
             _ = ApplicationDelegateProxy.shared.application(
                 UIApplication.shared,
-                open: urlContext.url,
+                open: url,
                 options: openURLOptions(from: urlContext.options)
             )
         }
@@ -53,9 +55,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         guard let urlContext = URLContexts.first else { return }
+        let url = urlContext.url
+        storePendingOAuthCallbackIfNeeded(url)
         _ = ApplicationDelegateProxy.shared.application(
             UIApplication.shared,
-            open: urlContext.url,
+            open: url,
             options: openURLOptions(from: urlContext.options)
         )
     }
@@ -66,6 +70,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             continue: userActivity,
             restorationHandler: { _ in }
         )
+    }
+
+    private func storePendingOAuthCallbackIfNeeded(_ url: URL) {
+        guard url.absoluteString.hasPrefix("com.padelibre.app://auth-callback") else { return }
+        // @capacitor/preferences stores keys as CapacitorStorage.<key> in UserDefaults.
+        UserDefaults.standard.set(url.absoluteString, forKey: "CapacitorStorage.pendingOAuthCallback")
     }
 
     private func openURLOptions(from options: UIScene.OpenURLOptions) -> [UIApplication.OpenURLOptionsKey: Any] {
