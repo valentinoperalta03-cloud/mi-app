@@ -34,19 +34,27 @@ if (!fs.existsSync(templatePath)) {
 }
 
 const SHELL_HTML = fs.readFileSync(templatePath, "utf8");
-fs.writeFileSync(indexHtml, SHELL_HTML, "utf8");
-console.log("Escrito capacitor-dist/index.html desde shell-template.html");
-
-if (fs.existsSync(publicDir)) {
-  copyRecursive(publicDir, path.join(distDir, "public"));
-  console.log("Copiado public/ → capacitor-dist/public/");
-}
 
 const logoSrc = path.join(publicDir, "logo.png");
 const logoDest = path.join(distDir, "logo.png");
 if (fs.existsSync(logoSrc)) {
   fs.copyFileSync(logoSrc, logoDest);
   console.log("Copiado logo.png → capacitor-dist/logo.png");
+}
+
+const logoPath = path.join(distDir, "logo.png");
+let shellHtml = SHELL_HTML;
+if (fs.existsSync(logoPath)) {
+  const logoBase64 = fs.readFileSync(logoPath).toString("base64");
+  shellHtml = shellHtml.replace('src="logo.png"', `src="data:image/png;base64,${logoBase64}"`);
+}
+
+fs.writeFileSync(indexHtml, shellHtml, "utf8");
+console.log("Escrito capacitor-dist/index.html desde shell-template.html");
+
+if (fs.existsSync(publicDir)) {
+  copyRecursive(publicDir, path.join(distDir, "public"));
+  console.log("Copiado public/ → capacitor-dist/public/");
 }
 
 console.log("capacitor-dist listo para npx cap sync");
