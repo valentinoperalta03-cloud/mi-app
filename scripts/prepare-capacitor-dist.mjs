@@ -42,4 +42,11 @@ if (fs.existsSync(publicDir)) {
   console.log("Copiado public/ → capacitor-dist/public/");
 }
 
+const logoSrc = path.join(publicDir, "logo.png");
+const logoDest = path.join(distDir, "logo.png");
+if (fs.existsSync(logoSrc)) {
+  fs.copyFileSync(logoSrc, logoDest);
+  console.log("Copiado logo.png → capacitor-dist/logo.png");
+}
+
 console.log("capacitor-dist listo para npx cap sync");
