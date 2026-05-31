@@ -1,6 +1,6 @@
 /**
- * Prepara capacitor-dist para cap sync (shell con redirect + assets estáticos).
- * Con server.url la app carga el sitio remoto; el shell local evita WebView vacío en Android.
+ * Prepara capacitor-dist para cap sync (shell inteligente + assets estáticos).
+ * La plantilla vive en shell-template.html; index.html se genera en cada build.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -10,20 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const distDir = path.join(root, "capacitor-dist");
 const publicDir = path.join(root, "public");
+const templatePath = path.join(distDir, "shell-template.html");
 const indexHtml = path.join(distDir, "index.html");
-
-const SHELL_HTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0;url=https://www.padelibre.online/login">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-</head>
-<body>
-  <script>window.location.replace('https://www.padelibre.online/login');</script>
-</body>
-</html>
-`;
 
 function copyRecursive(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -39,8 +27,15 @@ function copyRecursive(src, dest) {
 }
 
 fs.mkdirSync(distDir, { recursive: true });
+
+if (!fs.existsSync(templatePath)) {
+  console.error("Missing capacitor-dist/shell-template.html");
+  process.exit(1);
+}
+
+const SHELL_HTML = fs.readFileSync(templatePath, "utf8");
 fs.writeFileSync(indexHtml, SHELL_HTML, "utf8");
-console.log("Escrito capacitor-dist/index.html (redirect a /login)");
+console.log("Escrito capacitor-dist/index.html desde shell-template.html");
 
 if (fs.existsSync(publicDir)) {
   copyRecursive(publicDir, path.join(distDir, "public"));
