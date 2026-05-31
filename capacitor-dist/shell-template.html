@@ -2,776 +2,162 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0585FC" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmZHFpenhtcnJla21ndnBtcmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzODgyNjksImV4cCI6MjA5MDk2NDI2OX0.Dj6MP87UVLJhUGhU1tQwcQt20mqVGOOKIevQFrKGtN4" />
   <title>PadeLibre</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
 
     html, body {
       margin: 0;
-      min-height: 100%;
-      min-height: 100dvh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      background: #0585fc;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
 
     body {
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      color: #0f172a;
-    }
-
-    .shell {
-      min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2.5rem 1rem;
-      background: #f2f2f7;
+      min-height: 100%;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top, 0px) 1.5rem env(safe-area-inset-bottom, 0px);
+      background: #0585fc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
 
-    @media (prefers-color-scheme: dark) {
-      html, body { background: #0585fc; }
-      .shell { background: #000; color: #f9fafb; }
-      .card {
-        background: #1c1c1e !important;
-        border-color: rgba(255,255,255,0.08) !important;
-      }
-      .title { color: #f9fafb !important; }
-      .subtitle { color: #9ca3af !important; }
-      .label { color: #9ca3af !important; }
-      .input {
-        background: #1c1c1e !important;
-        border-color: rgba(255,255,255,0.08) !important;
-        color: #f9fafb !important;
-      }
-      .input::placeholder { color: #6b7280 !important; }
-      .btn-google {
-        background: #1c1c1e !important;
-        border-color: rgba(255,255,255,0.08) !important;
-        color: #f9fafb !important;
-      }
-      .separator-line { background: rgba(255,255,255,0.12) !important; }
-      .separator-text { color: #6b7280 !important; }
-      .link-toggle { color: #38bdf8 !important; }
-      .legal { color: #6b7280 !important; }
-      .legal a { color: #38bdf8 !important; }
-      .loading-text { color: #9ca3af !important; }
-    }
-
-    .offline-banner {
-      display: none;
-      position: fixed;
-      top: env(safe-area-inset-top, 0px);
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 0.75rem 1rem;
-      background: #0f172a;
-      color: #fff;
-      text-align: center;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-
-    .offline-banner.visible { display: block; }
-
-    .loading-wrap {
+    .splash {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1rem;
-      padding: 2rem;
+      justify-content: center;
+      gap: 1.75rem;
+      pointer-events: none;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      object-fit: cover;
+      pointer-events: none;
     }
 
     .spinner {
       width: 2rem;
       height: 2rem;
-      border: 3px solid rgba(5,133,252,0.2);
-      border-top-color: #0585fc;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #fff;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.75s linear infinite;
+      pointer-events: none;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .loading-text {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #64748b;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    .card {
-      width: 100%;
-      max-width: 420px;
-      background: #fff;
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 24px;
-      padding: 32px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-    }
-
-    .logo {
-      display: block;
-      width: 56px;
-      height: 56px;
-      margin: 0 auto;
-      border-radius: 16px;
-      object-fit: cover;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    .title {
-      margin: 1.25rem 0 0;
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #0f172a;
-    }
-
-    .subtitle {
-      margin: 0.5rem 0 0;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #64748b;
-    }
-
-    .alert {
-      margin-bottom: 1rem;
-      padding: 0.75rem 1rem;
-      border-radius: 1rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      line-height: 1.4;
-    }
-
-    .alert-error {
-      border: 1px solid rgba(244,63,94,0.35);
-      background: rgba(255,241,242,0.95);
-      color: #9f1239;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .alert-error {
-        border-color: rgba(190,18,60,0.4);
-        background: rgba(76,5,25,0.35);
-        color: #fda4af;
-      }
-    }
-
-    .oauth-stack { display: flex; flex-direction: column; gap: 0.75rem; }
-
-    .btn {
-      display: flex;
-      width: 100%;
+    .offline {
+      display: none;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+      gap: 1.25rem;
+      max-width: 18rem;
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    .offline.visible {
+      display: flex;
+    }
+
+    .offline p {
+      margin: 0;
+      color: #fff;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+
+    .retry-btn {
       border: none;
       border-radius: 1rem;
-      padding: 0.875rem 1rem;
-      font-size: 0.875rem;
+      padding: 0.875rem 1.5rem;
+      font-size: 0.9375rem;
       font-weight: 600;
+      color: #0585fc;
+      background: #fff;
       cursor: pointer;
-      transition: transform 0.15s, opacity 0.15s;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-    .btn:active:not(:disabled) { transform: scale(0.99); }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .btn-apple {
-      background: #0f172a;
-      color: #fff;
+    .retry-btn:active {
+      transform: scale(0.98);
+      opacity: 0.92;
     }
 
-    @media (prefers-color-scheme: dark) {
-      .btn-apple {
-        background: #fff;
-        color: #0f172a;
-      }
-    }
-
-    .btn-google {
-      background: #fff;
-      color: #1e293b;
-      border: 1px solid #cbd5e1;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
-    }
-
-    .separator {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin: 1.75rem 0;
-    }
-
-    .separator-line {
-      flex: 1;
-      height: 1px;
-      background: rgba(148,163,184,0.45);
-    }
-
-    .separator-text {
-      flex-shrink: 0;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-
-    .field { margin-bottom: 1rem; }
-
-    .label {
-      display: block;
-      margin-bottom: 0.375rem;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #64748b;
-    }
-
-    .input {
-      width: 100%;
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 0.75rem;
-      padding: 0.875rem 1rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      background: #fff;
-      color: #0f172a;
-      outline: none;
-    }
-
-    .input:focus {
-      border-color: #0585fc;
-      box-shadow: 0 0 0 3px rgba(56,189,248,0.22);
-    }
-
-    .input-otp {
-      text-align: center;
-      font-size: 1.875rem;
-      letter-spacing: 0.35em;
-      padding: 1.25rem 1.5rem;
-    }
-
-    .btn-primary {
-      width: 100%;
-      margin-top: 0.5rem;
-      border: none;
-      border-radius: 1rem;
-      padding: 1rem;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: #fff;
-      background: linear-gradient(180deg, #0585fc 0%, #0461c4 100%);
-      box-shadow: 0 4px 16px -4px rgba(2,132,199,0.45);
-      cursor: pointer;
-    }
-
-    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .link-toggle {
-      width: 100%;
-      margin-top: 0.75rem;
-      border: none;
-      background: transparent;
-      padding: 1rem;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: #0585fc;
-      cursor: pointer;
-      border-radius: 1rem;
-    }
-
-    .legal {
-      margin-top: 1.5rem;
-      text-align: center;
-      font-size: 0.75rem;
-      color: #64748b;
-      line-height: 1.5;
-    }
-
-    .legal a {
-      color: #0585fc;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .hidden { display: none !important; }
-
-    .otp-title {
-      margin: 0 0 0.25rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
-
-    .otp-desc {
-      margin: 0 0 1rem;
-      font-size: 0.875rem;
-      color: #64748b;
-      line-height: 1.5;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .otp-desc { color: #9ca3af; }
+    .splash.hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div id="offline-banner" class="offline-banner" role="alert">
-    Sin conexión. Verificá tu internet e intentá de nuevo.
+  <div id="splash" class="splash">
+    <img src="/logo.png" alt="" class="logo" width="80" height="80" draggable="false" />
+    <div class="spinner" aria-hidden="true"></div>
   </div>
 
-  <div id="loading-view" class="shell">
-    <div class="loading-wrap">
-      <div class="spinner" aria-hidden="true"></div>
-      <p class="loading-text">Cargando PadeLibre…</p>
-    </div>
-  </div>
-
-  <div id="login-view" class="shell hidden">
-    <div class="card">
-      <div class="header">
-        <img src="/logo.png" alt="PadeLibre" class="logo" width="56" height="56" />
-        <h1 class="title" id="card-title">Crear cuenta</h1>
-        <p class="subtitle">Unite a la comunidad de pádel</p>
-      </div>
-
-      <div id="global-error" class="alert alert-error hidden" role="alert"></div>
-
-      <div id="oauth-section" class="oauth-stack">
-        <button type="button" id="btn-apple" class="btn btn-apple hidden">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-          </svg>
-          <span id="btn-apple-label">Continuar con Apple</span>
-        </button>
-        <button type="button" id="btn-google" class="btn btn-google">
-          <span id="btn-google-label">Continuar con Google</span>
-        </button>
-      </div>
-
-      <div id="email-section">
-        <div class="separator">
-          <span class="separator-line"></span>
-          <span class="separator-text">o con email</span>
-          <span class="separator-line"></span>
-        </div>
-
-        <form id="login-form">
-          <div id="name-field" class="field hidden">
-            <label class="label" for="full-name">Nombre</label>
-            <input id="full-name" class="input" type="text" name="full_name" placeholder="Tu nombre" autocomplete="name" />
-          </div>
-          <div class="field">
-            <label class="label" for="email">Correo electrónico</label>
-            <input id="email" class="input" type="email" name="email" placeholder="tu@email.com" required autocomplete="email" />
-          </div>
-          <div class="field">
-            <label class="label" for="password">Contraseña</label>
-            <input id="password" class="input" type="password" name="password" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="current-password" />
-          </div>
-          <button type="submit" id="submit-btn" class="btn-primary">Iniciar sesión</button>
-        </form>
-
-        <form id="otp-form" class="hidden">
-          <h2 class="otp-title">Revisá tu email</h2>
-          <p class="otp-desc" id="otp-desc">Te enviamos un código de 6 dígitos.</p>
-          <div class="field">
-            <label class="label" for="otp">Código</label>
-            <input id="otp" class="input input-otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" required />
-          </div>
-          <button type="submit" id="otp-submit-btn" class="btn-primary">Verificar código</button>
-          <button type="button" id="otp-back-btn" class="link-toggle">Volver</button>
-        </form>
-
-        <button type="button" id="toggle-mode-btn" class="link-toggle">¿No tenés cuenta? Registrate</button>
-      </div>
-
-      <p class="legal">
-        Legal:
-        <a href="https://www.padelibre.online/legal/terminos">Términos de Uso</a>
-        y
-        <a href="https://www.padelibre.online/legal/privacidad">Política de Privacidad</a>
-      </p>
-    </div>
+  <div id="offline" class="offline" role="alert">
+    <p>Sin conexión. Verificá tu internet e intentá de nuevo.</p>
+    <button type="button" class="retry-btn" id="retry-btn">Reintentar</button>
   </div>
 
   <script>
     (function () {
-      var SITE = "https://www.padelibre.online";
-      var HOME_URL = SITE + "/home";
-      var LOGIN_REMOTE = SITE + "/login";
-      var SUPABASE_URL = "https://ffdqizxmrrekmgvpmrcg.supabase.co";
-      var OFFLINE_MSG = "Sin conexión. Verificá tu internet e intentá de nuevo.";
+      var LOGIN_URL = "https://www.padelibre.online/login";
+      var splash = document.getElementById("splash");
+      var offline = document.getElementById("offline");
+      var retryBtn = document.getElementById("retry-btn");
 
-      var state = {
-        isLogin: true,
-        otpEmail: "",
-        oauthOpened: false,
-      };
-
-      var offlineBanner = document.getElementById("offline-banner");
-      var loadingView = document.getElementById("loading-view");
-      var loginView = document.getElementById("login-view");
-      var globalError = document.getElementById("global-error");
-      var oauthSection = document.getElementById("oauth-section");
-      var emailSection = document.getElementById("email-section");
-      var loginForm = document.getElementById("login-form");
-      var otpForm = document.getElementById("otp-form");
-      var nameField = document.getElementById("name-field");
-      var submitBtn = document.getElementById("submit-btn");
-      var toggleModeBtn = document.getElementById("toggle-mode-btn");
-      var cardTitle = document.getElementById("card-title");
-      var passwordInput = document.getElementById("password");
-
-      function isOnline() {
-        return typeof navigator.onLine === "boolean" ? navigator.onLine : true;
+      function showOffline() {
+        splash.classList.add("hidden");
+        offline.classList.add("visible");
       }
 
-      function setOfflineVisible(visible) {
-        offlineBanner.classList.toggle("visible", visible);
+      function showSplash() {
+        splash.classList.remove("hidden");
+        offline.classList.remove("visible");
       }
 
-      function showError(message) {
-        globalError.textContent = message;
-        globalError.classList.remove("hidden");
-      }
-
-      function clearError() {
-        globalError.textContent = "";
-        globalError.classList.add("hidden");
-      }
-
-      function isNetworkError(err) {
-        if (!isOnline()) return true;
-        var msg = err && err.message ? String(err.message).toLowerCase() : "";
-        return msg.indexOf("fetch") !== -1 || msg.indexOf("network") !== -1 || msg.indexOf("failed") !== -1;
-      }
-
-      function handleRequestError(err) {
-        if (isNetworkError(err)) {
-          setOfflineVisible(true);
-          showError(OFFLINE_MSG);
+      function tryLoad() {
+        showSplash();
+        if (!navigator.onLine) {
+          showOffline();
           return;
         }
-        showError((err && err.message) || "Ocurrió un error. Intentá de nuevo.");
+        window.location.replace(LOGIN_URL);
       }
 
-      function showLoginView() {
-        loadingView.classList.add("hidden");
-        loginView.classList.remove("hidden");
-      }
-
-      function getSupabaseSession() {
-        try {
-          for (var i = 0; i < localStorage.length; i++) {
-            var key = localStorage.key(i);
-            if (key && key.indexOf("sb-") === 0 && key.slice(-11) === "-auth-token") {
-              var raw = localStorage.getItem(key);
-              if (!raw) continue;
-              var parsed = JSON.parse(raw);
-              var session = parsed && parsed.session ? parsed.session : parsed;
-              if (session && session.access_token && session.expires_at) {
-                var expiresAt = Number(session.expires_at);
-                var nowSecs = Date.now() / 1000;
-                if (expiresAt > nowSecs + 60) {
-                  return session;
-                }
-              }
-            }
-          }
-        } catch (e) {}
-        return null;
-      }
-
-      function getSupabaseClient() {
-        var meta = document.querySelector('meta[name="supabase-anon-key"]');
-        var key = meta ? meta.content : "";
-        if (!window.supabase || !window.supabase.createClient) {
-          throw new Error("Supabase no está disponible.");
-        }
-        return window.supabase.createClient(SUPABASE_URL, key);
-      }
-
-      function isCapacitorNative() {
-        return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-      }
-
-      function isIos() {
-        return isCapacitorNative() && window.Capacitor.getPlatform() === "ios";
-      }
-
-      function redirectHome() {
-        window.location.href = HOME_URL;
-      }
-
-      function redirectRemoteLoginForOAuth() {
-        window.location.href = LOGIN_REMOTE;
-      }
-
-      async function startOAuth(provider) {
-        clearError();
-        if (!isOnline()) {
-          setOfflineVisible(true);
-          showError(OFFLINE_MSG);
-          return;
-        }
-        try {
-          var client = getSupabaseClient();
-          var options = {
-            redirectTo: "com.padelibre.app://auth-callback",
-            skipBrowserRedirect: true,
-          };
-          if (provider === "apple") {
-            options.scopes = "name email";
-          }
-          var result = await client.auth.signInWithOAuth({ provider: provider, options: options });
-          if (result.error || !result.data || !result.data.url) {
-            showError("No se pudo iniciar sesión. Verificá tu conexión.");
-            return;
-          }
-          if (isCapacitorNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-            state.oauthOpened = true;
-            await window.Capacitor.Plugins.Browser.open({ url: result.data.url });
-          } else {
-            window.location.href = result.data.url;
-          }
-        } catch (err) {
-          handleRequestError(err);
-        }
-      }
-
-      function updateAuthMode() {
-        clearError();
-        nameField.classList.toggle("hidden", state.isLogin);
-        submitBtn.textContent = state.isLogin ? "Iniciar sesión" : "Crear mi cuenta";
-        toggleModeBtn.textContent = state.isLogin
-          ? "¿No tenés cuenta? Registrate"
-          : "¿Ya tenés cuenta? Iniciá sesión";
-        passwordInput.autocomplete = state.isLogin ? "current-password" : "new-password";
-        otpForm.classList.add("hidden");
-        loginForm.classList.remove("hidden");
-        oauthSection.classList.remove("hidden");
-        emailSection.querySelector(".separator").classList.remove("hidden");
-        toggleModeBtn.classList.remove("hidden");
-      }
-
-      function showOtpForm(email) {
-        state.otpEmail = email;
-        clearError();
-        loginForm.classList.add("hidden");
-        otpForm.classList.remove("hidden");
-        oauthSection.classList.add("hidden");
-        emailSection.querySelector(".separator").classList.add("hidden");
-        toggleModeBtn.classList.add("hidden");
-        document.getElementById("otp-desc").textContent =
-          "Te enviamos un código de 6 dígitos a " + email + ". Si no llega, revisá spam.";
-        document.getElementById("otp").value = "";
-      }
-
-      function hideOtpForm() {
-        state.otpEmail = "";
-        otpForm.classList.add("hidden");
-        loginForm.classList.remove("hidden");
-        oauthSection.classList.remove("hidden");
-        emailSection.querySelector(".separator").classList.remove("hidden");
-        toggleModeBtn.classList.remove("hidden");
-      }
-
-      loginForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        clearError();
-        if (!isOnline()) {
-          setOfflineVisible(true);
-          showError(OFFLINE_MSG);
-          return;
-        }
-
-        var email = document.getElementById("email").value.trim().toLowerCase();
-        var password = document.getElementById("password").value;
-        submitBtn.disabled = true;
-        submitBtn.textContent = state.isLogin ? "Iniciando sesión..." : "Creando cuenta...";
-
-        (async function () {
-          try {
-            var client = getSupabaseClient();
-            if (state.isLogin) {
-              var signIn = await client.auth.signInWithPassword({ email: email, password: password });
-              if (signIn.error) {
-                showError(signIn.error.message || "No se pudo iniciar sesión.");
-                return;
-              }
-              redirectHome();
-              return;
-            }
-
-            var fullName = document.getElementById("full-name").value.trim();
-            if (!fullName) {
-              showError("Completá tu nombre.");
-              return;
-            }
-
-            var signUp = await client.auth.signUp({
-              email: email,
-              password: password,
-              options: { data: { full_name: fullName } },
-            });
-
-            if (signUp.error) {
-              var errMsg = signUp.error.message || "";
-              if (errMsg.toLowerCase().indexOf("registered") !== -1) {
-                state.isLogin = true;
-                updateAuthMode();
-                showError("Ya existe una cuenta con ese email. Iniciá sesión.");
-                return;
-              }
-              showError(errMsg || "No se pudo crear la cuenta.");
-              return;
-            }
-
-            showOtpForm(email);
-          } catch (err) {
-            handleRequestError(err);
-          } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = state.isLogin ? "Iniciar sesión" : "Crear mi cuenta";
-          }
-        })();
-      });
-
-      otpForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        clearError();
-        if (!isOnline()) {
-          setOfflineVisible(true);
-          showError(OFFLINE_MSG);
-          return;
-        }
-
-        var token = document.getElementById("otp").value.replace(/\D/g, "").slice(0, 6);
-        var otpBtn = document.getElementById("otp-submit-btn");
-        otpBtn.disabled = true;
-        otpBtn.textContent = "Verificando...";
-
-        (async function () {
-          try {
-            var client = getSupabaseClient();
-            var verify = await client.auth.verifyOtp({
-              email: state.otpEmail,
-              token: token,
-              type: "signup",
-            });
-            if (verify.error) {
-              showError(verify.error.message || "Código inválido.");
-              return;
-            }
-            redirectHome();
-          } catch (err) {
-            handleRequestError(err);
-          } finally {
-            otpBtn.disabled = false;
-            otpBtn.textContent = "Verificar código";
-          }
-        })();
-      });
-
-      document.getElementById("otp-back-btn").addEventListener("click", function () {
-        hideOtpForm();
-        clearError();
-      });
-
-      toggleModeBtn.addEventListener("click", function () {
-        state.isLogin = !state.isLogin;
-        updateAuthMode();
-      });
-
-      document.getElementById("btn-apple").addEventListener("click", function () {
-        var btn = document.getElementById("btn-apple");
-        var label = document.getElementById("btn-apple-label");
-        btn.disabled = true;
-        label.textContent = "Abriendo Apple...";
-        startOAuth("apple").finally(function () {
-          btn.disabled = false;
-          label.textContent = "Continuar con Apple";
-        });
-      });
-
-      document.getElementById("btn-google").addEventListener("click", function () {
-        var btn = document.getElementById("btn-google");
-        var label = document.getElementById("btn-google-label");
-        btn.disabled = true;
-        label.textContent = "Abriendo Google...";
-        startOAuth("google").finally(function () {
-          btn.disabled = false;
-          label.textContent = "Continuar con Google";
-        });
-      });
-
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "visible" && state.oauthOpened) {
-          state.oauthOpened = false;
-          redirectRemoteLoginForOAuth();
-        }
-      });
+      retryBtn.addEventListener("click", tryLoad);
 
       window.addEventListener("online", function () {
-        setOfflineVisible(false);
-      });
-
-      window.addEventListener("offline", function () {
-        setOfflineVisible(true);
-        if (!loginView.classList.contains("hidden")) {
-          showError(OFFLINE_MSG);
+        if (offline.classList.contains("visible")) {
+          tryLoad();
         }
       });
 
-      function boot() {
-        if (!isOnline()) {
-          setOfflineVisible(true);
-          showLoginView();
-          if (isIos()) {
-            document.getElementById("btn-apple").classList.remove("hidden");
-          }
-          updateAuthMode();
-          showError(OFFLINE_MSG);
-          return;
-        }
-
-        var session = getSupabaseSession();
-        if (session) {
-          redirectHome();
-          return;
-        }
-
-        if (isIos()) {
-          document.getElementById("btn-apple").classList.remove("hidden");
-        }
-
-        updateAuthMode();
-        showLoginView();
-      }
-
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", boot);
-      } else {
-        boot();
-      }
+      tryLoad();
     })();
   </script>
 </body>
