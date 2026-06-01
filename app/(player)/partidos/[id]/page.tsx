@@ -11,14 +11,13 @@ import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
+import { isMatchPrivate } from "@/lib/match-visibility";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
 import PartidoEditSection from "./partido-edit-section";
 import RequestJoinButton from "./request-join-button";
-import VisibilityToggle from "./visibility-toggle";
 import WhatsappShareButton from "./whatsapp-share-button";
 import { MatchStatusBanner } from "@/components/match-status-banner";
 import { Alert } from "@/components/ui/alert";
@@ -697,8 +696,22 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <p className="text-xs font-medium text-[var(--text-tertiary)]">Precio total</p>
             <p className="text-xl font-bold text-[#0461C4]">${detail.total_price ?? 0}</p>
           </div>
-          {isOwner ? (
-            <VisibilityToggle matchId={id} initialVisibility={normalizeMatchVisibility(detail.visibility)} />
+          {isParticipant ? (
+            <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
+              <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu parte</p>
+              <p className="text-base font-bold text-[var(--text-primary)]">
+                ${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")}
+              </p>
+              {hasPaid ? (
+                <p className="mt-0.5 text-xs font-semibold text-emerald-600">✓ Pagado</p>
+              ) : myPaymentStatus === "pending" || myPaymentStatus === "invited" ? (
+                <p className="mt-0.5 text-xs font-semibold text-amber-600">Pendiente de confirmación</p>
+              ) : myPaymentStatus === "expired" ? (
+                <p className="mt-0.5 text-xs font-semibold text-rose-600">Pago vencido</p>
+              ) : (
+                <p className="mt-0.5 text-xs font-semibold text-slate-500">Sin pago registrado</p>
+              )}
+            </div>
           ) : null}
         </div>
       </article>

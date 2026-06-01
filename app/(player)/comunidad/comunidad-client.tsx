@@ -134,9 +134,11 @@ export function ComunidadClient({
 
       <div className="mt-6 space-y-5 px-4">
         <section className="space-y-3">
-          <h2 className="text-base font-bold tracking-tight text-[var(--text-primary)]">Jugadores para vos</h2>
+          <h2 className="text-base font-bold tracking-tight text-[var(--text-primary)]">
+            Jugadores con los que podrías jugar
+          </h2>
           <Suspense fallback={<HomeSuggestionsSkeleton />}>
-            <HomeSuggestionsSection userId={userId} />
+            <HomeSuggestionsSection userId={userId} context="comunidad" />
           </Suspense>
         </section>
         <section className="space-y-3">

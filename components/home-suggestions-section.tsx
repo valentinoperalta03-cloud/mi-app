@@ -6,11 +6,30 @@ import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/prof
 import { fetchSuggestedPlayers } from "@/lib/suggested-players";
 import { createClient } from "@/utils/supabase/server";
 
-export async function HomeSuggestionsSection({ userId }: { userId: string }) {
+export async function HomeSuggestionsSection({
+  userId,
+  context = "home",
+}: {
+  userId: string;
+  context?: "home" | "comunidad";
+}) {
   const supabase = await createClient();
   const list = await fetchSuggestedPlayers(supabase, userId);
 
   if (list.length === 0) {
+    if (context === "comunidad") {
+      return (
+        <div className="rounded-2xl border border-slate-200/80 bg-[var(--bg-card)] px-5 py-5 dark:border-slate-700/80">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
+            Jugadores con los que podrías jugar
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Jugá más partidos para ver sugerencias de tu nivel acá.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-2xl border border-slate-200/80 bg-[var(--bg-card)] px-5 py-6 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)] dark:border-slate-700/80">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
@@ -97,7 +116,7 @@ export async function HomeSuggestedClubs() {
             key={club.id}
             className="w-[10rem] shrink-0 rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-slate-700/80 dark:bg-[var(--bg-card)]"
           >
-            <Link href={`/clubs/${club.id}`} className="block text-center">
+            <Link href={`/clubes/${club.id}`} className="block text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
                 {imgUrl ? (
                   <img src={imgUrl} alt={label} className="h-full w-full object-cover" />

@@ -48,7 +48,6 @@ function PlayerDrawer({
   onSignOut,
   name,
   avatarUrl,
-  category,
   initial,
 }: {
   open: boolean;
@@ -57,7 +56,6 @@ function PlayerDrawer({
   onSignOut: () => void;
   name: string;
   avatarUrl: string | null;
-  category: string | null;
   initial: string;
 }) {
   if (!open) return null;
@@ -76,16 +74,15 @@ function PlayerDrawer({
         aria-modal="true"
         id="player-account-drawer"
         aria-label="Menú de cuenta"
-        className="player-account-drawer fixed right-0 z-[76] flex w-80 max-w-[85vw] flex-col overflow-y-auto border-l border-[rgba(5,133,252,0.1)] bg-white shadow-2xl dark:bg-[#1C1C1E]"
+        className="player-account-drawer fixed right-0 z-[76] flex w-80 max-w-[85vw] flex-col overflow-hidden border-l border-[rgba(5,133,252,0.1)] bg-white shadow-2xl dark:bg-[#1C1C1E]"
         style={{
           boxShadow: "var(--shadow-card)",
           top: "var(--player-top-chrome-offset)",
           height: "calc(100dvh - var(--player-top-chrome-offset))",
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)",
         }}
       >
         <div
-          className="border-b border-white/15 p-5"
+          className="shrink-0 border-b border-white/15 p-5"
           style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
         >
           <div className="flex items-center gap-3">
@@ -105,62 +102,64 @@ function PlayerDrawer({
             )}
             <div className="min-w-0">
               <p className="truncate font-bold text-white">{name}</p>
-              <div className="mt-1">
-                <span className="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white">
-                  {category ? `Nivel ${category}` : "Sin nivel asignado"}
-                </span>
-              </div>
             </div>
           </div>
         </div>
 
-        <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">TU CUENTA</p>
-        {accountItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
-            >
-              <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
-                <Icon size={16} />
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">TU CUENTA</p>
+          {accountItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+              >
+                <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
+                  <Icon size={16} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
-        <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">SOPORTE</p>
-        {supportItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={onClose}
-              className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
-            >
-              <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
-                <Icon size={16} />
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+          <p className="px-4 py-2 text-xs uppercase tracking-widest text-[var(--text-tertiary)]">SOPORTE</p>
+          {supportItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+              >
+                <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-[var(--text-primary)]">
+                  <Icon size={16} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
 
-        <button
-          type="button"
-          onClick={onSignOut}
-          disabled={busy}
-          className="mx-4 mb-4 mt-auto flex items-center gap-3 rounded-2xl border border-red-700/25 bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-500/30 dark:bg-red-700 dark:hover:bg-red-600"
+        <div
+          className="shrink-0 border-t border-[var(--border-subtle)] bg-white px-4 pt-3 dark:bg-[#1C1C1E]"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
         >
-          <span className="rounded-full bg-white/20 p-2 text-white">
-            <LogOut size={16} />
-          </span>
-          <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
-        </button>
+          <button
+            type="button"
+            onClick={onSignOut}
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-red-700/25 bg-red-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-500/30 dark:bg-red-700 dark:hover:bg-red-600"
+          >
+            <span className="rounded-full bg-white/20 p-2 text-white">
+              <LogOut size={16} />
+            </span>
+            <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
+          </button>
+        </div>
       </aside>
     </>
   );
@@ -173,7 +172,6 @@ export default function TopNav() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [name, setName] = useState("Jugador");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [category, setCategory] = useState<string | null>(null);
   const [portalReady, setPortalReady] = useState(false);
 
   useEffect(() => {
@@ -191,7 +189,7 @@ export default function TopNav() {
         if (!userId) return;
         const { data: profile } = await supabase
           .from(DB_TABLES.profiles)
-          .select("name, avatar_url, category")
+          .select("name, avatar_url")
           .eq("user_id", userId)
           .maybeSingle();
 
@@ -199,11 +197,9 @@ export default function TopNav() {
         const typed = profile as {
           name?: string | null;
           avatar_url?: string | null;
-          category?: string | null;
         } | null;
         setName(typed?.name?.trim() || "Jugador");
         setAvatarUrl(typed?.avatar_url ?? null);
-        setCategory(typed?.category ?? null);
 
         const { count } = await supabase
           .from(DB_TABLES.notifications)
@@ -280,7 +276,6 @@ export default function TopNav() {
             onSignOut={() => void handleSignOut()}
             name={name}
             avatarUrl={avatarUrl}
-            category={category}
             initial={initial}
           />,
           document.body

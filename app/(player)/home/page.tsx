@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, CirclePlus, GraduationCap, Search, Trophy, Zap } from "lucide-react";
+import { Building2, ChevronRight, CirclePlus, GraduationCap, Search, Trophy } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
@@ -94,8 +94,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         }}
       >
         <div className="relative z-10 flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-            <Zap size={20} strokeWidth={2.25} aria-hidden />
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-xl ring-1 ring-white/20" aria-hidden>
+            🎾
           </span>
           <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
             ¡Vamos! Todo listo para tu partido, {displayName}.

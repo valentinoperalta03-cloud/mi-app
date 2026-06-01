@@ -94,13 +94,29 @@ export default function ProfileSocialActions({
         </p>
       ) : null}
 
-      <Link
-        href={`/comunidad/mensajes/${targetUserId}`}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
-      >
-        <MessageSquare size={16} />
-        Mandar mensaje
-      </Link>
+      <div className="space-y-1.5">
+        {mutual ? (
+          <Link
+            href={`/comunidad/mensajes/${targetUserId}`}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
+          >
+            <MessageSquare size={16} />
+            Mandar mensaje
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] opacity-50"
+          >
+            <MessageSquare size={16} />
+            Mandar mensaje
+          </button>
+        )}
+        {!mutual ? (
+          <p className="text-center text-xs text-[var(--text-tertiary)]">Seguíos mutuamente para chatear</p>
+        ) : null}
+      </div>
 
       <AppleToast message={toast} />
     </div>
