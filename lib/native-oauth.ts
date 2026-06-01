@@ -9,6 +9,8 @@ const NATIVE_CALLBACK_PREFIX = NATIVE_AUTH_CALLBACK_URL.split("?")[0];
 
 export type NativeOAuthCallbackParams = {
   code: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   error: string | null;
   errorDescription: string | null;
 };
@@ -17,15 +19,18 @@ export function parseNativeOAuthCallback(url: string): NativeOAuthCallbackParams
   if (!url.startsWith(NATIVE_CALLBACK_PREFIX)) {
     return null;
   }
-
+  const hashStart = url.indexOf("#");
   const queryStart = url.indexOf("?");
-  const search = queryStart >= 0 ? url.slice(queryStart) : "";
-  const params = new URLSearchParams(search);
-
+  const search = queryStart >= 0 ? url.slice(queryStart, hashStart >= 0 ? hashStart : undefined) : "";
+  const hash = hashStart >= 0 ? url.slice(hashStart + 1) : "";
+  const queryParams = new URLSearchParams(search);
+  const hashParams = new URLSearchParams(hash);
   return {
-    code: params.get("code"),
-    error: params.get("error"),
-    errorDescription: params.get("error_description"),
+    code: queryParams.get("code"),
+    accessToken: hashParams.get("access_token"),
+    refreshToken: hashParams.get("refresh_token"),
+    error: queryParams.get("error") ?? hashParams.get("error"),
+    errorDescription: queryParams.get("error_description") ?? hashParams.get("error_description"),
   };
 }
 
@@ -80,7 +85,6 @@ export async function completeNativeOAuthFromDeepLink(
   if (!params) {
     return { ok: false, redirectTo: "/login" };
   }
-
   if (params.error) {
     const message =
       params.errorDescription?.replace(/\+/g, " ") ??
@@ -92,37 +96,47 @@ export async function completeNativeOAuthFromDeepLink(
       redirectTo: `/login?kind=error&message=${encodeURIComponent(message)}`,
     };
   }
+  const supabase = createSupabaseBrowserClient();
 
-  if (!params.code) {
+  if (params.accessToken && params.refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: params.accessToken,
+      refresh_token: params.refreshToken,
+    });
+    if (error) {
+      return {
+        ok: false,
+        redirectTo: `/login?kind=error&message=${encodeURIComponent(
+          formatAuthErrorMessage(error.message || "No se pudo completar el inicio de sesión.")
+        )}`,
+      };
+    }
+  } else if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+    if (error) {
+      return {
+        ok: false,
+        redirectTo: `/login?kind=error&message=${encodeURIComponent(
+          formatAuthErrorMessage(error.message || "No se pudo completar el inicio de sesión.")
+        )}`,
+      };
+    }
+  } else {
     return {
       ok: false,
       redirectTo: `/login?kind=error&message=${encodeURIComponent("Enlace de autenticación incompleto.")}`,
     };
   }
 
-  const supabase = createSupabaseBrowserClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-
-  if (error) {
-    return {
-      ok: false,
-      redirectTo: `/login?kind=error&message=${encodeURIComponent(
-        formatAuthErrorMessage(error.message || "No se pudo completar el inicio de sesión.")
-      )}`,
-    };
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
     return {
       ok: false,
       redirectTo: `/login?kind=error&message=${encodeURIComponent("No se pudo obtener la sesión.")}`,
     };
   }
-
   const home = await resolveHomePath(supabase, user.id);
   return { ok: true, redirectTo: home };
 }
