@@ -27,5 +27,5 @@ export default async function ComunidadPage({ searchParams }: ComunidadPageProps
 
   const rankingsPreview = await fetchRankingsPreview(user.id);
 
-  return <ComunidadClient rankingsPreview={rankingsPreview} />;
+  return <ComunidadClient rankingsPreview={rankingsPreview} userId={user.id} />;
 }

@@ -1,11 +1,9 @@
-import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { HomeSuggestionsSection } from "@/components/home-suggestions-section";
-import { HomeSuggestionsSkeleton } from "@/components/home-loading-skeletons";
+import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
-import { ParaTiCreatePost } from "@/components/para-ti-create-post";
+import { ParaTiCreatePostButton } from "@/components/para-ti-create-post";
 import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
-import { PlayerStackHeader } from "@/components/player-back-button";
 import { fetchLatestMatchResultForUser, fetchPostsFeed } from "@/lib/para-ti-posts";
 import { createClient } from "@/utils/supabase/server";
 
@@ -24,26 +22,28 @@ export default async function ParaTiPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
       <div className="px-4">
-        <PlayerStackHeader
-          backHref="/comunidad"
-          backLabel="Volver a Comunidad"
-          title="Para Ti"
-          subtitle="Novedades y sugerencias de la comunidad"
-        />
-
-        <section className="mb-5 min-w-0 space-y-3">
-          <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Sugerencias para vos</h2>
-          <Suspense fallback={<HomeSuggestionsSkeleton />}>
-            <HomeSuggestionsSection userId={user.id} />
-          </Suspense>
-        </section>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/comunidad"
+                className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] dark:ring-white/10"
+              >
+                <ChevronLeft size={20} className="text-[var(--text-secondary)]" />
+              </Link>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Para Ti</h1>
+            </div>
+            <p className="mt-1 pl-11 text-sm text-[var(--text-tertiary)]">
+              Novedades y sugerencias de la comunidad
+            </p>
+          </div>
+          <ParaTiCreatePostButton latestMatch={latestMatch} />
+        </div>
 
         <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
           <ParaTiPostsMotion posts={posts} />
         </section>
       </div>
-
-      <ParaTiCreatePost latestMatch={latestMatch} />
     </MotionPage>
   );
 }

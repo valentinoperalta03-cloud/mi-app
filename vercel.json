@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/check-incomplete-matches",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/auto-confirm-results",
+      "schedule": "0 3 * * *"
     }
   ]
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
@@ -8,7 +7,6 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, getProfileLevelParts } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 import ProfileSocialActions from "@/components/profile-social-actions";
-import ProfileStatsPanel from "./profile-stats-panel";
 
 type PageProps = { params: Promise<{ userId: string }> };
 
@@ -47,8 +45,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   };
 
   const displayName = row.name?.trim() || "Jugador";
-  const categoriaLabel =
-    row.gender === "masculino" ? "Masculino" : row.gender === "femenino" ? "Femenino" : "Mixto";
 
   let favorited = false;
   let followsBack = false;
@@ -74,10 +70,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   }
   const nivelLine = formatProfileNivelFromRow(row);
   const levelParts = getProfileLevelParts(row);
-  const eloLabel =
-    row.level != null && Number.isFinite(Number(row.level))
-      ? Number(row.level).toFixed(1)
-      : "Sin nivel";
 
   const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
     supabase
@@ -163,9 +155,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const ultimosCinco = normalizedResults
     .sort((a, b) => new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime())
     .slice(0, 5);
-  const chartValues = ultimosCinco
-    .map((m) => (m.resultado === "Victoria" ? 3 : m.resultado === "Empate" ? 1 : 0))
-    .reverse();
 
   const { data: participantsInMyMatches } = matchIds.length
     ? await supabase
@@ -234,11 +223,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </Link>
 
       <section className="rounded-3xl border border-slate-200/80 bg-white p-6 text-center shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
-        <div className="mx-auto mb-4 w-fit rounded-xl border border-slate-200/70 bg-white/90 p-1.5">
-          <div className="relative h-7 w-20 overflow-hidden">
-            <Image src="/logo.png" alt="Logo de Padelibre" fill className="object-contain" />
-          </div>
-        </div>
         <div className="mx-auto w-fit">
           <div className="rounded-full border border-slate-200 bg-white p-1 shadow-[0_8px_20px_-14px_rgba(15,23,42,0.35)]">
             <ProfileAvatar avatarUrl={row.avatar_url} name={displayName} size={108} />
@@ -280,7 +264,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
             <span className="font-bold">{nivelLine}</span>
           </p>
         )}
-        <p className="mt-1 text-xs font-medium text-slate-500">Categoría: {categoriaLabel}</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Partidos</p>
@@ -294,39 +277,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Seguidos</p>
             <p className="text-sm font-bold text-slate-900">{followingCount ?? 0}</p>
           </div>
-        </div>
-      </section>
-
-      <ProfileStatsPanel
-        partidosJugados={partidosJugados}
-        victoriasTotales={victoriasTotales}
-        nivelActual={levelParts?.category ?? nivelLine}
-        eloRanking={eloLabel}
-      />
-
-      <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Nivel y evolución</h2>
-        <div className="rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Últimos 5 partidos</p>
-          {chartValues.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Sin resultados suficientes para mostrar el gráfico.</p>
-          ) : (
-            <div className="mt-3 grid grid-cols-5 gap-2">
-              {chartValues.map((v, idx) => (
-                <div key={`bar-${idx}`} className="flex flex-col items-center gap-1">
-                  <div className="flex h-20 w-full items-end rounded-xl bg-slate-100 p-1">
-                    <div
-                      className={`w-full rounded-md ${
-                        v === 3 ? "bg-emerald-500" : v === 1 ? "bg-amber-400" : "bg-rose-400"
-                      }`}
-                      style={{ height: `${Math.max(18, (v / 3) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-400">P{idx + 1}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 

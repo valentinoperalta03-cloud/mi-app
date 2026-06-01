@@ -1,20 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Banknote,
-  BarChart3,
-  ChevronDown,
-  CircleDollarSign,
-  Clock3,
-  Lock,
-  Megaphone,
-  Search,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react";
+import { ChevronDown, CircleDollarSign, Search, TrendingUp, Users } from "lucide-react";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 16 },
@@ -45,38 +32,6 @@ const playerFeatures = [
     description:
       "¿Te falta uno? Publicá tu partido y dejá que el sistema encuentre al jugador ideal por vos según su nivel.",
     icon: Users,
-  },
-] as const;
-
-const clubBenefits = [
-  {
-    title: "Métricas en tiempo real",
-    description:
-      "Panel de control con ingresos, ocupación y horarios más rentables para tomar mejores decisiones.",
-    icon: BarChart3,
-  },
-  {
-    title: "Eliminá los huecos",
-    description:
-      "Nuestro sistema de Partidos Abiertos ayuda a completar turnos en horarios muertos automáticamente.",
-    icon: Zap,
-  },
-  {
-    title: "Gestión 24/7",
-    description:
-      "Recibí reservas mientras el club está cerrado. Tu agenda se actualiza sola sin que tengas que atender el teléfono.",
-    icon: Clock3,
-  },
-  {
-    title: "Visibilidad Total",
-    description: "Ponemos tu club frente a miles de jugadores de la zona que hoy no te conocen.",
-    icon: Megaphone,
-  },
-  {
-    title: "Cero deudas",
-    description:
-      "Olvidate de los no-show. Las reservas se confirman solo con el pago realizado. El dinero va directo a tu cuenta de Mercado Pago.",
-    icon: Lock,
   },
 ] as const;
 
@@ -164,79 +119,6 @@ export default function ComoFuncionaContent() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.2 }}
-        className="space-y-4 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5"
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-[#0585FC]">Para clubes</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Tu club en piloto automático. Sin costos fijos.
-          </h2>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Unirse a Padelibre no tiene costo mensual ni de alta. Ganamos solo si vos ganás.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          {clubBenefits.map((benefit) => {
-            const Icon = benefit.icon;
-            return (
-              <article
-                key={benefit.title}
-                className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex shrink-0 rounded-xl bg-[#0585FC]/10 p-2.5 text-[#0585FC]">
-                    <Icon size={20} />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{benefit.title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                      {benefit.description}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </motion.section>
-
-      <motion.section
-        variants={fadeInUp}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
-        className="space-y-4"
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-[#0585FC]">Transparencia y costos</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Un modelo justo para todos
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800">
-            <p className="text-sm font-semibold uppercase tracking-wide text-[#0585FC]">Clubes</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">$0 costo fijo</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Gestión, visibilidad y herramientas profesionales gratis.
-            </p>
-          </article>
-          <article className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800">
-            <p className="text-sm font-semibold uppercase tracking-wide text-[#0585FC]">Jugadores</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">+5% servicio</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Solo una pequeña comisión de servicio (+5%) para mantener la plataforma siempre al
-              100% y ofrecerte soporte.
-            </p>
-          </article>
-        </div>
-      </motion.section>
-
-      <motion.section
-        variants={fadeInUp}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
         className="space-y-4 rounded-3xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800"
       >
         <div className="space-y-2">
@@ -264,36 +146,20 @@ export default function ComoFuncionaContent() {
         </div>
 
         <div className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-4">
-          <p className="text-sm font-bold text-slate-900 dark:text-white">
-            ¿Sos dueño de un club o tenés dudas técnicas?
-          </p>
+          <p className="text-sm font-bold text-slate-900 dark:text-white">¿Sos dueño de un club?</p>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            Te acompañamos en todo el proceso: alta de club, configuración y resolución de cualquier
-            tema técnico.
+            Hablá con nosotros por WhatsApp y te ayudamos a sumarte a Padelibre.
           </p>
           <div className="mt-4">
-            <Link
-              href="/comunidad/mensajes"
-              className="inline-flex items-center justify-center rounded-2xl bg-[#0585FC] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0461C4]"
+            <a
+              href="https://wa.me/5493412591953?text=Hola%2C%20quiero%20sumar%20mi%20club%20a%20Padelibre"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-2xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1ebe5d]"
             >
-              Hablar con soporte
-            </Link>
+              Hablar por WhatsApp
+            </a>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3">
-          <Link
-            href="/reservas"
-            className="inline-flex items-center justify-center rounded-2xl bg-[#0585FC] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0461C4]"
-          >
-            Reservar una cancha
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center rounded-2xl border border-[#0585FC]/30 bg-white px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
-          >
-            Registrar mi club
-          </Link>
         </div>
       </motion.section>
     </main>

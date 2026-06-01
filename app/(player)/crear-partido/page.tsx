@@ -1,3 +1,4 @@
+import { CrearPartidoInfoButton } from "@/components/crear-partido-info-button";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -133,13 +134,18 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
-      <PlayerStackHeader
-        backHref="/home"
-        backLabel="Volver al inicio"
-        title="Crear partido"
-        subtitle="Reservá tu cancha en pocos pasos y publicá el partido para la comunidad."
-        className="mb-2"
-      />
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <PlayerStackHeader
+          backHref="/home"
+          backLabel="Volver al inicio"
+          title="Crear partido"
+          subtitle="Reservá tu cancha en pocos pasos y publicá el partido para la comunidad."
+          className="mb-0 min-w-0 flex-1"
+        />
+        <div className="shrink-0 pt-1">
+          <CrearPartidoInfoButton />
+        </div>
+      </div>
 
       {clubsError || courtsError ? (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">

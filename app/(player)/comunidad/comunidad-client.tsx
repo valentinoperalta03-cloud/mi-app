@@ -1,6 +1,7 @@
-"use client";
-
 import Link from "next/link";
+import { Suspense } from "react";
+import { HomeSuggestedClubs, HomeSuggestionsSection } from "@/components/home-suggestions-section";
+import { HomeSuggestionsSkeleton } from "@/components/home-loading-skeletons";
 import { MessageCircle, Sparkles, Trophy, Users } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import type { RankingsPreview } from "@/lib/rankings-data";
@@ -95,8 +96,10 @@ function ComunidadNavTile({ tile, href }: { tile: TileVisual; href: string }) {
 
 export function ComunidadClient({
   rankingsPreview,
+  userId,
 }: {
   rankingsPreview: RankingsPreview;
+  userId: string;
 }) {
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
@@ -127,6 +130,21 @@ export function ComunidadClient({
         {tileVisuals.map((tile) => (
           <ComunidadNavTile key={tile.id} tile={tile} href={hrefs[tile.id] ?? "/comunidad"} />
         ))}
+      </div>
+
+      <div className="mt-6 space-y-5 px-4">
+        <section className="space-y-3">
+          <h2 className="text-base font-bold tracking-tight text-[var(--text-primary)]">Jugadores para vos</h2>
+          <Suspense fallback={<HomeSuggestionsSkeleton />}>
+            <HomeSuggestionsSection userId={userId} />
+          </Suspense>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-base font-bold tracking-tight text-[var(--text-primary)]">Clubes cerca tuyo</h2>
+          <Suspense fallback={<HomeSuggestionsSkeleton />}>
+            <HomeSuggestedClubs />
+          </Suspense>
+        </section>
       </div>
     </MotionPage>
   );

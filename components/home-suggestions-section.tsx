@@ -69,3 +69,50 @@ export async function HomeSuggestionsSection({ userId }: { userId: string }) {
     </div>
   );
 }
+
+export async function HomeSuggestedClubs() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("clubs")
+    .select("id, name, location, logo_url, image_url")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .limit(6);
+
+  if (error || !data?.length) return null;
+
+  return (
+    <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:thin]">
+      {(data as Array<{
+        id: string;
+        name: string | null;
+        location: string | null;
+        logo_url: string | null;
+        image_url: string | null;
+      }>).map((club) => {
+        const label = club.name?.trim() || "Club";
+        const imgUrl = club.logo_url ?? club.image_url ?? null;
+        return (
+          <div
+            key={club.id}
+            className="w-[10rem] shrink-0 rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-slate-700/80 dark:bg-[var(--bg-card)]"
+          >
+            <Link href={`/clubs/${club.id}`} className="block text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
+                {imgUrl ? (
+                  <img src={imgUrl} alt={label} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-lg font-bold text-[#0585FC]">
+                    {label.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{club.location ?? ""}</p>
+            </Link>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

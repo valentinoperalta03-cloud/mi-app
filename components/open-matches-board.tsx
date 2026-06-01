@@ -1,4 +1,5 @@
 import EmptyStateCard from "@/components/empty-state-card";
+import { BuscarPartidoInfoButton } from "@/components/buscar-partido-info-button";
 import MatchesFilterBoard, { type MatchCardData } from "@/components/matches-filter-board";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
@@ -216,13 +217,18 @@ export default async function OpenMatchesBoard({
       }`}
     >
       {backHref ? (
-        <PlayerStackHeader
-          backHref={backHref}
-          backLabel={backLabel}
-          title={title}
-          subtitle={description}
-          className="mb-2"
-        />
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <PlayerStackHeader
+            backHref={backHref}
+            backLabel={backLabel}
+            title={title}
+            subtitle={description}
+            className="mb-0 min-w-0 flex-1"
+          />
+          <div className="shrink-0 pt-1">
+            <BuscarPartidoInfoButton />
+          </div>
+        </div>
       ) : (
         <header className="space-y-2">
           <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>

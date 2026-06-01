@@ -11,21 +11,11 @@ export type WeeklyTopPlayer = {
   categoryLabel: string;
 };
 
-export type GlobalRankingRow = {
+export type TopMatchesRow = {
   user_id: string;
   name: string | null;
   avatar_url: string | null;
-  level: number | null;
-  categoryLabel: string;
-  accent: "elite" | "avanzado" | "intermedio" | "principiante";
-};
-
-export type MyRankInfo = {
-  position: number;
-  total: number;
-  name: string | null;
-  avatar_url: string | null;
-  level: number | null;
+  matches_played: number;
   categoryLabel: string;
 };
 
@@ -34,14 +24,6 @@ export type RankingsPreview = {
   totalRankedPlayers: number;
   weeklyFirstName: string | null;
 };
-
-function accentFromLevel(level: number | null): GlobalRankingRow["accent"] {
-  const lv = level ?? 0;
-  if (lv >= 6) return "elite";
-  if (lv >= 4) return "avanzado";
-  if (lv >= 2) return "intermedio";
-  return "principiante";
-}
 
 /**
  * Top victorias en 7 días: partidos con al menos una fila en `match_result_confirmations`
@@ -140,84 +122,67 @@ export async function fetchWeeklyTopWinners(limit = 10): Promise<WeeklyTopPlayer
   });
 }
 
-export async function fetchGlobalRanking(limit = 50): Promise<GlobalRankingRow[]> {
+export async function fetchTopByMatchesPlayed(limit = 10): Promise<TopMatchesRow[]> {
   const admin = await getAdminClient();
   const { data, error } = await admin
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .not("player_id", "is", null);
+
+  if (error || !data?.length) return [];
+
+  const countMap = new Map<string, number>();
+  for (const row of data as { player_id: string }[]) {
+    countMap.set(row.player_id, (countMap.get(row.player_id) ?? 0) + 1);
+  }
+
+  const sorted = [...countMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+
+  if (!sorted.length) return [];
+
+  const ids = sorted.map(([id]) => id);
+  const { data: profiles } = await admin
     .from(DB_TABLES.profiles)
     .select("user_id, name, avatar_url, level, level_of_play")
-    .order("level", { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .in("user_id", ids);
 
-  if (error || !data) return [];
+  const byId = new Map(
+    (profiles ?? []).map(
+      (p: {
+        user_id: string;
+        name: string | null;
+        avatar_url: string | null;
+        level: number | null;
+        level_of_play: string | null;
+      }) => [p.user_id, p]
+    )
+  );
 
-  return (
-    data as Array<{
-      user_id: string;
-      name: string | null;
-      avatar_url: string | null;
-      level: number | null;
-      level_of_play: string | null;
-    }>
-  ).map((p) => {
-    const lv = p.level != null && Number.isFinite(Number(p.level)) ? Number(p.level) : null;
+  return sorted.map(([user_id, matches_played]) => {
+    const p = byId.get(user_id) as
+      | { name: string | null; avatar_url: string | null; level: number | null; level_of_play: string | null }
+      | undefined;
+    const lv = p?.level != null && Number.isFinite(Number(p.level)) ? Number(p.level) : null;
     const categoryLabel =
-      (p.level_of_play && String(p.level_of_play).trim()) || (lv != null ? classifyCategory(lv) : "—");
+      (p?.level_of_play && String(p.level_of_play).trim()) || (lv != null ? classifyCategory(lv) : "—");
     return {
-      user_id: p.user_id,
-      name: p.name,
-      avatar_url: p.avatar_url,
-      level: lv,
+      user_id,
+      matches_played,
+      name: p?.name ?? null,
+      avatar_url: p?.avatar_url ?? null,
       categoryLabel,
-      accent: accentFromLevel(lv),
     };
   });
 }
 
-export async function fetchMyGlobalRank(userId: string): Promise<MyRankInfo | null> {
-  const admin = await getAdminClient();
-
-  const { data: me, error: meErr } = await admin
-    .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level, level_of_play")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (meErr || !me) return null;
-
-  const { data: ordered, error: ordErr } = await admin
-    .from(DB_TABLES.profiles)
-    .select("user_id, level")
-    .order("level", { ascending: false, nullsFirst: false })
-    .order("user_id", { ascending: true });
-
-  if (ordErr || !ordered?.length) return null;
-
-  const rows = ordered as { user_id: string; level: number | null }[];
-  const myLevel = me.level != null && Number.isFinite(Number(me.level)) ? Number(me.level) : null;
-  const idx = rows.findIndex((r) => r.user_id === userId);
-  if (idx === -1) return null;
-
-  const lv = myLevel;
-  const meRow = me as { name: string | null; avatar_url: string | null; level_of_play: string | null };
-  const categoryLabel =
-    (meRow.level_of_play && String(meRow.level_of_play).trim()) || (lv != null ? classifyCategory(lv) : "—");
+export async function fetchRankingsPreview(_userId: string): Promise<RankingsPreview> {
+  const weekly = await fetchWeeklyTopWinners(1);
 
   return {
-    position: idx + 1,
-    total: rows.length,
-    name: meRow.name,
-    avatar_url: meRow.avatar_url,
-    level: lv,
-    categoryLabel,
-  };
-}
-
-export async function fetchRankingsPreview(userId: string): Promise<RankingsPreview> {
-  const [weekly, my] = await Promise.all([fetchWeeklyTopWinners(1), fetchMyGlobalRank(userId)]);
-
-  return {
-    myGlobalPosition: my?.position ?? null,
-    totalRankedPlayers: my?.total ?? 0,
+    myGlobalPosition: null,
+    totalRankedPlayers: 0,
     weeklyFirstName: weekly[0]?.name?.trim() || null,
   };
 }

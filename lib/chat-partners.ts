@@ -93,22 +93,17 @@ export async function fetchConversationPreviews(
 export async function fetchThreadMessages(
   supabase: SupabaseClient,
   userId: string,
-  peerId: string
+  peerId: string,
+  limit = 50
 ) {
-  const [{ data: out }, { data: inc }] = await Promise.all([
-    supabase
-      .from(DB_TABLES.messages)
-      .select("id, sender_id, receiver_id, content, created_at")
-      .eq("sender_id", userId)
-      .eq("receiver_id", peerId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from(DB_TABLES.messages)
-      .select("id, sender_id, receiver_id, content, created_at")
-      .eq("sender_id", peerId)
-      .eq("receiver_id", userId)
-      .order("created_at", { ascending: true }),
-  ]);
+  const { data } = await supabase
+    .from(DB_TABLES.messages)
+    .select("id, sender_id, receiver_id, content, created_at")
+    .or(
+      `and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   type Row = {
     id: string;
@@ -118,9 +113,7 @@ export async function fetchThreadMessages(
     created_at: string;
   };
 
-  const merged = [...(out ?? []), ...(inc ?? [])] as Row[];
-  merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  return merged;
+  return ((data ?? []) as Row[]).reverse();
 }
 
 export async function canOpenChatWithPeer(
@@ -130,6 +123,22 @@ export async function canOpenChatWithPeer(
 ): Promise<boolean> {
   if (!peerId || userId === peerId) return false;
 
+  const [{ data: block1 }, { data: block2 }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.blockedUsers)
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("blocked_user_id", peerId)
+      .maybeSingle(),
+    supabase
+      .from(DB_TABLES.blockedUsers)
+      .select("user_id")
+      .eq("user_id", peerId)
+      .eq("blocked_user_id", userId)
+      .maybeSingle(),
+  ]);
+  if (block1 || block2) return false;
+
   const { data: fav } = await supabase
     .from(DB_TABLES.userFavorites)
     .select("user_id")
@@ -137,25 +146,5 @@ export async function canOpenChatWithPeer(
     .eq("favorite_user_id", peerId)
     .maybeSingle();
 
-  if (fav) return true;
-
-  const { data: a } = await supabase
-    .from(DB_TABLES.messages)
-    .select("id")
-    .eq("sender_id", userId)
-    .eq("receiver_id", peerId)
-    .limit(1)
-    .maybeSingle();
-
-  if (a) return true;
-
-  const { data: b } = await supabase
-    .from(DB_TABLES.messages)
-    .select("id")
-    .eq("sender_id", peerId)
-    .eq("receiver_id", userId)
-    .limit(1)
-    .maybeSingle();
-
-  return Boolean(b);
+  return Boolean(fav);
 }

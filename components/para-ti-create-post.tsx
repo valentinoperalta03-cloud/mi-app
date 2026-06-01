@@ -5,10 +5,40 @@ import { Plus, X } from "lucide-react";
 import { createPostAction } from "@/app/(player)/comunidad/actions";
 import { initialCreatePostState, type CreatePostState } from "@/app/(player)/comunidad/post-types";
 
-type LatestMatch = {
+export type LatestMatch = {
   match_id: string;
   scoreLabel: string;
 } | null;
+
+type PostModalProps = {
+  open: boolean;
+  sessionKey: number;
+  latestMatch: LatestMatch;
+  onClose: () => void;
+};
+
+function PostModal({ open, sessionKey, latestMatch, onClose }: PostModalProps) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/35 p-4 backdrop-blur-[3px] sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="post-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.25)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CreatePostForm key={sessionKey} latestMatch={latestMatch} onRequestClose={onClose} />
+      </div>
+    </div>
+  );
+}
 
 type CreatePostFormProps = {
   latestMatch: LatestMatch;
@@ -175,17 +205,18 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
 export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) {
   const [open, setOpen] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    const onDrawerToggle = (event: Event) => {
-      const custom = event as CustomEvent<{ open?: boolean }>;
-      setDrawerOpen(Boolean(custom.detail?.open));
-    };
-    setDrawerOpen(document.body.classList.contains("player-drawer-open"));
-    window.addEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
-    return () => window.removeEventListener("player-drawer-toggle", onDrawerToggle as EventListener);
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setSessionKey((k) => k + 1);
   }, []);
+
+  return <PostModal open={open} sessionKey={sessionKey} latestMatch={latestMatch} onClose={handleClose} />;
+}
+
+export function ParaTiCreatePostButton({ latestMatch }: { latestMatch: LatestMatch }) {
+  const [open, setOpen] = useState(false);
+  const [sessionKey, setSessionKey] = useState(0);
 
   const handleOpen = useCallback(() => {
     setSessionKey((k) => k + 1);
@@ -199,47 +230,16 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
 
   return (
     <>
-      <div
-        className={`pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 transition-all duration-200 ${
-          drawerOpen ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
-        }`}
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#0585FC] px-3.5 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(5,133,252,0.45)] transition active:scale-[0.97]"
       >
-        <div className="pointer-events-auto relative h-full w-full">
-          <div className="absolute bottom-28 right-4">
-            <button
-              type="button"
-              onClick={handleOpen}
-              aria-label="Nueva publicación"
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0461C4] text-white shadow-[0_12px_40px_-8px_rgba(2,132,199,0.55)] ring-4 ring-white/90 transition hover:bg-[#0585FC]/50 hover:shadow-lg active:scale-95"
-            >
-              <Plus size={28} strokeWidth={2.25} aria-hidden />
-            </button>
-          </div>
-        </div>
-      </div>
+        <Plus size={16} strokeWidth={2.5} aria-hidden />
+        Publicar
+      </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/35 p-4 backdrop-blur-[3px] sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="post-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClose();
-          }}
-        >
-          <div
-            className="w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.25)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CreatePostForm
-              key={sessionKey}
-              latestMatch={latestMatch}
-              onRequestClose={handleClose}
-            />
-          </div>
-        </div>
-      ) : null}
+      <PostModal open={open} sessionKey={sessionKey} latestMatch={latestMatch} onClose={handleClose} />
     </>
   );
 }

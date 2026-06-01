@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+import { Info, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   recordMatchResultAction,
@@ -64,6 +65,7 @@ export function MatchResultForm({
     { a: 0, b: 0 },
   ]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const { needsThird, payloadForSubmit, previewLabel } = useMemo(() => {
     const s0 = sets[0]!;
@@ -171,6 +173,14 @@ export function MatchResultForm({
         className="relative overflow-hidden rounded-3xl p-6 text-center text-white"
         style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
       >
+        <button
+          type="button"
+          onClick={() => setShowInfo(true)}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white transition active:scale-95"
+          aria-label="Cómo funciona el resultado"
+        >
+          <Info size={16} />
+        </button>
         <div className="absolute right-3 top-3 opacity-10">
           <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
             <circle cx="30" cy="30" r="28" stroke="white" strokeWidth="2" />
@@ -374,6 +384,87 @@ export function MatchResultForm({
         >
           {state.message}
         </motion.p>
+      ) : null}
+
+      {showInfo ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.3)] dark:bg-[var(--bg-card)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Cómo funciona el resultado</h3>
+              <button
+                type="button"
+                onClick={() => setShowInfo(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+              <div className="flex gap-3">
+                <span className="text-xl">📊</span>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Cargá el marcador</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Tocá &quot;Cargar resultado&quot; para tomar el control. Tenés 30 minutos para ingresar el
+                    marcador por sets. Solo uno por equipo puede cargar a la vez.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xl">✅</span>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Confirmación de los 4</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Los otros 3 jugadores deben confirmar el resultado. Si todos confirman, el partido queda
+                    cerrado y se actualiza el ranking.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xl">⚡</span>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Partidos competitivos</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Solo los partidos competitivos actualizan tu ELO. Los amistosos se registran pero no
+                    afectan tu ranking.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xl">🚫</span>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">¿El resultado está mal?</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Tocá &quot;Disputar&quot; y cualquier jugador podrá proponer un nuevo marcador. Solo se
+                    borra tu confirmación, no la de los demás.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xl">⏱</span>
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Confirmación automática</p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Si pasan 72 horas sin que todos confirmen, el resultado se confirma automáticamente.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowInfo(false)}
+              className="mt-6 w-full rounded-2xl bg-[#0585FC] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );

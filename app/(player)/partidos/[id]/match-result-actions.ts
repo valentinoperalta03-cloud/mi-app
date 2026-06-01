@@ -11,7 +11,7 @@ import { createClient } from "@/utils/supabase/server";
 export type RecordMatchResultState = { ok: boolean; message: string };
 
 const initialState: RecordMatchResultState = { ok: false, message: "" };
-const LOCK_MINUTES = 10;
+const LOCK_MINUTES = 30;
 /** ELO por defecto (0–8) si falta dato en perfil. */
 const DEFAULT_LEVEL = 3.0;
 
@@ -454,6 +454,19 @@ export async function recordMatchResultAction(
       .eq("id", matchId);
     if (matchStatusErr) return { ok: false, message: matchStatusErr.message };
 
+    const otherPlayerIds = ids.filter((id) => id !== user.id);
+    await Promise.all(
+      otherPlayerIds.map((playerId) =>
+        createNotification(supabase, {
+          user_id: playerId,
+          type: "match_result",
+          title: "Resultado pendiente",
+          body: "Un compañero cargó el resultado del partido. Entrá a confirmarlo.",
+          match_id: matchId,
+        })
+      )
+    );
+
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     return { ok: true, message: "Resultado enviado. Falta confirmación de los otros 3 jugadores." };
@@ -485,26 +498,34 @@ export async function recordMatchResultAction(
     if (confErr) return { ok: false, message: confErr.message };
 
     if (decision === "dispute") {
-      await supabase.from(DB_TABLES.matchResultConfirmations).delete().eq("match_result_id", existing.id);
       await supabase
         .from(DB_TABLES.matchResults)
         .update({
           status: "pending_confirmation",
-          conflict_reason: null,
+          conflict_reason: `Disputado por ${user.id} a las ${nowIso()}`,
           team_a_score: null,
           team_b_score: null,
           sets: null,
+          proposed_by: null,
         })
         .eq("id", existing.id);
+
+      await supabase
+        .from(DB_TABLES.matchResultConfirmations)
+        .delete()
+        .eq("match_result_id", existing.id)
+        .eq("user_id", user.id);
+
       await supabase
         .from(DB_TABLES.matches)
         .update({ result_status: "pending_confirmation" })
         .eq("id", matchId);
+
       revalidatePath(`/partidos/${matchId}`);
       revalidatePath("/home");
       return {
         ok: true,
-        message: "Resultado en disputa. Cualquier jugador puede proponer uno nuevo.",
+        message: "Marcaste el resultado como incorrecto. Cualquier jugador puede proponer uno nuevo.",
       };
     }
 
@@ -557,4 +578,82 @@ export async function recordMatchResultAction(
   }
 
   return { ok: false, message: "Acción inválida." };
+}
+
+export async function autoConfirmExpiredResults(): Promise<void> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+
+  const { data: oldResults } = await supabase
+    .from(DB_TABLES.matchResults)
+    .select("id, match_id, team_a_score, team_b_score, proposed_by")
+    .eq("status", "pending_confirmation")
+    .lt("updated_at", cutoff)
+    .not("team_a_score", "is", null)
+    .not("team_b_score", "is", null)
+    .limit(50);
+
+  if (!oldResults?.length) return;
+
+  for (const result of oldResults as Array<{
+    id: string;
+    match_id: string;
+    team_a_score: number;
+    team_b_score: number;
+    proposed_by: string | null;
+  }>) {
+    await supabase
+      .from(DB_TABLES.matchResults)
+      .update({ status: "confirmed" })
+      .eq("id", result.id);
+
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ result_status: "confirmed" })
+      .eq("id", result.match_id);
+
+    const { data: participants } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id, team")
+      .eq("match_id", result.match_id);
+
+    const rows = (participants ?? []) as { player_id: string; team: number }[];
+    const teamAIds = rows.filter((r) => r.team === 1).map((r) => r.player_id);
+    const teamBIds = rows.filter((r) => r.team === 2).map((r) => r.player_id);
+
+    if (teamAIds.length === 2 && teamBIds.length === 2) {
+      const { data: matchRow } = await supabase
+        .from(DB_TABLES.matches)
+        .select("match_type")
+        .eq("id", result.match_id)
+        .maybeSingle();
+
+      const isCompetitive =
+        String((matchRow as { match_type?: string } | null)?.match_type ?? "").toLowerCase() ===
+        "competitivo";
+
+      if (isCompetitive) {
+        await applyEloForConfirmedMatch({
+          matchId: result.match_id,
+          teamAIds,
+          teamBIds,
+          teamAScore: result.team_a_score,
+          teamBScore: result.team_b_score,
+        });
+      } else {
+        await finalizeFriendlyResult(result.match_id);
+      }
+
+      const allIds = [...teamAIds, ...teamBIds];
+      for (const playerId of allIds) {
+        await createNotification(supabase, {
+          user_id: playerId,
+          type: "match_result",
+          title: "Resultado confirmado automáticamente",
+          body: "Pasaron 72hs sin respuesta de todos los jugadores. El resultado fue confirmado automáticamente.",
+          match_id: result.match_id,
+        });
+      }
+    }
+  }
 }

@@ -155,6 +155,10 @@ export default function CrearPartidoForm({
   const [isSubmitting, startSubmit] = useTransition();
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [currentStep]);
+
   const dates = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
