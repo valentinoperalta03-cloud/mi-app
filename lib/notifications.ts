@@ -7,6 +7,7 @@ type NotificationType =
   | "player_joined"
   | "match_reminder"
   | "result_pending"
+  | "match_result"
   | "reservation_confirmed"
   | "reservation_cancelled"
   | "payment_approved"
