@@ -19,6 +19,7 @@ type Props = {
   clubAcceptsTransfer: boolean;
   bankAlias: string | null;
   bankCbu: string | null;
+  clubWhatsapp: string | null;
   onboardingComplete: boolean;
 };
 
@@ -34,6 +35,7 @@ export function JoinMatchPaymentModal({
   clubAcceptsTransfer,
   bankAlias,
   bankCbu,
+  clubWhatsapp,
   onboardingComplete,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -161,6 +163,7 @@ export function JoinMatchPaymentModal({
                       <p className="mt-1 text-xs font-medium text-amber-700">
                         Guardá el comprobante para mostrarlo al ingresar. Si no transferís antes, podés abonar en el
                         mostrador del club.
+                        {clubWhatsapp ? " Después vas a poder confirmar la transferencia por WhatsApp." : ""}
                       </p>
                     ) : null}
                   </div>

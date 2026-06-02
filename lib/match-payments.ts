@@ -8,10 +8,16 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 async function loadMatchForMercadoPago(
   supabase: SupabaseServer,
   matchId: string
-): Promise<{ totalPrice: number; scheduledDate: string; clubName: string; courtName: string } | null> {
+): Promise<{
+  totalPrice: number;
+  scheduledDate: string;
+  clubName: string;
+  courtName: string;
+  clubAccessToken: string | null;
+} | null> {
   const { data: row, error } = await supabase
     .from(DB_TABLES.matches)
-    .select("total_price,scheduled_date,date,courts(name,clubs(name))")
+    .select("total_price,scheduled_date,date,courts(name,clubs(name,mp_access_token))")
     .eq("id", matchId)
     .maybeSingle();
   if (error || !row) return null;
@@ -22,11 +28,17 @@ async function loadMatchForMercadoPago(
     courts:
       | {
           name: string | null;
-          clubs: { name: string | null } | { name: string | null }[] | null;
+          clubs:
+            | { name: string | null; mp_access_token?: string | null }
+            | { name: string | null; mp_access_token?: string | null }[]
+            | null;
         }
       | {
           name: string | null;
-          clubs: { name: string | null } | { name: string | null }[] | null;
+          clubs:
+            | { name: string | null; mp_access_token?: string | null }
+            | { name: string | null; mp_access_token?: string | null }[]
+            | null;
         }[]
       | null;
   };
@@ -40,7 +52,8 @@ async function loadMatchForMercadoPago(
   }
   const courtName = courtRel?.name ?? "Cancha";
   const clubName = clubObj?.name ?? "Club";
-  return { totalPrice, scheduledDate, clubName, courtName };
+  const clubAccessToken = (clubObj as { mp_access_token?: string | null } | null)?.mp_access_token?.trim() || null;
+  return { totalPrice, scheduledDate, clubName, courtName, clubAccessToken };
 }
 
 async function getPayerIdentityForMp(payerUserId: string): Promise<{
@@ -109,6 +122,7 @@ export async function createParticipantMercadoPagoPreference(params: {
     payerEmail: payer.email,
     payerFirstName: payer.firstName,
     payerLastName: payer.lastName,
+    clubAccessToken: meta.clubAccessToken,
     backUrls,
   });
   if ("error" in mp) {

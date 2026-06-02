@@ -150,6 +150,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const onboardingComplete = await isOnboardingComplete(supabase, user.id);
+  const { data: userProfileData } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const userName = (userProfileData as { name?: string | null } | null)?.name?.trim() || "un jugador";
 
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
@@ -267,7 +273,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: clubPaymentData } = clubIdForPayment
     ? await supabase
         .from(DB_TABLES.clubs)
-        .select("accepts_cash, accepts_transfer, mp_access_token, bank_alias, bank_cbu")
+        .select("accepts_cash, accepts_transfer, mp_access_token, bank_alias, bank_cbu, whatsapp")
         .eq("id", clubIdForPayment)
         .maybeSingle()
     : { data: null };
@@ -278,6 +284,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     mp_access_token?: string | null;
     bank_alias?: string | null;
     bank_cbu?: string | null;
+    whatsapp?: string | null;
   } | null;
 
   const clubHasMp = Boolean(clubPayment?.mp_access_token?.trim());
@@ -285,6 +292,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const clubAcceptsTransfer = Boolean(clubPayment?.accepts_transfer);
   const bankAlias = clubPayment?.bank_alias?.trim() ?? null;
   const bankCbu = clubPayment?.bank_cbu?.trim() ?? null;
+  const clubWhatsapp = clubPayment?.whatsapp?.trim() ?? null;
 
   const team1Players = participants.filter((p) => p.team === 1);
   const team2Players = participants.filter((p) => p.team === 2);
@@ -298,7 +306,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   // Check if current user has paid
   const { data: myPayment } = await supabase
     .from(DB_TABLES.payments)
-    .select("id,status,mp_preference_id,updated_at")
+    .select("id,status,mp_preference_id,payment_method,updated_at")
     .eq("match_id", id)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -308,6 +316,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const myPaymentStatus = String(
     (myPayment as { status?: string | null; mp_preference_id?: string | null } | null)?.status ?? ""
   ).toLowerCase();
+  const myPaymentMethod = String((myPayment as { payment_method?: string | null } | null)?.payment_method ?? "").toLowerCase();
   const hasInvitedPayment = myPaymentStatus === "invited";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved" || myPaymentStatus === "paid";
@@ -606,12 +615,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   clubName={detail.club_name ?? "Club"}
                   matchDate={clubWhenDurationLine}
                   courtName={detail.court_name ?? "Cancha"}
-                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4)}
+                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4 * 1.05)}
                   clubHasMp={clubHasMp}
                   clubAcceptsCash={clubAcceptsCash}
                   clubAcceptsTransfer={clubAcceptsTransfer}
                   bankAlias={bankAlias}
                   bankCbu={bankCbu}
+                  clubWhatsapp={clubWhatsapp}
                   onboardingComplete={onboardingComplete}
                 />
               </div>
@@ -672,12 +682,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   clubName={detail.club_name ?? "Club"}
                   matchDate={clubWhenDurationLine}
                   courtName={detail.court_name ?? "Cancha"}
-                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4)}
+                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4 * 1.05)}
                   clubHasMp={clubHasMp}
                   clubAcceptsCash={clubAcceptsCash}
                   clubAcceptsTransfer={clubAcceptsTransfer}
                   bankAlias={bankAlias}
                   bankCbu={bankCbu}
+                  clubWhatsapp={clubWhatsapp}
                   onboardingComplete={onboardingComplete}
                 />
               </div>
@@ -699,16 +710,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </span>
         </div>
 
-        {freeSlots > 0 && !isOwner ? (
-          <div className="mt-5 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-center text-xs font-medium text-white/75 sm:text-left">
-              Invitá jugadores y completá el partido.
-            </p>
-            <div className="flex justify-center sm:justify-end">
-              <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
-            </div>
-          </div>
-        ) : null}
       </section>
 
       <article
@@ -743,7 +744,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
               <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu parte</p>
               <p className="text-base font-bold text-[var(--text-primary)]">
-                ${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")}
+                ${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")}
               </p>
               {hasPaid ? (
                 <p className="mt-0.5 text-xs font-semibold text-emerald-600">✓ Pagado</p>
@@ -804,7 +805,11 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       ) : null}
 
       {isParticipant ? (
-        <MatchStatusBanner matchFullyPaid={matchFullyPaid} myPaymentNorm={myPaymentBanner} />
+        <MatchStatusBanner
+          matchFullyPaid={matchFullyPaid}
+          myPaymentNorm={myPaymentBanner}
+          confirmedPlayers={participants.length}
+        />
       ) : null}
 
       {isParticipant && myPaymentBanner === "pending" ? (
@@ -842,6 +847,25 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <span className="text-lg text-emerald-700 dark:text-emerald-400">✓</span>
             <p className="font-semibold text-emerald-800 dark:text-emerald-300">Lugar confirmado</p>
           </div>
+        </section>
+      ) : null}
+
+      {isParticipant && myPaymentStatus === "invited" && myPaymentMethod === "transfer" && clubWhatsapp ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+          <p className="font-semibold text-emerald-800 dark:text-emerald-300">¿Ya transferiste?</p>
+          <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+            Avisale al club por WhatsApp para confirmar tu lugar. Guardá el comprobante para mostrarlo al ingresar.
+          </p>
+          <a
+            href={`https://wa.me/${clubWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+              `Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+          >
+            Confirmar transferencia al club
+          </a>
         </section>
       ) : null}
 

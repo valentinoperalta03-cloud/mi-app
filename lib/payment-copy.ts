@@ -22,4 +22,5 @@ export const PAYMENT_COPY = {
   youPaidRejected: "No se procesó. Podés reintentar con otro medio.",
   matchWaitingPlayers: "Esperando que paguen los 4 jugadores.",
   matchReserved: "Los pagos están completos — turno confirmado para el club.",
+  matchAllConfirmed: "¡Partido confirmado! Los 4 jugadores están anotados.",
 } as const;
