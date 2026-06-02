@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -75,18 +74,6 @@ export default async function PerfilPagosPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-base font-bold text-slate-900">Métodos de pago</h2>
-        <p className="mt-2 text-sm text-slate-600">Los pagos se procesan de forma segura mediante Mercado Pago</p>
-        <Link
-          href="https://www.mercadopago.com.ar"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex w-full justify-center rounded-2xl bg-[#0585FC]/50 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Ir a Mercado Pago
-        </Link>
-      </section>
     </main>
   );
 }

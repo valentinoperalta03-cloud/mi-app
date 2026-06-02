@@ -2,6 +2,7 @@ import { CrearPartidoInfoButton } from "@/components/crear-partido-info-button";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { createClient } from "@/utils/supabase/server";
 import CrearPartidoForm, {
   type ClubOption,
@@ -22,6 +23,13 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const onboardingDone = await isOnboardingComplete(supabase, user.id);
+  if (!onboardingDone) {
+    redirect("/onboarding");
+  }
   const { data: profile } = user
     ? await supabase.from(DB_TABLES.profiles).select("gender").eq("user_id", user.id).maybeSingle()
     : { data: null };

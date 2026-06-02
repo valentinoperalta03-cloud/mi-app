@@ -12,6 +12,7 @@ import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { isMatchPrivate } from "@/lib/match-visibility";
+import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
@@ -20,6 +21,7 @@ import PartidoEditSection from "./partido-edit-section";
 import RequestJoinButton from "./request-join-button";
 import WhatsappShareButton from "./whatsapp-share-button";
 import { MatchStatusBanner } from "@/components/match-status-banner";
+import { JoinMatchPaymentModal } from "../../../../components/join-match-payment-modal";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from "@/lib/messages";
@@ -147,6 +149,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const onboardingComplete = await isOnboardingComplete(supabase, user.id);
 
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
@@ -252,6 +255,36 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       technical_score: profile?.technical_score ?? null,
     } satisfies ParticipantRow;
   });
+
+  const { data: courtForClub } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id")
+    .eq("id", match.court_id)
+    .maybeSingle();
+
+  const clubIdForPayment = (courtForClub as { club_id?: string | null } | null)?.club_id ?? "";
+
+  const { data: clubPaymentData } = clubIdForPayment
+    ? await supabase
+        .from(DB_TABLES.clubs)
+        .select("accepts_cash, accepts_transfer, mp_access_token, bank_alias, bank_cbu")
+        .eq("id", clubIdForPayment)
+        .maybeSingle()
+    : { data: null };
+
+  const clubPayment = clubPaymentData as {
+    accepts_cash?: boolean | null;
+    accepts_transfer?: boolean | null;
+    mp_access_token?: string | null;
+    bank_alias?: string | null;
+    bank_cbu?: string | null;
+  } | null;
+
+  const clubHasMp = Boolean(clubPayment?.mp_access_token?.trim());
+  const clubAcceptsCash = Boolean(clubPayment?.accepts_cash);
+  const clubAcceptsTransfer = Boolean(clubPayment?.accepts_transfer);
+  const bankAlias = clubPayment?.bank_alias?.trim() ?? null;
+  const bankCbu = clubPayment?.bank_cbu?.trim() ?? null;
 
   const team1Players = participants.filter((p) => p.team === 1);
   const team2Players = participants.filter((p) => p.team === 2);
@@ -566,17 +599,22 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               })}
             </div>
             {canJoinAsNewPlayer && team1Count < 2 ? (
-              <form action={requestToJoin} className="mt-4 flex justify-center">
-                <input type="hidden" name="match_id" value={id} />
-                <input type="hidden" name="level_override" value="false" />
-                <input type="hidden" name="team" value="1" />
-                <button
-                  type="submit"
-                  className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0461C4] shadow-md transition hover:bg-white/95 active:scale-[0.98]"
-                >
-                  Unirse
-                </button>
-              </form>
+              <div className="mt-4 flex justify-center">
+                <JoinMatchPaymentModal
+                  matchId={id}
+                  team={1}
+                  clubName={detail.club_name ?? "Club"}
+                  matchDate={clubWhenDurationLine}
+                  courtName={detail.court_name ?? "Cancha"}
+                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4)}
+                  clubHasMp={clubHasMp}
+                  clubAcceptsCash={clubAcceptsCash}
+                  clubAcceptsTransfer={clubAcceptsTransfer}
+                  bankAlias={bankAlias}
+                  bankCbu={bankCbu}
+                  onboardingComplete={onboardingComplete}
+                />
+              </div>
             ) : null}
           </div>
 
@@ -627,17 +665,22 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               })}
             </div>
             {canJoinAsNewPlayer && team2Count < 2 ? (
-              <form action={requestToJoin} className="mt-4 flex justify-center">
-                <input type="hidden" name="match_id" value={id} />
-                <input type="hidden" name="level_override" value="false" />
-                <input type="hidden" name="team" value="2" />
-                <button
-                  type="submit"
-                  className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0461C4] shadow-md transition hover:bg-white/95 active:scale-[0.98]"
-                >
-                  Unirse
-                </button>
-              </form>
+              <div className="mt-4 flex justify-center">
+                <JoinMatchPaymentModal
+                  matchId={id}
+                  team={2}
+                  clubName={detail.club_name ?? "Club"}
+                  matchDate={clubWhenDurationLine}
+                  courtName={detail.court_name ?? "Cancha"}
+                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4)}
+                  clubHasMp={clubHasMp}
+                  clubAcceptsCash={clubAcceptsCash}
+                  clubAcceptsTransfer={clubAcceptsTransfer}
+                  bankAlias={bankAlias}
+                  bankCbu={bankCbu}
+                  onboardingComplete={onboardingComplete}
+                />
+              </div>
             ) : null}
           </div>
         </div>

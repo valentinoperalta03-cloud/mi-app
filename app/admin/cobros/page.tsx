@@ -165,7 +165,8 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           <ul className="flex flex-col gap-3">
             {pending.map((m) => {
               const pay = String(m.payment_status ?? "").toLowerCase();
-              const methodLabel = pay === "cash_pending" ? "💵 Efectivo" : "🏦 Transferencia";
+              const methodLabel =
+                pay === "cash_pending" ? "Efectivo" : pay === "transfer_pending" ? "Transferencia" : "MP";
               const name = ownerName.get(m.owner_id) ?? "Jugador";
               const time = String(m.scheduled_time ?? "").slice(0, 5);
               const court = courtName.get(m.court_id) ?? "Cancha";
@@ -187,7 +188,12 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       ${amount.toLocaleString("es-AR")}
                     </p>
                   </div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{methodLabel}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Método:</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      {methodLabel}
+                    </span>
+                  </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <form action={confirmOfflineCobro} className="flex-1">
                       <input type="hidden" name="match_id" value={m.id} />

@@ -1,0 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { DB_TABLES } from "@/lib/db-tables";
+
+export async function isOnboardingComplete(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name, gender")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const profile = data as { name?: string | null; gender?: string | null } | null;
+  return Boolean(profile?.name?.trim() && profile?.gender?.trim());
+}
