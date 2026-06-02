@@ -167,58 +167,79 @@ export default async function PerfilPage() {
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
-        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center shadow-[var(--shadow-card)]">
-          <div className="mx-auto w-fit">
+        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
+          <div className="flex items-center gap-4">
             <ProfileAvatar
               avatarUrl={row?.avatar_url ?? null}
               name={displayName}
-              size={104}
-              ringClassName="ring-4 ring-[var(--bg-subtle)]"
+              size={72}
+              ringClassName="ring-2 ring-[var(--bg-subtle)]"
             />
-          </div>
-          <h1 className="mt-4 text-2xl font-bold text-[var(--text-primary)]">{displayName}</h1>
-          {levelParts ? (
-            <div className="mt-2 space-y-2">
-              <p className="text-sm font-semibold text-[#0585FC]">{levelParts.category}</p>
-              <p className="text-xs font-medium text-[var(--text-tertiary)]">ELO {levelParts.elo}</p>
-              <div className="mx-auto h-1.5 w-full max-w-[200px] overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-                <div
-                  className="h-full rounded-full bg-[#0585FC] transition-[width]"
-                  style={{ width: `${levelParts.progressInEloUnit}%` }}
-                />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="truncate text-xl font-bold text-[var(--text-primary)]">{displayName}</h1>
+                <Link
+                  href="/perfil/editar"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition active:scale-95"
+                  aria-label="Editar perfil"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </Link>
               </div>
-            </div>
-          ) : (
-            <p className="mt-1 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
-          )}
-          <div className="mt-4 flex justify-center gap-3">
-            <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
-              <p className="text-sm font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Seguidores</p>
-            </div>
-            <div className="rounded-full bg-[var(--bg-subtle)] px-4 py-2 text-center">
-              <p className="text-sm font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Siguiendo</p>
+              {levelParts ? (
+                <p className="mt-0.5 text-sm font-semibold text-[#0585FC]">{levelParts.category}</p>
+              ) : (
+                <p className="mt-0.5 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
+              )}
+              {levelParts ? <p className="text-xs text-[var(--text-tertiary)]">ELO {levelParts.elo}</p> : null}
             </div>
           </div>
-          {row?.bio?.trim() ? (
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
+
+          {levelParts ? (
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+              <div
+                className="h-full rounded-full bg-[#0585FC] transition-[width]"
+                style={{ width: `${levelParts.progressInEloUnit}%` }}
+              />
+            </div>
           ) : null}
-          <Link
-            href="/perfil/editar"
-            className="btn-primary-gradient mt-6 inline-flex w-full max-w-xs items-center justify-center rounded-2xl py-3.5 text-sm font-semibold transition hover:brightness-95 active:scale-[0.99]"
-          >
-            Editar perfil
-          </Link>
+
+          {row?.bio?.trim() ? (
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
+          ) : null}
+
+          <div className="mt-4 flex gap-4 border-t border-[var(--border-subtle)] pt-4">
+            <div className="text-center">
+              <p className="text-base font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
+            </div>
+            <div className="text-center">
+              <p className="text-base font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
+            </div>
+          </div>
         </div>
       </ProfileMotionSurface>
 
       <SuperadminEntryLink />
 
       {isAdmin ? (
-        <section className="rounded-[2.5rem] border border-slate-200/60 bg-white p-6 shadow-[0_2px_24px_-8px_rgba(15,23,42,0.06)] dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Modo desarrollador</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <section className="rounded-[2.5rem] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 shadow-[var(--shadow-card)]">
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Modo desarrollador</h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Si sos <code className="text-xs">owner_id</code> de un club, el inicio te lleva al panel
             admin.
           </p>
@@ -231,7 +252,7 @@ export default async function PerfilPage() {
             </Link>
             <Link
               href="/admin/gestion"
-              className="rounded-2xl bg-transparent border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="rounded-2xl border border-[var(--border-subtle)] bg-transparent px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
             >
               Ir a Admin
             </Link>
@@ -251,11 +272,11 @@ export default async function PerfilPage() {
       </ProfileMotionSection>
 
       <ProfileMotionSection title="Datos" description="Información de tu perfil.">
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 dark:border-slate-800">
+        <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4">
           <User className="h-5 w-5 shrink-0 text-[#0585FC]" strokeWidth={1.6} aria-hidden />
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Edad</p>
-            <p className="text-sm font-medium text-slate-900 dark:text-white">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Edad</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">
               {row.age != null && row.age > 0 ? `${row.age} años` : "—"}
             </p>
           </div>
@@ -267,19 +288,19 @@ export default async function PerfilPage() {
         description="Según partidos recientes."
       >
         {coplayers.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Todavía no hay datos suficientes.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Todavía no hay datos suficientes.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {coplayers.map((p) => (
               <li key={p.user_id}>
                 <Link
                   href={`/jugador/${p.user_id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2.5 transition hover:bg-[var(--bg-subtle)]"
                 >
-                  <ProfileAvatar avatarUrl={p.avatar_url} name={p.name} size={44} ringClassName="ring-2 ring-white dark:ring-slate-700" />
+                  <ProfileAvatar avatarUrl={p.avatar_url} name={p.name} size={44} ringClassName="ring-2 ring-[var(--bg-subtle)]" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{p.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="truncate text-sm font-medium text-[var(--text-primary)]">{p.name}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">
                       {p.sharedMatches} partido{p.sharedMatches === 1 ? "" : "s"} en común
                     </p>
                   </div>
@@ -292,20 +313,20 @@ export default async function PerfilPage() {
 
       <ProfileMotionSection title="Clubes favoritos" description="Donde más reservás canchas.">
         {clubs.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Creá reservas para ver tendencias aquí.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Creá reservas para ver tendencias aquí.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {clubs.map((c) => (
               <li key={c.club_id}>
                 <Link
                   href={`/clubes/${c.club_id}`}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 transition hover:bg-[var(--bg-subtle)]"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Building2 className="h-4 w-4 shrink-0 text-[#0585FC]" strokeWidth={1.6} />
-                    <span className="truncate text-sm font-medium text-slate-900 dark:text-white">{c.name}</span>
+                    <span className="truncate text-sm font-medium text-[var(--text-primary)]">{c.name}</span>
                   </span>
-                  <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300 ring-1 ring-slate-100 dark:ring-slate-700">
+                  <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]">
                     {c.count}
                   </span>
                 </Link>

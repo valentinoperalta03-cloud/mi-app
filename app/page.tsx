@@ -54,7 +54,6 @@ const playerItems = [
   "Armás un partido y lo abrís para que otros jugadores de tu nivel se unan — ideal cuando no tenés los 4",
   "Chateás con tu equipo antes y después del partido desde la misma app",
   "Seguís tu evolución con el sistema ELO y ves cómo progresás con cada partido que jugás",
-  "Tus primeros 2 partidos sin comisión — para que lo pruebes sin riesgo",
 ];
 
 const clubItems = [
@@ -271,19 +270,29 @@ export default function LandingPage() {
         transition={{ duration: 0.45 }}
       >
         <div className="mx-auto w-full max-w-4xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight">Próximamente en App Store y Google Play</h2>
-          <p className="mt-3 text-[var(--text-secondary)]">
-            Mientras tanto, funciona perfecto desde el navegador de tu celular. Sin descargar nada.
-          </p>
+          <h2 className="text-3xl font-extrabold tracking-tight">Disponible en App Store y Google Play</h2>
+          <p className="mt-3 text-[var(--text-secondary)]">Descargá la app gratis y empezá a jugar hoy.</p>
           <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold">
-              📱 App Store — Próximamente
-            </div>
-            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold">
-              🤖 Google Play — Próximamente
-            </div>
+            <a
+              href="https://apps.apple.com/app/id6769852990"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold transition hover:bg-[var(--bg-subtle)]"
+            >
+              📱 Descargar en App Store
+            </a>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.padelibre.app"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold transition hover:bg-[var(--bg-subtle)]"
+            >
+              🤖 Descargar en Google Play
+            </a>
           </div>
-          <p className="mt-5 text-sm text-[var(--text-secondary)]">Disponible hoy en padelibre.online</p>
+          <p className="mt-5 text-sm text-[var(--text-secondary)]">
+            También disponible en padelibre.online desde el navegador
+          </p>
         </div>
       </motion.section>
 
@@ -298,7 +307,7 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-4xl">
           <h2 className="text-3xl font-extrabold tracking-tight text-white">¿Listo para jugar sin el caos?</h2>
           <p className="mx-auto mt-3 max-w-2xl text-white/90">
-            Unite a PadeLibre hoy. Es gratis para jugadores y tus primeros 2 partidos no tienen comisión.
+            Unite a PadeLibre hoy. Es gratis para jugadores. Reservá canchas, armá partidos y encontrá tu nivel.
           </p>
           <Link
             href="/login"
@@ -321,7 +330,7 @@ export default function LandingPage() {
             <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
             <span className="font-semibold">PadeLibre</span>
           </div>
-          <p className="text-sm text-[var(--text-secondary)]">© 2025 PadeLibre. Hecho en Argentina 🇦🇷</p>
+          <p className="text-sm text-[var(--text-secondary)]">© 2026 PadeLibre. Hecho en Argentina 🇦🇷</p>
           <div className="flex flex-wrap gap-4 text-sm">
             <a
               className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -347,7 +356,7 @@ export default function LandingPage() {
             </a>
             <a
               className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="https://wa.me/5493412571953"
+              href="https://wa.me/5493413741000"
               target="_blank"
               rel="noreferrer"
             >
