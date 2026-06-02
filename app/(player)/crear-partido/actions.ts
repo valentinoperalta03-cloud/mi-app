@@ -345,43 +345,43 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       await supabase.from(DB_TABLES.payments).insert(invitedPaymentRows);
     }
 
-    if (paymentMethod === "cash" || paymentMethod === "transfer") {
-      const friendlyDate = scheduledDate.split("-").reverse().join("/");
-      const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
-      const genderLabel =
-        genderCategory === "femenino"
-          ? "Partido femenino"
-          : genderCategory === "mixto"
-            ? "Partido mixto"
-            : "Partido masculino";
-      const groupRes = await createGroupChat(
-        supabase,
-        user.id,
-        `Partido en ${clubName} el ${friendlyDate}`,
-        `• ${competitiveLabel}\n• ${genderLabel}`,
-        [],
-        data.id
+    const friendlyDate = scheduledDate.split("-").reverse().join("/");
+    const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
+    const genderLabel =
+      genderCategory === "femenino"
+        ? "Partido femenino"
+        : genderCategory === "mixto"
+          ? "Partido mixto"
+          : "Partido masculino";
+    const groupRes = await createGroupChat(
+      supabase,
+      user.id,
+      `Partido en ${clubName} el ${friendlyDate}`,
+      `• ${competitiveLabel}\n• ${genderLabel}`,
+      [],
+      data.id
+    );
+    if (!groupRes.ok) {
+      console.error("[crearPartido] group chat", groupRes.message);
+    }
+
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
+    if (invitedFriendIds.length > 0) {
+      await Promise.all(
+        invitedFriendIds.map((friendId) =>
+          createNotification(supabase, {
+            user_id: friendId,
+            type: "join_request",
+            title: "¡Te invitaron a un partido!",
+            body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
+            match_id: data.id,
+          })
+        )
       );
-      if (!groupRes.ok) {
-        console.error("[crearPartido] group chat", groupRes.message);
-      }
+    }
 
-      const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-      const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
-      if (invitedFriendIds.length > 0) {
-        await Promise.all(
-          invitedFriendIds.map((friendId) =>
-            createNotification(supabase, {
-              user_id: friendId,
-              type: "join_request",
-              title: "¡Te invitaron a un partido!",
-              body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
-              match_id: data.id,
-            })
-          )
-        );
-      }
-
+    if (paymentMethod === "cash" || paymentMethod === "transfer") {
       redirect(`/partidos/${data.id}`);
     }
 
@@ -421,42 +421,6 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
       await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
       return { error: "No se pudo registrar el pago. Intentá de nuevo." };
-    }
-
-    const friendlyDate = scheduledDate.split("-").reverse().join("/");
-    const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
-    const genderLabel =
-      genderCategory === "femenino"
-        ? "Partido femenino"
-        : genderCategory === "mixto"
-          ? "Partido mixto"
-          : "Partido masculino";
-    const groupRes = await createGroupChat(
-      supabase,
-      user.id,
-      `Partido en ${clubName} el ${friendlyDate}`,
-      `• ${competitiveLabel}\n• ${genderLabel}`,
-      [],
-      data.id
-    );
-    if (!groupRes.ok) {
-      console.error("[crearPartido] group chat", groupRes.message);
-    }
-
-    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-    const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
-    if (invitedFriendIds.length > 0) {
-      await Promise.all(
-        invitedFriendIds.map((friendId) =>
-          createNotification(supabase, {
-            user_id: friendId,
-            type: "join_request",
-            title: "¡Te invitaron a un partido!",
-            body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
-            match_id: data.id,
-          })
-        )
-      );
     }
 
     redirect(mp.initPoint);

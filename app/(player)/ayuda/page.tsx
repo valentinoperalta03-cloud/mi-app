@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle, MessageCircle } from "lucide-react";
+import { Bot, ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type QA = { id: string; label: string; answer: string; category: string };
@@ -76,7 +76,7 @@ export default function AyudaPage() {
     if (loading) return;
     setMessages((prev) => [...prev, { question: qa.label, answer: "", category: qa.category }]);
     setLoading(true);
-
+    setSelectedCategory(null);
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
@@ -104,120 +104,142 @@ export default function AyudaPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-transparent">
-      <header className="flex h-14 items-center gap-2 bg-sky-500 px-4 text-white">
-        <HelpCircle size={18} />
-        <h1 className="text-lg font-bold">Centro de ayuda</h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[var(--bg-app)]">
+      <header className="flex items-center gap-3 bg-gradient-to-r from-[#0585FC] to-[#0461C4] px-4 py-4 text-white">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20">
+          <Bot size={22} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-base font-bold">Chat Bot</h1>
+          <p className="text-xs text-white/75">Respondemos tus dudas al instante</p>
+        </div>
       </header>
 
-      <div ref={viewportRef} className="flex-1 overflow-y-auto px-4 py-4 pb-24">
-        {messages.length === 0 ? (
+      <div ref={viewportRef} className="flex-1 overflow-y-auto px-4 py-4 pb-32">
+        {messages.length === 0 && !selectedCategory ? (
           <section className="space-y-4">
-            <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-5 text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-                <MessageCircle size={28} />
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+                <Bot size={16} className="text-white" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">¿En qué podemos ayudarte?</h2>
-              <p className="text-sm text-slate-500">Seleccioná una categoría</p>
+              <div className="rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)]">
+                <p className="text-sm text-[var(--text-primary)]">
+                  ¡Hola! Soy el Chat Bot de PadeLibre 👋 ¿En qué puedo ayudarte hoy?
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">Seleccioná una categoría para empezar</p>
+              </div>
             </div>
 
-            {!selectedCategory ? (
-              <div className="grid grid-cols-2 gap-3">
-                {CATEGORY_ORDER.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => setSelectedCategory(category)}
-                    className="rounded-2xl border border-slate-200 bg-white px-3 py-4 text-left transition-colors hover:bg-slate-50"
-                  >
-                    <p className="text-xl">{CATEGORY_ICON[category]}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-800">{category}</p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-600">{selectedCategory}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory(null)}
-                    className="text-xs font-semibold text-sky-600"
-                  >
-                    Volver
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {(grouped.get(selectedCategory) ?? []).map((qa) => (
-                    <button
-                      key={qa.id}
-                      type="button"
-                      onClick={() => void askQuestion(qa)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
-                    >
-                      {qa.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              {CATEGORY_ORDER.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setSelectedCategory(category)}
+                  className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-4 text-left shadow-[var(--shadow-card)] transition active:scale-[0.97]"
+                >
+                  <p className="text-2xl">{CATEGORY_ICON[category]}</p>
+                  <p className="mt-1.5 text-sm font-semibold text-[var(--text-primary)]">{category}</p>
+                </button>
+              ))}
+            </div>
           </section>
-        ) : (
+        ) : null}
+
+        {selectedCategory && messages.length === 0 ? (
+          <section className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+                <Bot size={16} className="text-white" />
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)]">
+                <p className="text-sm text-[var(--text-primary)]">
+                  {CATEGORY_ICON[selectedCategory]} <strong>{selectedCategory}</strong> — ¿Cuál es tu consulta?
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory(null)}
+              className="flex items-center gap-1 text-xs font-semibold text-[#0585FC]"
+            >
+              <ChevronLeft size={14} /> Volver a categorías
+            </button>
+            <div className="space-y-2">
+              {(grouped.get(selectedCategory) ?? []).map((qa) => (
+                <button
+                  key={qa.id}
+                  type="button"
+                  onClick={() => void askQuestion(qa)}
+                  className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-left text-sm font-medium text-[var(--text-primary)] shadow-[var(--shadow-card)] transition active:scale-[0.98]"
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {messages.length > 0 ? (
           <section className="space-y-4">
             {messages.map((m, idx) => (
-              <div key={`${m.question}-${idx}`} className="space-y-2">
+              <div key={`${m.question}-${idx}`} className="space-y-3">
                 <div className="flex justify-end">
-                  <div className="max-w-[85%] break-words rounded-2xl bg-sky-500 px-4 py-2 text-sm text-white">{m.question}</div>
-                </div>
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] break-words rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-800">
-                    {m.answer ? formatMessage(m.answer) : "Cargando respuesta..."}
+                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#0585FC] px-4 py-2.5 text-sm text-white shadow-sm">
+                    {m.question}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory(m.category)}
-                    className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
-                  >
-                    Ver más preguntas de {m.category}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMessages([]);
-                      setSelectedCategory(null);
-                    }}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
-                  >
-                    Volver al inicio
-                  </button>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+                    <Bot size={16} className="text-white" />
+                  </div>
+                  <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-card)]">
+                    {m.answer ? (
+                      formatMessage(m.answer)
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]">Escribiendo...</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
 
-            <div>
-              <button
-                type="button"
-                onClick={() => setSelectedCategory(selectedCategory ?? "Pagos")}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-              >
-                Ver otras preguntas
-              </button>
-            </div>
+            {!loading ? (
+              <div className="flex flex-wrap gap-2 pl-11">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMessages([]);
+                    setSelectedCategory(null);
+                  }}
+                  className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] shadow-sm transition active:scale-[0.97]"
+                >
+                  Nueva consulta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(messages[messages.length - 1]?.category ?? null)}
+                  className="rounded-full border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] shadow-sm transition active:scale-[0.97] dark:text-sky-400"
+                >
+                  Más preguntas
+                </button>
+              </div>
+            ) : null}
           </section>
-        )}
+        ) : null}
 
         {selectedCategory && messages.length > 0 ? (
           <section className="mt-4 space-y-2">
-            <h3 className="text-sm font-semibold text-slate-600">{selectedCategory}</h3>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+              {selectedCategory}
+            </p>
             {(grouped.get(selectedCategory) ?? []).map((qa) => (
               <button
                 key={`post-${qa.id}`}
                 type="button"
                 onClick={() => void askQuestion(qa)}
                 disabled={loading}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-left text-sm font-medium text-[var(--text-primary)] shadow-[var(--shadow-card)] transition active:scale-[0.98] disabled:opacity-60"
               >
                 {qa.label}
               </button>
@@ -226,8 +248,8 @@ export default function AyudaPage() {
         ) : null}
 
         {!loaded ? (
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-center text-sm text-slate-500">
-            Cargando centro de ayuda...
+          <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3 text-center text-sm text-[var(--text-secondary)]">
+            Cargando Chat Bot...
           </div>
         ) : null}
       </div>

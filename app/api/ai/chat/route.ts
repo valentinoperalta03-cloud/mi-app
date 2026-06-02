@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const SUPPORT_EMAIL = "soporte.padelibre@gmail.com";
-const SUPPORT_WHATSAPP = "https://wa.me/5493412571953";
+const SUPPORT_WHATSAPP = "https://wa.me/5493413741000";
 
 const CONTACT = `¿Necesitás más ayuda? Contactanos:\n\n📧 ${SUPPORT_EMAIL}\n💬 ${SUPPORT_WHATSAPP}`;
 
@@ -104,7 +104,37 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "contacto",
     category: "Más ayuda",
     label: "Hablar con soporte humano",
-    answer: `¿Necesitás hablar con una persona?\n\n📧 **Email:** soporte.padelibre@gmail.com\n💬 **WhatsApp:** +54 9 341 257-1953\n\nNuestro equipo responde en horario comercial (Lunes a Viernes 9-18hs).\n\nAl contactarnos, indicá tu email registrado y una descripción del problema.`,
+    answer: `¿Necesitás hablar con una persona?\n\n📧 **Email:** soporte.padelibre@gmail.com\n💬 **WhatsApp:** +54 9 341 374-1000\n\nNuestro equipo responde en horario comercial (Lunes a Viernes 9-18hs).\n\nAl contactarnos, indicá tu email registrado y una descripción del problema.`,
+  },
+  {
+    id: "pago_efectivo_transferencia",
+    category: "Pagos",
+    label: "¿Puedo pagar en efectivo o transferencia?",
+    answer: `Sí, algunos clubes aceptan **efectivo** y/o **transferencia bancaria**.\n\nCuando te unís a un partido, el sistema te muestra los métodos de pago disponibles para ese club:\n\n💳 **Mercado Pago** → Pagás online al instante\n🏦 **Transferencia** → Transferís antes de ir y guardás el comprobante para mostrarlo al ingresar\n💵 **Efectivo** → Abonás directamente en el club el día del partido\n\nSi el club no tiene Mercado Pago configurado, solo verás las opciones offline disponibles.`,
+  },
+  {
+    id: "confirmar_transferencia",
+    category: "Pagos",
+    label: "Pagué por transferencia, ¿cómo confirmo mi lugar?",
+    answer: `Después de unirte al partido eligiendo transferencia:\n\n1. Tu lugar queda **reservado** automáticamente\n2. En la pantalla del partido aparece el botón **"Confirmar transferencia al club"**\n3. Tocá ese botón → se abre WhatsApp con un mensaje pre-armado al club\n4. El club verifica la transferencia y confirma tu lugar en su panel\n\n⚠️ Si no podés transferir antes, podés abonar en efectivo en el mostrador del club el día del partido. Guardá el comprobante si transferís.`,
+  },
+  {
+    id: "comision_servicio",
+    category: "Pagos",
+    label: "¿Qué es la comisión de servicio?",
+    answer: `PadeLibre cobra una **comisión del 5%** sobre el precio de cada turno.\n\nEsta comisión:\n✅ Ya está incluida en el precio que ves al unirte o crear un partido\n✅ No hay sorpresas — el precio que ves es el que pagás\n✅ Para los clubes es completamente gratis\n\nEjemplo: si el turno vale $50.000\n→ Cada jugador paga $13.125 (incluye el 5%)`,
+  },
+  {
+    id: "chat_grupo_partido",
+    category: "Partidos",
+    label: "¿Cómo funciona el chat del partido?",
+    answer: `Cada partido tiene su propio **grupo de chat** donde pueden coordinar los 4 jugadores.\n\nEl grupo se crea automáticamente cuando se crea el partido.\n\nPodés acceder al chat desde:\n1. La pantalla del partido → botón "Chat del grupo"\n2. La sección Mensajes → pestaña Grupos\n\nTodos los jugadores que se unen al partido entran automáticamente al grupo.`,
+  },
+  {
+    id: "onboarding_perfil",
+    category: "Inconvenientes",
+    label: "No me deja unirme ni crear partidos",
+    answer: `Para poder crear o unirte a partidos necesitás **completar tu perfil**.\n\nQué necesitás:\n✅ Nombre\n✅ Género\n✅ Quiz de nivel (para tu ranking ELO)\n\nCómo completarlo:\n1. Andá al menú (☰) → Editar perfil\n2. O desde la pantalla del partido → el sistema te va a guiar automáticamente\n\nSolo toma 2 minutos y te habilita todas las funciones de la app.`,
   },
 ];
 

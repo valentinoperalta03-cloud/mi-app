@@ -804,6 +804,18 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
+      {isParticipant && !isOwner && showGroupChat && groupChatHref ? (
+        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+          <Link
+            href={groupChatHref}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10 dark:text-sky-400"
+          >
+            <MessageCircle size={16} aria-hidden />
+            Chat del grupo
+          </Link>
+        </section>
+      ) : null}
+
       {isParticipant ? (
         <MatchStatusBanner
           matchFullyPaid={matchFullyPaid}
@@ -1132,16 +1144,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {isParticipant && !isOwner && !isMatchFinished ? (
         <section className="space-y-3 rounded-2xl border border-emerald-200/80 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900/40">
-          {showGroupChat && groupChatHref ? (
-            <Link
-              href={groupChatHref}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition hover:brightness-95 active:scale-[0.99]"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-            >
-              <MessageCircle size={18} aria-hidden />
-              Chat del grupo
-            </Link>
-          ) : null}
           <div className="flex w-full justify-center">
             <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
           </div>
@@ -1172,14 +1174,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {canJoinAsNewPlayer && !isMatchFinished && match.level_restricted && !isOwner ? (
         <div className="space-y-2">
-          {showGroupChat && groupChatHref ? (
-            <Link
-              href={groupChatHref}
-              className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0585FC]"
-            >
-              Chat del grupo
-            </Link>
-          ) : null}
           <JoinWithTeamForm
             matchId={id}
             team1Count={team1Count}

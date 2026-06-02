@@ -132,5 +132,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=pago` });
   }
 
+  await addPlayerToGroup(matchId, user.id);
+
+  if (m.owner_id && m.owner_id !== user.id) {
+    const { data: joinerProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const joinerName = (joinerProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+    await createNotification(supabase, {
+      user_id: m.owner_id,
+      type: "player_joined",
+      title: "Nuevo jugador",
+      body: `${joinerName} se unió a tu partido. Abonará por Mercado Pago.`,
+      match_id: matchId,
+    });
+  }
+
   return NextResponse.json({ redirect: mpRes.initPoint });
 }

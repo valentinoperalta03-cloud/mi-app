@@ -13,6 +13,7 @@ import {
   X,
   Settings,
   Shield,
+  Sparkles,
   User,
   UserCircle,
 } from "lucide-react";
@@ -35,7 +36,8 @@ const accountItems: DrawerItem[] = [
 ];
 
 const supportItems: DrawerItem[] = [
-  { href: "/ayuda", label: "Ayuda", icon: CircleHelp },
+  { href: "/sobre-padelibre", label: "Un poco más de PadeLibre", icon: Sparkles },
+  { href: "/ayuda", label: "Chat Bot", icon: CircleHelp },
   { href: "/como-funciona", label: "Cómo funciona", icon: FileText },
   { href: "/legal/terminos", label: "Condiciones de uso", icon: Shield },
   { href: "/legal/privacidad", label: "Política de privacidad", icon: FileText },
