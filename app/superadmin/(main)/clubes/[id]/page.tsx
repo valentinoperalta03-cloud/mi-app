@@ -243,7 +243,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
                     <span className="text-slate-500">· {courtRel?.name ?? "Cancha"}</span>
                   </span>
                   <span className="text-slate-400">
-                    {money(Number(row.total_price ?? 0))} · {row.payment_status ?? "—"} · {row.match_status ?? "—"}
+                    {money(Number(row.total_price ?? 0) * 1.05)} · {row.payment_status ?? "—"} · {row.match_status ?? "—"}
                   </span>
                 </li>
               );

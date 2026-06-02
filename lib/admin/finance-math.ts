@@ -10,6 +10,11 @@ export type MatchMoneyRow = {
 };
 
 const PAID = "paid";
+const PADELIBRE_FEE_MULTIPLIER = 1.05;
+
+function withPadelibreFee(amount: number | null | undefined) {
+  return Number(amount ?? 0) * PADELIBRE_FEE_MULTIPLIER;
+}
 
 export function filterPaid(rows: MatchMoneyRow[]) {
   return rows.filter((r) => (r.payment_status ?? "").toLowerCase() === PAID);
@@ -19,14 +24,14 @@ export function sumByCourt(rows: MatchMoneyRow[]) {
   const paid = filterPaid(rows);
   const map = new Map<string, number>();
   for (const r of paid) {
-    const p = r.total_price ?? 0;
+    const p = withPadelibreFee(r.total_price);
     map.set(r.court_id, (map.get(r.court_id) ?? 0) + p);
   }
   return map;
 }
 
 export function totalPaid(rows: MatchMoneyRow[]) {
-  return filterPaid(rows).reduce((s, r) => s + (r.total_price ?? 0), 0);
+  return filterPaid(rows).reduce((s, r) => s + withPadelibreFee(r.total_price), 0);
 }
 
 export function sumInRange(rows: MatchMoneyRow[], from: Date, to: Date) {
@@ -35,7 +40,7 @@ export function sumInRange(rows: MatchMoneyRow[], from: Date, to: Date) {
       const d = parseISO(r.date);
       return d >= from && d <= to;
     })
-    .reduce((s, r) => s + (r.total_price ?? 0), 0);
+    .reduce((s, r) => s + withPadelibreFee(r.total_price), 0);
 }
 
 export function compareThisMonthVsPrevious(rows: MatchMoneyRow[]) {
@@ -58,7 +63,7 @@ export function aggregateByDay(rows: MatchMoneyRow[], daysBack = 14) {
     const d = parseISO(r.date);
     if (d > now) continue;
     const key = format(d, "yyyy-MM-dd");
-    map.set(key, (map.get(key) ?? 0) + (r.total_price ?? 0));
+    map.set(key, (map.get(key) ?? 0) + withPadelibreFee(r.total_price));
   }
   const keys = Array.from(map.keys())
     .sort()
@@ -72,7 +77,7 @@ export function aggregateByWeek(rows: MatchMoneyRow[]) {
   for (const r of paid) {
     const d = parseISO(r.date);
     const wk = format(startOfWeek(d, { weekStartsOn: 1 }), "yyyy-'W'II");
-    map.set(wk, (map.get(wk) ?? 0) + (r.total_price ?? 0));
+    map.set(wk, (map.get(wk) ?? 0) + withPadelibreFee(r.total_price));
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -86,7 +91,7 @@ export function aggregateByMonth(rows: MatchMoneyRow[]) {
   for (const r of paid) {
     const d = parseISO(r.date);
     const mk = format(d, "yyyy-MM");
-    map.set(mk, (map.get(mk) ?? 0) + (r.total_price ?? 0));
+    map.set(mk, (map.get(mk) ?? 0) + withPadelibreFee(r.total_price));
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))

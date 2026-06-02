@@ -169,7 +169,8 @@ export default async function OpenMatchesBoard({
     const genderLabel = genderCategory === "masculino" ? "Masculino" : genderCategory === "femenino" ? "Femenino" : "Mixto";
     const genderRestrictionMessage = !currentUserJoined && !userCanJoinByGender ? `Este partido es exclusivo para ${genderLabel}.` : null;
     const turnTotal = Number(match.total_price ?? 0);
-    const joinShare = turnTotal > 0 ? Math.round((turnTotal / 4) * 100) / 100 : 0;
+    const turnTotalWithFee = turnTotal * 1.05;
+    const joinShare = turnTotalWithFee > 0 ? Math.round((turnTotalWithFee / 4) * 100) / 100 : 0;
     const levelLabel = getAverageLevelLabel(match.match_participants);
     const levelParts = splitOfficialCategoryLine(levelLabel);
     const participants = (match.match_participants ?? []).map((mp) => {

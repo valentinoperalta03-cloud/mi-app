@@ -108,7 +108,7 @@ export async function simulatePaymentApproved(formData: FormData) {
     .update({ payment_status: "paid", match_status: "reserved" })
     .eq("id", matchId);
   const tplApproved = NOTIFICATION_TEMPLATES.payment_approved(
-    String(Math.round(Number((match as { total_price?: number | null }).total_price ?? 0)))
+    String(Math.round(Number((match as { total_price?: number | null }).total_price ?? 0) * 1.05))
   );
   await createNotification(supabase, {
     user_id: user.id,

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { MessageCircle, Send, User } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
+import { ConfirmTransferWhatsappButton } from "@/components/confirm-transfer-whatsapp-button";
 import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
@@ -508,8 +508,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const clubWhenDurationLine = `${heroDateHeadline} · ${hourAr} · ${roundedDuration} min`;
   const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
   const sharePath = partyUrl;
-  const assistWhatsMessage = `Hola, ya me sumé al partido del ${longDateAr}. ¡En un ratito te paso el comprobante!`;
-  const assistWhatsHref = `https://wa.me/?text=${encodeURIComponent(assistWhatsMessage)}`;
   const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
   const ownerLevelLabel = formatProfileNivelFromRow(
     ownerParticipant ? { level: ownerParticipant.level } : null
@@ -738,7 +736,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
           <div>
             <p className="text-xs font-medium text-[var(--text-tertiary)]">Precio total</p>
-            <p className="text-xl font-bold text-[#0461C4]">${detail.total_price ?? 0}</p>
+            <p className="text-xl font-bold text-[#0461C4]">
+              ${Math.round((detail.total_price ?? 0) * 1.05).toLocaleString("es-AR")}
+            </p>
           </div>
           {isParticipant ? (
             <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
@@ -856,16 +856,10 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
             Avisale al club por WhatsApp para confirmar tu lugar. Guardá el comprobante para mostrarlo al ingresar.
           </p>
-          <a
-            href={`https://wa.me/${clubWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
-              `Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
-          >
-            Confirmar transferencia al club
-          </a>
+          <ConfirmTransferWhatsappButton
+            clubWhatsapp={clubWhatsapp}
+            message={`Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`}
+          />
         </section>
       ) : null}
 
@@ -997,26 +991,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               );
             })}
           </ul>
-        </section>
-      ) : null}
-
-      {isParticipant && !isOwner && payStatus !== "paid" ? (
-        <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-emerald-200/70 bg-white p-4 shadow-sm`}>
-          <div className="mb-3 flex items-center gap-2">
-            <div className="relative h-5 w-16 overflow-hidden opacity-60">
-              <Image src="/logo.png" alt="Padelibre" fill className="object-contain" />
-            </div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones por WhatsApp</p>
-          </div>
-          <a
-            href={assistWhatsHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 active:scale-[0.98]"
-          >
-            <Send size={16} aria-hidden />
-            Confirmar asistencia
-          </a>
         </section>
       ) : null}
 

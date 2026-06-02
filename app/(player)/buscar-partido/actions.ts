@@ -274,7 +274,7 @@ export async function toggleMatchParticipationAction(
 
   const turnPrice = Number(matchData.total_price ?? 0);
   if (turnPrice > 0) {
-    const share = Math.round((turnPrice / 4) * 100) / 100;
+    const share = Math.round(((turnPrice / 4) * 1.05) * 100) / 100;
     return {
       success: false,
       message: `Para unirte debés abonar tu parte ($${share}). Hacé click en 'Pagar y unirse'.`,

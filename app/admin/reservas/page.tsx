@@ -517,7 +517,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
               <dt className={adminKicker}>Precio total del turno</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
-                {selectedMatch.total_price != null ? `$${Number(selectedMatch.total_price).toFixed(2)}` : "—"}
+                {selectedMatch.total_price != null ? `$${(Number(selectedMatch.total_price) * 1.05).toFixed(2)}` : "—"}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
@@ -529,7 +529,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
               <dt className={adminKicker}>Precio por jugador (aprox.)</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
-                {selectedMatch.total_price != null ? `$${(Number(selectedMatch.total_price) / 4).toFixed(2)}` : "—"}
+                {selectedMatch.total_price != null ? `$${((Number(selectedMatch.total_price) / 4) * 1.05).toFixed(2)}` : "—"}
               </dd>
             </div>
           </dl>

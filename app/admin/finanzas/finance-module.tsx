@@ -285,7 +285,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           const d = parseISO(r.date);
           return d >= weekStart && d <= now;
         })
-        .reduce((acc, r) => acc + Number(r.total_price ?? 0), 0),
+        .reduce((acc, r) => acc + Number(r.total_price ?? 0) * 1.05, 0),
     [now, rows, weekStart]
   );
   const paidRows = useMemo(
@@ -300,7 +300,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     for (const row of paidRows) {
       const d = parseISO(row.date);
       if (d < thisMonthStart || d > thisMonthEnd) continue;
-      map.set(row.court_id, (map.get(row.court_id) ?? 0) + Number(row.total_price ?? 0));
+      map.set(row.court_id, (map.get(row.court_id) ?? 0) + Number(row.total_price ?? 0) * 1.05);
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
   }, [paidRows, thisMonthEnd, thisMonthStart]);

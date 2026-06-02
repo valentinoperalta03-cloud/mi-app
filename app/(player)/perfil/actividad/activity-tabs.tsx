@@ -150,7 +150,7 @@ export default function ActivityTabs({
                 </div>
                 <p className="mt-2 truncate text-sm text-slate-700">Cancha: {item.court_name}</p>
                 <p className="text-sm text-slate-700">
-                  Precio: {item.total_price != null ? money.format(item.total_price) : "—"}
+                  Precio: {item.total_price != null ? money.format(item.total_price * 1.05) : "—"}
                 </p>
               </article>
             ))

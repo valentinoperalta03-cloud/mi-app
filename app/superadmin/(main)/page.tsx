@@ -75,7 +75,7 @@ export default async function SuperadminDashboardPage() {
   ]);
 
   const ingresosPagados =
-    (paidMatches.data ?? []).reduce((a, r) => a + Number((r as { total_price: number | null }).total_price ?? 0), 0) ||
+    (paidMatches.data ?? []).reduce((a, r) => a + Number((r as { total_price: number | null }).total_price ?? 0) * 1.05, 0) ||
     0;
 
   const deudaTotal = (debtsPending.data ?? []).reduce(
