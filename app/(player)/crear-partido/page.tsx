@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { CrearPartidoInfoButton } from "@/components/crear-partido-info-button";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
