@@ -19,7 +19,7 @@ export async function HomeSuggestionsSection({
   if (list.length === 0) {
     if (context === "comunidad") {
       return (
-        <div className="rounded-2xl border border-slate-200/80 bg-[var(--bg-card)] px-5 py-5 dark:border-slate-700/80">
+        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-5 shadow-[var(--shadow-card)] dark:border-slate-700/80">
           <p className="text-sm font-semibold text-[var(--text-primary)]">
             Jugadores con los que podrías jugar
           </p>
@@ -60,7 +60,7 @@ export async function HomeSuggestionsSection({
         return (
           <div
             key={p.user_id}
-            className="w-[10rem] shrink-0 rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]"
+            className="w-[10rem] shrink-0 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]"
           >
             <Link href={`/jugador/${p.user_id}`} className="block text-center">
               <div className="mx-auto w-fit">
@@ -68,10 +68,10 @@ export async function HomeSuggestionsSection({
                   avatarUrl={p.avatar_url}
                   name={label}
                   size={56}
-                  ringClassName="ring-2 ring-slate-100"
+                  ringClassName="ring-2 ring-[var(--border-subtle)]"
                 />
               </div>
-              <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900">{label}</p>
+              <p className="mt-2 line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{label}</p>
               <p className="mt-0.5 line-clamp-1 text-xs text-[#0461C4]">
                 <span className="font-bold">{nivelParts.category || "—"}</span>
                 {nivelParts.description ? (
@@ -114,7 +114,7 @@ export async function HomeSuggestedClubs() {
         return (
           <div
             key={club.id}
-            className="w-[10rem] shrink-0 rounded-[2rem] border border-slate-200/80 bg-white p-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-slate-700/80 dark:bg-[var(--bg-card)]"
+            className="w-[10rem] shrink-0 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]"
           >
             <Link href={`/clubes/${club.id}`} className="block text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
@@ -126,8 +126,8 @@ export async function HomeSuggestedClubs() {
                   </span>
                 )}
               </div>
-              <p className="mt-2 line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
-              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{club.location ?? ""}</p>
+              <p className="mt-2 line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+              <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-tertiary)]">{club.location ?? ""}</p>
             </Link>
           </div>
         );
