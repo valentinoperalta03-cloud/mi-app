@@ -52,9 +52,8 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                   <span className="font-semibold text-slate-700">Tipo:</span> {r.matchTypeLabel}
                 </p>
                 <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">Estado de cupos:</span>{" "}
-                  {r.slotsFree} libre{r.slotsFree === 1 ? "" : "s"} de 4 · {r.slotsFilled} anotado
-                  {r.slotsFilled === 1 ? "" : "s"}
+                  <span className="font-semibold text-slate-700">Jugadores:</span>{" "}
+                  {r.slotsFilled}/4 confirmados
                 </p>
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div

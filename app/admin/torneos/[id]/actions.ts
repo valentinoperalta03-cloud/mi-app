@@ -155,7 +155,7 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
       )
     ),
   ];
-  const chat = await createGroupChat(supabase, gate.ctx.userId, `Chat · ${tname}`, "Grupo del torneo", memberIds, null, tournamentId);
+  const chat = await createGroupChat(supabase, gate.ctx.userId, `Chat · ${tname}`, "Grupo del torneo", memberIds, null);
   if (chat.ok && chat.groupId) {
     await service.from(DB_TABLES.tournaments).update({ group_chat_id: chat.groupId }).eq("id", tournamentId);
   }

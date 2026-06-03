@@ -94,8 +94,7 @@ export async function createGroupChat(
   title: string,
   description: string,
   memberIds: string[],
-  matchId?: string | null,
-  tournamentId?: string | null
+  matchId?: string | null
 ): Promise<{ ok: boolean; groupId?: string; message?: string }> {
   void supabase;
   const service = createServiceClient();
@@ -111,7 +110,6 @@ export async function createGroupChat(
       description: cleanDescription || null,
       created_by: userId,
       match_id: matchId ?? null,
-      tournament_id: tournamentId ?? null,
     })
     .select("id")
     .single();
