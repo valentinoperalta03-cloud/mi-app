@@ -232,16 +232,114 @@ export async function saveTournamentMatchAction(
     }
   }
 
+  if (!Number.isFinite(s1) || !Number.isFinite(s2) || s1 < 0 || s2 < 0) {
+    return { ok: false, message: "Scores inválidos." };
+  }
+  if (s1 === s2) {
+    return { ok: false, message: "No puede haber empate — uno debe ganar más sets." };
+  }
+  if (s1 > 3 || s2 > 3) {
+    return { ok: false, message: "El máximo de sets es 3." };
+  }
+
   const service = createServiceClient();
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
-  const res = await saveTournamentMatchResultAndElo({
-    admin: service,
-    matchId,
-    pair1Score: s1,
-    pair2Score: s2,
-    setsJson: setsJson ?? [],
-    tournamentName: tname,
-  });
+
+  const { data: existing } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .select("pair1_id, pair2_id, status")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  const em = existing as { pair1_id: string | null; pair2_id: string | null; status: string } | null;
+  if (!em?.pair1_id || !em.pair2_id) {
+    return { ok: false, message: "Faltan parejas en el partido." };
+  }
+
+  const winnerPairId = s1 > s2 ? em.pair1_id : em.pair2_id;
+  let res: { ok: boolean; message: string };
+
+  if (em.status === "finished") {
+    const { error } = await service
+      .from(DB_TABLES.tournamentMatches)
+      .update({
+        pair1_score: s1,
+        pair2_score: s2,
+        sets: (setsJson ?? []) as never,
+        winner_pair_id: winnerPairId,
+        status: "finished",
+      })
+      .eq("id", matchId);
+    res = error ? { ok: false, message: error.message } : { ok: true, message: "Resultado actualizado." };
+  } else {
+    res = await saveTournamentMatchResultAndElo({
+      admin: service,
+      matchId,
+      pair1Score: s1,
+      pair2Score: s2,
+      setsJson: setsJson ?? [],
+      tournamentName: tname,
+    });
+  }
+
+  if (res.ok) {
+    const { data: matchRow } = await service
+      .from(DB_TABLES.tournamentMatches)
+      .select("winner_pair_id, pair1_id, pair2_id")
+      .eq("id", matchId)
+      .maybeSingle();
+
+    const winnerId = (matchRow as { winner_pair_id?: string | null } | null)?.winner_pair_id;
+    if (winnerId) {
+      const { data: nextLeft } = await service
+        .from(DB_TABLES.tournamentMatches)
+        .select("id, pair1_id")
+        .eq("feeder_left_match_id", matchId)
+        .maybeSingle();
+
+      const { data: nextRight } = await service
+        .from(DB_TABLES.tournamentMatches)
+        .select("id, pair2_id")
+        .eq("feeder_right_match_id", matchId)
+        .maybeSingle();
+
+      if (nextLeft) {
+        await service
+          .from(DB_TABLES.tournamentMatches)
+          .update({ pair1_id: winnerId })
+          .eq("id", (nextLeft as { id: string }).id);
+      }
+      if (nextRight) {
+        await service
+          .from(DB_TABLES.tournamentMatches)
+          .update({ pair2_id: winnerId })
+          .eq("id", (nextRight as { id: string }).id);
+      }
+    }
+
+    const m = matchRow as { pair1_id: string | null; pair2_id: string | null } | null;
+    const pairIds = [m?.pair1_id, m?.pair2_id].filter(Boolean) as string[];
+    if (pairIds.length > 0) {
+      const { data: regRows } = await service
+        .from(DB_TABLES.tournamentRegistrations)
+        .select("player1_id, player2_id")
+        .in("id", pairIds);
+
+      const playerIds = ((regRows ?? []) as Array<{ player1_id: string; player2_id: string | null }>).flatMap(
+        (r) => [r.player1_id, r.player2_id].filter(Boolean) as string[]
+      );
+
+      for (const uid of playerIds) {
+        await createNotification(service, {
+          user_id: uid,
+          type: "tournament_event",
+          title: "Resultado cargado",
+          body: `Se cargó el resultado de tu partido en el torneo "${tname}". Revisá el fixture.`,
+        });
+      }
+    }
+  }
+
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/torneos/${tournamentId}`);
   return res;

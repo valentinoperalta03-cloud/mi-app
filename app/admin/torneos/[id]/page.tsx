@@ -78,6 +78,13 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     ])
   );
 
+  const pairNameMap = new Map<string, string>();
+  for (const r of regList) {
+    const p1 = profileMap.get(r.player1_id)?.name ?? "Jugador";
+    const p2 = r.player2_id ? profileMap.get(r.player2_id)?.name ?? "Jugador" : null;
+    pairNameMap.set(r.id, p2 ? `${p1} / ${p2}` : p1);
+  }
+
   const typeBadge = TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)?.badge ?? tour.tournament_type;
   const approved = regList.filter((r) => r.payment_status === "approved" && !r.waitlist);
   const waitlist = regList.filter((r) => r.waitlist);
@@ -189,20 +196,36 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                 Ronda {m.round} · {m.round_name ?? "—"}
               </p>
               <p className="mt-1 text-slate-800 dark:text-slate-100">
-                {m.pair1_id ? `Pareja ${m.pair1_id.slice(0, 6)}…` : "—"} vs {m.pair2_id ? `Pareja ${m.pair2_id.slice(0, 6)}…` : "—"}
+                {m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "Pareja 1" : "—"} vs{" "}
+                {m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "Pareja 2" : "—"}
               </p>
-              <p className="text-xs text-slate-500">Estado: {m.status}</p>
-              {m.status !== "finished" && m.pair1_id && m.pair2_id ? (
+              <span
+                className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  m.status === "finished"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : m.status === "in_progress"
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                }`}
+              >
+                {m.status === "finished"
+                  ? "✓ Finalizado"
+                  : m.status === "in_progress"
+                    ? "En curso"
+                    : "Pendiente"}
+              </span>
+              {m.pair1_id && m.pair2_id ? (
                 <form action={saveTournamentMatchFormAction} className="mt-2 grid gap-2 sm:grid-cols-4">
                   <input type="hidden" name="tournament_id" value={id} />
                   <input type="hidden" name="match_id" value={m.id} />
-                  <input type="hidden" name="sets_json" value='[{"a":6,"b":4}]' />
+                  <input type="hidden" name="sets_json" value="[]" />
                   <input
                     type="number"
                     name="pair1_score"
                     min={0}
-                    max={2}
+                    max={3}
                     required
+                    defaultValue={m.pair1_score ?? ""}
                     placeholder="Sets P1"
                     className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
                   />
@@ -210,13 +233,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                     type="number"
                     name="pair2_score"
                     min={0}
-                    max={2}
+                    max={3}
                     required
+                    defaultValue={m.pair2_score ?? ""}
                     placeholder="Sets P2"
                     className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
                   />
                   <button type="submit" className="rounded-lg bg-[#0461C4] px-2 py-1 text-xs font-semibold text-white">
-                    Guardar
+                    {m.status === "finished" ? "Editar" : "Guardar"}
                   </button>
                 </form>
               ) : null}
