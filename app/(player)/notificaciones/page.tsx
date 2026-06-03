@@ -27,6 +27,7 @@ type NotificationRow = {
   title: string;
   body: string;
   match_id: string | null;
+  actor_id: string | null;
   read: boolean;
   created_at: string;
 };
@@ -71,7 +72,7 @@ export default async function NotificacionesPage() {
 
   const { data } = await supabase
     .from(DB_TABLES.notifications)
-    .select("id,type,title,body,match_id,read,created_at")
+    .select("id,type,title,body,match_id,actor_id,read,created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -118,6 +119,9 @@ export default async function NotificacionesPage() {
                 {group.items.map((n) => {
                   const meta = TYPE_UI[n.type] ?? { Icon: AlertCircle, className: "text-slate-500" };
                   const rel = formatDistanceToNow(parseISO(n.created_at), { addSuffix: true, locale: es });
+                  const showProfileButton =
+                    Boolean(n.actor_id) &&
+                    ["new_follower", "now_friends", "join_request", "join_approved"].includes(n.type);
                   const content = (
                     <article className="rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="flex items-start gap-3">
@@ -131,12 +135,26 @@ export default async function NotificacionesPage() {
                           </div>
                           <p className="mt-1 break-words text-sm text-slate-600">{n.body}</p>
                           <p className="mt-2 text-xs text-slate-400">{rel}</p>
+                          {showProfileButton ? (
+                            <Link
+                              href={`/jugador/${n.actor_id}`}
+                              className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] transition active:scale-[0.97] dark:text-sky-400"
+                            >
+                              Ver perfil →
+                            </Link>
+                          ) : null}
                         </div>
                       </div>
                     </article>
                   );
-                  return n.match_id ? (
-                    <Link key={n.id} href={`/partidos/${n.match_id}`} className="block">
+                  const href = showProfileButton
+                    ? null
+                    : n.match_id
+                      ? `/partidos/${n.match_id}`
+                      : null;
+
+                  return href ? (
+                    <Link key={n.id} href={href} className="block">
                       {content}
                     </Link>
                   ) : (

@@ -68,6 +68,7 @@ export async function sendFriendRequest(targetUserId: string): Promise<FriendReq
     type: "join_request",
     title: "Nueva solicitud de amistad",
     body: `${senderName} quiere agregarte como amigo.`,
+    actor_id: user.id,
   });
 
   revalidatePath(`/jugador/${targetUserId}`);
@@ -182,6 +183,7 @@ export async function followUser(targetUserId: string): Promise<{ ok: boolean; m
     type: "new_follower",
     title: "Nuevo seguidor",
     body: `${senderName} empezó a seguirte.`,
+    actor_id: user.id,
   });
 
   const { data: reverseFollow } = await supabase
@@ -197,6 +199,7 @@ export async function followUser(targetUserId: string): Promise<{ ok: boolean; m
       type: "now_friends",
       title: "¡Son amigos!",
       body: `${senderName} y vos se siguen mutuamente.`,
+      actor_id: user.id,
     });
 
     const { data: targetProfile } = await supabase

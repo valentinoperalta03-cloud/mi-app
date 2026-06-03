@@ -140,13 +140,37 @@
         offline.classList.remove("visible");
       }
 
+      var MAX_RETRIES = 3;
+      var retries = 0;
+      var TIMEOUT_MS = 8000;
+
       function tryLoad() {
         showSplash();
-        if (!navigator.onLine) {
-          showOffline();
-          return;
-        }
-        window.location.replace(LOGIN_URL);
+
+        var controller = new AbortController();
+        var timeout = setTimeout(function () {
+          controller.abort();
+        }, TIMEOUT_MS);
+
+        fetch("https://www.padelibre.online/api/prefetch", {
+          method: "HEAD",
+          signal: controller.signal,
+          cache: "no-store",
+        })
+          .then(function () {
+            clearTimeout(timeout);
+            window.location.replace(LOGIN_URL);
+          })
+          .catch(function () {
+            clearTimeout(timeout);
+            retries++;
+            if (retries < MAX_RETRIES) {
+              setTimeout(tryLoad, 2000);
+            } else {
+              retries = 0;
+              showOffline();
+            }
+          });
       }
 
       retryBtn.addEventListener("click", tryLoad);

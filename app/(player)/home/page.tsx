@@ -17,7 +17,9 @@ import {
   getCachedPendingResultsForUser,
   getCachedProfileDisplayName,
 } from "@/lib/home-cache";
+import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
+import { HomeClientWrapper } from "./home-client-wrapper";
 
 type HomePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -70,13 +72,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profileSlides } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("slides_seen")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const slidesSeen = Boolean((profileSlides as { slides_seen?: boolean | null } | null)?.slides_seen);
+
   const [displayName, pendingForMe] = await Promise.all([
     getCachedProfileDisplayName(user.id),
     getCachedPendingResultsForUser(user.id),
   ]);
 
   return (
-    <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
+    <HomeClientWrapper slidesSeen={slidesSeen}>
+      <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-100">
           <p className="text-sm font-semibold">Perfil guardado con éxito.</p>
@@ -172,6 +183,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <HomeReservationsSection userId={user.id} />
         </Suspense>
       </section>
-    </MotionPage>
+      </MotionPage>
+    </HomeClientWrapper>
   );
 }

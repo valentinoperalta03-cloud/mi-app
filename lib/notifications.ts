@@ -31,6 +31,7 @@ export async function createNotification(
     title: string;
     body: string;
     match_id?: string;
+    actor_id?: string;
   }
 ) {
   await supabase.from("notifications").insert({
@@ -39,6 +40,7 @@ export async function createNotification(
     title: params.title,
     body: params.body,
     match_id: params.match_id ?? null,
+    actor_id: params.actor_id ?? null,
   });
 }
 
