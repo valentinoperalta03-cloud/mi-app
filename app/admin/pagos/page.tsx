@@ -6,7 +6,7 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 
 type PageProps = {
   searchParams: Promise<{ court?: string; status?: string }>;
@@ -72,11 +72,11 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
       : { data: [] };
 
   const ids = (matchIds ?? []).map((m: { id: string }) => m.id);
-  console.log("[pagos] courtIds", ctx.courtIds, "matchIds", ids.length);
+  const admin = await getAdminClient();
 
   const { data: paymentsRaw } =
     ids.length > 0
-      ? await supabase
+      ? await admin
           .from(DB_TABLES.payments)
           .select(
             "id,user_id,amount,status,created_at,match_id,matches!inner(id,court_id,scheduled_date,scheduled_time,match_type,es_turno_fijo,courts(name)),profiles:user_id(user_id,name,avatar_url)"

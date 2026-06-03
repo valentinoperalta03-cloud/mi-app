@@ -5,7 +5,7 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 import { confirmOfflineCobro, markOfflineNoShow } from "./actions";
 
 function isYmdInArgentina(iso: string, ymd: string): boolean {
@@ -39,6 +39,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
   const todayAr = getTodayYmdInArgentina();
   const clubId = ctx.clubIds[0]!;
+  const admin = await getAdminClient();
 
   const { data: clubMatchRows } = await supabase
     .from(DB_TABLES.matches)
@@ -60,7 +61,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .in("payment_status", ["cash_pending", "transfer_pending"])
       .order("scheduled_time", { ascending: true }),
     clubMatchIds.length > 0
-      ? supabase
+      ? admin
           .from(DB_TABLES.payments)
           .select(
             "id, amount, updated_at, payment_method, match_id, user_id, matches!inner(court_id, scheduled_date, scheduled_time)"
