@@ -223,47 +223,6 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {paymentsToday.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmados hoy ({todayAr})</h2>
-          <ul className="flex flex-col gap-2">
-            {paymentsToday.map((p) => {
-              const rel = p.matches;
-              const match = Array.isArray(rel) ? rel[0] ?? null : rel;
-              const time = String(match?.scheduled_time ?? "").slice(0, 5);
-              const court = courtName.get(match?.court_id ?? "") ?? "Cancha";
-              const name = playerName.get(p.user_id) ?? "Jugador";
-              const methodLabel =
-                p.payment_method === "cash"
-                  ? "Efectivo"
-                  : p.payment_method === "transfer"
-                    ? "Transferencia"
-                    : "—";
-              const amount = Number(p.amount ?? 0);
-              return (
-                <li
-                  key={p.id}
-                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {court} · {time || "—"}
-                    </p>
-                    <span className="mt-1.5 inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      {methodLabel}
-                    </span>
-                  </div>
-                  <p className="shrink-0 text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                    ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Pendientes ({todayAr})</h2>
         {pending.length === 0 ? (
@@ -327,6 +286,47 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           </ul>
         )}
       </section>
+
+      {paymentsToday.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmados hoy ({todayAr})</h2>
+          <ul className="flex flex-col gap-2">
+            {paymentsToday.map((p) => {
+              const rel = p.matches;
+              const match = Array.isArray(rel) ? rel[0] ?? null : rel;
+              const time = String(match?.scheduled_time ?? "").slice(0, 5);
+              const court = courtName.get(match?.court_id ?? "") ?? "Cancha";
+              const name = playerName.get(p.user_id) ?? "Jugador";
+              const methodLabel =
+                p.payment_method === "cash"
+                  ? "Efectivo"
+                  : p.payment_method === "transfer"
+                    ? "Transferencia"
+                    : "—";
+              const amount = Number(p.amount ?? 0);
+              return (
+                <li
+                  key={p.id}
+                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {court} · {time || "—"}
+                    </p>
+                    <span className="mt-1.5 inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      {methodLabel}
+                    </span>
+                  </div>
+                  <p className="shrink-0 text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {noShows.length > 0 ? (
         <section className="space-y-3">

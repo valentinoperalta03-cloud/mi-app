@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   CircleHelp,
@@ -169,6 +169,7 @@ function PlayerDrawer({
 
 export default function TopNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -183,6 +184,7 @@ export default function TopNav() {
   useEffect(() => {
     const supabase = createClient();
     let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     async function load() {
       try {
@@ -210,6 +212,23 @@ export default function TopNav() {
           .eq("read", false);
         if (!active) return;
         setUnreadCount(count ?? 0);
+
+        if (!active) return;
+        channel = supabase
+          .channel("notifications-badge")
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: DB_TABLES.notifications,
+              filter: `user_id=eq.${userId}`,
+            },
+            () => {
+              setUnreadCount((prev) => prev + 1);
+            }
+          )
+          .subscribe();
       } catch (err) {
         console.error("[TopNav] profile load failed", err);
         if (!active) return;
@@ -222,8 +241,17 @@ export default function TopNav() {
     void load();
     return () => {
       active = false;
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (pathname === "/notificaciones") {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     document.body.classList.toggle("player-drawer-open", open);
