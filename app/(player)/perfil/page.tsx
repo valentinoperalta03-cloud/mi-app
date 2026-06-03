@@ -167,87 +167,108 @@ export default async function PerfilPage() {
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
-        <div className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
+        <div
+          className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]"
+          style={{ background: "var(--bg-card)" }}
+        >
+          {/* Banner difuminado */}
           <div
-            className="relative h-20 w-full"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            className="relative h-28 w-full"
+            style={{
+              background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 100%)",
+            }}
           >
-            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute right-4 top-4">
-              {levelParts ? (
-                <span
-                  className="rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide"
-                  style={{ background: "#CCFF00", color: "#000" }}
-                >
-                  {levelParts.category}
-                </span>
-              ) : null}
-            </div>
+            <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -left-4 top-0 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
           </div>
 
-          <div className="px-5 pb-5">
-            <div className="-mt-9 mb-3 flex items-end justify-between">
-              <ProfileAvatar
-                avatarUrl={row?.avatar_url ?? null}
-                name={displayName}
-                size={72}
-                ringClassName="ring-4 ring-[var(--bg-card)]"
-              />
+          <div className="px-5 pb-6">
+            {/* Avatar + editar */}
+            <div className="-mt-12 mb-4 flex items-end justify-between">
+              <div className="relative">
+                <ProfileAvatar
+                  avatarUrl={row?.avatar_url ?? null}
+                  name={displayName}
+                  size={80}
+                  ringClassName="ring-4 ring-[var(--bg-card)]"
+                />
+                {levelParts ? (
+                  <span
+                    className="absolute -bottom-1 -right-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide"
+                    style={{ background: "#CCFF00", color: "#000" }}
+                  >
+                    {levelParts.category}
+                  </span>
+                ) : null}
+              </div>
               <Link
                 href="/perfil/editar"
                 className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition active:scale-95"
                 aria-label="Editar perfil"
               >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </Link>
             </div>
 
-            <h1 className="text-xl font-bold text-[var(--text-primary)]">{displayName}</h1>
+            {/* Nombre */}
+            <h1 className="text-lg font-bold text-[var(--text-primary)]">{displayName}</h1>
+
+            {/* ELO hero */}
             {levelParts ? (
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tight text-[var(--text-primary)]">
+                <span
+                  className="text-5xl font-black tracking-tight"
+                  style={{ color: "#CCFF00", textShadow: "0 0 32px rgba(204,255,0,0.25)" }}
+                >
                   {levelParts.elo}
                 </span>
-                <span className="text-sm font-semibold text-[var(--text-tertiary)]">ELO</span>
+                <span className="text-sm font-bold text-[var(--text-tertiary)]">ELO</span>
               </div>
             ) : (
               <p className="mt-1 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
             )}
 
+            {/* Barra de progreso */}
             {levelParts ? (
               <div className="mt-3 space-y-1.5">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                   <div
                     className="h-full rounded-full transition-[width]"
-                    style={{ width: `${levelParts.progressInEloUnit}%`, background: "#CCFF00" }}
+                    style={{
+                      width: `${levelParts.progressInEloUnit}%`,
+                      background: "linear-gradient(90deg, #CCFF00, #aadd00)",
+                      boxShadow: "0 0 8px rgba(204,255,0,0.4)",
+                    }}
                   />
                 </div>
-                <p className="text-xs text-[var(--text-tertiary)]">
+                <p className="text-[11px] text-[var(--text-tertiary)]">
                   {levelParts.progressInEloUnit}% hacia la siguiente categoría
                 </p>
               </div>
             ) : null}
 
+            {/* Bio */}
             {row?.bio?.trim() ? (
               <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
             ) : null}
 
-            <div className="mt-4 flex gap-6 border-t border-[var(--border-subtle)] pt-4">
+            {/* Seguidores / Siguiendo */}
+            <div
+              className="mt-4 flex gap-6 border-t pt-4"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
               <div>
-                <p className="text-lg font-black text-[var(--text-primary)]">{followersCount ?? 0}</p>
+                <p
+                  className="text-lg font-black"
+                  style={{ color: "#CCFF00" }}
+                >
+                  {followersCount ?? 0}
+                </p>
                 <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
               </div>
               <div>
