@@ -67,13 +67,13 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`player-bottom-nav pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 transition-all duration-200 ${
+      className={`player-bottom-nav pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center border-t border-[var(--border-subtle)] bg-[var(--glass-bg)] px-4 backdrop-blur-md transition-all duration-200 ${
         drawerOpen ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
       }`}
       aria-label="Navegación principal"
     >
       <div
-        className="player-shell-inner pointer-events-auto flex w-full items-center justify-around gap-2 rounded-2xl px-3 py-2 backdrop-blur-[20px]"
+        className="player-shell-inner pointer-events-auto flex w-full items-center justify-around gap-2 rounded-2xl px-3 py-2"
         style={{
           background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
           boxShadow: "0 -4px 20px rgba(5,133,252,0.3)",

@@ -30,7 +30,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
           <article className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
             <div
               className="-mx-5 -mt-5 mb-4 h-1"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              style={{ background: "#CCFF00" }}
             />
             <div className="flex gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/10 text-[#0461C4]">
@@ -41,25 +41,37 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                 )}
               </span>
               <div className="min-w-0 flex-1 space-y-1.5">
-                <p className="text-sm font-bold leading-tight text-slate-900">{r.clubName}</p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">Fecha:</span> {r.dateLine}
+                <p className="text-base font-bold text-[var(--text-primary)]">{r.clubName}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  {r.dateLine} · {r.timeLine}
                 </p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">Hora:</span> {r.timeLine}
-                </p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">Tipo:</span> {r.matchTypeLabel}
-                </p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-700">Jugadores:</span>{" "}
-                  {r.slotsFilled}/4 confirmados
-                </p>
-                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full bg-[#0585FC] transition-all"
-                    style={{ width: `${Math.min(100, Math.max(0, (r.slotsFilled / 4) * 100))}%` }}
-                  />
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                  style={{
+                    background: r.matchTypeLabel === "Competitivo" ? "rgba(5,133,252,0.1)" : "rgba(204,255,0,0.15)",
+                    color: r.matchTypeLabel === "Competitivo" ? "#0585FC" : "#5a7a00",
+                  }}
+                >
+                  {r.matchTypeLabel}
+                </span>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                      {r.slotsFilled}/4 jugadores
+                    </p>
+                    <p className="text-[10px] text-[var(--text-tertiary)]">
+                      {r.slotsFilled === 4 ? "Completo" : `${4 - r.slotsFilled} lugares libres`}
+                    </p>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, (r.slotsFilled / 4) * 100))}%`,
+                        background: r.slotsFilled === 4 ? "#CCFF00" : "linear-gradient(90deg, #0585FC, #0461C4)",
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
                   <Link

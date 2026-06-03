@@ -52,21 +52,49 @@ const hrefs: Record<string, string> = {
   rankings: "/comunidad/rankings",
 };
 
-function ComunidadNavTile({ tile, href }: { tile: TileVisual; href: string }) {
+function ComunidadNavTile({ tile, href, hero = false }: { tile: TileVisual; href: string; hero?: boolean }) {
+  if (hero) {
+    return (
+      <Link
+        href={href}
+        prefetch
+        aria-label={`Ir a ${tile.label}`}
+        className="flex items-center gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition active:scale-[0.98]"
+      >
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: "rgba(204,255,0,0.15)" }}
+        >
+          <tile.Icon size={22} style={{ color: "#CCFF00" }} strokeWidth={2.1} aria-hidden />
+        </div>
+        <div className="flex-1">
+          <p className="text-base font-bold text-[var(--text-primary)]">{tile.label}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">Recomendado para vos</p>
+        </div>
+        <span
+          className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+          style={{ background: "#CCFF00", color: "#000" }}
+        >
+          Nuevo
+        </span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={href}
       prefetch
       aria-label={`Ir a ${tile.label}`}
-      className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition active:scale-[0.96]"
+      className="flex flex-col items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-3.5 shadow-[var(--shadow-card)] transition active:scale-[0.96]"
     >
       <div
-        className="flex h-10 w-10 items-center justify-center rounded-xl"
+        className="flex h-9 w-9 items-center justify-center rounded-xl"
         style={{ background: tile.accentBg }}
       >
-        <tile.Icon size={20} style={{ color: tile.accent }} strokeWidth={2.1} aria-hidden />
+        <tile.Icon size={18} style={{ color: tile.accent }} strokeWidth={2.1} aria-hidden />
       </div>
-      <p className="text-sm font-bold text-[var(--text-primary)]">{tile.label}</p>
+      <p className="text-xs font-bold text-[var(--text-primary)]">{tile.label}</p>
     </Link>
   );
 }
@@ -103,10 +131,17 @@ export function ComunidadClient({
         ) : null}
       </header>
 
-      <div className="grid min-w-0 grid-cols-2 gap-3 px-4 sm:gap-3.5">
-        {tileVisuals.map((tile) => (
-          <ComunidadNavTile key={tile.id} tile={tile} href={hrefs[tile.id] ?? "/comunidad"} />
-        ))}
+      <div className="flex flex-col gap-3 px-4">
+        <ComunidadNavTile
+          tile={tileVisuals[0]}
+          href={hrefs["para-ti"] ?? "/comunidad"}
+          hero
+        />
+        <div className="grid grid-cols-3 gap-3">
+          {tileVisuals.slice(1).map((tile) => (
+            <ComunidadNavTile key={tile.id} tile={tile} href={hrefs[tile.id] ?? "/comunidad"} />
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 space-y-5 px-4">

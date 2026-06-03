@@ -167,68 +167,93 @@ export default async function PerfilPage() {
   return (
     <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-5 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <ProfileMotionSurface animateOnMount>
-        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-4">
-            <ProfileAvatar
-              avatarUrl={row?.avatar_url ?? null}
-              name={displayName}
-              size={72}
-              ringClassName="ring-2 ring-[var(--bg-subtle)]"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <h1 className="truncate text-xl font-bold text-[var(--text-primary)]">{displayName}</h1>
-                <Link
-                  href="/perfil/editar"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition active:scale-95"
-                  aria-label="Editar perfil"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </Link>
-              </div>
+        <div className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
+          <div
+            className="relative h-20 w-full"
+            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          >
+            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute right-4 top-4">
               {levelParts ? (
-                <p className="mt-0.5 text-sm font-semibold text-[#0585FC]">{levelParts.category}</p>
-              ) : (
-                <p className="mt-0.5 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
-              )}
-              {levelParts ? <p className="text-xs text-[var(--text-tertiary)]">ELO {levelParts.elo}</p> : null}
+                <span
+                  className="rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide"
+                  style={{ background: "#CCFF00", color: "#000" }}
+                >
+                  {levelParts.category}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          {levelParts ? (
-            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-              <div
-                className="h-full rounded-full bg-[#0585FC] transition-[width]"
-                style={{ width: `${levelParts.progressInEloUnit}%` }}
+          <div className="px-5 pb-5">
+            <div className="-mt-9 mb-3 flex items-end justify-between">
+              <ProfileAvatar
+                avatarUrl={row?.avatar_url ?? null}
+                name={displayName}
+                size={72}
+                ringClassName="ring-4 ring-[var(--bg-card)]"
               />
+              <Link
+                href="/perfil/editar"
+                className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition active:scale-95"
+                aria-label="Editar perfil"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </Link>
             </div>
-          ) : null}
 
-          {row?.bio?.trim() ? (
-            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
-          ) : null}
+            <h1 className="text-xl font-bold text-[var(--text-primary)]">{displayName}</h1>
+            {levelParts ? (
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-4xl font-black tracking-tight text-[var(--text-primary)]">
+                  {levelParts.elo}
+                </span>
+                <span className="text-sm font-semibold text-[var(--text-tertiary)]">ELO</span>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm font-semibold text-[#0585FC]">{nivelLine}</p>
+            )}
 
-          <div className="mt-4 flex gap-4 border-t border-[var(--border-subtle)] pt-4">
-            <div className="text-center">
-              <p className="text-base font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
-            </div>
-            <div className="text-center">
-              <p className="text-base font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
+            {levelParts ? (
+              <div className="mt-3 space-y-1.5">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
+                  <div
+                    className="h-full rounded-full transition-[width]"
+                    style={{ width: `${levelParts.progressInEloUnit}%`, background: "#CCFF00" }}
+                  />
+                </div>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  {levelParts.progressInEloUnit}% hacia la siguiente categoría
+                </p>
+              </div>
+            ) : null}
+
+            {row?.bio?.trim() ? (
+              <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
+            ) : null}
+
+            <div className="mt-4 flex gap-6 border-t border-[var(--border-subtle)] pt-4">
+              <div>
+                <p className="text-lg font-black text-[var(--text-primary)]">{followersCount ?? 0}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Seguidores</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-[var(--text-primary)]">{followingCount ?? 0}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Siguiendo</p>
+              </div>
             </div>
           </div>
         </div>

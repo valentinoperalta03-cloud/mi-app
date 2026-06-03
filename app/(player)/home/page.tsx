@@ -73,7 +73,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   ]);
 
   return (
-    <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-transparent px-4 pb-24 pt-6">
+    <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       {levelingDone ? (
         <section className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-100">
           <p className="text-sm font-semibold">Perfil guardado con éxito.</p>
@@ -149,10 +149,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               key={title}
               href={href}
               prefetch
-              className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 shadow-[var(--shadow-card)] transition active:scale-[0.97]"
+              className="flex flex-col gap-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4 shadow-[var(--shadow-card)] transition active:scale-[0.97]"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/10">
-                <Icon size={18} className="text-[#0585FC]" />
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-xl"
+                style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              >
+                <Icon size={19} className="text-white" />
               </div>
               <div>
                 <p className="text-sm font-bold text-[var(--text-primary)]">{title}</p>
@@ -180,7 +183,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Resultados pendientes</h2>
+          <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Resultados pendientes</h2>
           {pendingForMe.slice(0, 2).map((p) => (
             <CompetitiveResultConfirmationCard
               key={p.match_id}
@@ -202,14 +205,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Tu resumen</h2>
+        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Mis Reservas</h2>
+        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Mis Reservas</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>
