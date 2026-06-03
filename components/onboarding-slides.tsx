@@ -154,7 +154,7 @@ function PadelibreLogo({ size = 56, showText = true, textSize = "text-2xl" }: { 
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Padelibre" />
+        <img src="/logo.png" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }} alt="Padelibre" />
       </div>
       {showText ? (
         <span
@@ -338,7 +338,7 @@ function SlideContent({ id }: { id: number }) {
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Padelibre" />
+              <img src="/logo.png" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }} alt="Padelibre" />
             </div>
           </motion.div>
 
@@ -450,8 +450,8 @@ function SlideContent({ id }: { id: number }) {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'Outfit',sans-serif" }}>San Andrés Padel Club</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Viernes 5 · 19:30 · 90 min</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'Outfit',sans-serif" }}>Tu club favorito</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Sábado · 18:00 · $X.XXX por jugador</div>
               </div>
               <div
                 style={{
@@ -464,7 +464,7 @@ function SlideContent({ id }: { id: number }) {
                   fontFamily: "'Outfit',sans-serif",
                 }}
               >
-                $13.125
+                $X.XXX
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -573,8 +573,8 @@ function SlideContent({ id }: { id: number }) {
             </p>
           </motion.div>
 
-          <ClubCard name="San Andrés Padel Club" city="Roldán, Santa Fe" delay={0.2} />
-          <ClubCard name="Schwank Tennis & Paddle" city="Rosario, Santa Fe" delay={0.3} />
+          <ClubCard name="Club Pádel Centro" city="Tu ciudad" delay={0.2} />
+          <ClubCard name="Padel Norte" city="Cerca tuyo" delay={0.3} />
 
           <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
             <IconCard icon="users" label="Seguí jugadores" delay={0.4} />
