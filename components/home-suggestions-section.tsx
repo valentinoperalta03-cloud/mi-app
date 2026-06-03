@@ -19,13 +19,25 @@ export async function HomeSuggestionsSection({
   if (list.length === 0) {
     if (context === "comunidad") {
       return (
-        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-5 shadow-[var(--shadow-card)] dark:border-slate-700/80">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
-            Jugadores con los que podrías jugar
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Jugá más partidos para ver sugerencias de tu nivel acá.
-          </p>
+        <div
+          className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4 shadow-[var(--shadow-card)]"
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: "rgba(5,133,252,0.1)" }}
+            >
+              <Users size={18} className="text-[#0585FC]" strokeWidth={2} aria-hidden />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[var(--text-primary)]">
+                Jugadores de tu nivel
+              </p>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                Jugá más partidos para ver sugerencias acá
+              </p>
+            </div>
+          </div>
         </div>
       );
     }

@@ -132,9 +132,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         >
           <div
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-            style={{ background: "rgba(204,255,0,0.12)" }}
+            style={{ background: "rgba(204,255,0,0.25)" }}
           >
-            <CirclePlus size={22} style={{ color: "#CCFF00" }} />
+            <CirclePlus size={22} style={{ color: "#7a9900" }} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-[var(--text-primary)]">{quickActions[1].title}</p>

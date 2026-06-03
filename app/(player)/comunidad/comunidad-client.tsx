@@ -63,7 +63,7 @@ function ComunidadNavTile({ tile, href, hero = false }: { tile: TileVisual; href
       >
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(204,255,0,0.15)" }}
+          style={{ background: "#1a1a1a" }}
         >
           <tile.Icon size={22} style={{ color: "#CCFF00" }} strokeWidth={2.1} aria-hidden />
         </div>

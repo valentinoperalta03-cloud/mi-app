@@ -147,16 +147,16 @@ function PlayerDrawer({
         </div>
 
         <div
-          className="shrink-0 border-t border-[var(--border-subtle)] bg-white px-4 pt-3 dark:bg-[#1C1C1E]"
+          className="shrink-0 border-t border-[var(--border-subtle)] px-4 pt-2"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
         >
           <button
             type="button"
             onClick={onSignOut}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-red-700/25 bg-red-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-500/30 dark:bg-red-700 dark:hover:bg-red-600"
+            className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/25"
           >
-            <span className="rounded-full bg-white/20 p-2 text-white">
+            <span className="rounded-full bg-[var(--bg-subtle)] p-2 text-red-500 dark:text-red-400">
               <LogOut size={16} />
             </span>
             <span>{busy ? "Cerrando sesión…" : "Cerrar sesión"}</span>

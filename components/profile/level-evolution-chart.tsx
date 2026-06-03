@@ -8,13 +8,13 @@ type LevelEvolutionChartProps = {
   points: EvolutionPoint[];
 };
 
-const STROKE = "#2563eb";
-const FILL = "rgba(37, 99, 235, 0.08)";
+const STROKE = "#0585FC";
+const FILL = "rgba(5, 133, 252, 0.08)";
 
 export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
   if (points.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200/70 bg-[var(--bg-card)] px-5 py-8 text-center dark:border-slate-700/70">
+      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-8 text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
           <TrendingUp className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
         </div>
@@ -66,10 +66,10 @@ export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
         />
         <circle cx={last.x} cy={last.y} r={4.5} fill="white" stroke={STROKE} strokeWidth={2} />
       </svg>
-      <div className="mt-3 flex items-baseline justify-between px-1 text-xs text-slate-500">
+      <div className="mt-3 flex items-baseline justify-between px-1 text-xs text-[var(--text-tertiary)]">
         <span>
           Último:{" "}
-          <span className="font-medium text-slate-800">{formatTechnicalLevelDisplay(last.score)}</span>
+          <span className="font-medium text-[var(--text-primary)]">{formatTechnicalLevelDisplay(last.score)}</span>
         </span>
         <span>{n} registro{n === 1 ? "" : "s"}</span>
       </div>
