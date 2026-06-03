@@ -26,37 +26,24 @@ type HomePageProps = {
 
 const quickActions = [
   {
+    title: "Buscar partido",
+    href: "/buscar-partido",
+    Icon: Search,
+    desc: "Encontrá partidos abiertos de tu nivel",
+    featured: true,
+  },
+  {
     title: "Crear Partido",
     href: "/crear-partido",
     Icon: CirclePlus,
     desc: "Organizá un partido en segundos",
-    gradient: "var(--color-brand-gradient)",
-    shadow: "0 4px 16px rgba(5,133,252,0.35)",
+    featured: false,
   },
-  {
-    title: "Buscar partido",
-    desc: "Sumate a partidos abiertos",
-    href: "/buscar-partido",
-    Icon: Search,
-    gradient: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-    shadow: "0 4px 16px rgba(22,163,74,0.35)",
-  },
-  {
-    title: "Torneos",
-    href: "/torneos",
-    Icon: Trophy,
-    desc: "Torneos y competencias",
-    gradient: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
-    shadow: "0 4px 16px rgba(168,85,247,0.35)",
-  },
-  {
-    title: "Aprender",
-    href: "/clases",
-    Icon: GraduationCap,
-    desc: "Clases y entrenamientos",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-    shadow: "0 4px 16px rgba(245,158,11,0.35)",
-  },
+] as const;
+
+const secondaryActions = [
+  { title: "Torneos", href: "/torneos", Icon: Trophy },
+  { title: "Aprender", href: "/clases", Icon: GraduationCap },
 ] as const;
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -97,40 +84,85 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ) : null}
 
       <section
-        className="relative overflow-hidden rounded-3xl p-6 text-white"
+        className="relative overflow-hidden rounded-3xl p-5 text-white"
         style={{
-          background: "var(--color-brand-gradient)",
-          boxShadow: "0 4px 20px rgba(5,133,252,0.3)",
+          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          boxShadow: "0 4px 24px rgba(5,133,252,0.3)",
         }}
       >
-        <div className="relative z-10 flex items-start gap-3">
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-xl ring-1 ring-white/20" aria-hidden>
-            🎾
+        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative z-10">
+          <span
+            className="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+            style={{ background: "#CCFF00", color: "#000" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-black" />
+            En línea
           </span>
-          <h1 className="text-xl font-bold leading-tight tracking-tight md:text-[1.35rem]">
-            ¡Vamos! Todo listo para tu partido, {displayName}.
-          </h1>
+          <h1 className="text-xl font-bold leading-tight tracking-tight">¡Vamos, {displayName}!</h1>
+          <p className="mt-1 text-sm text-white/75">¿Qué querés hacer hoy?</p>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        {quickActions.map(({ title, desc, href, Icon, gradient, shadow }) => (
-          <Link
-            key={title}
-            href={href}
-            prefetch
-            className="group flex min-h-28 flex-col justify-between rounded-2xl p-4 text-white transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0"
-            style={{ background: gradient, boxShadow: shadow }}
+      <section className="flex flex-col gap-3">
+        <Link
+          href={quickActions[0].href}
+          prefetch
+          className="group relative flex items-center gap-4 overflow-hidden rounded-3xl p-5 text-white transition active:scale-[0.98]"
+          style={{
+            background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+            boxShadow: "0 4px 20px rgba(5,133,252,0.25)",
+          }}
+        >
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 ring-1 ring-white/25">
+            <Search size={22} className="text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold">{quickActions[0].title}</p>
+            <p className="text-sm text-white/75">{quickActions[0].desc}</p>
+          </div>
+          <ChevronRight size={20} className="shrink-0 text-white/60" />
+        </Link>
+
+        <Link
+          href={quickActions[1].href}
+          prefetch
+          className="flex items-center gap-4 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)] transition active:scale-[0.98]"
+        >
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+            style={{ background: "rgba(204,255,0,0.12)" }}
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-              <Icon size={20} className="text-white" aria-hidden />
-            </span>
-            <div className="mt-2">
-              <h2 className="text-base font-bold leading-tight">{title}</h2>
-              <p className="mt-0.5 text-xs leading-snug text-white/80">{desc}</p>
-            </div>
-          </Link>
-        ))}
+            <CirclePlus size={22} style={{ color: "#CCFF00" }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-[var(--text-primary)]">{quickActions[1].title}</p>
+            <p className="text-sm text-[var(--text-tertiary)]">{quickActions[1].desc}</p>
+          </div>
+          <ChevronRight size={20} className="shrink-0 text-[var(--text-tertiary)]" />
+        </Link>
+
+        <div className="grid grid-cols-2 gap-3">
+          {secondaryActions.map(({ title, href, Icon }) => (
+            <Link
+              key={title}
+              href={href}
+              prefetch
+              className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 shadow-[var(--shadow-card)] transition active:scale-[0.97]"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/10">
+                <Icon size={18} className="text-[#0585FC]" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{title}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  {title === "Torneos" ? "Competí" : "Clases"}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <Link

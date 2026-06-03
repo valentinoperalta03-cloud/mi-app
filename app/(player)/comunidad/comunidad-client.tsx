@@ -10,9 +10,8 @@ type TileVisual = {
   id: string;
   label: string;
   Icon: typeof Sparkles;
-  ringGradient: string;
-  barGradient: string;
-  iconClass: string;
+  accent: string;
+  accentBg: string;
 };
 
 const tileVisuals: TileVisual[] = [
@@ -20,33 +19,29 @@ const tileVisuals: TileVisual[] = [
     id: "para-ti",
     label: "Para Ti",
     Icon: Sparkles,
-    ringGradient: "linear-gradient(135deg, #0585FC 0%, #0461C4 40%, #0585FC 100%)",
-    barGradient: "linear-gradient(90deg, #0585FC, #0461C4, #0585FC)",
-    iconClass: "text-[#0585FC]",
+    accent: "#CCFF00",
+    accentBg: "rgba(204,255,0,0.1)",
   },
   {
     id: "jugadores",
     label: "Jugadores",
     Icon: Users,
-    ringGradient: "linear-gradient(135deg, #16a34a 0%, #15803d 45%, #16a34a 100%)",
-    barGradient: "linear-gradient(90deg, #16a34a, #15803d, #16a34a)",
-    iconClass: "text-[#16a34a]",
+    accent: "#0585FC",
+    accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "mensajes",
     label: "Mensajes",
     Icon: MessageCircle,
-    ringGradient: "linear-gradient(135deg, #a855f7 0%, #7c3aed 45%, #a855f7 100%)",
-    barGradient: "linear-gradient(90deg, #a855f7, #7c3aed, #a855f7)",
-    iconClass: "text-[#9333ea]",
+    accent: "#0585FC",
+    accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "rankings",
     label: "Rankings",
     Icon: Trophy,
-    ringGradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 45%, #f59e0b 100%)",
-    barGradient: "linear-gradient(90deg, #f59e0b, #d97706, #f59e0b)",
-    iconClass: "text-[#d97706]",
+    accent: "#0585FC",
+    accentBg: "rgba(5,133,252,0.1)",
   },
 ];
 
@@ -57,39 +52,21 @@ const hrefs: Record<string, string> = {
   rankings: "/comunidad/rankings",
 };
 
-const outerTileClass =
-  "comunidad-gradient-animated block min-h-[112px] w-full min-w-0 rounded-3xl p-[2.5px] text-left shadow-[0_2px_12px_rgba(15,23,42,0.06)] outline-none transition-[transform,box-shadow] duration-200 hover:shadow-[0_8px_28px_rgba(15,23,42,0.1)] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[#0585FC] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] touch-manipulation dark:focus-visible:ring-offset-black";
-
 function ComunidadNavTile({ tile, href }: { tile: TileVisual; href: string }) {
-  const inner = (
-    <div className="relative flex min-h-[106px] flex-col rounded-[20px] bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-6px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.05] transition-shadow duration-200 dark:bg-[var(--bg-card)] dark:ring-white/[0.08]">
-      <div className="flex items-start gap-2.5">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full p-[2.5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
-          style={{ backgroundImage: tile.ringGradient }}
-        >
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-white shadow-inner dark:bg-[var(--bg-card)]">
-            <tile.Icon className={tile.iconClass} size={22} strokeWidth={2.25} aria-hidden />
-          </div>
-        </div>
-      </div>
-      <p className="mt-2.5 text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">{tile.label}</p>
-      <div
-        className="comunidad-gradient-animated mt-auto h-[3px] w-full rounded-full opacity-95"
-        style={{ backgroundImage: tile.barGradient }}
-      />
-    </div>
-  );
-
   return (
     <Link
       href={href}
       prefetch
       aria-label={`Ir a ${tile.label}`}
-      className={outerTileClass}
-      style={{ backgroundImage: tile.ringGradient }}
+      className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition active:scale-[0.96]"
     >
-      {inner}
+      <div
+        className="flex h-10 w-10 items-center justify-center rounded-xl"
+        style={{ background: tile.accentBg }}
+      >
+        <tile.Icon size={20} style={{ color: tile.accent }} strokeWidth={2.1} aria-hidden />
+      </div>
+      <p className="text-sm font-bold text-[var(--text-primary)]">{tile.label}</p>
     </Link>
   );
 }
@@ -103,9 +80,9 @@ export function ComunidadClient({
 }) {
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
-      <header className="mx-4 mb-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/90 px-4 py-4 shadow-[var(--shadow-card)] backdrop-blur-md dark:bg-[var(--bg-card)]/95">
-        <h1 className="text-[1.65rem] font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
-        <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">Tu espacio social</p>
+      <header className="mx-4 mb-6 space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
+        <p className="text-sm text-[var(--text-tertiary)]">Conectate con otros jugadores</p>
         {rankingsPreview.myGlobalPosition != null && rankingsPreview.totalRankedPlayers > 0 ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--bg-subtle)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
             <span>
