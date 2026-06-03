@@ -18,7 +18,8 @@ export function playerShareWithMarketplaceFee(totalCourtPrice: number) {
 export function clubPadelibreDebtFromTurn(totalCourtPrice: number) {
   const n = Number(totalCourtPrice);
   if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.round(n * 0.05 * 100) / 100;
+  const perPlayerBase = Math.round(n / 4);
+  return Math.round(perPlayerBase * 0.05 * 100) / 100;
 }
 
 export function isReservationSlotBlockingPaymentStatus(status: string | null | undefined): boolean {

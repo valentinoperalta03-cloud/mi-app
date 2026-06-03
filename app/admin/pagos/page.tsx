@@ -62,17 +62,25 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
   const selectedStatus = STATUS_OPTIONS.some((opt) => opt.value === sp.status) ? String(sp.status) : "all";
   const since5DaysYmd = format(subDays(new Date(), 5), "yyyy-MM-dd");
 
-  const { data: paymentsRaw } =
+  const { data: matchIds } =
     ctx.courtIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.matches)
+          .select("id")
+          .in("court_id", ctx.courtIds)
+          .gte("scheduled_date", since5DaysYmd)
+      : { data: [] };
+
+  const ids = (matchIds ?? []).map((m: { id: string }) => m.id);
+
+  const { data: paymentsRaw } =
+    ids.length > 0
       ? await supabase
           .from(DB_TABLES.payments)
           .select(
             "id,user_id,amount,status,created_at,match_id,matches!inner(id,court_id,scheduled_date,scheduled_time,match_type,es_turno_fijo,courts(name)),profiles:user_id(user_id,name,avatar_url)"
           )
-          .in("matches.court_id", ctx.courtIds)
-          .gte("matches.scheduled_date", since5DaysYmd)
-          .order("scheduled_date", { ascending: false, referencedTable: "matches" })
-          .order("scheduled_time", { ascending: false, referencedTable: "matches" })
+          .in("match_id", ids)
           .order("created_at", { ascending: false })
       : { data: [] };
 
