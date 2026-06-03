@@ -170,7 +170,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
               const name = ownerName.get(m.owner_id) ?? "Jugador";
               const time = String(m.scheduled_time ?? "").slice(0, 5);
               const court = courtName.get(m.court_id) ?? "Cancha";
-              const amount = Number(m.total_price ?? 0) * 1.05;
+              const amount = Math.round(Number(m.total_price ?? 0) / 4 * 1.05);
               return (
                 <li
                   key={m.id}

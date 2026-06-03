@@ -15,7 +15,7 @@ import { isMatchPrivate } from "@/lib/match-visibility";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, getAdminClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
 import PartidoEditSection from "./partido-edit-section";
 import RequestJoinButton from "./request-join-button";
@@ -337,7 +337,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
 
-  const { data: groupChatRow } = await supabase
+  const adminForGroup = await getAdminClient();
+  const { data: groupChatRow } = await adminForGroup
     .from(DB_TABLES.groupChats)
     .select("id")
     .eq("match_id", id)
