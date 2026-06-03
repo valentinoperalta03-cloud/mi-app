@@ -40,6 +40,12 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   const todayAr = getTodayYmdInArgentina();
   const clubId = ctx.clubIds[0]!;
 
+  const { data: clubMatchRows } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .in("court_id", ctx.courtIds);
+  const clubMatchIds = (clubMatchRows ?? []).map((m: { id: string }) => m.id);
+
   const [
     { data: pendingRows, error: pendErr },
     { data: payRows },
@@ -53,16 +59,18 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .eq("scheduled_date", todayAr)
       .in("payment_status", ["cash_pending", "transfer_pending"])
       .order("scheduled_time", { ascending: true }),
-    supabase
-      .from(DB_TABLES.payments)
-      .select(
-        "id, amount, updated_at, payment_method, user_id, match_id, matches!inner(court_id, scheduled_date, scheduled_time, owner_id)"
-      )
-      .eq("status", "approved")
-      .in("payment_method", ["cash", "transfer"])
-      .in("matches.court_id", ctx.courtIds)
-      .order("updated_at", { ascending: false })
-      .limit(20),
+    clubMatchIds.length > 0
+      ? supabase
+          .from(DB_TABLES.payments)
+          .select(
+            "id, amount, updated_at, payment_method, match_id, user_id, matches!inner(court_id, scheduled_date, scheduled_time)"
+          )
+          .eq("status", "approved")
+          .in("payment_method", ["cash", "transfer"])
+          .in("match_id", clubMatchIds)
+          .order("updated_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] }),
     supabase
       .from(DB_TABLES.clubDebts)
       .select("id, amount, confirmed_at, payment_method, match_id")
@@ -110,13 +118,11 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           court_id: string;
           scheduled_date: string | null;
           scheduled_time: string | null;
-          owner_id: string;
         }
       | {
           court_id: string;
           scheduled_date: string | null;
           scheduled_time: string | null;
-          owner_id: string;
         }[]
       | null;
   }>;
@@ -126,7 +132,8 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     if (!match) return false;
     const court = match.court_id;
     if (!court || !ctx.courtIds.includes(court)) return false;
-    return match.scheduled_date === todayAr;
+    if (!p.updated_at) return false;
+    return isYmdInArgentina(p.updated_at, todayAr);
   });
   const confirmadosHoy = paymentsToday.length;
   const totalCobradoHoy = paymentsToday.reduce((s, p) => s + Number(p.amount ?? 0), 0);

@@ -72,6 +72,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
       : { data: [] };
 
   const ids = (matchIds ?? []).map((m: { id: string }) => m.id);
+  console.log("[pagos] courtIds", ctx.courtIds, "matchIds", ids.length);
 
   const { data: paymentsRaw } =
     ids.length > 0
