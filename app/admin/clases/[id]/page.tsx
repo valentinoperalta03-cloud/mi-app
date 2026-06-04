@@ -11,6 +11,7 @@ import {
   PRACTICE_STATUS_LABELS,
   PRACTICE_SESSION_STATUS_LABELS,
 } from "@/lib/practice-constants";
+import { practicePaymentStatusLabel } from "@/lib/practice-registration";
 import { practiceTotalPrice } from "@/lib/practice-pricing";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { PublishPracticeButton, CancelPracticeButton } from "../publish-practice-button";
@@ -76,7 +77,7 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
   const { data: regs } = sessionIds.length
     ? await service
         .from(DB_TABLES.practiceRegistrations)
-        .select("id, session_id, player_id, payment_status, registered_at")
+        .select("id, session_id, player_id, payment_status, payment_method, registered_at")
         .in("session_id", sessionIds)
         .order("registered_at", { ascending: true })
     : { data: [] };
@@ -86,6 +87,7 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
     session_id: string;
     player_id: string;
     payment_status: string;
+    payment_method: string | null;
     registered_at: string;
   }>;
   const playerIds = [...new Set(regList.map((r) => r.player_id))];
@@ -182,11 +184,10 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
                         <li key={r.id} className="flex justify-between gap-2 text-slate-700 dark:text-slate-300">
                           <span>{profileMap.get(r.player_id)}</span>
                           <span className="text-xs text-slate-500">
-                            {r.payment_status === "approved"
-                              ? "Pagado"
-                              : r.payment_status === "pending"
-                                ? "Pendiente"
-                                : r.payment_status}
+                            {practicePaymentStatusLabel(r.payment_status)}
+                            {r.payment_method && r.payment_status === "approved"
+                              ? ` · ${r.payment_method === "cash" ? "Efectivo" : r.payment_method === "transfer" ? "Transferencia" : "MP"}`
+                              : null}
                           </span>
                         </li>
                       ))}

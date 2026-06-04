@@ -1,29 +1,29 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { notifyClubOwner } from "@/lib/club-notify";
 import { DB_TABLES } from "@/lib/db-tables";
+import { createNotification } from "@/lib/notifications";
 import { createPracticeMercadoPagoPreference } from "@/lib/mp-practice-preference";
-import { practiceTotalPrice } from "@/lib/practice-pricing";
+import { practicePlayerPayAmount } from "@/lib/practice-offline";
+import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
+import { normalizePlayerPaymentMethod } from "@/lib/offline-payments";
 import { createClient } from "@/utils/supabase/server";
 
 export type CheckoutState = { ok: boolean; message: string; url?: string };
 
-export async function beginPracticeCheckoutAction(formData: FormData): Promise<CheckoutState> {
-  const sessionId = String(formData.get("session_id") ?? "").trim();
-  if (!sessionId) return { ok: false, message: "Sesión inválida." };
-
+async function loadSessionForRegister(sessionId: string, userId: string) {
   const supabase = await createClient({ allowCookieWrites: true });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, message: "Iniciá sesión para inscribirte." };
 
   const { data: session } = await supabase
     .from(DB_TABLES.practiceSessions)
-    .select("id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name))")
+    .select(
+      "id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name, mp_access_token, accepts_cash, accepts_transfer, bank_alias, bank_cbu, whatsapp))"
+    )
     .eq("id", sessionId)
     .maybeSingle();
-  if (!session) return { ok: false, message: "Clase no encontrada." };
+  if (!session) return { error: "Clase no encontrada." as const };
 
   const raw = session as Record<string, unknown>;
   const practicePack = raw.practices;
@@ -35,60 +35,153 @@ export async function beginPracticeCheckoutAction(formData: FormData): Promise<C
     price_base: number;
     level_min: number | null;
     level_max: number | null;
-    clubs?: { name: string | null } | { name: string | null }[] | null;
+    club_id: string;
+    clubs?:
+      | {
+          name: string | null;
+          mp_access_token?: string | null;
+          accepts_cash?: boolean | null;
+          accepts_transfer?: boolean | null;
+          bank_alias?: string | null;
+          bank_cbu?: string | null;
+          whatsapp?: string | null;
+        }
+      | Array<{
+          name: string | null;
+          mp_access_token?: string | null;
+          accepts_cash?: boolean | null;
+          accepts_transfer?: boolean | null;
+          bank_alias?: string | null;
+          bank_cbu?: string | null;
+          whatsapp?: string | null;
+        }>;
   } | undefined;
+
   const sessionDate = String(raw.session_date);
   const sessionStatus = String(raw.status);
   if (!practice || practice.status !== "open" || sessionStatus !== "open") {
-    return { ok: false, message: "Esta clase no está disponible." };
+    return { error: "Esta clase no está disponible." as const };
   }
   if (sessionDate < new Date().toISOString().slice(0, 10)) {
-    return { ok: false, message: "La fecha ya pasó." };
+    return { error: "La fecha ya pasó." as const };
   }
 
-  const { data: me } = await supabase.from(DB_TABLES.profiles).select("level").eq("user_id", user.id).maybeSingle();
-  const myLevel = (me as { level?: number | null } | null)?.level;
+  const { data: me } = await supabase.from(DB_TABLES.profiles).select("level, name").eq("user_id", userId).maybeSingle();
+  const myLevel = (me as { level?: number | null; name?: string | null } | null)?.level;
   if (practice.level_min != null && myLevel != null && myLevel < practice.level_min) {
-    return { ok: false, message: "Tu nivel está por debajo del mínimo de la clase." };
+    return { error: "Tu nivel está por debajo del mínimo de la clase." as const };
   }
   if (practice.level_max != null && myLevel != null && myLevel > practice.level_max) {
-    return { ok: false, message: "Tu nivel supera el máximo de la clase." };
+    return { error: "Tu nivel supera el máximo de la clase." as const };
   }
 
-  const { count } = await supabase
+  const { data: regs } = await supabase
     .from(DB_TABLES.practiceRegistrations)
-    .select("id", { count: "exact", head: true })
-    .eq("session_id", sessionId)
-    .eq("payment_status", "approved");
-  if ((count ?? 0) >= practice.max_spots) return { ok: false, message: "No hay cupos disponibles." };
+    .select("id, player_id, payment_status")
+    .eq("session_id", sessionId);
 
-  const { data: existing } = await supabase
-    .from(DB_TABLES.practiceRegistrations)
-    .select("id, payment_status")
-    .eq("session_id", sessionId)
-    .eq("player_id", user.id)
-    .maybeSingle();
-  if (existing) {
-    const row = existing as { id: string; payment_status: string };
-    if (row.payment_status === "approved") return { ok: false, message: "Ya estás inscripto." };
-    await supabase.from(DB_TABLES.practiceRegistrations).delete().eq("id", row.id);
+  const regList = (regs ?? []) as Array<{ id: string; player_id: string; payment_status: string }>;
+  const spotsTaken = regList.filter((r) => practiceRegistrationHoldsSpot(r.payment_status)).length;
+  if (spotsTaken >= practice.max_spots) {
+    return { error: "No hay cupos disponibles." as const };
   }
 
-  const { data: reg, error: insErr } = await supabase
+  const mine = regList.find((r) => r.player_id === userId);
+  if (mine?.payment_status === "approved") {
+    return { error: "Ya estás inscripto." as const };
+  }
+
+  return { supabase, practice, sessionDate, payerName: String((me as { name?: string | null } | null)?.name ?? "").trim(), existingRegId: mine?.id };
+}
+
+export async function registerForPracticeAction(formData: FormData): Promise<CheckoutState> {
+  const sessionId = String(formData.get("session_id") ?? "").trim();
+  const paymentMethod = normalizePlayerPaymentMethod(String(formData.get("payment_method") ?? ""));
+  if (!sessionId) return { ok: false, message: "Sesión inválida." };
+  if (!paymentMethod) return { ok: false, message: "Elegí un método de pago." };
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Iniciá sesión para inscribirte." };
+
+  const loaded = await loadSessionForRegister(sessionId, user.id);
+  if ("error" in loaded) return { ok: false, message: String(loaded.error) };
+
+  const { supabase: sb, practice, sessionDate, payerName, existingRegId } = loaded;
+  const clubPack = practice.clubs;
+  const club = Array.isArray(clubPack) ? clubPack[0] : clubPack;
+  const clubName = String(club?.name ?? "Club");
+  const clubId = practice.club_id;
+  const payAmount = practicePlayerPayAmount(Number(practice.price_base));
+
+  if (paymentMethod === "mercadopago") {
+    if (!String(club?.mp_access_token ?? "").trim()) {
+      return { ok: false, message: "Este club no tiene Mercado Pago configurado." };
+    }
+  } else if (paymentMethod === "cash") {
+    if (!club?.accepts_cash) return { ok: false, message: "Este club no acepta pago en efectivo." };
+  } else if (paymentMethod === "transfer") {
+    if (!club?.accepts_transfer) return { ok: false, message: "Este club no acepta transferencia bancaria." };
+    if (!String(club?.bank_alias ?? "").trim() && !String(club?.bank_cbu ?? "").trim()) {
+      return { ok: false, message: "El club no cargó datos para transferencias." };
+    }
+  }
+
+  if (existingRegId) {
+    await sb.from(DB_TABLES.practiceRegistrations).delete().eq("id", existingRegId);
+  }
+
+  if (paymentMethod === "cash" || paymentMethod === "transfer") {
+    const payStatus = paymentMethod === "cash" ? "cash_pending" : "transfer_pending";
+    const { data: reg, error: insErr } = await sb
+      .from(DB_TABLES.practiceRegistrations)
+      .insert({
+        session_id: sessionId,
+        player_id: user.id,
+        payment_status: payStatus,
+        payment_method: paymentMethod,
+        amount: payAmount,
+      })
+      .select("id")
+      .single();
+    if (insErr || !reg) return { ok: false, message: insErr?.message ?? "No se pudo crear la inscripción." };
+
+    const methodLabel = paymentMethod === "cash" ? "Efectivo" : "Transferencia";
+    await notifyClubOwner(sb, clubId, {
+      title: paymentMethod === "cash" ? "💵 Cobro clase pendiente" : "📅 Inscripción clase",
+      body: `${payerName || "Un jugador"} — ${practice.title} el ${sessionDate}. Método: ${methodLabel}.`,
+    });
+
+    await createNotification(sb, {
+      user_id: user.id,
+      type: "reservation_confirmed",
+      title: paymentMethod === "cash" ? "Inscripción con efectivo" : "Inscripción con transferencia",
+      body:
+        paymentMethod === "cash"
+          ? `Tu lugar en "${practice.title}" el ${sessionDate} quedó reservado. Pagás en efectivo en el club.`
+          : `Tu lugar en "${practice.title}" el ${sessionDate} quedó reservado. Transferí y mostrá el comprobante en el club.`,
+    });
+
+    revalidatePath("/clases");
+    revalidatePath(`/clases/${sessionId}`);
+    revalidatePath("/admin/cobros");
+    redirect(`/clases/${sessionId}?pay=offline&method=${paymentMethod}`);
+  }
+
+  const { data: reg, error: insErr } = await sb
     .from(DB_TABLES.practiceRegistrations)
     .insert({
       session_id: sessionId,
       player_id: user.id,
       payment_status: "pending",
+      payment_method: "mercadopago",
     })
     .select("id")
     .single();
   if (insErr || !reg) return { ok: false, message: insErr?.message ?? "No se pudo crear la inscripción." };
   const registrationId = (reg as { id: string }).id;
-
-  const clubPack = practice.clubs;
-  const club = Array.isArray(clubPack) ? clubPack[0] : clubPack;
-  const clubName = String(club?.name ?? "Club");
 
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
   const pref = await createPracticeMercadoPagoPreference({
@@ -106,11 +199,11 @@ export async function beginPracticeCheckoutAction(formData: FormData): Promise<C
     },
   });
   if ("error" in pref) {
-    await supabase.from(DB_TABLES.practiceRegistrations).delete().eq("id", registrationId);
+    await sb.from(DB_TABLES.practiceRegistrations).delete().eq("id", registrationId);
     return { ok: false, message: pref.error };
   }
 
-  await supabase
+  await sb
     .from(DB_TABLES.practiceRegistrations)
     .update({ mp_preference_id: pref.prefId, amount: pref.total })
     .eq("id", registrationId);
@@ -118,4 +211,10 @@ export async function beginPracticeCheckoutAction(formData: FormData): Promise<C
   revalidatePath("/clases");
   revalidatePath(`/clases/${sessionId}`);
   return { ok: true, message: "Redirigiendo a Mercado Pago…", url: pref.initPoint };
+}
+
+/** @deprecated Usar registerForPracticeAction */
+export async function beginPracticeCheckoutAction(formData: FormData): Promise<CheckoutState> {
+  formData.set("payment_method", "mercadopago");
+  return registerForPracticeAction(formData);
 }

@@ -6,7 +6,12 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
-import { confirmOfflineCobro, markOfflineNoShow } from "./actions";
+import {
+  confirmOfflineCobro,
+  confirmPracticeOfflineCobro,
+  markOfflineNoShow,
+  markPracticeOfflineNoShow,
+} from "./actions";
 
 function isYmdInArgentina(iso: string, ymd: string): boolean {
   return (
@@ -49,7 +54,9 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
   const [
     { data: pendingRows, error: pendErr },
+    { data: practicePendingRows, error: practicePendErr },
     { data: payRows },
+    { data: practiceApprovedRows },
     { data: debtRows },
     { data: noShowRows },
   ] = await Promise.all([
@@ -60,6 +67,15 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .eq("scheduled_date", todayAr)
       .in("payment_status", ["cash_pending", "transfer_pending"])
       .order("scheduled_time", { ascending: true }),
+    supabase
+      .from(DB_TABLES.practiceRegistrations)
+      .select(
+        "id, player_id, payment_status, payment_method, amount, practice_sessions!inner(session_date, start_time, practices!inner(title, club_id))"
+      )
+      .in("payment_status", ["cash_pending", "transfer_pending"])
+      .eq("practice_sessions.session_date", todayAr)
+      .in("practice_sessions.practices.club_id", ctx.clubIds)
+      .order("registered_at", { ascending: true }),
     clubMatchIds.length > 0
       ? admin
           .from(DB_TABLES.payments)
@@ -72,6 +88,16 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           .order("updated_at", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] }),
+    supabase
+      .from(DB_TABLES.practiceRegistrations)
+      .select(
+        "id, player_id, payment_status, payment_method, amount, confirmed_at, practice_sessions!inner(session_date, start_time, practices!inner(title, club_id))"
+      )
+      .eq("payment_status", "approved")
+      .in("payment_method", ["cash", "transfer"])
+      .eq("practice_sessions.session_date", todayAr)
+      .in("practice_sessions.practices.club_id", ctx.clubIds)
+      .order("confirmed_at", { ascending: false }),
     supabase
       .from(DB_TABLES.clubDebts)
       .select("id, amount, confirmed_at, payment_method, match_id")
@@ -96,6 +122,42 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     payment_status: string | null;
     match_type: string | null;
   }>;
+
+  type PracticePendingRow = {
+    id: string;
+    player_id: string;
+    payment_status: string;
+    amount: number | null;
+    practice_sessions: {
+      session_date: string;
+      start_time: string;
+      practices: { title: string; club_id: string } | { title: string; club_id: string }[];
+    } | {
+      session_date: string;
+      start_time: string;
+      practices: { title: string; club_id: string } | { title: string; club_id: string }[];
+    }[];
+  };
+
+  function parsePracticeReg(row: PracticePendingRow & { payment_method?: string | null }) {
+    const s = Array.isArray(row.practice_sessions) ? row.practice_sessions[0] : row.practice_sessions;
+    const p = s ? (Array.isArray(s.practices) ? s.practices[0] : s.practices) : null;
+    return {
+      id: row.id,
+      player_id: row.player_id,
+      payment_status: row.payment_status,
+      payment_method: String(row.payment_method ?? "").toLowerCase(),
+      amount: row.amount,
+      session_date: s?.session_date ?? "",
+      start_time: s?.start_time ?? "",
+      title: p?.title ?? "Clase",
+      club_id: p?.club_id ?? "",
+    };
+  }
+
+  const practicePending = ((practicePendingRows ?? []) as PracticePendingRow[]).map(parsePracticeReg);
+
+  const practiceApprovedToday = ((practiceApprovedRows ?? []) as PracticePendingRow[]).map(parsePracticeReg);
 
   const noShows = (noShowRows ?? []) as Array<{
     id: string;
@@ -136,18 +198,24 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     if (!p.updated_at) return false;
     return isYmdInArgentina(p.updated_at, todayAr);
   });
-  const confirmadosHoy = paymentsToday.length;
-  const totalCobradoHoy = paymentsToday.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const totalEfectivo = paymentsToday
-    .filter((p) => p.payment_method === "cash")
-    .reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const totalTransferencia = paymentsToday
-    .filter((p) => p.payment_method === "transfer")
-    .reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const confirmadosHoy = paymentsToday.length + practiceApprovedToday.length;
+  const totalCobradoHoy =
+    paymentsToday.reduce((s, p) => s + Number(p.amount ?? 0), 0) +
+    practiceApprovedToday.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const totalEfectivo =
+    paymentsToday.filter((p) => p.payment_method === "cash").reduce((s, p) => s + Number(p.amount ?? 0), 0) +
+    practiceApprovedToday.filter((p) => p.payment_method === "cash").reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const totalTransferencia =
+    paymentsToday.filter((p) => p.payment_method === "transfer").reduce((s, p) => s + Number(p.amount ?? 0), 0) +
+    practiceApprovedToday
+      .filter((p) => p.payment_method === "transfer")
+      .reduce((s, p) => s + Number(p.amount ?? 0), 0);
 
   const profileUserIds = [
     ...new Set([
       ...pending.map((p) => p.owner_id),
+      ...practicePending.map((p) => p.player_id),
+      ...practiceApprovedToday.map((p) => p.player_id),
       ...paymentsToday.map((p) => p.user_id),
       ...noShows.map((m) => m.owner_id),
     ].filter(Boolean)),
@@ -196,11 +264,16 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       {pendErr ? (
         <p className="text-sm text-rose-600">No se pudieron cargar los pendientes: {pendErr.message}</p>
       ) : null}
+      {practicePendErr ? (
+        <p className="text-sm text-rose-600">No se pudieron cargar clases pendientes: {practicePendErr.message}</p>
+      ) : null}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={adminCard}>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pendientes</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">{pending.length}</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
+            {pending.length + practicePending.length}
+          </p>
           <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">de cobro hoy</p>
         </div>
         <div className={adminCard}>
@@ -225,10 +298,61 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Pendientes ({todayAr})</h2>
-        {pending.length === 0 ? (
+        {pending.length === 0 && practicePending.length === 0 ? (
           <p className={`${adminCard} text-sm text-slate-500 dark:text-slate-400`}>No hay cobros pendientes para hoy.</p>
         ) : (
           <ul className="flex flex-col gap-3">
+            {practicePending.map((pr) => {
+              const pay = String(pr.payment_status ?? "").toLowerCase();
+              const methodLabel = pay === "cash_pending" ? "Efectivo" : "Transferencia";
+              const name = playerName.get(pr.player_id) ?? "Jugador";
+              const time = String(pr.start_time ?? "").slice(0, 5);
+              const amount = Math.round(Number(pr.amount ?? 0));
+              return (
+                <li
+                  key={pr.id}
+                  className={`${adminCard} flex flex-col gap-3 border-amber-200/80 dark:border-amber-900/50`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">{name}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Clase · {pr.title} · {time}
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      ${amount.toLocaleString("es-AR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Método:</span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      {methodLabel}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <form action={confirmPracticeOfflineCobro} className="flex-1">
+                      <input type="hidden" name="registration_id" value={pr.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                      >
+                        Confirmar cobro
+                      </button>
+                    </form>
+                    <form action={markPracticeOfflineNoShow} className="flex-1">
+                      <input type="hidden" name="registration_id" value={pr.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        No se presentó
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
             {pending.map((m) => {
               const pay = String(m.payment_status ?? "").toLowerCase();
               const methodLabel =
@@ -287,10 +411,40 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         )}
       </section>
 
-      {paymentsToday.length > 0 ? (
+      {paymentsToday.length > 0 || practiceApprovedToday.length > 0 ? (
         <section className="space-y-3">
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmados hoy ({todayAr})</h2>
           <ul className="flex flex-col gap-2">
+            {practiceApprovedToday.map((pr) => {
+              const methodLabel =
+                pr.payment_method === "cash"
+                  ? "Efectivo"
+                  : pr.payment_method === "transfer"
+                    ? "Transferencia"
+                    : "—";
+              const name = playerName.get(pr.player_id) ?? "Jugador";
+              const time = String(pr.start_time ?? "").slice(0, 5);
+              const amount = Number(pr.amount ?? 0);
+              return (
+                <li
+                  key={pr.id}
+                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Clase · {pr.title} · {time || "—"}
+                    </p>
+                    <span className="mt-1.5 inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      {methodLabel}
+                    </span>
+                  </div>
+                  <p className="shrink-0 text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  </p>
+                </li>
+              );
+            })}
             {paymentsToday.map((p) => {
               const rel = p.matches;
               const match = Array.isArray(rel) ? rel[0] ?? null : rel;

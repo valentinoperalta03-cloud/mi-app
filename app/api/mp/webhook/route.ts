@@ -203,8 +203,10 @@ async function handlePracticePaymentIfPresent(
       .from(DB_TABLES.practiceRegistrations)
       .update({
         payment_status: "approved",
+        payment_method: "mercadopago",
         mp_payment_id: params.paymentId,
         amount: Number.isFinite(paidAmount) ? paidAmount : null,
+        confirmed_at: new Date().toISOString(),
       })
       .eq("id", registrationId);
 

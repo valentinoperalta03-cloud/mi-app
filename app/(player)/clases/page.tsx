@@ -5,6 +5,7 @@ import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_MODALITY_OPTIONS } from "@/lib/practice-constants";
+import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { practiceTotalPrice } from "@/lib/practice-pricing";
 import { createClient } from "@/utils/supabase/server";
 
@@ -40,16 +41,21 @@ export default async function ClasesPage() {
   }>);
 
   const sessionIds = list.map((r) => r.id);
-  const { data: counts } = sessionIds.length
+  const { data: regRows } = sessionIds.length
     ? await supabase
         .from(DB_TABLES.practiceRegistrations)
-        .select("session_id")
+        .select("session_id, payment_status")
         .in("session_id", sessionIds)
-        .eq("payment_status", "approved")
     : { data: [] };
-  const countMap = new Map<string, number>();
-  for (const c of (counts ?? []) as { session_id: string }[]) {
-    countMap.set(c.session_id, (countMap.get(c.session_id) ?? 0) + 1);
+  const approvedMap = new Map<string, number>();
+  const spotsMap = new Map<string, number>();
+  for (const c of (regRows ?? []) as { session_id: string; payment_status: string }[]) {
+    if (c.payment_status === "approved") {
+      approvedMap.set(c.session_id, (approvedMap.get(c.session_id) ?? 0) + 1);
+    }
+    if (practiceRegistrationHoldsSpot(c.payment_status)) {
+      spotsMap.set(c.session_id, (spotsMap.get(c.session_id) ?? 0) + 1);
+    }
   }
 
   return (
@@ -72,8 +78,8 @@ export default async function ClasesPage() {
           const clubPack = p.clubs;
           const club = Array.isArray(clubPack) ? clubPack[0] : clubPack;
           const dt = parseISO(`${row.session_date}T${String(row.start_time).slice(0, 5)}:00`);
-          const approved = countMap.get(row.id) ?? 0;
-          const full = approved >= p.max_spots;
+          const approved = approvedMap.get(row.id) ?? 0;
+          const full = (spotsMap.get(row.id) ?? 0) >= p.max_spots;
           const modality = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === p.modality)?.label ?? p.modality;
           const total = practiceTotalPrice(Number(p.price_base));
 
