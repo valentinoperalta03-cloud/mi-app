@@ -138,14 +138,37 @@ html.capacitor-native header a {
   user-select: none;
 }
 
+/* Evita arrastre/selección tipo navegador en botones, links y tarjetas táctiles (WKWebView iOS) */
+html.capacitor-native a,
 html.capacitor-native button,
 html.capacitor-native [role="button"],
-html.capacitor-native a {
+html.capacitor-native label,
+html.capacitor-native summary,
+html.capacitor-native .btn-primary,
+html.capacitor-native .btn-primary-gradient,
+html.capacitor-native .player-app-shell a,
+html.capacitor-native .player-app-shell button,
+html.capacitor-native .home-page-shell a,
+html.capacitor-native .home-page-shell button {
   cursor: default;
   touch-action: manipulation;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-user-drag: none;
+}
+
+html.capacitor-native a *,
+html.capacitor-native button *,
+html.capacitor-native [role="button"] * {
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.capacitor-native img,
+html.capacitor-native svg {
+  -webkit-user-drag: none;
 }
 
 @keyframes player-nav-progress {
