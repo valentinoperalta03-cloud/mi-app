@@ -18,6 +18,13 @@ workflows:
           npx cap sync ios
       - name: Add OneSignal SPM dependency
         script: node scripts/add-onesignal-spm.mjs
+      - name: Resolve SPM dependencies
+        script: |
+          cd ios/App
+          xcodebuild -resolvePackageDependencies \
+            -project App.xcodeproj \
+            -scheme App \
+            -clonedSourcePackagesDirPath ~/Library/Developer/Xcode/DerivedData/SourcePackages
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
