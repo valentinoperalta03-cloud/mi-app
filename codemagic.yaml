@@ -20,6 +20,7 @@ workflows:
         script: node scripts/add-onesignal-spm.mjs
       - name: Resolve SPM dependencies
         script: |
+          rm -rf ~/Library/Caches/org.swift.swiftpm/artifacts
           cd ios/App
           xcodebuild -resolvePackageDependencies \
             -project App.xcodeproj \
