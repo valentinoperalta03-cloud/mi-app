@@ -76,5 +76,7 @@
 	<true/>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>PadeLibre necesita enviarte notificaciones sobre tus partidos y reservas.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PadeLibre usa tu ubicación para mostrarte clubes y jugadores cerca tuyo.</string>
 </dict>
 </plist>
