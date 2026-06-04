@@ -34,6 +34,7 @@ export async function createNotification(
     actor_id?: string;
   }
 ) {
+  // 1. Guardar en base de datos (in-app)
   await supabase.from("notifications").insert({
     user_id: params.user_id,
     type: params.type,
@@ -42,6 +43,23 @@ export async function createNotification(
     match_id: params.match_id ?? null,
     actor_id: params.actor_id ?? null,
   });
+
+  // 2. Disparar push externo (OneSignal)
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online";
+    await fetch(`${baseUrl}/api/push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: params.user_id,
+        title: params.title,
+        body: params.body,
+        match_id: params.match_id,
+      }),
+    });
+  } catch (err) {
+    console.error("Push notification error:", err);
+  }
 }
 
 export const NOTIFICATION_TEMPLATES = {
