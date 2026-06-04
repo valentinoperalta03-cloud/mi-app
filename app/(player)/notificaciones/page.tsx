@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import NotificationsPermissionButton from "@/components/notifications-permission-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -100,9 +101,12 @@ export default async function NotificacionesPage() {
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="space-y-1">
-        <p className="text-sm font-medium text-[#0585FC]">Notificaciones</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tu actividad reciente</h1>
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-[#0585FC]">Notificaciones</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Tu actividad reciente</h1>
+        </div>
+        <NotificationsPermissionButton />
       </header>
 
       {rows.length === 0 ? (
