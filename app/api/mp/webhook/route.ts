@@ -7,6 +7,7 @@ import { getPaymentClient } from "@/lib/mercadopago";
 import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { createNotification } from "@/lib/notifications";
+import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
 import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -156,6 +157,119 @@ async function handleTournamentPaymentIfPresent(
   return true;
 }
 
+async function handlePracticePaymentIfPresent(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    paymentId: string;
+    extRef: string;
+    status: string;
+    mpPayment: { transaction_amount?: number | null };
+  }
+): Promise<boolean> {
+  const parsed = parsePracticeRegistrationRef(params.extRef);
+  if (params.extRef.startsWith("practice_reg_") && !parsed) {
+    log.warn({ event: "mp.webhook.practice_ref_invalid", requestId: params.requestId, extRef: params.extRef });
+    return true;
+  }
+  if (!parsed) return false;
+
+  const { registrationId, payerUserId } = parsed;
+  const { data: reg } = await admin
+    .from(DB_TABLES.practiceRegistrations)
+    .select("id, player_id, session_id, payment_status")
+    .eq("id", registrationId)
+    .maybeSingle();
+  const regRow = reg as {
+    id?: string;
+    player_id?: string;
+    session_id?: string;
+    payment_status?: string | null;
+  } | null;
+  if (!regRow?.id || regRow.player_id !== payerUserId) {
+    log.warn({
+      event: "mp.webhook.practice_registration_mismatch",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+    });
+    return true;
+  }
+
+  const paidAmount = Number(params.mpPayment.transaction_amount ?? 0);
+
+  if (params.status === "approved") {
+    await admin
+      .from(DB_TABLES.practiceRegistrations)
+      .update({
+        payment_status: "approved",
+        mp_payment_id: params.paymentId,
+        amount: Number.isFinite(paidAmount) ? paidAmount : null,
+      })
+      .eq("id", registrationId);
+
+    const { data: srow } = await admin
+      .from(DB_TABLES.practiceSessions)
+      .select("practice_id, session_date")
+      .eq("id", String(regRow.session_id))
+      .maybeSingle();
+    const { data: prow } = await admin
+      .from(DB_TABLES.practices)
+      .select("title, club_id")
+      .eq("id", String((srow as { practice_id?: string } | null)?.practice_id ?? ""))
+      .maybeSingle();
+    const p = prow as { title?: string | null; club_id?: string | null } | null;
+    const { data: crow } = await admin
+      .from(DB_TABLES.clubs)
+      .select("owner_id, name")
+      .eq("id", String(p?.club_id ?? ""))
+      .maybeSingle();
+    const ownerId = String((crow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    const sessionDate = String((srow as { session_date?: string } | null)?.session_date ?? "").trim();
+    if (ownerId) {
+      await createNotification(admin, {
+        user_id: ownerId,
+        type: "practice_event",
+        title: "Inscripción pagada",
+        body: `Nueva inscripción pagada en la clase "${String(p?.title ?? "Clase").trim()}"${sessionDate ? ` (${sessionDate})` : ""}.`,
+      });
+    }
+    await createNotification(admin, {
+      user_id: payerUserId,
+      type: "payment_approved",
+      title: "¡Pago confirmado!",
+      body: "Tu inscripción a la clase fue confirmada.",
+    });
+    log.info({
+      event: "payment.practice.approved",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+      mpPaymentId: params.paymentId,
+    });
+    return true;
+  }
+
+  if (params.status === "rejected" || params.status === "cancelled" || params.status === "expired") {
+    await admin
+      .from(DB_TABLES.practiceRegistrations)
+      .update({
+        payment_status: "cancelled",
+        mp_payment_id: params.paymentId,
+      })
+      .eq("id", registrationId);
+    await createNotification(admin, {
+      user_id: payerUserId,
+      type: "payment_rejected",
+      title: "Pago no procesado",
+      body: "No se pudo confirmar el pago de tu inscripción a la clase.",
+    });
+    return true;
+  }
+
+  return true;
+}
+
 export async function POST(req: Request) {
   return handleNotification(req);
 }
@@ -231,6 +345,17 @@ async function handleNotification(req: Request) {
   const extRef = String(mpPayment.external_reference ?? "").trim();
   const status = String(mpPayment.status ?? "").toLowerCase();
   const now = new Date().toISOString();
+
+  const practiceHandled = await handlePracticePaymentIfPresent(admin, {
+    requestId,
+    paymentId,
+    extRef,
+    status,
+    mpPayment: mpPayment as { transaction_amount?: number | null },
+  });
+  if (practiceHandled) {
+    return NextResponse.json({ ok: true });
+  }
 
   const tournamentHandled = await handleTournamentPaymentIfPresent(admin, {
     requestId,

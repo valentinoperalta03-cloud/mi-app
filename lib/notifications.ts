@@ -21,6 +21,7 @@ type NotificationType =
   | "group_message"
   | "added_to_group"
   | "tournament_event"
+  | "practice_event"
   | "club_agenda";
 
 export async function createNotification(
