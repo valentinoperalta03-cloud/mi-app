@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { setUserFavorite } from "@/app/(player)/jugador/[userId]/actions";
@@ -32,6 +32,9 @@ export default function FriendsSearchClient({
 }: FriendsSearchClientProps) {
   const [query, setQuery] = useState("");
   const [followingIds, setFollowingIds] = useState(() => new Set(initialFollowingIds));
+  useEffect(() => {
+    setFollowingIds(new Set(initialFollowingIds));
+  }, [initialFollowingIds]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -40,11 +43,6 @@ export default function FriendsSearchClient({
     const q = query.trim().toLowerCase();
     if (q.length < 2) return players;
     return players.filter((player) => {
-      const label = (player.name ?? "Jugador").toLowerCase();
-      const nivelLine = formatProfileNivelFromRow(player).toLowerCase();
-      const bio = (player.bio ?? "").toLowerCase();
-      return label.includes(q) || nivelLine.includes(q);
-    }).filter((player) => {
       const label = (player.name ?? "Jugador").toLowerCase();
       const nivelLine = formatProfileNivelFromRow(player).toLowerCase();
       const bio = (player.bio ?? "").toLowerCase();

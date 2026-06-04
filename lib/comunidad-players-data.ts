@@ -34,23 +34,23 @@ export async function fetchComunidadPlayersData(
     playerIds.length
       ? supabase
           .from(DB_TABLES.userFavorites)
-          .select("favorite_id")
+          .select("favorite_user_id")
           .eq("user_id", userId)
-          .in("favorite_id", playerIds)
-      : Promise.resolve({ data: [] as { favorite_id: string }[] }),
+          .in("favorite_user_id", playerIds)
+      : Promise.resolve({ data: [] as { favorite_user_id: string }[] }),
     playerIds.length
       ? supabase
           .from(DB_TABLES.userFavorites)
           .select("user_id")
-          .eq("favorite_id", userId)
+          .eq("favorite_user_id", userId)
           .in("user_id", playerIds)
       : Promise.resolve({ data: [] as { user_id: string }[] }),
   ]);
 
   return {
     players,
-    initialFollowingIds: ((myFollowingRes.data ?? []) as { favorite_id: string }[]).map(
-      (row) => row.favorite_id
+    initialFollowingIds: ((myFollowingRes.data ?? []) as { favorite_user_id: string }[]).map(
+      (row) => row.favorite_user_id
     ),
     followsMeIds: ((followsMeRes.data ?? []) as { user_id: string }[]).map((row) => row.user_id),
   };

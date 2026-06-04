@@ -165,12 +165,26 @@ export async function followUser(targetUserId: string): Promise<{ ok: boolean; m
   if (!user) return { ok: false, message: "No autenticado." };
   if (targetUserId === user.id) return { ok: false, message: "No podés seguirte a vos mismo." };
 
+  const { data: alreadyFollowing } = await supabase
+    .from(DB_TABLES.userFavorites)
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("favorite_user_id", targetUserId)
+    .maybeSingle();
+
+  if (alreadyFollowing) {
+    revalidatePath("/comunidad/jugadores");
+    revalidatePath("/comunidad/buscar");
+    revalidatePath(`/jugador/${targetUserId}`);
+    return { ok: true, message: "Ya seguís a este jugador." };
+  }
+
   const { error } = await supabase.from(DB_TABLES.userFavorites).insert({
     user_id: user.id,
     favorite_user_id: targetUserId,
   });
 
-  if (error && error.code !== "23505") return { ok: false, message: error.message };
+  if (error) return { ok: false, message: error.message };
 
   const { data: senderProfile } = await supabase
     .from(DB_TABLES.profiles)
@@ -218,6 +232,8 @@ export async function followUser(targetUserId: string): Promise<{ ok: boolean; m
   }
 
   revalidatePath(`/jugador/${targetUserId}`);
+  revalidatePath("/comunidad/jugadores");
+  revalidatePath("/comunidad/buscar");
   return { ok: true, message: "Ahora seguís a este jugador." };
 }
 
@@ -236,6 +252,8 @@ export async function unfollowUser(targetUserId: string): Promise<{ ok: boolean;
 
   if (error) return { ok: false, message: error.message };
   revalidatePath(`/jugador/${targetUserId}`);
+  revalidatePath("/comunidad/jugadores");
+  revalidatePath("/comunidad/buscar");
   return { ok: true, message: "Dejaste de seguir a este jugador." };
 }
 

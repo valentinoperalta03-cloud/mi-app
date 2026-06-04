@@ -111,9 +111,11 @@ export default async function OpenMatchesBoard({
   const currentUserGender = (myProfile as { gender?: "masculino" | "femenino" | null } | null)?.gender ?? null;
 
   const { data: myFavorites } = user
-    ? await supabase.from(DB_TABLES.userFavorites).select("favorite_id").eq("user_id", user.id)
+    ? await supabase.from(DB_TABLES.userFavorites).select("favorite_user_id").eq("user_id", user.id)
     : { data: [] };
-  const favoriteIds = ((myFavorites ?? []) as { favorite_id: string }[]).map((f) => f.favorite_id);
+  const favoriteIds = ((myFavorites ?? []) as { favorite_user_id: string }[]).map(
+    (f) => f.favorite_user_id
+  );
 
   const { data, error } = await supabase
     .from(DB_TABLES.matches)
