@@ -16,6 +16,8 @@ workflows:
         script: |
           test -f capacitor-dist/index.html || { echo "Missing capacitor-dist/index.html"; exit 1; }
           npx cap sync ios
+      - name: Add OneSignal SPM dependency
+        script: node scripts/add-onesignal-spm.mjs
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Increment build number

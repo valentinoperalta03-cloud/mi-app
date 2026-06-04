@@ -10,27 +10,28 @@ export default function OneSignalInit() {
 
     async function init() {
       try {
+        const { default: OneSignal } = await import("@onesignal/capacitor-plugin");
+
+        await OneSignal.initialize({
+          appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ?? "",
+        });
+
+        const granted = await OneSignal.Notifications.requestPermission(true);
+        console.log("OneSignal permission granted:", granted);
+
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Registrar al usuario en OneSignal via REST API usando su user_id como external_id
-        await fetch("https://api.onesignal.com/apps/" + process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID + "/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            identity: {
-              external_id: user.id,
-            },
-            subscriptions: [
-              {
-                type: Capacitor.getPlatform() === "ios" ? "iOSPush" : "AndroidPush",
-              }
-            ]
-          }),
-        });
+        await OneSignal.login({ externalId: user.id });
+
+        const token = await OneSignal.User.pushSubscription.getToken();
+        if (!token) return;
+
+        await supabase
+          .from("profiles")
+          .update({ onesignal_player_id: token })
+          .eq("user_id", user.id);
 
       } catch (err) {
         console.error("OneSignal init error:", err);
