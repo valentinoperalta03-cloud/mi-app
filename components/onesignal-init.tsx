@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
+  attachOneSignalListeners,
   hasNotificationPermission,
   maybePromptPushOnAppOpen,
   registerOneSignalUser,
@@ -11,6 +12,8 @@ import {
 export default function OneSignalInit() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+
+    const detach = attachOneSignalListeners();
 
     async function init() {
       const granted = await hasNotificationPermission();
@@ -23,11 +26,12 @@ export default function OneSignalInit() {
 
     const onReady = () => void init();
     window.addEventListener("capacitor-shell-ready", onReady, { once: true });
-    const fallback = window.setTimeout(() => void init(), 4000);
+    const fallback = window.setTimeout(() => void init(), 5000);
 
     return () => {
       window.removeEventListener("capacitor-shell-ready", onReady);
       window.clearTimeout(fallback);
+      detach();
     };
   }, []);
 

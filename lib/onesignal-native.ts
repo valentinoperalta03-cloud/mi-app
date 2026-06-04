@@ -37,13 +37,14 @@ export async function hasNotificationPermission(): Promise<boolean> {
 
 async function waitForPushToken(
   OneSignal: Awaited<ReturnType<typeof ensureOneSignalInitialized>>,
-  attempts = 6,
-  delayMs = 800
+  attempts = 15,
+  delayMs = 1000
 ): Promise<string | null> {
   if (!OneSignal) return null;
   for (let i = 0; i < attempts; i++) {
+    const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
     const token = await OneSignal.User.pushSubscription.getTokenAsync();
-    if (token) return token;
+    if (optedIn && token) return token;
     await sleep(delayMs);
   }
   return null;
@@ -57,33 +58,35 @@ export async function registerOneSignalUser(): Promise<boolean> {
     const OneSignal = await ensureOneSignalInitialized();
     if (!OneSignal) return false;
 
+    const permitted = await OneSignal.Notifications.hasPermission();
+    if (!permitted) return false;
+
+    await OneSignal.User.pushSubscription.optIn();
+
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return false;
 
-    await OneSignal.login(user.id);
-
-    const permitted = await OneSignal.Notifications.hasPermission();
-    if (permitted) {
-      await OneSignal.User.pushSubscription.optIn();
+    if (user) {
+      await OneSignal.login(user.id);
     }
 
     const token = await waitForPushToken(OneSignal);
     if (!token) {
-      console.warn("[OneSignal] Sin token de push aún (revisá Audience en el dashboard)");
+      console.warn("[OneSignal] Sin token APNs — hace falta build iOS con Push en el perfil");
       return false;
     }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ onesignal_player_id: token })
-      .eq("user_id", user.id);
+    if (user) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ onesignal_player_id: token })
+        .eq("user_id", user.id);
 
-    if (error) {
-      console.error("[OneSignal] Error guardando token:", error);
-      return false;
+      if (error) {
+        console.error("[OneSignal] Error guardando token:", error);
+      }
     }
 
     return true;
@@ -116,7 +119,6 @@ export async function requestPushPermissionAndRegister(): Promise<boolean> {
 
 /**
  * Una vez por instalación: si aún no hay permiso, muestra el diálogo de iOS al abrir la app.
- * Si el usuario ya denegó, no insiste (sigue el botón en Notificaciones).
  */
 export async function maybePromptPushOnAppOpen(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
@@ -135,6 +137,45 @@ export async function maybePromptPushOnAppOpen(): Promise<void> {
   const canAsk = await OneSignal.Notifications.canRequestPermission();
   if (!canAsk) return;
 
+  const ok = await requestPushPermissionAndRegister();
   window.localStorage.setItem(PUSH_PROMPT_KEY, "1");
-  await requestPushPermissionAndRegister();
+  if (!ok) {
+    console.warn("[OneSignal] Permiso OK pero sin token — reinstalá con build iOS que incluya Push");
+  }
+}
+
+/** Escucha cambios de permiso/suscripción y reintenta registro. */
+export function attachOneSignalListeners(): () => void {
+  if (!Capacitor.isNativePlatform()) return () => {};
+
+  let disposed = false;
+  let removePermissionListener: (() => void) | undefined;
+  let removeSubscriptionListener: (() => void) | undefined;
+
+  void (async () => {
+    const OneSignal = await ensureOneSignalInitialized();
+    if (!OneSignal || disposed) return;
+
+    const onPermission = (granted: boolean) => {
+      if (granted) void registerOneSignalUser();
+    };
+    OneSignal.Notifications.addEventListener("permissionChange", onPermission);
+    removePermissionListener = () => {
+      OneSignal.Notifications.removeEventListener("permissionChange", onPermission);
+    };
+
+    const onSubscription = () => {
+      void registerOneSignalUser();
+    };
+    OneSignal.User.pushSubscription.addEventListener("change", onSubscription);
+    removeSubscriptionListener = () => {
+      OneSignal.User.pushSubscription.removeEventListener("change", onSubscription);
+    };
+  })();
+
+  return () => {
+    disposed = true;
+    removePermissionListener?.();
+    removeSubscriptionListener?.();
+  };
 }
