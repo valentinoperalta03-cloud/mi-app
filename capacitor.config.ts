@@ -12,11 +12,25 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     /** Evita conflictos de chrome del sistema en iOS 26+ (iPad). */
     limitsNavigationsToAppBoundDomains: false,
-    // OAuth + chrome nativo (StatusBar no crashea al launch; evitar SplashScreen).
-      includePlugins: ["@capacitor/app", "@capacitor/browser", "@capacitor/status-bar", "@capacitor/preferences", "@onesignal/capacitor-plugin"],
+    /** OneSignal maneja notificaciones; evita "APNS Delegate Never Fired". */
+    handleApplicationNotifications: false,
+    includePlugins: [
+      '@capacitor/app',
+      '@capacitor/browser',
+      '@capacitor/status-bar',
+      '@capacitor/preferences',
+      '@onesignal/capacitor-plugin',
+    ],
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,
+    includePlugins: [
+      '@capacitor/app',
+      '@capacitor/browser',
+      '@capacitor/status-bar',
+      '@capacitor/preferences',
+      '@onesignal/capacitor-plugin',
+    ],
   },
   // iOS 26: server.url carga remoto en el bridge al instante y crashea en cold start.
   // Shell local (capacitor-dist/index.html) redirige a /login; allowNavigation mantiene el dominio.

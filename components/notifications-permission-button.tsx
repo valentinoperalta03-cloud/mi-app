@@ -2,49 +2,53 @@
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
-import { createClient } from "@/utils/supabase/client";
+import {
+  ensureOneSignalInitialized,
+  hasNotificationPermission,
+  registerOneSignalUser,
+} from "@/lib/onesignal-native";
 
 export default function NotificationsPermissionButton() {
-  const [status, setStatus] = useState<"unknown" | "granted" | "denied" | "requesting">("unknown");
+  const [status, setStatus] = useState<"loading" | "granted" | "denied" | "requesting">("loading");
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     async function checkStatus() {
       try {
-        const { default: OneSignal } = await import("@onesignal/capacitor-plugin");
-        const perm = await OneSignal.Notifications.getPermissionAsync();
-        setStatus(perm ? "granted" : "denied");
+        const OneSignal = await ensureOneSignalInitialized();
+        if (!OneSignal) {
+          setStatus("denied");
+          return;
+        }
+        const perm = await hasNotificationPermission();
+        if (perm) {
+          await registerOneSignalUser();
+          setStatus("granted");
+        } else {
+          setStatus("denied");
+        }
       } catch {
         setStatus("denied");
       }
     }
-    checkStatus();
+    void checkStatus();
   }, []);
 
   if (!Capacitor.isNativePlatform()) return null;
-  if (status === "unknown" || status === "granted") return null;
+  if (status === "loading" || status === "granted") return null;
 
   async function handleRequest() {
     try {
       setStatus("requesting");
-      const { default: OneSignal } = await import("@onesignal/capacitor-plugin");
-      await OneSignal.initialize({
-        appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ?? "",
-      });
+      const OneSignal = await ensureOneSignalInitialized();
+      if (!OneSignal) {
+        setStatus("denied");
+        return;
+      }
       const granted = await OneSignal.Notifications.requestPermission(true);
       if (granted) {
+        await registerOneSignalUser();
         setStatus("granted");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        await OneSignal.login({ externalId: user.id });
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const token = await OneSignal.User.pushSubscription.getToken();
-        if (!token) return;
-        await supabase
-          .from("profiles")
-          .update({ onesignal_player_id: token })
-          .eq("user_id", user.id);
       } else {
         setStatus("denied");
       }
@@ -55,7 +59,8 @@ export default function NotificationsPermissionButton() {
 
   return (
     <button
-      onClick={handleRequest}
+      type="button"
+      onClick={() => void handleRequest()}
       disabled={status === "requesting"}
       className="flex items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-[var(--shadow-card)] transition active:scale-95"
     >

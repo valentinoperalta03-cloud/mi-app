@@ -139,9 +139,13 @@ html.capacitor-native header a {
 }
 
 html.capacitor-native button,
-html.capacitor-native [role="button"] {
+html.capacitor-native [role="button"],
+html.capacitor-native a {
   cursor: default;
   touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 @keyframes player-nav-progress {
