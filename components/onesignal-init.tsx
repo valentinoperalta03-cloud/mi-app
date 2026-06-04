@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import OneSignal from "@onesignal/capacitor-plugin";
 import { Capacitor } from "@capacitor/core";
 import { createClient } from "@/utils/supabase/client";
 
@@ -11,26 +10,27 @@ export default function OneSignalInit() {
 
     async function init() {
       try {
-        await OneSignal.initialize({
-          appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ?? "",
-        });
-
-        await OneSignal.Notifications.requestPermission(true);
-
-        const { pushSubscription } = OneSignal.User;
-        const token = await pushSubscription.getToken();
-        if (!token) return;
-
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        await OneSignal.login({ externalId: user.id });
-
-        await supabase
-          .from("profiles")
-          .update({ onesignal_player_id: token })
-          .eq("user_id", user.id);
+        // Registrar al usuario en OneSignal via REST API usando su user_id como external_id
+        await fetch("https://api.onesignal.com/apps/" + process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID + "/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            identity: {
+              external_id: user.id,
+            },
+            subscriptions: [
+              {
+                type: Capacitor.getPlatform() === "ios" ? "iOSPush" : "AndroidPush",
+              }
+            ]
+          }),
+        });
 
       } catch (err) {
         console.error("OneSignal init error:", err);
