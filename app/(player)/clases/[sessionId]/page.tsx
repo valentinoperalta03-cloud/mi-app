@@ -6,7 +6,8 @@ import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_MODALITY_OPTIONS } from "@/lib/practice-constants";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
-import { practiceTotalPrice } from "@/lib/practice-pricing";
+import { isClubMercadoPagoConnected } from "@/lib/club-mp";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { createClient } from "@/utils/supabase/server";
 import PracticeRegisterForm from "../practice-register-form";
 
@@ -29,7 +30,7 @@ export default async function ClaseDetallePage({
   const { data: session } = await supabase
     .from(DB_TABLES.practiceSessions)
     .select(
-      "id, session_date, start_time, status, practices(id, title, description, modality, max_spots, price_base, level_min, level_max, status, practice_coaches(name), clubs(name, logo_url, mp_access_token, accepts_cash, accepts_transfer, bank_alias, bank_cbu))"
+      "id, session_date, start_time, status, practices(id, title, description, modality, max_spots, price_base, level_min, level_max, status, practice_coaches(name), clubs(name, logo_url, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu))"
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -59,6 +60,7 @@ export default async function ClaseDetallePage({
           name: string | null;
           logo_url: string | null;
           mp_access_token?: string | null;
+          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -68,6 +70,7 @@ export default async function ClaseDetallePage({
           name: string | null;
           logo_url: string | null;
           mp_access_token?: string | null;
+          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -86,16 +89,26 @@ export default async function ClaseDetallePage({
     .select("player_id, payment_status, payment_method")
     .eq("session_id", sessionId);
 
-  const regList = (regs ?? []) as Array<{
+  let regList = (regs ?? []) as Array<{
     player_id: string;
     payment_status: string;
     payment_method: string | null;
   }>;
+
+  if (sp.pay === "fail") {
+    const stale = regList.find((r) => r.player_id === user.id && r.payment_status === "pending");
+    if (stale) {
+      await supabase.from(DB_TABLES.practiceRegistrations).delete().eq("session_id", sessionId).eq("player_id", user.id).eq("payment_status", "pending");
+      regList = regList.filter((r) => !(r.player_id === user.id && r.payment_status === "pending"));
+    }
+  }
+
   const spotsTaken = regList.filter((r) => practiceRegistrationHoldsSpot(r.payment_status)).length;
   const myReg = regList.find((r) => r.player_id === user.id);
   const alreadyApproved = myReg?.payment_status === "approved";
   const offlinePending =
     myReg?.payment_status === "cash_pending" || myReg?.payment_status === "transfer_pending";
+  const mpCheckoutPending = myReg?.payment_status === "pending";
   const canRegister =
     s.status === "open" &&
     s.session_date >= new Date().toISOString().slice(0, 10) &&
@@ -104,10 +117,10 @@ export default async function ClaseDetallePage({
     spotsTaken < practice.max_spots;
 
   const dt = parseISO(`${s.session_date}T${String(s.start_time).slice(0, 5)}:00`);
-  const total = practiceTotalPrice(Number(practice.price_base));
+  const price = practicePriceBreakdown(Number(practice.price_base));
   const modality = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === practice.modality)?.label ?? practice.modality;
 
-  const clubHasMp = Boolean(String(club?.mp_access_token ?? "").trim());
+  const clubHasMp = isClubMercadoPagoConnected(club);
   const clubAcceptsCash = Boolean(club?.accepts_cash);
   const clubAcceptsTransfer = Boolean(club?.accepts_transfer);
   const bankAlias = club?.bank_alias?.trim() || null;
@@ -151,8 +164,23 @@ export default async function ClaseDetallePage({
         {practice.description ? (
           <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{practice.description}</p>
         ) : null}
-        <p className="mt-3 text-lg font-bold text-[var(--text-primary)]">${total.toLocaleString("es-AR")}</p>
+        <p className="mt-3 text-lg font-bold text-[var(--text-primary)]">
+          ${price.playerTotal.toLocaleString("es-AR")}
+        </p>
+        {price.platformFee > 0 ? (
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+            Clase ${price.clubPriceBase.toLocaleString("es-AR")} + servicio 5% $
+            {price.platformFee.toLocaleString("es-AR")}
+          </p>
+        ) : null}
       </header>
+
+      {mpCheckoutPending ? (
+        <p className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+          Iniciaste el pago con Mercado Pago pero no se completó. Podés volver a intentar abajo; el cupo se confirma solo
+          cuando el pago se acredita.
+        </p>
+      ) : null}
 
       {offlinePending ? (
         <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
@@ -173,7 +201,7 @@ export default async function ClaseDetallePage({
         <PracticeRegisterForm
           sessionId={sessionId}
           canRegister={canRegister}
-          priceLabel={`$${total.toLocaleString("es-AR")}`}
+          priceLabel={`$${price.playerTotal.toLocaleString("es-AR")}`}
           clubHasMp={clubHasMp}
           clubAcceptsCash={clubAcceptsCash}
           clubAcceptsTransfer={clubAcceptsTransfer}

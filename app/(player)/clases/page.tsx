@@ -6,7 +6,7 @@ import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_MODALITY_OPTIONS } from "@/lib/practice-constants";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
-import { practiceTotalPrice } from "@/lib/practice-pricing";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +81,7 @@ export default async function ClasesPage() {
           const approved = approvedMap.get(row.id) ?? 0;
           const full = (spotsMap.get(row.id) ?? 0) >= p.max_spots;
           const modality = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === p.modality)?.label ?? p.modality;
-          const total = practiceTotalPrice(Number(p.price_base));
+          const total = practicePriceBreakdown(Number(p.price_base)).playerTotal;
 
           return (
             <li key={row.id}>

@@ -12,7 +12,7 @@ import {
   PRACTICE_SESSION_STATUS_LABELS,
 } from "@/lib/practice-constants";
 import { practicePaymentStatusLabel } from "@/lib/practice-registration";
-import { practiceTotalPrice } from "@/lib/practice-pricing";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { PublishPracticeButton, CancelPracticeButton } from "../publish-practice-button";
 
@@ -108,7 +108,7 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
   const modalityLabel = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === practice.modality)?.label ?? practice.modality;
   const recurrenceLabel =
     PRACTICE_RECURRENCE_OPTIONS.find((o) => o.value === practice.recurrence_type)?.label ?? practice.recurrence_type;
-  const finalPrice = practiceTotalPrice(Number(practice.price_base));
+  const price = practicePriceBreakdown(Number(practice.price_base));
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 pb-28 pt-6 md:pb-10">
@@ -129,8 +129,8 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
           {recurrenceLabel} · {modalityLabel} · {practice.max_spots} cupos
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Precio club ${Number(practice.price_base).toLocaleString("es-AR")} · Jugador paga ${finalPrice.toLocaleString("es-AR")}{" "}
-          (5% comisión)
+          Precio club ${price.clubPriceBase.toLocaleString("es-AR")} · Comisión 5% $
+          {price.platformFee.toLocaleString("es-AR")} · Jugador paga ${price.playerTotal.toLocaleString("es-AR")}
         </p>
         {coachName ? <p className="mt-1 text-xs text-slate-500">Profesor: {coachName}</p> : null}
         {courtName ? <p className="mt-1 text-xs text-slate-500">Cancha: {courtName}</p> : null}

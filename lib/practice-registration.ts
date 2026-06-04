@@ -1,12 +1,15 @@
-/** Estados que ocupan un cupo de la clase. */
+/**
+ * Estados que ocupan un cupo.
+ * `pending` (checkout MP sin pagar) NO ocupa cupo hasta que el webhook confirme el pago.
+ */
 export function practiceRegistrationHoldsSpot(paymentStatus: string | null | undefined): boolean {
   const s = String(paymentStatus ?? "").toLowerCase();
-  return (
-    s === "approved" ||
-    s === "pending" ||
-    s === "cash_pending" ||
-    s === "transfer_pending"
-  );
+  return s === "approved" || s === "cash_pending" || s === "transfer_pending";
+}
+
+export function practiceRegistrationBlocksRetry(paymentStatus: string | null | undefined): boolean {
+  const s = String(paymentStatus ?? "").toLowerCase();
+  return s === "approved" || s === "cash_pending" || s === "transfer_pending";
 }
 
 export function practicePaymentStatusLabel(status: string | null | undefined): string {

@@ -8,6 +8,7 @@ import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { createNotification } from "@/lib/notifications";
 import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
+import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -199,6 +200,52 @@ async function handlePracticePaymentIfPresent(
   const paidAmount = Number(params.mpPayment.transaction_amount ?? 0);
 
   if (params.status === "approved") {
+    const { data: srow } = await admin
+      .from(DB_TABLES.practiceSessions)
+      .select("practice_id, session_date")
+      .eq("id", String(regRow.session_id))
+      .maybeSingle();
+    const { data: prow } = await admin
+      .from(DB_TABLES.practices)
+      .select("title, club_id, max_spots")
+      .eq("id", String((srow as { practice_id?: string } | null)?.practice_id ?? ""))
+      .maybeSingle();
+    const p = prow as { title?: string | null; club_id?: string | null; max_spots?: number } | null;
+    const maxSpots = Number(p?.max_spots ?? 0);
+
+    const { data: sessionRegs } = await admin
+      .from(DB_TABLES.practiceRegistrations)
+      .select("id, payment_status")
+      .eq("session_id", String(regRow.session_id));
+    const occupied = ((sessionRegs ?? []) as Array<{ id: string; payment_status: string }>).filter(
+      (r) => r.id !== registrationId && practiceRegistrationHoldsSpot(r.payment_status)
+    ).length;
+
+    if (maxSpots > 0 && occupied >= maxSpots) {
+      await admin
+        .from(DB_TABLES.practiceRegistrations)
+        .update({
+          payment_status: "cancelled",
+          mp_payment_id: params.paymentId,
+          amount: Number.isFinite(paidAmount) ? paidAmount : null,
+        })
+        .eq("id", registrationId);
+      await createNotification(admin, {
+        user_id: payerUserId,
+        type: "payment_rejected",
+        title: "Clase completa",
+        body: "Tu pago se registró pero la clase ya no tiene cupos. Contactá al club para el reintegro.",
+      });
+      log.warn({
+        event: "payment.practice.approved_but_full",
+        requestId: params.requestId,
+        registrationId,
+        occupied,
+        maxSpots,
+      });
+      return true;
+    }
+
     await admin
       .from(DB_TABLES.practiceRegistrations)
       .update({
@@ -209,18 +256,6 @@ async function handlePracticePaymentIfPresent(
         confirmed_at: new Date().toISOString(),
       })
       .eq("id", registrationId);
-
-    const { data: srow } = await admin
-      .from(DB_TABLES.practiceSessions)
-      .select("practice_id, session_date")
-      .eq("id", String(regRow.session_id))
-      .maybeSingle();
-    const { data: prow } = await admin
-      .from(DB_TABLES.practices)
-      .select("title, club_id")
-      .eq("id", String((srow as { practice_id?: string } | null)?.practice_id ?? ""))
-      .maybeSingle();
-    const p = prow as { title?: string | null; club_id?: string | null } | null;
     const { data: crow } = await admin
       .from(DB_TABLES.clubs)
       .select("owner_id, name")

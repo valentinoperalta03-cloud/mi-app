@@ -6,8 +6,9 @@ import { notifyClubOwner } from "@/lib/club-notify";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
 import { createPracticeMercadoPagoPreference } from "@/lib/mp-practice-preference";
-import { practicePlayerPayAmount } from "@/lib/practice-offline";
-import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
+import { isClubMercadoPagoConnected } from "@/lib/club-mp";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
+import { practiceRegistrationBlocksRetry, practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { normalizePlayerPaymentMethod } from "@/lib/offline-payments";
 import { createClient } from "@/utils/supabase/server";
 
@@ -19,7 +20,7 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
   const { data: session } = await supabase
     .from(DB_TABLES.practiceSessions)
     .select(
-      "id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name, mp_access_token, accepts_cash, accepts_transfer, bank_alias, bank_cbu, whatsapp))"
+      "id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, whatsapp))"
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -40,6 +41,7 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
       | {
           name: string | null;
           mp_access_token?: string | null;
+          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -49,6 +51,7 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
       | Array<{
           name: string | null;
           mp_access_token?: string | null;
+          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -90,8 +93,17 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
   if (mine?.payment_status === "approved") {
     return { error: "Ya estás inscripto." as const };
   }
+  if (mine && practiceRegistrationBlocksRetry(mine.payment_status)) {
+    return { error: "Ya tenés un lugar reservado en esta clase." as const };
+  }
 
-  return { supabase, practice, sessionDate, payerName: String((me as { name?: string | null } | null)?.name ?? "").trim(), existingRegId: mine?.id };
+  return {
+    supabase,
+    practice,
+    sessionDate,
+    payerName: String((me as { name?: string | null } | null)?.name ?? "").trim(),
+    existingRegId: mine?.payment_status === "pending" ? mine.id : undefined,
+  };
 }
 
 export async function registerForPracticeAction(formData: FormData): Promise<CheckoutState> {
@@ -114,11 +126,15 @@ export async function registerForPracticeAction(formData: FormData): Promise<Che
   const club = Array.isArray(clubPack) ? clubPack[0] : clubPack;
   const clubName = String(club?.name ?? "Club");
   const clubId = practice.club_id;
-  const payAmount = practicePlayerPayAmount(Number(practice.price_base));
+  const price = practicePriceBreakdown(Number(practice.price_base));
+  const payAmount = price.playerTotal;
 
   if (paymentMethod === "mercadopago") {
-    if (!String(club?.mp_access_token ?? "").trim()) {
-      return { ok: false, message: "Este club no tiene Mercado Pago configurado." };
+    if (!isClubMercadoPagoConnected(club)) {
+      return {
+        ok: false,
+        message: "Este club no tiene Mercado Pago conectado. Elegí efectivo o transferencia.",
+      };
     }
   } else if (paymentMethod === "cash") {
     if (!club?.accepts_cash) return { ok: false, message: "Este club no acepta pago en efectivo." };
@@ -190,7 +206,6 @@ export async function registerForPracticeAction(formData: FormData): Promise<Che
     payerUserId: user.id,
     clubName,
     practiceTitle: practice.title,
-    clubPriceBase: Number(practice.price_base),
     payerEmail: user.email ?? undefined,
     backUrls: {
       success: `${base}/clases/${sessionId}?pay=ok`,

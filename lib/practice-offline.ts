@@ -1,11 +1,11 @@
-import { practicePlatformFee, practiceTotalPrice } from "@/lib/practice-pricing";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
 
-/** Monto que paga el jugador (precio base + 5%). */
+/** Monto que paga el jugador (precio base del club + 5% de ese base). */
 export function practicePlayerPayAmount(priceBase: number): number {
-  return practiceTotalPrice(priceBase);
+  return practicePriceBreakdown(priceBase).playerTotal;
 }
 
-/** Comisión PadeLibre que registra el club al confirmar cobro offline. */
+/** Comisión PadeLibre (5% del precio base del club) al confirmar cobro offline. */
 export function practiceClubPadelibreDebt(priceBase: number): number {
-  return practicePlatformFee(priceBase);
+  return practicePriceBreakdown(priceBase).platformFee;
 }

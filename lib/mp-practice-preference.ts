@@ -1,7 +1,8 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
+import { isClubMercadoPagoConnected } from "@/lib/club-mp";
 import { DB_TABLES } from "@/lib/db-tables";
 import { log } from "@/lib/logger";
-import { practicePlatformFee, practiceTotalPrice } from "@/lib/practice-pricing";
+import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { createServiceClient } from "@/utils/supabase/server";
 
 export function practiceExternalReference(registrationId: string, payerUserId: string): string {
@@ -30,18 +31,23 @@ function getPublicBaseUrl(): string {
   return "";
 }
 
+/**
+ * Preferencia MP para clase:
+ * - `unit_price` = precio base del club + 5% de ese base (lo que paga el jugador).
+ * - `marketplace_fee` = 5% del precio base del club (PadeLibre), NO del total.
+ * Ej.: base $25.000 → fee $1.250 → jugador paga $26.250 → club recibe $25.000.
+ */
 export async function createPracticeMercadoPagoPreference(params: {
   sessionId: string;
   registrationId: string;
   payerUserId: string;
   clubName: string;
   practiceTitle: string;
-  clubPriceBase: number;
   payerEmail?: string;
   backUrls?: { success: string; failure: string; pending: string };
 }): Promise<
   | { error: string }
-  | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
+  | { prefId: string; initPoint: string; total: number; marketplaceFee: number; clubPriceBase: number }
 > {
   const service = createServiceClient();
   const { data: session } = await service
@@ -60,18 +66,23 @@ export async function createPracticeMercadoPagoPreference(params: {
 
   const { data: club } = await service
     .from(DB_TABLES.clubs)
-    .select("name, mp_access_token")
+    .select("name, mp_access_token, mp_user_id")
     .eq("id", (practice as { club_id: string }).club_id)
     .maybeSingle();
-  const clubTyped = club as { name?: string | null; mp_access_token?: string | null } | null;
+  const clubTyped = club as { name?: string | null; mp_access_token?: string | null; mp_user_id?: string | null } | null;
+  if (!isClubMercadoPagoConnected(clubTyped)) {
+    return { error: "El club no tiene Mercado Pago conectado." };
+  }
   const clubToken = String(clubTyped?.mp_access_token ?? "").trim();
-  if (!clubToken) return { error: "El club no tiene Mercado Pago configurado." };
 
-  const clubPrice = Number(params.clubPriceBase);
-  if (!Number.isFinite(clubPrice) || clubPrice < 0) return { error: "Precio inválido." };
-
-  const marketplaceFee = practicePlatformFee(clubPrice);
-  const total = practiceTotalPrice(clubPrice);
+  const { clubPriceBase, platformFee, playerTotal } = practicePriceBreakdown(
+    Number((practice as { price_base: number }).price_base)
+  );
+  if (!Number.isFinite(clubPriceBase) || clubPriceBase < 0) return { error: "Precio inválido." };
+  if (playerTotal <= 0) return { error: "Esta clase no tiene precio para cobrar con Mercado Pago." };
+  if (platformFee >= playerTotal) {
+    return { error: "Error en el cálculo de comisión." };
+  }
 
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
@@ -97,7 +108,7 @@ export async function createPracticeMercadoPagoPreference(params: {
             title,
             description: `Inscripción · ${clubName}${sessionDate ? ` · ${sessionDate}` : ""}`,
             quantity: 1,
-            unit_price: total,
+            unit_price: playerTotal,
             currency_id: "ARS",
             category_id: "others",
           },
@@ -106,7 +117,7 @@ export async function createPracticeMercadoPagoPreference(params: {
           email: params.payerEmail,
         },
         statement_descriptor: "PADELIBRE",
-        marketplace_fee: marketplaceFee,
+        marketplace_fee: platformFee,
         back_urls: {
           success: successUrl,
           failure: failureUrl,
@@ -124,7 +135,20 @@ export async function createPracticeMercadoPagoPreference(params: {
     if (!prefId || !initPoint) {
       return { error: "La respuesta de Mercado Pago fue incompleta." };
     }
-    return { prefId, initPoint, total, marketplaceFee };
+    log.info({
+      event: "mp.practice.preference_created",
+      sessionId: params.sessionId,
+      clubPriceBase,
+      platformFee,
+      playerTotal,
+    });
+    return {
+      prefId,
+      initPoint,
+      total: playerTotal,
+      marketplaceFee: platformFee,
+      clubPriceBase,
+    };
   } catch (e) {
     log.error({ event: "mp.practice.preference_failed", sessionId: params.sessionId, err: e });
     return { error: "Mercado Pago no pudo crear el pago. Intentá más tarde." };
