@@ -16,7 +16,7 @@ let package = Package(
         .package(name: "CapacitorBrowser", path: "..\..\..\node_modules\@capacitor\browser"),
         .package(name: "CapacitorStatusBar", path: "..\..\..\node_modules\@capacitor\status-bar"),
         .package(name: "CapacitorPreferences", path: "..\..\..\node_modules\@capacitor\preferences"),
-        .package(url: "https://github.com/OneSignal/OneSignal-iOS-SDK.git", from: "5.0.0")
+        .package(name: "OnesignalCapacitorPlugin", path: "..\..\..\node_modules\@onesignal\capacitor-plugin")
     ],
     targets: [
         .target(
@@ -28,7 +28,7 @@ let package = Package(
                 .product(name: "CapacitorBrowser", package: "CapacitorBrowser"),
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "CapacitorPreferences", package: "CapacitorPreferences"),
-                .product(name: "OneSignal", package: "OneSignal-iOS-SDK")
+                .product(name: "OnesignalCapacitorPlugin", package: "OnesignalCapacitorPlugin")
             ]
         )
     ]
