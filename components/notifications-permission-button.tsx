@@ -3,9 +3,8 @@ import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import {
-  ensureOneSignalInitialized,
   hasNotificationPermission,
-  registerOneSignalUser,
+  requestPushPermissionAndRegister,
 } from "@/lib/onesignal-native";
 
 export default function NotificationsPermissionButton() {
@@ -15,14 +14,9 @@ export default function NotificationsPermissionButton() {
     if (!Capacitor.isNativePlatform()) return;
     async function checkStatus() {
       try {
-        const OneSignal = await ensureOneSignalInitialized();
-        if (!OneSignal) {
-          setStatus("denied");
-          return;
-        }
         const perm = await hasNotificationPermission();
         if (perm) {
-          await registerOneSignalUser();
+          await requestPushPermissionAndRegister();
           setStatus("granted");
         } else {
           setStatus("denied");
@@ -40,18 +34,8 @@ export default function NotificationsPermissionButton() {
   async function handleRequest() {
     try {
       setStatus("requesting");
-      const OneSignal = await ensureOneSignalInitialized();
-      if (!OneSignal) {
-        setStatus("denied");
-        return;
-      }
-      const granted = await OneSignal.Notifications.requestPermission(true);
-      if (granted) {
-        await registerOneSignalUser();
-        setStatus("granted");
-      } else {
-        setStatus("denied");
-      }
+      const ok = await requestPushPermissionAndRegister();
+      setStatus(ok ? "granted" : "denied");
     } catch {
       setStatus("denied");
     }

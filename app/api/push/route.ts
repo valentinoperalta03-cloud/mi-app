@@ -17,7 +17,10 @@ export async function POST(req: NextRequest) {
 
     const payload: Record<string, unknown> = {
       app_id: appId,
-      filters: [{ field: "external_id", value: user_id }],
+      target_channel: "push",
+      include_aliases: {
+        external_id: [String(user_id)],
+      },
       headings: { en: title },
       contents: { en: body },
     };
@@ -35,7 +38,13 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
+
+    if (!res.ok) {
+      console.error("[push] OneSignal error:", data);
+      return NextResponse.json({ error: "OneSignal rejected", details: data }, { status: res.status });
+    }
+
     return NextResponse.json(data);
   } catch (err) {
     console.error("Push error:", err);

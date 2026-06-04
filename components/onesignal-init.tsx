@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { hasNotificationPermission, registerOneSignalUser } from "@/lib/onesignal-native";
+import {
+  hasNotificationPermission,
+  maybePromptPushOnAppOpen,
+  registerOneSignalUser,
+} from "@/lib/onesignal-native";
 
 export default function OneSignalInit() {
   useEffect(() => {
@@ -12,7 +16,9 @@ export default function OneSignalInit() {
       const granted = await hasNotificationPermission();
       if (granted) {
         await registerOneSignalUser();
+        return;
       }
+      await maybePromptPushOnAppOpen();
     }
 
     const onReady = () => void init();
