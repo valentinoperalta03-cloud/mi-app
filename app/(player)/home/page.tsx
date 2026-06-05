@@ -7,6 +7,7 @@ import { CompetitiveResultConfirmationCard } from "@/components/competitive-resu
 import { FriendRequestsSection } from "@/components/friend-requests-section";
 import HomeJoinRequestsSection from "@/components/home-join-requests-section";
 import { HomeReservationsSection } from "@/components/home-reservations-section";
+import { HomeSocialSection } from "@/components/home-social-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
 import {
   HomeReservationsSkeleton,
@@ -180,6 +181,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
         <ChevronRight size={20} className="shrink-0 text-[#0585FC]" aria-hidden />
       </Link>
+
+      <HomeSocialSection />
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
