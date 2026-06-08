@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ChevronDown, Loader2, MapPin } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { LocationSelector } from "@/components/location-selector";
+import { inferLocationFromCity, type LocationSelection } from "@/lib/location-data";
+import { buildLocationLabel } from "@/lib/locations";
 
 type ActionState = { ok: boolean; message: string };
 
 type Props = {
   initialLocation: string | null;
+  initialCity: string;
+  initialProvince: string;
+  initialCountry: string;
   notificationsEnabled: boolean;
   isPublic: boolean;
   category: string | null;
@@ -33,6 +39,9 @@ const LEVEL_INFO = [
 
 export default function SettingsClient({
   initialLocation,
+  initialCity,
+  initialProvince,
+  initialCountry,
   notificationsEnabled,
   isPublic,
   category,
@@ -46,8 +55,22 @@ export default function SettingsClient({
   changePasswordAction,
   deleteAccountAction,
 }: Props) {
-  const [location, setLocation] = useState(initialLocation ?? "Sin ubicación");
+  const initialSelection = useMemo<LocationSelection>(
+    () =>
+      inferLocationFromCity(initialCity) ?? {
+        country: initialCountry,
+        province: initialProvince,
+        city: initialCity.toLowerCase(),
+      },
+    [initialCity, initialCountry, initialProvince]
+  );
+
+  const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(initialSelection);
+  const [locationLabel, setLocationLabel] = useState(
+    initialLocation ?? buildLocationLabel(initialSelection)
+  );
   const [locationMsg, setLocationMsg] = useState<string>("");
+  const [locationPending, startLocationTransition] = useTransition();
   const [notifEnabled, setNotifEnabled] = useState(notificationsEnabled);
   const [privacyPublic, setPrivacyPublic] = useState(isPublic);
   const [notifMsg, setNotifMsg] = useState("");
@@ -59,44 +82,24 @@ export default function SettingsClient({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  async function detectLocation() {
-    setLocationMsg("");
-    if (!navigator.geolocation) {
-      setLocationMsg("Tu dispositivo no soporta geolocalización.");
+  function saveLocation() {
+    if (!locationSelection?.country || !locationSelection.province || !locationSelection.city) {
+      setLocationMsg("Debés seleccionar país, provincia y ciudad.");
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`
-          );
-          const data = (await res.json()) as {
-            address?: {
-              city?: string;
-              town?: string;
-              village?: string;
-              state?: string;
-            };
-          };
-          const city = data.address?.city || data.address?.town || data.address?.village || "Sin ciudad";
-          const state = data.address?.state || "Sin provincia";
-          const composed = `${city}, ${state}`;
-          const fd = new FormData();
-          fd.set("location", composed);
-          const result = await updateLocationAction(fd);
-          if (result.ok) {
-            setLocation(composed);
-          }
-          setLocationMsg(result.message);
-        } catch {
-          setLocationMsg("No pudimos detectar la ubicación. Intentá nuevamente.");
-        }
-      },
-      () => {
-        setLocationMsg("Activá el GPS para detectar tu ubicación");
+
+    setLocationMsg("");
+    startLocationTransition(async () => {
+      const fd = new FormData();
+      fd.set("country", locationSelection.country);
+      fd.set("province", locationSelection.province);
+      fd.set("city", locationSelection.city);
+      const result = await updateLocationAction(fd);
+      setLocationMsg(result.message);
+      if (result.ok) {
+        setLocationLabel(buildLocationLabel(locationSelection));
       }
-    );
+    });
   }
 
   function toggleNotifications(next: boolean) {
@@ -139,17 +142,34 @@ export default function SettingsClient({
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
         <h2 className="text-base font-bold text-[var(--text-primary)]">Mi cuenta</h2>
 
-        <div className="mt-4 space-y-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3">
-          <p className="text-sm font-medium text-[var(--text-secondary)]">Ubicación (obligatoria)</p>
-          <p className="text-sm text-[var(--text-tertiary)]">{location}</p>
+        <div className="mt-4 space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] p-3">
+          <div>
+            <p className="text-sm font-medium text-[var(--text-secondary)]">Mi ubicación</p>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">{locationLabel}</p>
+          </div>
+
+          <LocationSelector
+            initial={initialSelection}
+            onLocationSelect={setLocationSelection}
+            showSummary={false}
+          />
+
           <button
             type="button"
-            onClick={detectLocation}
-            className="btn-primary-gradient inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold"
+            onClick={saveLocation}
+            disabled={!locationSelection?.city || locationPending}
+            className="btn-primary-gradient inline-flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold disabled:opacity-50"
           >
-            <MapPin size={16} />
-            Detectar mi ubicación
+            {locationPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              "Guardar ubicación"
+            )}
           </button>
+
           {locationMsg ? <p className="text-xs text-[var(--text-tertiary)]">{locationMsg}</p> : null}
         </div>
 

@@ -5,6 +5,7 @@ import ThemeToggleButton from "@/components/theme-toggle-button";
 import SettingsClient from "./settings-client";
 import { LEVEL_HIERARCHY, getLevelIndex } from "@/lib/match-level";
 import { DB_TABLES } from "@/lib/db-tables";
+import { buildLocationLabel, normalizeCity } from "@/lib/locations";
 import { createClient } from "@/utils/supabase/server";
 
 type ActionState = { ok: boolean; message: string };
@@ -36,12 +37,15 @@ export default async function AjustesPage({
 
   const { data: profile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("location, notifications_enabled, is_public, category, name, avatar_url")
+    .select("location, city, province, country, notifications_enabled, is_public, category, name, avatar_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
   const typed = profile as {
     location?: string | null;
+    city?: string | null;
+    province?: string | null;
+    country?: string | null;
     notifications_enabled?: boolean | null;
     is_public?: boolean | null;
     category?: string | null;
@@ -57,12 +61,30 @@ export default async function AjustesPage({
     } = await supabase.auth.getUser();
     if (!user) return { ok: false, message: "No hay sesión activa." };
 
-    const location = String(formData.get("location") ?? "").trim();
-    if (!location) return { ok: false, message: "No se pudo detectar la ubicación." };
+    const country = String(formData.get("country") ?? "").trim();
+    const province = String(formData.get("province") ?? "").trim();
+    const cityRaw = String(formData.get("city") ?? "").trim();
 
-    const { error } = await supabase.from(DB_TABLES.profiles).update({ location }).eq("user_id", user.id);
+    if (!country || !province || !cityRaw) {
+      return { ok: false, message: "Debés seleccionar país, provincia y ciudad." };
+    }
+
+    const city = normalizeCity(cityRaw);
+    const { error } = await supabase
+      .from(DB_TABLES.profiles)
+      .update({
+        country,
+        province,
+        city,
+        location: buildLocationLabel({ country, province, city }),
+      })
+      .eq("user_id", user.id);
+
     if (error) return { ok: false, message: error.message };
     revalidatePath("/ajustes");
+    revalidatePath("/home");
+    revalidatePath("/clubes");
+    revalidatePath("/buscar-partido");
     return { ok: true, message: "Ubicación actualizada ✓" };
   }
 
@@ -183,6 +205,9 @@ export default async function AjustesPage({
       </section>
       <SettingsClient
         initialLocation={typed?.location ?? null}
+        initialCity={typed?.city ?? "rosario"}
+        initialProvince={typed?.province ?? "Santa Fe"}
+        initialCountry={typed?.country ?? "Argentina"}
         notificationsEnabled={typed?.notifications_enabled ?? true}
         isPublic={typed?.is_public ?? true}
         category={typed?.category ?? null}
