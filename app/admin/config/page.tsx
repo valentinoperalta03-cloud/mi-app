@@ -8,13 +8,14 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import ConfigCancellationForm from "./config-cancellation-form";
 import ConfigClubDataForm from "./config-club-data-form";
+import ConfigClubLocationForm from "./config-club-location-form";
 import ConfigClubPhotosForm from "./config-club-photos-form";
 import ConfigPaymentMethodsForm from "./config-payment-methods-form";
 import { saveClubHours, updateFinancePin } from "./actions";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
+  "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
 
@@ -43,27 +44,31 @@ function flash(ok: boolean, err: string) {
   return null;
 }
 
+type ConfigSearchParams = {
+  hours_saved?: string;
+  hours_error?: string;
+  data_saved?: string;
+  data_error?: string;
+  location_saved?: string;
+  location_error?: string;
+  photos_saved?: string;
+  photos_error?: string;
+  payments_saved?: string;
+  payments_error?: string;
+  policy_saved?: string;
+  policy_error?: string;
+  pin_saved?: string;
+  pin_error?: string;
+  saved?: string;
+  error?: string;
+};
+
 type PageProps = {
-  searchParams?: Promise<{
-    hours_saved?: string;
-    hours_error?: string;
-    data_saved?: string;
-    data_error?: string;
-    photos_saved?: string;
-    photos_error?: string;
-    payments_saved?: string;
-    payments_error?: string;
-    policy_saved?: string;
-    policy_error?: string;
-    pin_saved?: string;
-    pin_error?: string;
-    saved?: string;
-    error?: string;
-  }>;
+  searchParams?: Promise<ConfigSearchParams>;
 };
 
 export default async function AdminConfigPage({ searchParams }: PageProps) {
-  const sp = searchParams ? await searchParams : {};
+  const sp: ConfigSearchParams = searchParams ? await searchParams : {};
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -126,6 +131,10 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
 
   const club = clubRaw as {
     name: string | null;
+    location?: string | null;
+    city?: string | null;
+    province?: string | null;
+    country?: string | null;
     description: string | null;
     address: string | null;
     contact_phone: string | null;
@@ -165,6 +174,8 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   const hoursErr = decode(sp.hours_error) || decode(sp.error);
   const dataOk = sp.data_saved === "1";
   const dataErr = decode(sp.data_error);
+  const locationOk = sp.location_saved === "1";
+  const locationErr = decode(sp.location_error);
   const photosOk = sp.photos_saved === "1";
   const photosErr = decode(sp.photos_error);
   const paymentsOk = sp.payments_saved === "1";
@@ -269,7 +280,25 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">4. Fotos</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">4. Ubicación del club</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Ciudad donde opera el club. Los jugadores solo verán tu club si están en la misma ciudad.
+        </p>
+        {flash(locationOk, locationErr)}
+        <div className="mt-4">
+          <ConfigClubLocationForm
+            initial={{
+              location: club.location ?? null,
+              city: club.city ?? null,
+              province: club.province ?? null,
+              country: club.country ?? null,
+            }}
+          />
+        </div>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">5. Fotos</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Logo, portada y galería visible para jugadores.</p>
         {flash(photosOk, photosErr)}
         <div className="mt-4">
@@ -288,7 +317,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">5. Métodos de pago</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">6. Métodos de pago</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Mercado Pago, efectivo y transferencia.</p>
         {flash(paymentsOk, paymentsErr)}
         <div className="mt-4">
@@ -306,7 +335,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">6. Política de cancelación</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">7. Política de cancelación</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Definí hasta cuándo los jugadores pueden cancelar con reembolso.</p>
         {flash(policyOk, policyErr)}
         <div className="mt-4">

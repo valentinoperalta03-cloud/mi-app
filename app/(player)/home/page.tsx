@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, CirclePlus, GraduationCap, Search, Trophy } from "lucide-react";
+import { Building2, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
@@ -19,6 +19,8 @@ import {
   getCachedProfileDisplayName,
 } from "@/lib/home-cache";
 import { DB_TABLES } from "@/lib/db-tables";
+import { formatCityLabel } from "@/lib/locations";
+import { getUserLocationServer } from "@/lib/locations-server";
 import { createClient } from "@/utils/supabase/server";
 
 type HomePageProps = {
@@ -68,10 +70,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const slidesSeen = Boolean((profileSlides as { slides_seen?: boolean | null } | null)?.slides_seen);
   if (!slidesSeen) redirect("/bienvenida");
 
-  const [displayName, pendingForMe] = await Promise.all([
+  const [displayName, pendingForMe, userLocation] = await Promise.all([
     getCachedProfileDisplayName(user.id),
     getCachedPendingResultsForUser(user.id),
+    getUserLocationServer(),
   ]);
+  const cityLabel = formatCityLabel(userLocation.city);
 
   return (
     <MotionPage className="home-page-shell mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
@@ -103,6 +107,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <h1 className="text-xl font-bold leading-tight tracking-tight">¡Vamos, {displayName}!</h1>
           <p className="mt-1 text-sm text-white/75">¿Qué querés hacer hoy?</p>
         </div>
+      </section>
+
+      <section className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+          <MapPin className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+          <span className="truncate">
+            ¿Dónde jugás? <span className="font-semibold text-slate-900 dark:text-white">{cityLabel}</span>
+          </span>
+        </div>
+        <Link
+          href="/ajustes"
+          className="shrink-0 rounded-full border border-sky-200 px-3 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/40"
+        >
+          Cambiar
+        </Link>
       </section>
 
       <section className="flex flex-col gap-3">

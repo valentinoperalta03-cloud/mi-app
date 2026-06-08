@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
+import { buildClubLocationPayload } from "@/lib/locations";
 import { createClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -21,6 +22,33 @@ async function ownerClubContext() {
   if (!ctx?.userId) redirect("/login");
   if (!ctx.clubIds.length) redirect("/admin/config?data_error=no_club");
   return { supabase, ctx, clubId: ctx.clubIds[0]! };
+}
+
+export async function saveClubLocation(formData: FormData) {
+  const { supabase, ctx, clubId } = await ownerClubContext();
+
+  const locationCountry = getField(formData, "country");
+  const locationProvince = getField(formData, "province");
+  const locationCity = getField(formData, "city") || getField(formData, "location");
+
+  if (!locationCity) {
+    redirect("/admin/config?location_error=Seleccion%C3%A1%20una%20ciudad");
+  }
+
+  const payload = buildClubLocationPayload({
+    country: locationCountry || "Argentina",
+    province: locationProvince,
+    city: locationCity,
+  });
+
+  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  if (error) {
+    redirect(`/admin/config?location_error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  revalidatePath("/clubes");
+  redirect("/admin/config?location_saved=1");
 }
 
 export async function saveClubData(formData: FormData) {
@@ -73,9 +101,22 @@ export async function updateClubInfo(formData: FormData) {
   if (!actionCtx?.userId) redirect("/login");
   if (!actionCtx.clubIds.length) redirect("/admin/config?data_error=no_club");
 
+  const locationCountry = getField(formData, "country");
+  const locationProvince = getField(formData, "province");
+  const locationCity = getField(formData, "city") || getField(formData, "location");
+
+  const locationPayload =
+    locationCity.trim().length > 0
+      ? buildClubLocationPayload({
+          country: locationCountry || "Argentina",
+          province: locationProvince || "",
+          city: locationCity,
+        })
+      : { location: getField(formData, "location") || null };
+
   const payload = {
     name: getField(formData, "name") || null,
-    location: getField(formData, "location") || null,
+    ...locationPayload,
     description: getField(formData, "description") || null,
     address: getField(formData, "address") || null,
     contact_phone: getField(formData, "contact_phone") || null,

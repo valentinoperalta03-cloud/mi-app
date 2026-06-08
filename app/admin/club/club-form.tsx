@@ -1,7 +1,10 @@
 "use client";
 
 import { Camera, Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { LocationSelector } from "@/components/location-selector";
+import { inferLocationFromCity, type LocationSelection } from "@/lib/location-data";
+import { formatCityLabel } from "@/lib/locations";
 import { updateClubInfo } from "./actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -67,6 +70,9 @@ type Props = {
   initial: {
     name: string;
     location: string;
+    city?: string | null;
+    province?: string | null;
+    country?: string | null;
     description: string;
     address: string;
     contact_phone: string;
@@ -97,6 +103,17 @@ type ImageSlot = {
 };
 
 export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
+  const initialLocation = useMemo(
+    () =>
+      inferLocationFromCity(initial.city ?? initial.location) ?? {
+        country: initial.country ?? "Argentina",
+        province: initial.province ?? "",
+        city: initial.city ?? "",
+      },
+    [initial.city, initial.country, initial.location, initial.province]
+  );
+  const [clubLocation, setClubLocation] = useState<LocationSelection | null>(initialLocation);
+
   const initialHours = parseBusinessHours(initial.business_hours);
   const [hoursOpen, setHoursOpen] = useState(initialHours.open);
   const [hoursClose, setHoursClose] = useState(initialHours.close);
@@ -230,15 +247,18 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nombre del club</span>
         <input name="name" defaultValue={initial.name} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
       </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Ciudad / ubicación</span>
+      <div className="space-y-2">
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Ciudad del club</span>
+        <LocationSelector initial={initialLocation} onLocationSelect={setClubLocation} />
+        <input type="hidden" name="country" value={clubLocation?.country ?? ""} />
+        <input type="hidden" name="province" value={clubLocation?.province ?? ""} />
+        <input type="hidden" name="city" value={clubLocation?.city ?? ""} />
         <input
+          type="hidden"
           name="location"
-          defaultValue={initial.location}
-          placeholder="Ej: Rosario, Santa Fe"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+          value={clubLocation?.city ? formatCityLabel(clubLocation.city) : initial.location}
         />
-      </label>
+      </div>
       <label className="block space-y-1">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Descripción</span>
         <textarea name="description" defaultValue={initial.description} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />

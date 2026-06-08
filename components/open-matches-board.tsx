@@ -7,6 +7,8 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { formatLevel } from "@/lib/level-quiz-logic";
 import { isMatchPrivate } from "@/lib/match-visibility";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatCityLabel, normalizeCity } from "@/lib/locations";
+import { getUserCityServer } from "@/lib/locations-server";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchFeedRow = {
@@ -24,6 +26,7 @@ type MatchFeedRow = {
           | {
               name: string | null;
               location: string | null;
+              city?: string | null;
             }
           | null;
       }
@@ -98,6 +101,8 @@ export default async function OpenMatchesBoard({
   backLabel = "Volver al inicio",
 }: OpenMatchesBoardProps) {
   const supabase = await createClient();
+  const userCity = await getUserCityServer();
+  const userCityLabel = formatCityLabel(userCity);
   const nowIso = new Date().toISOString();
   const params = searchParams ? await searchParams : undefined;
   const flashMessage = params?.message ?? "";
@@ -132,7 +137,8 @@ export default async function OpenMatchesBoard({
       courts (
         clubs (
           name,
-          location
+          location,
+          city
         )
       ),
       match_participants (
@@ -154,6 +160,11 @@ export default async function OpenMatchesBoard({
 
   const rawMatches = (data ?? []) as unknown as MatchFeedRow[];
   const matches = rawMatches
+    .filter((match) => {
+      const club = match.courts?.clubs;
+      const clubCity = normalizeCity(club?.city || club?.location || "");
+      return clubCity === userCity;
+    })
     .filter((match) => {
       if (!isMatchPrivate(match.visibility)) return true;
       if (user?.id && match.owner_id && user.id === match.owner_id) return true;
@@ -213,6 +224,8 @@ export default async function OpenMatchesBoard({
     };
   });
 
+  const effectiveDescription = `${description} Partidos en ${userCityLabel}.`;
+
   return (
     <MotionPage
       className={`mx-auto min-h-screen w-full space-y-6 bg-slate-50 px-4 pb-24 pt-6 ${
@@ -225,7 +238,7 @@ export default async function OpenMatchesBoard({
             backHref={backHref}
             backLabel={backLabel}
             title={title}
-            subtitle={description}
+            subtitle={effectiveDescription}
             className="mb-0 min-w-0 flex-1"
           />
           <div className="shrink-0 pt-1">
@@ -236,7 +249,7 @@ export default async function OpenMatchesBoard({
         <header className="space-y-2">
           <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
-          <p className="text-sm text-slate-500">{description}</p>
+          <p className="text-sm text-slate-500">{effectiveDescription}</p>
         </header>
       )}
 

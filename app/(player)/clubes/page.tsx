@@ -1,16 +1,25 @@
 import { Suspense } from "react";
+
+export const dynamic = "force-dynamic";
 import MotionPage from "@/components/motion-page";
 import ClubsListClient, { type ClubRow } from "@/components/clubs-list-client";
 import { DB_TABLES } from "@/lib/db-tables";
+import { formatCityLabel } from "@/lib/locations";
+import { getUserCityServer } from "@/lib/locations-server";
 import { PLAYER_CARD } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
-/**
- * Columnas que existen en `public.clubs` (sin latitude/longitude: no están en el schema actual).
- * Pedir columnas inexistentes hace que PostgREST responda 400.
- */
-const CLUBS_LIST_SELECT =
-  "id,name,location,cover_image_url,logo_url,description,business_hours";
+type RpcClubRow = {
+  id: string;
+  name: string | null;
+  location: string | null;
+  city: string | null;
+  address: string | null;
+  image_url: string | null;
+  logo_url: string | null;
+  description: string | null;
+  business_hours: string | null;
+};
 
 function ClubesLoading() {
   return (
@@ -31,27 +40,49 @@ function ClubesLoading() {
   );
 }
 
+function mapRpcClub(row: RpcClubRow): ClubRow {
+  return {
+    id: row.id,
+    name: row.name,
+    location: row.location ?? formatCityLabel(row.city),
+    cover_image_url: row.image_url,
+    logo_url: row.logo_url,
+    description: row.description,
+    business_hours: row.business_hours,
+  };
+}
+
 async function ClubesContent() {
   let clubs: ClubRow[] = [];
   let errorMessage: string | null = null;
   let errorDebug: string | null = null;
+  let userCity = "rosario";
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from(DB_TABLES.clubs)
-      .select(CLUBS_LIST_SELECT)
-      .eq("is_active", true);
+    userCity = await getUserCityServer();
 
-    console.log("[clubes] Supabase response", { data, error });
+    const { data, error } = await supabase.rpc("get_clubs_by_city", { user_city: userCity });
 
     if (error) {
-      errorMessage = "No se pudieron cargar los clubes. Intenta nuevamente.";
-      errorDebug =
-        [error.message, error.details, error.hint, error.code].filter(Boolean).join(" — ") ||
-        JSON.stringify(error);
+      const { data: fallback, error: fallbackError } = await supabase
+        .from(DB_TABLES.clubs)
+        .select("id,name,location,cover_image_url,logo_url,description,business_hours,city")
+        .eq("is_active", true)
+        .ilike("city", userCity);
+
+      if (fallbackError) {
+        errorMessage = "No se pudieron cargar los clubes. Intentá nuevamente.";
+        errorDebug =
+          [error.message, fallbackError.message].filter(Boolean).join(" — ") || JSON.stringify(error);
+      } else {
+        clubs = ((fallback ?? []) as ClubRow[]).map((club) => ({
+          ...club,
+          location: club.location ?? formatCityLabel(userCity),
+        }));
+      }
     } else {
-      clubs = (data as ClubRow[]) ?? [];
+      clubs = ((data ?? []) as RpcClubRow[]).map(mapRpcClub);
     }
   } catch (e) {
     console.error("[clubes] ClubesContent exception", e);
@@ -59,7 +90,14 @@ async function ClubesContent() {
     errorDebug = e instanceof Error ? e.message : String(e);
   }
 
-  return <ClubsListClient clubs={clubs} errorMessage={errorMessage} errorDebug={errorDebug} />;
+  return (
+    <ClubsListClient
+      clubs={clubs}
+      userCity={userCity}
+      errorMessage={errorMessage}
+      errorDebug={errorDebug}
+    />
+  );
 }
 
 export default function ClubesPage() {

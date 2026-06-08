@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PlayerStackHeader } from "@/components/player-back-button";
+import { formatCityLabel } from "@/lib/locations";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 
 export type ClubRow = {
@@ -51,25 +52,35 @@ const itemVariants = {
 
 export default function ClubsListClient({
   clubs,
+  userCity,
   errorMessage,
   errorDebug,
 }: {
   clubs: ClubRow[];
+  userCity?: string | null;
   errorMessage: string | null;
   /** Detalle técnico (p. ej. mensaje PostgREST) para depuración */
   errorDebug?: string | null;
 }) {
   const router = useRouter();
+  const cityLabel = formatCityLabel(userCity);
 
   return (
     <>
       <PlayerStackHeader
         backHref="/home"
         backLabel="Volver al inicio"
-        title="Clubes disponibles"
-        subtitle="Explorá clubes cerca tuyo"
+        title={`Clubes en ${cityLabel}`}
+        subtitle="Explorá clubes de tu ciudad"
         className="mb-1"
       />
+
+      <div className="flex items-center gap-2 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-3 py-2 text-sm text-sky-900 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-100">
+        <MapPin className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+        <span>
+          Mostrando clubes en <span className="font-semibold">{cityLabel}</span>
+        </span>
+      </div>
 
       {errorMessage ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
@@ -85,6 +96,15 @@ export default function ClubsListClient({
           >
             Reintentar
           </motion.button>
+        </div>
+      ) : null}
+
+      {!errorMessage && clubs.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 text-center dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">No hay clubes en {cityLabel}</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Todavía no hay clubes registrados en tu ciudad. Probá cambiar tu ubicación en Ajustes.
+          </p>
         </div>
       ) : null}
 

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, type ReactNode, type TouchEvent } from "react";
+import { useCallback, useState, type ReactNode, type TouchEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { LocationSelectorOnboarding } from "@/components/LocationSelectorOnboarding";
+import { DEFAULT_USER_LOCATION, type LocationSelection } from "@/lib/location-data";
+import { saveUserLocationToProfile } from "@/lib/locations";
 
 const BLUE = "#0585FC";
 const BLUE_DARK = "#0461C4";
@@ -314,9 +317,15 @@ function ClubCard({ name, city, delay = 0 }: { name: string; city: string; delay
   );
 }
 
-const SLIDES = [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+const SLIDES = [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }];
 
-function SlideContent({ id }: { id: number }) {
+function SlideContent({
+  id,
+  onLocationSelect,
+}: {
+  id: number;
+  onLocationSelect: (location: LocationSelection) => void;
+}) {
   switch (id) {
     case 0:
       return (
@@ -651,6 +660,9 @@ function SlideContent({ id }: { id: number }) {
         </div>
       );
 
+    case 5:
+      return <LocationSelectorOnboarding onLocationSelect={onLocationSelect} />;
+
     default:
       return null;
   }
@@ -659,13 +671,28 @@ function SlideContent({ id }: { id: number }) {
 export function OnboardingSlides({ onComplete }: { onComplete?: () => void }) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [userLocation, setUserLocation] = useState<LocationSelection | null>(null);
+  const [savingLocation, setSavingLocation] = useState(false);
   const total = SLIDES.length;
 
-  const goNext = () => {
+  const handleLocationSelect = useCallback((location: LocationSelection) => {
+    setUserLocation(location);
+  }, []);
+
+  const goNext = async () => {
     if (current < total - 1) {
       setDirection(1);
       setCurrent((c) => c + 1);
-    } else {
+      return;
+    }
+
+    setSavingLocation(true);
+    try {
+      await saveUserLocationToProfile(userLocation ?? DEFAULT_USER_LOCATION);
+    } catch (err) {
+      console.error("Error guardando ubicación:", err);
+    } finally {
+      setSavingLocation(false);
       onComplete?.();
     }
   };
@@ -793,7 +820,7 @@ export function OnboardingSlides({ onComplete }: { onComplete?: () => void }) {
                 overflow: "hidden",
               }}
             >
-              <SlideContent id={current} />
+              <SlideContent id={current} onLocationSelect={handleLocationSelect} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -837,15 +864,17 @@ export function OnboardingSlides({ onComplete }: { onComplete?: () => void }) {
 
             <motion.button
               type="button"
-              onClick={goNext}
-              whileTap={{ scale: 0.97 }}
+              onClick={() => void goNext()}
+              disabled={savingLocation}
+              whileTap={{ scale: savingLocation ? 1 : 0.97 }}
               style={{
                 flex: 1,
                 height: 56,
                 borderRadius: 16,
                 background: `linear-gradient(135deg, ${BLUE} 0%, ${BLUE_DARK} 100%)`,
                 border: "none",
-                cursor: "pointer",
+                cursor: savingLocation ? "wait" : "pointer",
+                opacity: savingLocation ? 0.75 : 1,
                 fontSize: 16,
                 fontWeight: 700,
                 color: "#fff",
@@ -860,7 +889,7 @@ export function OnboardingSlides({ onComplete }: { onComplete?: () => void }) {
               {isLast ? (
                 <>
                   <Icon name="check" size={18} color="#fff" />
-                  Empezar
+                  {savingLocation ? "Guardando…" : "Empezar"}
                 </>
               ) : (
                 <>
