@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { EditProfileForm } from "@/components/edit-profile-form";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -37,13 +39,21 @@ export default async function EditarPerfilPage() {
   const competitiveLevelLine = formatProfileNivelFromRow(row);
 
   return (
-    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-24 pt-6">
-      <header className="mb-6 space-y-1">
-        <p className="text-sm font-medium text-[#0585FC]">Perfil</p>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Editar perfil</h1>
-        <p className="text-sm text-[var(--text-tertiary)]">
-          La foto se sube a Supabase desde tu dispositivo; al guardar solo enviamos la URL pública.
-        </p>
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-24 pt-4">
+      <header className="mb-6">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/perfil"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-card)] text-[#0585FC] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition active:scale-95 dark:ring-white/10"
+            aria-label="Volver al perfil"
+          >
+            <ChevronLeft size={22} aria-hidden />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Editar perfil</h1>
+            <p className="text-sm text-[var(--text-tertiary)]">Actualizá tus datos personales</p>
+          </div>
+        </div>
       </header>
 
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">

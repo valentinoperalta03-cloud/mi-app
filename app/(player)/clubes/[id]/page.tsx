@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, AtSign, Clock, MapPin, MessageCircle, Phone, Shield } from "lucide-react";
 import ClubGalleryLightbox from "@/components/club-gallery-lightbox";
+import { ClubHeroLightboxButton } from "@/components/club-hero-lightbox-button";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -105,7 +106,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 px-4 pb-4">
+          <div className="absolute inset-x-0 bottom-0 z-10 flex items-end gap-3 px-4 pb-4">
             {logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -128,6 +129,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
               ) : null}
             </div>
           </div>
+          {heroSrc ? <ClubHeroLightboxButton src={heroSrc} /> : null}
         </div>
 
         <div className="space-y-6 px-4 pt-6">

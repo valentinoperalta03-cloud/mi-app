@@ -67,9 +67,6 @@ export default function FriendsSearchClient({
       </header>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
-          Resultados ({filtered.length})
-        </h2>
         <ul className="space-y-3">
           {filtered.map((player) => {
             const label = player.name?.trim() || "Jugador";
