@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+type capacitor.config.tspackage com.getcapacitor.myapp;
 
 import static org.junit.Assert.*;
 

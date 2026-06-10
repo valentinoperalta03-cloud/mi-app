@@ -39,7 +39,7 @@ const steps = [
     number: "03",
     title: "Cada uno paga su parte",
     description:
-      "No más transferencias, no más 'te debo'. Cada jugador paga su cuarto del turno directo por la app via Mercado Pago. El dinero va al club automáticamente. PadeLibre nunca toca tu plata.",
+      "No más transferencias, no más 'te debo'. Cada jugador paga su cuarto del turno directo por la app vía Mercado Pago. El dinero va al club automáticamente. PadeLibre nunca toca tu plata.",
   },
   {
     number: "04",
@@ -58,7 +58,7 @@ const playerItems = [
 
 const clubItems = [
   "Tus canchas aparecen visibles para todos los jugadores de la zona que buscan dónde jugar",
-  "Los cobros son automáticos via Mercado Pago — el dinero va directo a tu cuenta sin intermediarios",
+  "Los cobros son automáticos vía Mercado Pago — el dinero va directo a tu cuenta sin intermediarios",
   "Panel de administración completo: canchas, horarios, precios dinámicos por horario, historial de pagos",
   "Llenás los horarios muertos con jugadores que buscan canchas disponibles en tiempo real",
   "Sin costo para el club — PadeLibre cobra solo al jugador",
