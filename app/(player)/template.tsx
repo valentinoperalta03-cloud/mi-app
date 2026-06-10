@@ -33,6 +33,10 @@ export default function PlayerTemplate({ children }: { children: ReactNode }) {
     setIsNative(Capacitor.isNativePlatform());
   }, []);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   const skipMotion = isNative || prefersReducedMotion;
 
   if (skipMotion) {

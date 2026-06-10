@@ -19,8 +19,8 @@ const tileVisuals: TileVisual[] = [
     id: "para-ti",
     label: "Para Ti",
     Icon: Sparkles,
-    accent: "#CCFF00",
-    accentBg: "rgba(204,255,0,0.1)",
+    accent: "#0585FC",
+    accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "jugadores",
