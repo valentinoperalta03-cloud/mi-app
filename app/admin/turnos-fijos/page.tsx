@@ -6,7 +6,7 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { addExceptionToFixedSlot, deleteFixedSlot, removeException } from "./actions";
+import { addExceptionToFixedSlot, deleteFixedSlot, removeException, saveFixedSlotSettings } from "./actions";
 import AddPlayerInline from "./add-player-inline";
 import TurnosFijosForm from "./turnos-form";
 
@@ -27,10 +27,29 @@ function paymentStateLabel(status: string | null | undefined) {
   return "⚠️ Pendiente";
 }
 
-export default async function AdminTurnosFijosPage() {
+type PageProps = {
+  searchParams?: Promise<{ fixed_saved?: string; fixed_error?: string }>;
+};
+
+export default async function AdminTurnosFijosPage({ searchParams }: PageProps) {
+  const sp = searchParams ? await searchParams : {};
+  const fixedOk = sp.fixed_saved === "1";
+  const fixedErr = sp.fixed_error ? decodeURIComponent(sp.fixed_error) : "";
+
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
+
+  const { data: clubRow } = ctx.clubIds.length
+    ? await supabase
+        .from(DB_TABLES.clubs)
+        .select("fixed_slot_confirmation_hours")
+        .eq("id", ctx.clubIds[0])
+        .maybeSingle()
+    : { data: null };
+  const confirmationHours = Number(
+    (clubRow as { fixed_slot_confirmation_hours?: number | null } | null)?.fixed_slot_confirmation_hours ?? 24
+  );
 
   const { data: slotsRaw } = ctx.clubIds.length
     ? await supabase
@@ -168,6 +187,42 @@ export default async function AdminTurnosFijosPage() {
         <h1 className={adminTitle}>Turnos fijos</h1>
         <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores.</p>
       </header>
+
+      <section className={`${adminCard} p-5`}>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmación de asistencia</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Con cuántas horas de anticipación los jugadores deben confirmar asistencia. Aplica a todos los turnos del club.
+        </p>
+        {fixedOk ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+            Cambios guardados.
+          </p>
+        ) : fixedErr ? (
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+            {fixedErr}
+          </p>
+        ) : null}
+        <form action={saveFixedSlotSettings} className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            Horas de anticipación
+            <input
+              name="fixed_slot_confirmation_hours"
+              type="number"
+              min="1"
+              max="168"
+              required
+              defaultValue={confirmationHours}
+              className="w-28 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-xl bg-[#0585FC] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+          >
+            Guardar
+          </button>
+        </form>
+      </section>
 
       <section className={adminCard}>
         <h2 className="mb-3 text-base font-bold text-slate-900 dark:text-slate-100">Agregar turno fijo</h2>

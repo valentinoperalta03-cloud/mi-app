@@ -13,6 +13,38 @@ function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function enc(msg: string) {
+  return encodeURIComponent(msg);
+}
+
+export async function saveFixedSlotSettings(formData: FormData): Promise<void> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/turnos-fijos");
+
+  const clubId = ctx.clubIds[0];
+  const hoursRaw = getField(formData, "fixed_slot_confirmation_hours");
+  const hours = Number(hoursRaw);
+
+  if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
+    redirect(`/admin/turnos-fijos?fixed_error=${enc("Ingresá una cantidad válida de horas (1–168).")}`);
+  }
+
+  const { error } = await supabase
+    .from(DB_TABLES.clubs)
+    .update({ fixed_slot_confirmation_hours: hours })
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
+
+  if (error) {
+    redirect(`/admin/turnos-fijos?fixed_error=${enc(error.message)}`);
+  }
+
+  revalidatePath("/admin/turnos-fijos");
+  redirect("/admin/turnos-fijos?fixed_saved=1");
+}
+
 export async function createFixedSlot(formData: FormData) {
   const courtId = getField(formData, "court_id");
   const dayOfWeek = Number(getField(formData, "day_of_week"));
