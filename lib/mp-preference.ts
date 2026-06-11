@@ -57,10 +57,15 @@ export async function createMPPreference(params: {
   const service = createServiceClient();
   const { data: match } = await service
     .from(DB_TABLES.matches)
-    .select("court_id,scheduled_time")
+    .select("court_id,scheduled_time,es_turno_fijo")
     .eq("id", params.matchId)
     .maybeSingle();
-  const matchTyped = match as { court_id: string | null; scheduled_time: string | null } | null;
+  const matchTyped = match as {
+    court_id: string | null;
+    scheduled_time: string | null;
+    es_turno_fijo?: boolean | null;
+  } | null;
+  const isTurnoFijo = Boolean(matchTyped?.es_turno_fijo);
   const hour = String(matchTyped?.scheduled_time ?? "").trim().slice(0, 5);
   if (matchTyped?.court_id && hour) {
     const hMin = clockToMinutes(hour);
@@ -112,7 +117,7 @@ export async function createMPPreference(params: {
     return { error: "Datos de pago inválidos." };
   }
 
-  const feeRate = parseFeeRate();
+  const feeRate = isTurnoFijo ? 0 : parseFeeRate();
   const marketplaceFee = Math.round(amount * feeRate * 100) / 100;
   const total = Math.round((amount + marketplaceFee) * 100) / 100;
 

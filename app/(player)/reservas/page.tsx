@@ -9,7 +9,7 @@ import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
-import { cancelReservation } from "./actions";
+import { cancelReservation, confirmFixedSlotAttendance, declineFixedSlotAttendance } from "./actions";
 
 type ReservationRow = {
   id: string;
@@ -131,6 +131,86 @@ function ReservationCard({
   );
 }
 
+type FixedSlotEntry = {
+  matchId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  durationMinutes: number;
+  courtName: string;
+  clubName: string;
+  attendanceStatus: string | null;
+  deadlinePassed: boolean;
+};
+
+function FixedSlotCard({ slot }: { slot: FixedSlotEntry }) {
+  const dateStr = slot.scheduledDate;
+  const fecha =
+    dateStr.length >= 10
+      ? format(parseISO(`${dateStr}T12:00:00`), "EEE d MMM yyyy", { locale: es })
+      : "—";
+  const confirmed = slot.attendanceStatus === "confirmed";
+
+  return (
+    <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">{slot.clubName}</h2>
+          <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{slot.courtName}</p>
+        </div>
+        <Badge variant="brand" className="shrink-0">
+          Turno fijo
+        </Badge>
+      </div>
+      <dl className="mt-3 grid gap-2 text-sm text-[var(--text-tertiary)]">
+        <div className="flex justify-between">
+          <dt>Fecha</dt>
+          <dd className="font-semibold capitalize text-[var(--text-primary)]">{fecha}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>Hora</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">{slot.scheduledTime}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt>Duración</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">{slot.durationMinutes} min</dd>
+        </div>
+      </dl>
+      <div className="mt-4">
+        {confirmed ? (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700">
+            Confirmaste tu asistencia
+          </p>
+        ) : slot.deadlinePassed ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-sm text-slate-500">
+            Plazo de confirmación vencido
+          </p>
+        ) : (
+          <div className="flex gap-2">
+            <form action={confirmFixedSlotAttendance} className="flex-1">
+              <input type="hidden" name="match_id" value={slot.matchId} />
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-[#0585FC] py-2.5 text-sm font-semibold text-white transition hover:brightness-105"
+              >
+                Confirmo asistencia
+              </button>
+            </form>
+            <form action={declineFixedSlotAttendance} className="flex-1">
+              <input type="hidden" name="match_id" value={slot.matchId} />
+              <button
+                type="submit"
+                className="w-full rounded-xl border border-rose-200 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+              >
+                No voy
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
 const ERROR_MESSAGES: Record<string, string> = {
   cancel: "No se pudo cancelar la reserva. Intentá de nuevo.",
   mp_reembolso:
@@ -201,6 +281,103 @@ export default async function ReservasPage({
     };
   });
 
+  // ── Turno fijo participations ─────────────────────────────────────
+  const { data: fixedParticipantRows } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("match_id, attendance_status")
+    .eq("player_id", user.id);
+
+  const fixedParticipantMatchIds = (
+    (fixedParticipantRows ?? []) as Array<{ match_id: string }>
+  ).map((p) => p.match_id);
+
+  const { data: fixedMatchRows } =
+    fixedParticipantMatchIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.matches)
+          .select("id, scheduled_date, scheduled_time, duration_minutes, court_id, match_status")
+          .in("id", fixedParticipantMatchIds)
+          .eq("es_turno_fijo", true)
+          .neq("match_status", "cancelled")
+          .gte("scheduled_date", today)
+          .order("scheduled_date", { ascending: true })
+      : { data: [] };
+
+  const fixedCourtIds = [
+    ...new Set(
+      ((fixedMatchRows ?? []) as Array<{ court_id: string }>).map((r) => r.court_id)
+    ),
+  ];
+  const { data: fixedCourtsJoin } =
+    fixedCourtIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.courts)
+          .select("id, name, clubs ( name, fixed_slot_confirmation_hours )")
+          .in("id", fixedCourtIds)
+      : { data: [] };
+
+  const fixedCourtMap = new Map<
+    string,
+    { name: string | null; clubName: string | null; confirmationHours: number }
+  >();
+  for (const c of fixedCourtsJoin ?? []) {
+    const row = c as {
+      id: string;
+      name: string | null;
+      clubs:
+        | { name: string | null; fixed_slot_confirmation_hours?: number | null }
+        | Array<{ name: string | null; fixed_slot_confirmation_hours?: number | null }>
+        | null;
+    };
+    const clubRel = row.clubs;
+    const clubObj = Array.isArray(clubRel) ? (clubRel[0] ?? null) : clubRel;
+    fixedCourtMap.set(row.id, {
+      name: row.name,
+      clubName: clubObj?.name ?? null,
+      confirmationHours: Number(clubObj?.fixed_slot_confirmation_hours ?? 24),
+    });
+  }
+
+  const participationStatusMap = new Map<string, string | null>();
+  for (const p of (fixedParticipantRows ?? []) as Array<{
+    match_id: string;
+    attendance_status: string | null;
+  }>) {
+    participationStatusMap.set(p.match_id, p.attendance_status);
+  }
+
+  const nowMs = Date.now();
+  const fixedSlots: FixedSlotEntry[] = (
+    (fixedMatchRows ?? []) as Array<{
+      id: string;
+      scheduled_date: string | null;
+      scheduled_time: string | null;
+      duration_minutes: number | null;
+      court_id: string;
+    }>
+  ).map((m) => {
+    const courtInfo = fixedCourtMap.get(m.court_id) ?? null;
+    const confirmationHours = courtInfo?.confirmationHours ?? 24;
+    const dateStr = m.scheduled_date ?? "";
+    const timeStr = String(m.scheduled_time ?? "").slice(0, 5);
+    const matchTimeAr =
+      dateStr && timeStr ? new Date(`${dateStr}T${timeStr}:00-03:00`) : null;
+    const deadlineMs = matchTimeAr
+      ? matchTimeAr.getTime() - confirmationHours * 3_600_000
+      : 0;
+    return {
+      matchId: m.id,
+      scheduledDate: dateStr,
+      scheduledTime: timeStr || "—",
+      durationMinutes: m.duration_minutes ?? 90,
+      courtName: courtInfo?.name ?? "Cancha",
+      clubName: courtInfo?.clubName ?? "Club",
+      attendanceStatus: participationStatusMap.get(m.id) ?? null,
+      deadlinePassed: nowMs >= deadlineMs,
+    };
+  });
+  // ─────────────────────────────────────────────────────────────────
+
   const upcoming = list.filter((r) => {
     const d = r.scheduled_date ?? "";
     return (d >= today && r.match_status === "reserved") || false;
@@ -243,6 +420,17 @@ export default async function ReservasPage({
           ctaHref="/reservas/nueva"
           ctaLabel="Hacer una reserva"
         />
+      ) : null}
+
+      {!error && fixedSlots.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Turnos fijos</h2>
+          <div className="space-y-3">
+            {fixedSlots.map((slot) => (
+              <FixedSlotCard key={slot.matchId} slot={slot} />
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {!error && upcoming.length > 0 ? (

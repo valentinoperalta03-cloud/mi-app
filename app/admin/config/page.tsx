@@ -11,13 +11,13 @@ import ConfigClubDataForm from "./config-club-data-form";
 import ConfigClubLocationForm from "./config-club-location-form";
 import ConfigClubPhotosForm from "./config-club-photos-form";
 import ConfigPaymentMethodsForm from "./config-payment-methods-form";
-import { saveClubHours, updateFinancePin } from "./actions";
+import { saveClubHours, saveFixedSlotSettings, updateFinancePin } from "./actions";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
+  "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu,fixed_slot_confirmation_hours" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu,fixed_slot_confirmation_hours" as const;
 
 async function signOutAction() {
   "use server";
@@ -59,6 +59,8 @@ type ConfigSearchParams = {
   policy_error?: string;
   pin_saved?: string;
   pin_error?: string;
+  fixed_saved?: string;
+  fixed_error?: string;
   saved?: string;
   error?: string;
 };
@@ -158,6 +160,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
     accepts_transfer?: boolean | null;
     bank_alias?: string | null;
     bank_cbu?: string | null;
+    fixed_slot_confirmation_hours?: number | null;
   };
 
   const isMpConnected = Boolean(club.mp_access_token);
@@ -184,6 +187,8 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   const policyErr = decode(sp.policy_error);
   const pinOk = sp.pin_saved === "1";
   const pinErr = decode(sp.pin_error);
+  const fixedOk = sp.fixed_saved === "1";
+  const fixedErr = decode(sp.fixed_error);
 
   const cancellationHours =
     typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours)
@@ -347,9 +352,37 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       </section>
 
       <section className={`${adminCard} p-6`}>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">8. Turnos fijos</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Con cuántas horas de anticipación los jugadores deben confirmar su asistencia a cada turno fijo. Aplica a todos los turnos del club.
+        </p>
+        {flash(fixedOk, fixedErr)}
+        <form action={saveFixedSlotSettings} className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            Horas de anticipación para confirmar
+            <input
+              name="fixed_slot_confirmation_hours"
+              type="number"
+              min="1"
+              max="168"
+              required
+              defaultValue={club.fixed_slot_confirmation_hours ?? 24}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-xl bg-[#0585FC] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+          >
+            Guardar
+          </button>
+        </form>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
           <Lock size={18} />
-          7. PIN de finanzas
+          9. PIN de finanzas
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {hasFinancePin

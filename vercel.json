@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/auto-confirm-results",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/fixed-slot-reminder-night",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/fixed-slot-reminder-morning",
+      "schedule": "0 11 * * *"
     }
   ]
 }

@@ -44,6 +44,121 @@ async function notifyClubReservationReleased(
   });
 }
 
+export async function confirmFixedSlotAttendance(formData: FormData) {
+  const matchId = String(formData.get("match_id") ?? "").trim();
+  if (!matchId) redirect("/reservas");
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: participation } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("attendance_status")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+  if (!participation) redirect("/reservas");
+
+  await supabase
+    .from(DB_TABLES.matchParticipants)
+    .update({ attendance_status: "confirmed" })
+    .eq("match_id", matchId)
+    .eq("player_id", user.id);
+
+  revalidatePath("/reservas");
+  redirect("/reservas");
+}
+
+export async function declineFixedSlotAttendance(formData: FormData) {
+  const matchId = String(formData.get("match_id") ?? "").trim();
+  if (!matchId) redirect("/reservas");
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: participation } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("attendance_status")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+  if (!participation) redirect("/reservas");
+
+  await supabase
+    .from(DB_TABLES.matchParticipants)
+    .update({ attendance_status: "declined" })
+    .eq("match_id", matchId)
+    .eq("player_id", user.id);
+
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select("scheduled_date, scheduled_time, court_id")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  const typed = matchRow as {
+    scheduled_date?: string | null;
+    scheduled_time?: string | null;
+    court_id?: string | null;
+  } | null;
+  const scheduledDate = String(typed?.scheduled_date ?? "");
+  const scheduledTime = String(typed?.scheduled_time ?? "").slice(0, 5);
+  const courtId = String(typed?.court_id ?? "");
+
+  await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+
+  const { data: profileRow } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const playerName =
+    String((profileRow as { name?: string | null } | null)?.name ?? "").trim() || "Un jugador";
+
+  if (courtId) {
+    const { data: courtRow } = await supabase
+      .from(DB_TABLES.courts)
+      .select("club_id, name")
+      .eq("id", courtId)
+      .maybeSingle();
+    const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+    const courtName =
+      String((courtRow as { name?: string | null } | null)?.name ?? "Cancha").trim() || "Cancha";
+    if (clubId) {
+      await notifyClubOwner(supabase, clubId, {
+        title: "Turno fijo cancelado",
+        body: `${playerName} no puede asistir el ${scheduledDate} a las ${scheduledTime} en ${courtName}. El turno quedó libre.`,
+        match_id: matchId,
+      });
+    }
+  }
+
+  const { data: otherParticipants } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId)
+    .neq("player_id", user.id);
+
+  for (const p of (otherParticipants ?? []) as Array<{ player_id: string }>) {
+    await createNotification(supabase, {
+      user_id: p.player_id,
+      type: "reservation_cancelled",
+      title: "Turno fijo cancelado",
+      body: `${playerName} no puede asistir el ${scheduledDate} a las ${scheduledTime}. El turno fue cancelado.`,
+      match_id: matchId,
+    });
+  }
+
+  revalidatePath("/reservas");
+  redirect("/reservas");
+}
+
 export async function simulatePaymentApproved(formData: FormData) {
   const matchId = String(formData.get("match_id") ?? "").trim();
   if (!matchId || !(await isLocalDevHost())) {

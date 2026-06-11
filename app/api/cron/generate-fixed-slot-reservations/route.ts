@@ -133,9 +133,9 @@ export async function GET(req: NextRequest) {
 
       await createNotification(supabase, {
         user_id: player.player_id,
-        type: "join_request",
-        title: "Turno fijo generado",
-        body: `Tenés un turno fijo pendiente de pago para el ${targetDate}.`,
+        type: "reservation_confirmed",
+        title: "Turno fijo agendado",
+        body: `Tu turno fijo del ${targetDate} fue agendado. Confirmá tu asistencia desde la app antes del horario indicado.`,
         match_id: matchId,
       });
     }

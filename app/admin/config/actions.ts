@@ -114,6 +114,34 @@ export async function saveCancellationPolicy(formData: FormData) {
   redirect("/admin/config?policy_saved=1");
 }
 
+export async function saveFixedSlotSettings(formData: FormData) {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/config?fixed_error=no_club");
+
+  const clubId = ctx.clubIds[0];
+  const hoursRaw = getField(formData, "fixed_slot_confirmation_hours");
+  const hours = Number(hoursRaw);
+
+  if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
+    redirect(`/admin/config?fixed_error=${enc("Ingresá una cantidad válida de horas (1–168).")}`);
+  }
+
+  const { error } = await supabase
+    .from(DB_TABLES.clubs)
+    .update({ fixed_slot_confirmation_hours: hours })
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
+
+  if (error) {
+    redirect(`/admin/config?fixed_error=${enc(error.message)}`);
+  }
+
+  revalidatePath("/admin/config");
+  redirect("/admin/config?fixed_saved=1");
+}
+
 export async function updateFinancePin(formData: FormData) {
   const currentPin = String(formData.get("current_pin") ?? "").trim();
   const newPin = String(formData.get("new_pin") ?? "").trim();
