@@ -166,6 +166,41 @@ export async function deleteFixedSlot(formData: FormData) {
   if (!courtId || !ctx.courtIds.includes(courtId)) return;
 
   await supabase.from(DB_TABLES.fixedSlots).update({ is_active: false }).eq("id", fixedSlotId);
+
+  // Cancelar partidos futuros generados para este slot
+  const today = getArgentinaNow().toISOString().slice(0, 10);
+  const { data: futureMatches } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("es_turno_fijo", true)
+    .neq("match_status", "cancelled")
+    .gte("scheduled_date", today);
+
+  const matchIds = ((futureMatches ?? []) as Array<{ id: string }>).map((m) => m.id);
+  if (matchIds.length > 0) {
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: "cancelled" })
+      .in("id", matchIds);
+
+    // Notificar a los participantes de cada partido cancelado
+    const { data: participants } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id, match_id")
+      .in("match_id", matchIds);
+
+    for (const p of (participants ?? []) as Array<{ player_id: string; match_id: string }>) {
+      await createNotification(supabase, {
+        user_id: p.player_id,
+        type: "reservation_cancelled",
+        title: "Turno fijo cancelado",
+        body: "El club desactivó este turno fijo. Los partidos pendientes fueron cancelados.",
+        match_id: p.match_id,
+      });
+    }
+  }
+
   revalidatePath("/admin/turnos-fijos");
 }
 
