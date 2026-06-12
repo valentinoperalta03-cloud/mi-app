@@ -97,14 +97,21 @@ export async function createMPPreference(params: {
     }
 
     if (!Number.isFinite(override) || override <= 0) {
-      const { data: legacy } = await service
+      // Buscar precio por turno (guardado por saveCourtHourlyPrices, range_name IS NULL)
+      const { data: slotRow } = await service
         .from(DB_TABLES.courtSchedules)
-        .select("price_override")
+        .select("price_override, range_name")
         .eq("court_id", matchTyped.court_id)
+        .is("day_of_week", null)
         .eq("start_time", hour)
         .not("price_override", "is", null)
         .maybeSingle();
-      override = Number((legacy as { price_override: number | null } | null)?.price_override ?? 0);
+      if (slotRow) {
+        const slotPrice = Number((slotRow as { price_override: number | null; range_name: string | null }).price_override ?? 0);
+        const isPerTurnTotal = (slotRow as { range_name: string | null }).range_name === null;
+        // price_override sin range_name = precio total del turno → dividir por 4 para precio por jugador
+        override = isPerTurnTotal ? Math.round(slotPrice / 4) : slotPrice;
+      }
     }
 
     if (Number.isFinite(override) && override > 0) {

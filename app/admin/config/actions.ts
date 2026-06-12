@@ -43,19 +43,6 @@ export async function saveClubHours(formData: FormData) {
     redirect(`/admin/config?error=${enc(clubErr.message)}`);
   }
 
-  const { data: courts } = await supabase.from(DB_TABLES.courts).select("id").eq("club_id", clubId);
-  const courtIds = ((courts ?? []) as Array<{ id: string }>).map((c) => c.id);
-  for (const courtId of courtIds) {
-    const { error: schErr } = await supabase
-      .from(DB_TABLES.courtSchedules)
-      .update({ open_time: open, close_time: close })
-      .eq("court_id", courtId)
-      .not("day_of_week", "is", null);
-    if (schErr) {
-      redirect(`/admin/config?error=${enc(schErr.message)}`);
-    }
-  }
-
   revalidatePath("/admin/config");
   revalidatePath("/admin/canchas");
   revalidatePath("/admin/reservas");

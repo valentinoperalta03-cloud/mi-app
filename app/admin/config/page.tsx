@@ -165,7 +165,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
   const clubName = club.name ?? "Club";
   const clubShortId = clubId.slice(0, 8);
   const clubOpenDefault = String(club.open_time ?? "09:00:00").trim().slice(0, 5);
-  const clubCloseDefault = String(club.close_time ?? "22:30:00").trim().slice(0, 5);
+  const clubCloseDefault = String(club.close_time ?? "23:59:00").trim().slice(0, 5);
   const businessHoursDisplay = club.business_hours ?? `${clubOpenDefault} - ${clubCloseDefault}`;
 
   const decode = (key?: string) => (key ? decodeURIComponent(key) : "");
@@ -227,7 +227,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       <section className={`${adminCard} p-6`}>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">2. Horarios del club</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Apertura y cierre generales. Al guardar se sincronizan los días activos de cada cancha.
+          Apertura y cierre generales del club. Se aplican a canchas que no tengan horarios propios configurados. Para que el turno de 22:30 aparezca, el cierre debe ser mayor a 22:30 (p. ej. 23:59).
         </p>
         {flash(hoursOk, hoursErr)}
         <form action={saveClubHours} className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">

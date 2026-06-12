@@ -16,6 +16,29 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 /** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
 
+/**
+ * Grilla fija de turnos de 90 min alineada al cierre de las 22:30.
+ * Todos los horarios del sistema usan esta grilla.
+ */
+const FIXED_GRID_MINUTES = [
+  9 * 60,       // 09:00
+  10 * 60 + 30, // 10:30
+  12 * 60,      // 12:00
+  13 * 60 + 30, // 13:30
+  15 * 60,      // 15:00
+  16 * 60 + 30, // 16:30
+  18 * 60,      // 18:00
+  19 * 60 + 30, // 19:30
+  21 * 60,      // 21:00
+  22 * 60 + 30, // 22:30 — último turno siempre
+] as const;
+
+/** Fallback cuando no hay horarios configurados: grilla completa 09:00–22:30. */
+const FALLBACK_SLOTS: GeneratedSlot[] = FIXED_GRID_MINUTES.map((m) => ({
+  time: minutesToClock(m),
+  duration: 90,
+}));
+
 /** Normaliza HH:MM desde columnas `blocked_time` o `start_time`. */
 export function normalizeSlotTime(t: string | null | undefined): string {
   if (!t) return "";
@@ -37,19 +60,6 @@ export function courtBlockStartsFromRows(
   ]);
 }
 
-const FALLBACK_SLOTS: GeneratedSlot[] = [
-  { time: "08:00", duration: 90 },
-  { time: "09:30", duration: 90 },
-  { time: "11:00", duration: 90 },
-  { time: "12:30", duration: 90 },
-  { time: "14:00", duration: 90 },
-  { time: "15:30", duration: 90 },
-  { time: "17:00", duration: 90 },
-  { time: "18:30", duration: 90 },
-  { time: "20:00", duration: 90 },
-  { time: "21:30", duration: 90 },
-];
-
 function parseClockToMinutes(clock: string): number {
   let s = clock.trim();
   const tIdx = s.indexOf("T");
@@ -60,6 +70,12 @@ function parseClockToMinutes(clock: string): number {
   const m = Number(parts[1] ?? 0);
   if (Number.isNaN(h) || Number.isNaN(m)) return 0;
   return h * 60 + m;
+}
+
+/** Parsea un horario de cierre: "00:00" se trata como medianoche (1440 min). */
+function parseCloseTimeToMinutes(clock: string): number {
+  const m = parseClockToMinutes(clock);
+  return m === 0 ? 1440 : m;
 }
 
 function scheduleMatchesDay(dayOfWeekRaw: number | null | undefined, dow: number): boolean {
@@ -79,15 +95,21 @@ function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: nu
   const c = String(bounds.close_time ?? "").trim();
   if (!o || !c) return null;
   const lo = parseClockToMinutes(o);
-  const hi = parseClockToMinutes(c);
+  const hi = parseCloseTimeToMinutes(c);
   if (!(hi > lo)) return null;
   return { lo, hi };
 }
 
 /**
- * Une horarios de canchas para el día y genera slots de 90 min.
- * Si `clubBounds` trae apertura/cierre del club, actúa como marco global;
- * una cancha puede extender el cierre más allá del cierre general (ej. techada).
+ * Genera los slots disponibles para el día filtrando la grilla fija (09:00–22:30)
+ * por el horario de apertura/cierre de la cancha o del club.
+ *
+ * Regla: un slot se muestra si su hora de inicio >= apertura Y < cierre.
+ * Esto garantiza que el turno 22:30 aparece siempre que el cierre sea > 22:30
+ * (p. ej. "23:59" o "00:00" que se interpreta como medianoche).
+ *
+ * Si `clubBounds` se pasa null/undefined, se usan solo los horarios por cancha.
+ * Si no hay ningún horario configurado, devuelve la grilla completa como fallback.
  */
 export function buildSlotsForDay(
   courtIds: string[],
@@ -107,6 +129,7 @@ export function buildSlotsForDay(
     );
 
     if (!daySchedules.length) {
+      // Sin horario propio → usar horario del club como fallback
       if (cb) {
         minM = Math.min(minM, cb.lo);
         maxM = Math.max(maxM, cb.hi);
@@ -116,17 +139,11 @@ export function buildSlotsForDay(
 
     for (const s of daySchedules) {
       if (!s.open_time || !s.close_time) continue;
-      let o = parseClockToMinutes(String(s.open_time));
-      let c = parseClockToMinutes(String(s.close_time));
+      const o = parseClockToMinutes(String(s.open_time));
+      const c = parseCloseTimeToMinutes(String(s.close_time));
       if (!(c > o)) continue;
-      if (cb) {
-        o = Math.max(o, cb.lo);
-        c = c > cb.hi ? c : Math.min(c, cb.hi);
-      }
-      if (c > o) {
-        minM = Math.min(minM, o);
-        maxM = Math.max(maxM, c);
-      }
+      minM = Math.min(minM, o);
+      maxM = Math.max(maxM, c);
     }
   }
 
@@ -134,13 +151,10 @@ export function buildSlotsForDay(
     return FALLBACK_SLOTS;
   }
 
-  const slots: GeneratedSlot[] = [];
-  let cur = minM;
-  const dur = 90;
-  while (cur + dur <= maxM) {
-    slots.push({ time: minutesToClock(cur), duration: dur });
-    cur += dur;
-  }
+  // Filtrar la grilla fija: slots que empiezan dentro del rango [minM, maxM)
+  const slots = FIXED_GRID_MINUTES
+    .filter((t) => t >= minM && t < maxM)
+    .map((t) => ({ time: minutesToClock(t), duration: 90 as const }));
 
   return slots.length ? slots : FALLBACK_SLOTS;
 }

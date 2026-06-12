@@ -31,8 +31,8 @@ export async function saveSchedules(formData: FormData): Promise<void> {
 
   for (let d = 0; d <= 6; d++) {
     const active = formData.get(`day_${d}_active`) === "on";
-    const open = getField(formData, `day_${d}_open`) || "08:00";
-    const close = getField(formData, `day_${d}_close`) || "22:00";
+    const open = getField(formData, `day_${d}_open`) || "09:00";
+    const close = getField(formData, `day_${d}_close`) || "23:59";
 
     const { error: delErr } = await supabase
       .from(DB_TABLES.courtSchedules)

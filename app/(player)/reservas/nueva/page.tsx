@@ -175,21 +175,35 @@ function NuevaReservaContent() {
         }
       }
 
-      const { data: clubHoursRow } = clubId
-        ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle()
-        : { data: null };
-      const clubBounds =
-        clubId && clubHoursRow
-          ? {
-              open_time: String((clubHoursRow as { open_time?: string | null }).open_time ?? "").trim() || null,
-              close_time: String((clubHoursRow as { close_time?: string | null }).close_time ?? "").trim() || null,
-            }
-          : null;
+      // Todas las filas de la cancha (cualquier día) — ya filtradas por .not("day_of_week","is",null)
+      const allCourtSchedules = (schedRows ?? []) as ScheduleInput[];
+      const courtHasAnySchedule = allCourtSchedules.length > 0;
+      const todaySchedules = allCourtSchedules.filter(
+        (r) => Number(r.day_of_week) === dow
+      );
 
-      const schedules: ScheduleInput[] = (schedRows ?? []).filter(
-        (r) => Number((r as ScheduleInput).day_of_week) === dow
-      ) as ScheduleInput[];
-      const built = buildSlotsForDay([courtId], dayDate, schedules, clubBounds);
+      let built: GeneratedSlot[];
+
+      if (courtHasAnySchedule && todaySchedules.length === 0) {
+        // La cancha tiene horarios configurados pero no para hoy → cerrada
+        built = [];
+      } else if (!courtHasAnySchedule) {
+        // Sin horario propio → usar horario del club como fallback
+        const { data: clubHoursRow } = clubId
+          ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle()
+          : { data: null };
+        const clubBounds =
+          clubId && clubHoursRow
+            ? {
+                open_time: String((clubHoursRow as { open_time?: string | null }).open_time ?? "").trim() || null,
+                close_time: String((clubHoursRow as { close_time?: string | null }).close_time ?? "").trim() || null,
+              }
+            : null;
+        built = buildSlotsForDay([courtId], dayDate, [], clubBounds);
+      } else {
+        // Cancha tiene horario para hoy → usarlo sin restricción del club
+        built = buildSlotsForDay([courtId], dayDate, todaySchedules, null);
+      }
 
       const matches = (matchRows ?? []) as MatchRow[];
       const blockStarts = courtBlockStartsFromRows(

@@ -136,7 +136,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                     <input
                       type="time"
                       name={`day_${d}_open`}
-                      defaultValue={normalizeTime(row?.open_time ?? null, "08:00")}
+                      defaultValue={normalizeTime(row?.open_time ?? null, "09:00")}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                     />
                   </label>
@@ -145,7 +145,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                     <input
                       type="time"
                       name={`day_${d}_close`}
-                      defaultValue={normalizeTime(row?.close_time ?? null, "22:00")}
+                      defaultValue={normalizeTime(row?.close_time ?? null, "23:59")}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                     />
                   </label>
