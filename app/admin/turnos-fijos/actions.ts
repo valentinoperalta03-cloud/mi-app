@@ -230,21 +230,54 @@ export async function addExceptionToFixedSlot(formData: FormData): Promise<void>
   });
   if (error) return;
 
-  const { data: players } = await supabase
-    .from(DB_TABLES.fixedSlotPlayers)
-    .select("player_id")
-    .eq("fixed_slot_id", fixedSlotId);
-  const playerIds = (players ?? []).map((p: { player_id: string }) => p.player_id);
-  await Promise.all(
-    playerIds.map((playerId) =>
-      createNotification(supabase, {
-        user_id: playerId,
+  const slotTime = String(typedSlot.start_time).slice(0, 5);
+
+  // Cancelar el partido ya generado para esa fecha y liberar el horario
+  const { data: existingMatch } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("scheduled_date", exceptionDate)
+    .eq("es_turno_fijo", true)
+    .neq("match_status", "cancelled")
+    .maybeSingle();
+
+  if (existingMatch) {
+    const matchId = String((existingMatch as { id: string }).id);
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: "cancelled" })
+      .eq("id", matchId);
+
+    const { data: matchParticipants } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id")
+      .eq("match_id", matchId);
+
+    for (const p of (matchParticipants ?? []) as Array<{ player_id: string }>) {
+      await createNotification(supabase, {
+        user_id: p.player_id,
         type: "reservation_cancelled",
         title: "Turno fijo cancelado",
-        body: `El turno fijo del ${exceptionDate} a las ${String(typedSlot.start_time).slice(0, 5)} fue cancelado por el club.`,
-      })
-    )
-  );
+        body: `El club canceló el turno del ${exceptionDate} a las ${slotTime}. El horario quedó libre.`,
+        match_id: matchId,
+      });
+    }
+  } else {
+    // Si no había partido generado, igual notificamos por las dudas
+    const { data: players } = await supabase
+      .from(DB_TABLES.fixedSlotPlayers)
+      .select("player_id")
+      .eq("fixed_slot_id", fixedSlotId);
+    for (const p of (players ?? []) as Array<{ player_id: string }>) {
+      await createNotification(supabase, {
+        user_id: p.player_id,
+        type: "reservation_cancelled",
+        title: "Turno fijo cancelado",
+        body: `El club canceló el turno del ${exceptionDate} a las ${slotTime}.`,
+      });
+    }
+  }
 
   revalidatePath("/admin/turnos-fijos");
 }
@@ -277,6 +310,44 @@ export async function addPlayerToFixedSlot(formData: FormData): Promise<void> {
     player_id: playerId,
   });
   if (error && error.code !== "23505") return;
+
+  // Agregar al jugador a los partidos futuros ya generados
+  const today = getArgentinaNow().toISOString().slice(0, 10);
+  const { data: futureMatches } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("es_turno_fijo", true)
+    .neq("match_status", "cancelled")
+    .gte("scheduled_date", today);
+
+  for (const match of (futureMatches ?? []) as Array<{ id: string }>) {
+    const { data: alreadyIn } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id")
+      .eq("match_id", match.id)
+      .eq("player_id", playerId)
+      .maybeSingle();
+    if (alreadyIn) continue;
+
+    const { count } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id", { count: "exact", head: true })
+      .eq("match_id", match.id);
+    if ((count ?? 0) >= 4) continue;
+
+    await supabase.from(DB_TABLES.matchParticipants).insert({
+      match_id: match.id,
+      player_id: playerId,
+    });
+    await supabase.from(DB_TABLES.payments).insert({
+      match_id: match.id,
+      user_id: playerId,
+      status: "invited",
+      amount: 0,
+      marketplace_fee: 0,
+    });
+  }
 
   await createNotification(supabase, {
     user_id: playerId,

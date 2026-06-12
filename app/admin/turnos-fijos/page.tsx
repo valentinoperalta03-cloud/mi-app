@@ -19,12 +19,10 @@ function nextDateForDay(dayOfWeek: number, fromDate = new Date()) {
   return addDays(base, delta);
 }
 
-function paymentStateLabel(status: string | null | undefined) {
-  const s = String(status ?? "").toLowerCase();
-  if (s === "approved" || s === "cash_confirmed") return "✅ Confirmado";
-  if (s === "pending" || s === "invited") return "⚠️ Pendiente";
-  if (!s || s === "cancelled") return "❌ No confirmó";
-  return "⚠️ Pendiente";
+function attendanceLabel(status: string | null | undefined) {
+  if (status === "confirmed") return "✅ Confirmado";
+  if (status === "declined") return "❌ No va";
+  return "⏳ Sin confirmar";
 }
 
 type PageProps = {
@@ -137,25 +135,19 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
   }
 
   const nextMatchIds = generatedMatches.map((m) => m.id);
-  const { data: nextMatchPaymentsRaw } = nextMatchIds.length
+  const { data: nextMatchParticipantsRaw } = nextMatchIds.length
     ? await supabase
-        .from(DB_TABLES.payments)
-        .select("match_id,user_id,status,created_at")
+        .from(DB_TABLES.matchParticipants)
+        .select("match_id,player_id,attendance_status")
         .in("match_id", nextMatchIds)
-        .order("created_at", { ascending: false })
     : { data: [] };
-  const nextMatchPayments = (nextMatchPaymentsRaw ?? []) as Array<{
+  const attendanceByMatchPlayer = new Map<string, string | null>();
+  for (const p of (nextMatchParticipantsRaw ?? []) as Array<{
     match_id: string;
-    user_id: string;
-    status: string | null;
-    created_at: string;
-  }>;
-  const latestPaymentByMatchUser = new Map<string, string>();
-  for (const pay of nextMatchPayments) {
-    const key = `${pay.match_id}__${pay.user_id}`;
-    if (!latestPaymentByMatchUser.has(key)) {
-      latestPaymentByMatchUser.set(key, String(pay.status ?? "").toLowerCase());
-    }
+    player_id: string;
+    attendance_status: string | null;
+  }>) {
+    attendanceByMatchPlayer.set(`${p.match_id}__${p.player_id}`, p.attendance_status ?? null);
   }
 
   const { data: exceptionsRaw } = slotIds.length
@@ -355,11 +347,11 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {players.map((player) => {
-                          const payStatus = latestPaymentByMatchUser.get(`${nextMatch.id}__${player.playerId}`);
+                          const attendance = attendanceByMatchPlayer.get(`${nextMatch.id}__${player.playerId}`);
                           return (
                             <li key={`${slot.id}-status-${player.playerId}`} className="flex items-center justify-between text-sm">
                               <span className="text-slate-700 dark:text-slate-200">{player.name}</span>
-                              <span className="font-semibold">{paymentStateLabel(payStatus)}</span>
+                              <span className="font-semibold">{attendanceLabel(attendance)}</span>
                             </li>
                           );
                         })}
