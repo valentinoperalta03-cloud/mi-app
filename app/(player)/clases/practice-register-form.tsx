@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowRightLeft, Banknote, CreditCard } from "lucide-react";
 import { registerForPracticeAction } from "./actions";
+import { nativeOpenUrl } from "@/lib/native-open";
 
 type PaymentMethod = "mercadopago" | "cash" | "transfer";
 
@@ -114,7 +115,7 @@ export default function PracticeRegisterForm({
               setMsg(res.message);
               return;
             }
-            if (res.url) window.location.href = res.url;
+            if (res.url) await nativeOpenUrl(res.url);
           });
         }}
         className="mt-4 w-full rounded-2xl bg-[#0461C4] py-3 text-sm font-semibold text-white disabled:opacity-60"

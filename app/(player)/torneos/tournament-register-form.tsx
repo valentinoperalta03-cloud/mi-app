@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
 import { beginTournamentCheckoutAction } from "./actions";
+import { nativeOpenUrl } from "@/lib/native-open";
 
 type Props = {
   tournamentId: string;
@@ -41,7 +42,7 @@ export default function TournamentRegisterForm({ tournamentId, isMixing, canRegi
         setMsg(res.message);
         return;
       }
-      if (res.url) window.location.href = res.url;
+      if (res.url) await nativeOpenUrl(res.url);
     });
   }
 

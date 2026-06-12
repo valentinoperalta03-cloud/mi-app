@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRightLeft, Banknote, CreditCard, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { OnboardingRequiredModal } from "@/components/onboarding-required-modal";
+import { nativeOpenUrl } from "@/lib/native-open";
 
 type PaymentMethod = "mercadopago" | "cash" | "transfer";
 
@@ -65,7 +66,7 @@ export function JoinMatchPaymentModal({
 
     if (data.redirect) {
       if (data.redirect.startsWith("http")) {
-        window.location.href = data.redirect;
+        await nativeOpenUrl(data.redirect);
       } else {
         router.push(data.redirect);
         router.refresh();

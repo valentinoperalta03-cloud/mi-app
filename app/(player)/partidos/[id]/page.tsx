@@ -22,6 +22,7 @@ import RequestJoinButton from "./request-join-button";
 import WhatsappShareButton from "./whatsapp-share-button";
 import { MatchStatusBanner } from "@/components/match-status-banner";
 import { JoinMatchPaymentModal } from "../../../../components/join-match-payment-modal";
+import { MercadoPagoPayButton } from "@/components/mercadopago-pay-button";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from "@/lib/messages";
@@ -842,15 +843,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               </Button>
             </form>
           ) : myPrefId ? (
-            <a
+            <MercadoPagoPayButton
               href={mercadoPagoPayHref}
-              target="_blank"
-              rel="noopener noreferrer"
               className="mt-3 block w-full rounded-2xl py-3 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
               style={{ background: "var(--color-brand-gradient)" }}
             >
               Pagar ahora
-            </a>
+            </MercadoPagoPayButton>
           ) : null}
         </section>
       ) : null}
