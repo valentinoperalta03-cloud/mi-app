@@ -29,6 +29,20 @@
                 <data android:scheme="com.padelibre.app" android:host="auth-callback" />
             </intent-filter>
 
+            <!-- App Links: abre la app cuando se toca un link de padelibre.online -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.padelibre.online" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="padelibre.online" />
+            </intent-filter>
+
         </activity>
 
         <provider
