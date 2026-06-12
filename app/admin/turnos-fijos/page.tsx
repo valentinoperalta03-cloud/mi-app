@@ -6,7 +6,7 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { addExceptionToFixedSlot, deleteFixedSlot, removeException, saveFixedSlotSettings } from "./actions";
+import { addExceptionToFixedSlot, deleteFixedSlot, removeException, removePlayerFromFixedSlot, saveFixedSlotSettings } from "./actions";
 import AddPlayerInline from "./add-player-inline";
 import TurnosFijosForm from "./turnos-form";
 
@@ -293,7 +293,14 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                                 {player.name.slice(0, 1).toUpperCase()}
                               </span>
                             )}
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <span className="flex-1 font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <form action={removePlayerFromFixedSlot}>
+                              <input type="hidden" name="fixed_slot_id" value={slot.id} />
+                              <input type="hidden" name="player_id" value={player.playerId} />
+                              <button type="submit" className="text-slate-400 hover:text-rose-500 transition" title="Quitar jugador">
+                                ✕
+                              </button>
+                            </form>
                           </div>
                         );
                       })}
@@ -329,7 +336,14 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                                 {player.name.slice(0, 1).toUpperCase()}
                               </span>
                             )}
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <span className="flex-1 font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <form action={removePlayerFromFixedSlot}>
+                              <input type="hidden" name="fixed_slot_id" value={slot.id} />
+                              <input type="hidden" name="player_id" value={player.playerId} />
+                              <button type="submit" className="text-slate-400 hover:text-rose-500 transition" title="Quitar jugador">
+                                ✕
+                              </button>
+                            </form>
                           </div>
                         );
                       })}

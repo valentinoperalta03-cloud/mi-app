@@ -369,20 +369,93 @@ export async function removeException(formData: FormData): Promise<void> {
 
   const { data: exceptionRow } = await supabase
     .from(DB_TABLES.fixedSlotExceptions)
-    .select("id,fixed_slot_id")
+    .select("id,fixed_slot_id,exception_date")
     .eq("id", exceptionId)
     .maybeSingle();
-  const exception = exceptionRow as { id: string; fixed_slot_id: string } | null;
+  const exception = exceptionRow as { id: string; fixed_slot_id: string; exception_date: string } | null;
   if (!exception) return;
 
   const { data: slot } = await supabase
     .from(DB_TABLES.fixedSlots)
-    .select("id,court_id")
+    .select("id,court_id,club_id,start_time,duration_minutes")
     .eq("id", exception.fixed_slot_id)
+    .maybeSingle();
+  const typedSlot = slot as {
+    id: string;
+    court_id: string;
+    club_id: string;
+    start_time: string;
+    duration_minutes: number;
+  } | null;
+  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
+
+  await supabase.from(DB_TABLES.fixedSlotExceptions).delete().eq("id", exceptionId);
+
+  // Regenerar el partido para esa fecha ahora que la excepción ya no existe
+  const serviceSupabase = createServiceClient();
+  await generateMatchForSlotOnDate(serviceSupabase, {
+    id: typedSlot.id,
+    club_id: typedSlot.club_id,
+    court_id: typedSlot.court_id,
+    start_time: typedSlot.start_time,
+    duration_minutes: typedSlot.duration_minutes,
+  }, exception.exception_date);
+
+  revalidatePath("/admin/turnos-fijos");
+}
+
+export async function removePlayerFromFixedSlot(formData: FormData): Promise<void> {
+  const fixedSlotId = getField(formData, "fixed_slot_id");
+  const playerId = getField(formData, "player_id");
+  if (!fixedSlotId || !playerId) return;
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: slot } = await supabase
+    .from(DB_TABLES.fixedSlots)
+    .select("id,court_id")
+    .eq("id", fixedSlotId)
     .maybeSingle();
   const typedSlot = slot as { id: string; court_id: string } | null;
   if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
 
-  await supabase.from(DB_TABLES.fixedSlotExceptions).delete().eq("id", exceptionId);
+  await supabase
+    .from(DB_TABLES.fixedSlotPlayers)
+    .delete()
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("player_id", playerId);
+
+  // Remover de los partidos futuros generados
+  const today = getArgentinaNow().toISOString().slice(0, 10);
+  const { data: futureMatches } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("es_turno_fijo", true)
+    .neq("match_status", "cancelled")
+    .gte("scheduled_date", today);
+
+  for (const match of (futureMatches ?? []) as Array<{ id: string }>) {
+    await supabase
+      .from(DB_TABLES.matchParticipants)
+      .delete()
+      .eq("match_id", match.id)
+      .eq("player_id", playerId);
+    await supabase
+      .from(DB_TABLES.payments)
+      .delete()
+      .eq("match_id", match.id)
+      .eq("user_id", playerId);
+  }
+
+  await createNotification(supabase, {
+    user_id: playerId,
+    type: "reservation_cancelled",
+    title: "Te removieron del turno fijo",
+    body: "El club te quitó de un turno fijo.",
+  });
+
   revalidatePath("/admin/turnos-fijos");
 }

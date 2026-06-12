@@ -40,16 +40,46 @@ export async function GET(req: NextRequest) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, scheduled_time")
+    .select("id, scheduled_time, court_id")
     .eq("es_turno_fijo", true)
     .eq("scheduled_date", tomorrow)
     .neq("match_status", "cancelled");
 
   if (!matches?.length) return NextResponse.json({ ok: true, sent: 0 });
 
+  // Obtener fixed_slot_confirmation_hours de los clubes en bulk
+  const courtIds = [...new Set((matches as Array<{ court_id: string | null }>).map((m) => m.court_id).filter(Boolean))] as string[];
+  const { data: courts } = courtIds.length
+    ? await supabase.from(DB_TABLES.courts).select("id, club_id").in("id", courtIds)
+    : { data: [] };
+
+  const clubIds = [...new Set((courts ?? []).map((c: { club_id: string | null }) => c.club_id).filter(Boolean))] as string[];
+  const { data: clubs } = clubIds.length
+    ? await supabase.from(DB_TABLES.clubs).select("id, fixed_slot_confirmation_hours").in("id", clubIds)
+    : { data: [] };
+
+  const courtToClub = new Map<string, string>(
+    (courts ?? []).map((c: { id: string; club_id: string }) => [c.id, c.club_id])
+  );
+  const clubToHours = new Map<string, number>(
+    (clubs ?? []).map((c: { id: string; fixed_slot_confirmation_hours: number | null }) => [
+      c.id,
+      Number(c.fixed_slot_confirmation_hours ?? 24),
+    ])
+  );
+
+  const nowMs = Date.now();
   let sent = 0;
-  for (const match of matches as Array<{ id: string; scheduled_time: string | null }>) {
+
+  for (const match of matches as Array<{ id: string; scheduled_time: string | null; court_id: string | null }>) {
     const hora = String(match.scheduled_time ?? "").slice(0, 5);
+
+    // Verificar si el plazo de confirmación ya venció
+    const clubId = courtToClub.get(match.court_id ?? "") ?? "";
+    const confirmationHours = clubToHours.get(clubId) ?? 24;
+    const matchTimeAr = hora ? new Date(`${tomorrow}T${hora}:00-03:00`) : null;
+    const deadlineMs = matchTimeAr ? matchTimeAr.getTime() - confirmationHours * 3_600_000 : 0;
+    if (nowMs >= deadlineMs) continue; // plazo vencido, no avisar
 
     const { data: unconfirmed } = await supabase
       .from(DB_TABLES.matchParticipants)
