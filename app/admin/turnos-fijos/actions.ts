@@ -5,7 +5,21 @@ import { redirect } from "next/navigation";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+
+function getArgentinaNow(): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return new Date(`${y}-${m}-${d}T12:00:00`);
+}
 
 const DAY_LABELS = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 
@@ -117,6 +131,19 @@ export async function createFixedSlot(formData: FormData) {
       })
     )
   );
+
+  // Generar partidos para las próximas 2 semanas inmediatamente
+  const serviceSupabase = createServiceClient();
+  const upcomingDates = getUpcomingDatesForDayOfWeek(dayOfWeek, getArgentinaNow(), 14);
+  for (const date of upcomingDates) {
+    await generateMatchForSlotOnDate(serviceSupabase, {
+      id: fixedSlotId,
+      club_id: court.club_id,
+      court_id: courtId,
+      start_time: startTime,
+      duration_minutes: Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : 90,
+    }, date);
+  }
 
   revalidatePath("/admin/turnos-fijos");
   return { ok: true };

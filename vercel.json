@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/generate-fixed-slot-reservations",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/cron/expire-unpaid-matches",
       "schedule": "0 3 * * *"
     },
