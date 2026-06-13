@@ -8,7 +8,7 @@ export type ScheduleInput = {
   close_time: string | null;
 };
 
-export type GeneratedSlot = { time: string; duration: 90 };
+export type GeneratedSlot = { time: string; duration: number };
 
 export type CourtBlockModernRow = { blocked_time: string | null };
 export type CourtBlockLegacyRow = { start_time: string | null };
@@ -17,10 +17,11 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
 
 /**
- * Grilla fija de turnos de 90 min alineada al cierre de las 22:30.
- * Todos los horarios del sistema usan esta grilla.
+ * Grilla fija de 90 min alineada al cierre de las 22:30.
+ * Se usa cuando slot_duration_minutes === 90 para preservar compatibilidad
+ * con reservas ya creadas en esos horarios.
  */
-const FIXED_GRID_MINUTES = [
+const FIXED_90MIN_GRID = [
   9 * 60,       // 09:00
   10 * 60 + 30, // 10:30
   12 * 60,      // 12:00
@@ -33,11 +34,22 @@ const FIXED_GRID_MINUTES = [
   22 * 60 + 30, // 22:30 — último turno siempre
 ] as const;
 
-/** Fallback cuando no hay horarios configurados: grilla completa 09:00–22:30. */
-const FALLBACK_SLOTS: GeneratedSlot[] = FIXED_GRID_MINUTES.map((m) => ({
-  time: minutesToClock(m),
-  duration: 90,
-}));
+/** Genera una grilla dinámica de slots entre openMin y closeMin con el paso dado. */
+function buildDynamicGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
+  const slots: GeneratedSlot[] = [];
+  for (let t = openMin; t + durationMinutes <= closeMin; t += durationMinutes) {
+    slots.push({ time: minutesToClock(t), duration: durationMinutes });
+  }
+  return slots;
+}
+
+function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
+  if (durationMinutes === 90) {
+    const filtered = FIXED_90MIN_GRID.filter((t) => t >= openMin && t < closeMin);
+    return filtered.map((t) => ({ time: minutesToClock(t), duration: 90 }));
+  }
+  return buildDynamicGrid(openMin, closeMin, durationMinutes);
+}
 
 /** Normaliza HH:MM desde columnas `blocked_time` o `start_time`. */
 export function normalizeSlotTime(t: string | null | undefined): string {
@@ -101,21 +113,19 @@ function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: nu
 }
 
 /**
- * Genera los slots disponibles para el día filtrando la grilla fija (09:00–22:30)
- * por el horario de apertura/cierre de la cancha o del club.
+ * Genera los slots disponibles para el día según apertura/cierre de la cancha o del club.
  *
- * Regla: un slot se muestra si su hora de inicio >= apertura Y < cierre.
- * Esto garantiza que el turno 22:30 aparece siempre que el cierre sea > 22:30
- * (p. ej. "23:59" o "00:00" que se interpreta como medianoche).
+ * Para 90 min usa la grilla fija histórica (backward compat con reservas existentes).
+ * Para otros valores genera la grilla dinámicamente desde la apertura.
  *
- * Si `clubBounds` se pasa null/undefined, se usan solo los horarios por cancha.
- * Si no hay ningún horario configurado, devuelve la grilla completa como fallback.
+ * Si no hay ningún horario configurado, devuelve una grilla de fallback 09:00–22:30.
  */
 export function buildSlotsForDay(
   courtIds: string[],
   dayDate: Date,
   schedules: ScheduleInput[],
-  clubBounds?: ClubHoursBounds | null
+  clubBounds?: ClubHoursBounds | null,
+  slotDurationMinutes = 90
 ): GeneratedSlot[] {
   const dow = getDay(dayDate);
   const cb = clubBoundsMinutes(clubBounds ?? null);
@@ -148,13 +158,9 @@ export function buildSlotsForDay(
   }
 
   if (maxM <= minM) {
-    return FALLBACK_SLOTS;
+    return buildGrid(9 * 60, 22 * 60 + 30, slotDurationMinutes);
   }
 
-  // Filtrar la grilla fija: slots que empiezan dentro del rango [minM, maxM)
-  const slots = FIXED_GRID_MINUTES
-    .filter((t) => t >= minM && t < maxM)
-    .map((t) => ({ time: minutesToClock(t), duration: 90 as const }));
-
-  return slots.length ? slots : FALLBACK_SLOTS;
+  const slots = buildGrid(minM, maxM, slotDurationMinutes);
+  return slots.length ? slots : buildGrid(9 * 60, 22 * 60 + 30, slotDurationMinutes);
 }

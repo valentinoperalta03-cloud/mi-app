@@ -56,7 +56,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
   const { data: court } = await supabase
     .from(DB_TABLES.courts)
-    .select("id,name,price,club_id")
+    .select("id,name,price,club_id,slot_duration_minutes")
     .eq("id", courtId)
     .maybeSingle();
   if (!court) notFound();
@@ -87,6 +87,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       .map((r) => [String(r.start_time).slice(0, 5), Number(r.price_override ?? 0)])
   );
   const basePrice = Number((court as { price: number | null }).price ?? 0);
+  const slotDuration = Number((court as { slot_duration_minutes?: number | null }).slot_duration_minutes ?? 90);
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,6 +121,21 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
         <form action={saveSchedules} className="space-y-5">
           <input type="hidden" name="court_id" value={courtId} />
+
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 space-y-2">
+            <p className="text-sm font-bold text-slate-900">Duración de turno</p>
+            <p className="text-xs text-slate-500">Define cada cuánto tiempo se generan los slots de reserva.</p>
+            <select
+              name="slot_duration_minutes"
+              defaultValue={String(slotDuration)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+            >
+              <option value="60">60 minutos (1 hora)</option>
+              <option value="90">90 minutos (1 hora 30 min)</option>
+              <option value="120">120 minutos (2 horas)</option>
+            </select>
+          </div>
+
           {dayLabels.map((label, d) => {
             const row = byDay.get(d);
             const active = Boolean(row?.open_time && row?.close_time);

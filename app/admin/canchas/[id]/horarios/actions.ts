@@ -29,6 +29,13 @@ export async function saveSchedules(formData: FormData): Promise<void> {
     redirectHorariosError(courtId, "No tenés permiso para editar esta cancha.");
   }
 
+  const durationRaw = Number.parseInt(getField(formData, "slot_duration_minutes"), 10);
+  const slotDurationMinutes = [60, 90, 120].includes(durationRaw) ? durationRaw : 90;
+  await supabase
+    .from(DB_TABLES.courts)
+    .update({ slot_duration_minutes: slotDurationMinutes })
+    .eq("id", courtId);
+
   for (let d = 0; d <= 6; d++) {
     const active = formData.get(`day_${d}_active`) === "on";
     const open = getField(formData, `day_${d}_open`) || "09:00";

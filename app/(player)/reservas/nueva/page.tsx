@@ -123,7 +123,7 @@ function NuevaReservaContent() {
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
       ] = await Promise.all([
-        supabase.from(DB_TABLES.courts).select("club_id").eq("id", courtId).maybeSingle(),
+        supabase.from(DB_TABLES.courts).select("club_id,slot_duration_minutes").eq("id", courtId).maybeSingle(),
         supabase
           .from(DB_TABLES.courtSchedules)
           .select("court_id,day_of_week,open_time,close_time")
@@ -161,6 +161,7 @@ function NuevaReservaContent() {
       }
 
       const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+      const slotDurationMinutes = Number((courtRow as { slot_duration_minutes?: number | null } | null)?.slot_duration_minutes ?? 90) || 90;
       if (clubId) {
         const { data: closedRow } = await supabase
           .from(DB_TABLES.clubClosedDays)
@@ -199,10 +200,10 @@ function NuevaReservaContent() {
                 close_time: String((clubHoursRow as { close_time?: string | null }).close_time ?? "").trim() || null,
               }
             : null;
-        built = buildSlotsForDay([courtId], dayDate, [], clubBounds);
+        built = buildSlotsForDay([courtId], dayDate, [], clubBounds, slotDurationMinutes);
       } else {
         // Cancha tiene horario para hoy → usarlo sin restricción del club
-        built = buildSlotsForDay([courtId], dayDate, todaySchedules, null);
+        built = buildSlotsForDay([courtId], dayDate, todaySchedules, null, slotDurationMinutes);
       }
 
       const matches = (matchRows ?? []) as MatchRow[];

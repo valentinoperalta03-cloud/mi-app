@@ -13,7 +13,7 @@ export type Court = {
 
 export type TimeSlot = {
   time: string;
-  duration: 60 | 90;
+  duration: number;
 };
 
 type SelectedBooking = {
