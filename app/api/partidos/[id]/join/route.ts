@@ -97,7 +97,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       player_id: user.id,
       team: requestedTeam,
     });
-    if (partErr) return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
+    if (partErr) {
+      await supabase
+        .from(DB_TABLES.payments)
+        .delete()
+        .eq("match_id", matchId)
+        .eq("user_id", user.id)
+        .eq("status", "invited");
+      return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
+    }
 
     await addPlayerToGroup(matchId, user.id);
 

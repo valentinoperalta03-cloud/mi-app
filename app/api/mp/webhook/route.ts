@@ -442,7 +442,7 @@ async function handleNotification(req: Request) {
           detail: rpcErr.message,
           requestId,
         });
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ ok: false }, { status: 500 });
       }
       const row = (rpcRows as { payment_row_id?: string; idempotent_ok?: boolean }[] | null)?.[0];
       log.info({
@@ -503,6 +503,12 @@ async function handleNotification(req: Request) {
         .eq("id", matchId)
         .maybeSingle();
       const mb = matchBefore as { match_status?: string | null; payment_status?: string | null } | null;
+
+      if (mb?.payment_status === "paid") {
+        log.info({ event: "mp.webhook.reserva.idempotent_skip", requestId, matchId });
+        return NextResponse.json({ ok: true });
+      }
+
       try {
         assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
           requestId,
@@ -530,6 +536,7 @@ async function handleNotification(req: Request) {
       const { error: payErr } = await payUpd;
       if (payErr) {
         log.error({ event: "mp.webhook.update_payment_reserva", requestId, matchId, err: payErr });
+        return NextResponse.json({ ok: false }, { status: 500 });
       }
 
       await admin
