@@ -1,7 +1,6 @@
 /**
- * Escala competitiva cerrada 0.0–7.0 (fuente de verdad: `profiles.technical_score`).
+ * Escala competitiva cerrada 0.0–7.0 (fuente de verdad: `profiles.level` vía ELO).
  * Bandas: 0–1 8va, 1–2 7ma, …, 6–7 2da/1ra.
- * Los cambios por partido viven en `lib/level-logic.ts`.
  */
 
 export const TECH_SCORE_MIN = 0;
