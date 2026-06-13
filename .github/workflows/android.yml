@@ -83,7 +83,7 @@ jobs:
           CM_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           CM_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          VERSION_CODE="${{ github.run_number }}"
+          VERSION_CODE="$(( ${{ github.run_number }} + 1000 ))"
           echo "Building versionName=$VERSION_NAME versionCode=$VERSION_CODE"
           cd android
           chmod +x gradlew
