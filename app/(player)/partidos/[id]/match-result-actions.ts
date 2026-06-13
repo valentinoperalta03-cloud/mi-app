@@ -521,6 +521,19 @@ export async function recordMatchResultAction(
         .update({ result_status: "pending_confirmation" })
         .eq("id", matchId);
 
+      const otherPlayerIds = ids.filter((id) => id !== user.id);
+      await Promise.all(
+        otherPlayerIds.map((pid) =>
+          createNotification(supabase, {
+            user_id: pid,
+            type: "match_result",
+            title: "Resultado disputado",
+            body: "Un jugador no acordó con el marcador. Acordá el resultado con tus compañeros y volvé a proponer.",
+            match_id: matchId,
+          })
+        )
+      );
+
       revalidatePath(`/partidos/${matchId}`);
       revalidatePath("/home");
       return {
