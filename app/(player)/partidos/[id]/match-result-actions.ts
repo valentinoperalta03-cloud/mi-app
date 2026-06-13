@@ -526,7 +526,7 @@ export async function recordMatchResultAction(
         otherPlayerIds.map((pid) =>
           createNotification(supabase, {
             user_id: pid,
-            type: "match_result",
+            type: "result_disputed",
             title: "Resultado disputado",
             body: "Un jugador no acordó con el marcador. Acordá el resultado con tus compañeros y volvé a proponer.",
             match_id: matchId,
@@ -568,6 +568,18 @@ export async function recordMatchResultAction(
 
     await supabase.from(DB_TABLES.matchResults).update({ status: "confirmed" }).eq("id", existing.id);
     await supabase.from(DB_TABLES.matches).update({ result_status: "confirmed" }).eq("id", matchId);
+
+    await Promise.all(
+      ids.map((pid) =>
+        createNotification(supabase, {
+          user_id: pid,
+          type: "result_confirmed",
+          title: "Resultado confirmado",
+          body: "Los 4 jugadores confirmaron el resultado. Tu nivel fue actualizado.",
+          match_id: matchId,
+        })
+      )
+    );
 
     let eloRes: RecordMatchResultState;
     if (isCompetitive) {
