@@ -121,13 +121,11 @@ jobs:
           print(f"Service account OK: {data['client_email']}")
           PY
 
-      # Primera publicación: internal + draft (Google suele rechazar production si la ficha no está completa).
-      # Cuando la app esté lista, cambiá track a production y status a completed.
-      - name: Upload AAB to Google Play (internal draft)
+      - name: Upload AAB to Google Play (closed testing)
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.padelibre.app
           releaseFiles: android/app/build/outputs/bundle/release/*.aab
-          track: internal
-          status: draft
+          track: alpha
+          status: completed
