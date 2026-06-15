@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { addMemberToGroup, createGroupChat, sendGroupMessage } from "@/lib/group-chats";
-import { canOpenChatWithPeer } from "@/lib/chat-partners";
+import { canOpenChatWithPeer, fetchThreadMessages } from "@/lib/chat-partners";
 import { createNotification } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
@@ -89,6 +89,18 @@ export async function sendChatMessage(
   revalidatePath("/comunidad/mensajes");
   revalidatePath(`/comunidad/mensajes/${peerId}`);
   return { ok: true, message: "", row };
+}
+
+export async function loadMoreMessages(
+  peerId: string,
+  before: string
+): Promise<ChatMessageRow[]> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+  return fetchThreadMessages(supabase, user.id, peerId, 50, before);
 }
 
 export async function createGroupChatAction(params: {

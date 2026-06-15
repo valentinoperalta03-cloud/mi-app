@@ -94,17 +94,9 @@ export async function fetchThreadMessages(
   supabase: SupabaseClient,
   userId: string,
   peerId: string,
-  limit = 50
+  limit = 50,
+  before?: string
 ) {
-  const { data } = await supabase
-    .from(DB_TABLES.messages)
-    .select("id, sender_id, receiver_id, content, created_at")
-    .or(
-      `and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`
-    )
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
   type Row = {
     id: string;
     sender_id: string;
@@ -113,6 +105,20 @@ export async function fetchThreadMessages(
     created_at: string;
   };
 
+  let query = supabase
+    .from(DB_TABLES.messages)
+    .select("id, sender_id, receiver_id, content, created_at")
+    .or(
+      `and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (before) {
+    query = query.lt("created_at", before);
+  }
+
+  const { data } = await query;
   return ((data ?? []) as Row[]).reverse();
 }
 
@@ -139,12 +145,36 @@ export async function canOpenChatWithPeer(
   ]);
   if (block1 || block2) return false;
 
-  const { data: fav } = await supabase
-    .from(DB_TABLES.userFavorites)
-    .select("user_id")
+  // Favorito O jugaron juntos → permitir chat
+  const [{ data: fav }, { data: peerMatches }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.userFavorites)
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("favorite_user_id", peerId)
+      .maybeSingle(),
+    supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("match_id")
+      .eq("user_id", peerId)
+      .limit(100),
+  ]);
+
+  if (fav) return true;
+
+  const peerMatchIds = (peerMatches ?? [])
+    .map((r: { match_id: string }) => r.match_id)
+    .filter(Boolean);
+
+  if (peerMatchIds.length === 0) return false;
+
+  const { data: sharedMatch } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("match_id")
     .eq("user_id", userId)
-    .eq("favorite_user_id", peerId)
+    .in("match_id", peerMatchIds)
+    .limit(1)
     .maybeSingle();
 
-  return Boolean(fav);
+  return Boolean(sharedMatch);
 }

@@ -552,7 +552,7 @@ export default function CrearPartidoForm({
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
                       <p className="text-sm font-semibold text-[#0585FC]">
-                        Desde ${new Intl.NumberFormat("es-AR").format(minPriceByCourt.get(court.id) ?? court.price)}/turno
+                        Desde ${new Intl.NumberFormat("es-AR").format(playerShareWithMarketplaceFee(minPriceByCourt.get(court.id) ?? court.price).total * 4)}/turno
                       </p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">

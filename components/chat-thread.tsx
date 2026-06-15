@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
-import { sendChatMessage, type ChatMessageRow } from "@/app/(player)/comunidad/mensajes/actions";
+import { loadMoreMessages, sendChatMessage, type ChatMessageRow } from "@/app/(player)/comunidad/mensajes/actions";
 import { createClient } from "@/utils/supabase/client";
 
 function ChatInputBar({
@@ -76,15 +76,18 @@ export function ChatThread({
   peerId: string;
 }) {
   const [items, setItems] = useState(initialMessages);
+  const [hasMore, setHasMore] = useState(initialMessages.length >= 50);
+  const [loadingMore, setLoadingMore] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setItems(initialMessages);
+    setHasMore(initialMessages.length >= 50);
   }, [initialMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [items]);
+  }, [items.length]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -112,6 +115,19 @@ export function ChatThread({
     };
   }, [myId, peerId]);
 
+  async function handleLoadMore() {
+    if (!items.length || loadingMore) return;
+    setLoadingMore(true);
+    const older = await loadMoreMessages(peerId, items[0].created_at);
+    setLoadingMore(false);
+    if (!older.length || older.length < 50) setHasMore(false);
+    if (!older.length) return;
+    setItems((prev) => {
+      const ids = new Set(prev.map((m) => m.id));
+      return [...older.filter((m) => !ids.has(m.id)), ...prev];
+    });
+  }
+
   async function onSend(text: string) {
     const res = await sendChatMessage(peerId, text);
     if (res.ok && res.row) {
@@ -126,6 +142,18 @@ export function ChatThread({
   return (
     <>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-1 pb-44 pt-2">
+        {hasMore ? (
+          <div className="flex justify-center pb-1 pt-2">
+            <button
+              type="button"
+              onClick={() => void handleLoadMore()}
+              disabled={loadingMore}
+              className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              {loadingMore ? "Cargando..." : "Cargar más"}
+            </button>
+          </div>
+        ) : null}
         {items.length === 0 ? (
           <p className="py-8 text-center text-sm text-slate-400">Sin mensajes todavía. Saludá 👋</p>
         ) : null}
