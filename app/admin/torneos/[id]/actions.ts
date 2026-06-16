@@ -71,6 +71,10 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     return { ok: false, message: "Eliminación requiere cantidad de parejas potencia de 2 (p. ej. 8, 16)." };
   }
 
+  if (ttype === "mixing" && pairIds.length % 2 !== 0) {
+    return { ok: false, message: "Mixing requiere un número par de parejas inscriptas." };
+  }
+
   await service.from(DB_TABLES.tournamentMatches).delete().eq("tournament_id", tournamentId);
 
   if (ttype === "americano" || ttype === "grupos_eliminacion") {

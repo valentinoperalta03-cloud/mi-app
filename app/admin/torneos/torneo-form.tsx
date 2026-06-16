@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { MAX_PAIRS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { useActionState, useState } from "react";
+import { MAX_PAIRS_OPTIONS, TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
 import { createTournamentAction, type CreateTournamentState } from "./actions";
@@ -10,6 +10,7 @@ const initial: CreateTournamentState = { ok: false, message: "" };
 
 export default function TorneoForm({ clubId }: { clubId: string }) {
   const [state, formAction, pending] = useActionState(createTournamentAction, initial);
+  const [clubPrice, setClubPrice] = useState(0);
 
   return (
     <form action={formAction} className="mt-4 space-y-4 text-sm">
@@ -90,17 +91,29 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         </select>
       </label>
 
-      <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Precio por pareja (ARS, para el club)</span>
+      <div className="block">
+        <label htmlFor="price_per_pair" className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          Precio por pareja (ARS, para el club)
+        </label>
         <input
+          id="price_per_pair"
           type="number"
           name="price_per_pair"
           min={0}
           step="100"
           defaultValue={0}
+          onChange={(e) => setClubPrice(Number(e.target.value) || 0)}
           className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
         />
-      </label>
+        <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          Los jugadores verán{" "}
+          <span className="font-bold">
+            ${(clubPrice + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} por pareja
+          </span>{" "}
+          (tu precio ${clubPrice.toLocaleString("es-AR")} + $
+          {TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} comisión PadeLibre).
+        </p>
+      </div>
 
       <label className="block">
         <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Premio (opcional)</span>

@@ -4,8 +4,9 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { MessageCircle } from "lucide-react";
 import MotionPage from "@/components/motion-page";
+import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { formatCategoryRange, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 import TournamentRegisterForm from "../tournament-register-form";
@@ -91,6 +92,14 @@ export default async function TorneoDetallePage({ params }: PageProps) {
     ])
   );
 
+  // Mapa de registration_id → "Jugador 1 & Jugador 2"
+  const pairNameMap = new Map<string, string>();
+  for (const r of regList) {
+    const p1 = pmap.get(r.player1_id)?.name ?? "Jugador";
+    const p2 = r.player2_id ? pmap.get(r.player2_id)?.name ?? "Jugador" : null;
+    pairNameMap.set(r.id, p2 ? `${p1} & ${p2}` : p1);
+  }
+
   const { data: matches } = await supabase
     .from(DB_TABLES.tournamentMatches)
     .select("id, round, round_name, pair1_score, pair2_score, status, winner_pair_id, pair1_id, pair2_id")
@@ -106,9 +115,11 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const dt = parseISO(`${tour.start_date}T${String(tour.start_time).slice(0, 5)}:00`);
   const dateLabel = format(dt, "EEEE d 'de' MMMM", { locale: es });
   const timeLabel = format(dt, "HH:mm");
+  const priceDisplay = Math.round(Number(tour.price_per_pair) + TOURNAMENT_PLATFORM_FEE_ARS);
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
+      <TournamentRealtimeRefresh tournamentId={id} />
       <Link href="/torneos" className="text-sm font-medium text-[#0461C4]">
         ← Torneos
       </Link>
@@ -124,8 +135,15 @@ export default async function TorneoDetallePage({ params }: PageProps) {
           {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved}/{tour.max_pairs} parejas ·{" "}
           {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
-        <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">${Math.round(Number(tour.price_per_pair))} por pareja</p>
-        {tour.prize ? <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">🏅 Premio: {tour.prize}</p> : null}
+        <div className="mt-2">
+          <p className="text-sm font-bold text-[var(--text-primary)]">
+            ${priceDisplay.toLocaleString("es-AR")} por pareja
+          </p>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} al club + ${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} servicio PadeLibre
+          </p>
+        </div>
+        {tour.prize ? <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">🏅 Premio: {tour.prize}</p> : null}
         {tour.description ? (
           <p className="mt-3 break-words text-sm leading-relaxed text-[var(--text-secondary)]">{tour.description}</p>
         ) : null}
@@ -167,31 +185,64 @@ export default async function TorneoDetallePage({ params }: PageProps) {
                 </span>
               </li>
             ))}
+          {regList.filter((r) => r.payment_status === "approved").length === 0 ? (
+            <li className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-4 text-center text-xs text-[var(--text-tertiary)]">
+              Todavía no hay inscriptos.
+            </li>
+          ) : null}
         </ul>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">Fixture</h2>
-        <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-          {((matches ?? []) as Array<{
-            id: string;
-            round: number;
-            round_name: string | null;
-            pair1_score: number | null;
-            pair2_score: number | null;
-            status: string;
-          }>).map((m) => (
-            <li key={m.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
-              <span className="text-xs text-[var(--text-tertiary)]">
-                R{m.round} · {m.round_name ?? "—"}
-              </span>
-              <p className="font-medium text-[var(--text-primary)]">
-                {m.pair1_score ?? "—"} — {m.pair2_score ?? "—"} ({m.status})
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {((matches ?? []) as Array<unknown>).length > 0 ? (
+        <section className="mt-8">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">Fixture</h2>
+          <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+            {((matches ?? []) as Array<{
+              id: string;
+              round: number;
+              round_name: string | null;
+              pair1_id: string | null;
+              pair2_id: string | null;
+              pair1_score: number | null;
+              pair2_score: number | null;
+              winner_pair_id: string | null;
+              status: string;
+            }>).map((m) => {
+              const name1 = m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "Por definir";
+              const name2 = m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "Por definir";
+              const finished = m.status === "finished";
+              const winner = m.winner_pair_id;
+              return (
+                <li key={m.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3">
+                  <span className="text-xs font-semibold text-[var(--text-tertiary)]">
+                    {m.round_name ?? `Ronda ${m.round}`}
+                  </span>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <span className={`flex-1 truncate text-sm font-medium ${winner === m.pair1_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
+                      {name1}
+                    </span>
+                    <span className="shrink-0 text-base font-bold tabular-nums text-[var(--text-secondary)]">
+                      {finished ? `${m.pair1_score ?? 0} – ${m.pair2_score ?? 0}` : "vs"}
+                    </span>
+                    <span className={`flex-1 truncate text-right text-sm font-medium ${winner === m.pair2_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
+                      {name2}
+                    </span>
+                  </div>
+                  {!finished ? (
+                    <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      Pendiente
+                    </span>
+                  ) : (
+                    <span className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                      Finalizado
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {tour.group_chat_id ? (
         <Link

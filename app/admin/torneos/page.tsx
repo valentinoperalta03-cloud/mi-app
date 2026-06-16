@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, Trophy } from "lucide-react";
+import { Info, Plus, Trophy } from "lucide-react";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +51,71 @@ export default async function AdminTorneosPage() {
           Crear
         </Link>
       </div>
+
+      {/* Sección de información */}
+      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200/80 bg-sky-50/80 dark:border-sky-800/60 dark:bg-sky-950/30">
+        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
+          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
+          ¿Cómo funciona la sección de torneos?
+          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
+          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 hidden group-open:inline">Cerrar</span>
+        </summary>
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-sky-950 dark:border-sky-800/40 dark:text-sky-100">
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">¿Qué es un torneo en PadeLibre?</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Un torneo te permite organizar competencias para los jugadores de tu club. Los jugadores se inscriben y pagan a través de la app. Vos controlás el fixture y cargás los resultados.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Tipos de torneo</p>
+            <ul className="mt-1.5 space-y-1.5 text-sky-800 dark:text-sky-300">
+              <li><span className="font-semibold">🏆 Americano:</span> Todas las parejas juegan entre sí. Gana quien más puntos acumule. Ideal para grupos pequeños (hasta 8 parejas).</li>
+              <li><span className="font-semibold">⚡ Eliminación directa:</span> El que pierde queda afuera. Requiere potencia de 2 de parejas (4, 8, 16…). Para muchos participantes.</li>
+              <li><span className="font-semibold">🎯 Grupos + eliminación:</span> Fase de grupos americano y luego eliminación. Lo mejor de ambos mundos.</li>
+              <li><span className="font-semibold">🔀 Mixing:</span> Las parejas se sortean al azar en cada ronda. Requiere número par de participantes.</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Paso a paso para crear un torneo</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-sky-800 dark:text-sky-300">
+              <li>Hacé clic en <strong>Crear</strong> y completá los datos: nombre, tipo, fechas, precio y categoría de nivel.</li>
+              <li>El torneo queda en estado <strong>Inscripción abierta</strong>. Los jugadores ven el torneo y pueden inscribirse pagando desde la app.</li>
+              <li>Cuando llegue la fecha, entrá al torneo y hacé clic en <strong>Iniciar torneo</strong>. Se genera el fixture automáticamente.</li>
+              <li>A medida que se juegan los partidos, ingresá los sets ganados de cada pareja y guardá. El ELO de los jugadores se actualiza solo.</li>
+              <li>Al terminar todas las rondas, hacé clic en <strong>Finalizar torneo</strong>.</li>
+            </ol>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Inscripción y pagos</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Los jugadores pagan con Mercado Pago directamente desde la app. Vos recibís el precio que configuraste. PadeLibre cobra una comisión fija de <strong>${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} por pareja</strong> por encima del precio del club. Por ejemplo, si ponés $3.000, el jugador paga $4.000 y vos recibís $3.000.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Resultados y ELO</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Cargás los sets de cada partido (ej. 3–1). El sistema calcula automáticamente el cambio de nivel ELO de cada jugador. En torneos el multiplicador es mayor que en partidos comunes, así que un torneo puede mover más el nivel.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Cierre de inscripción</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Las inscripciones se cierran automáticamente cuando se alcanza el máximo de parejas o cuando pasa la fecha límite que configuraste. Después de eso no se aceptan nuevos pagos.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="font-bold">Consejo:</span> Para eliminación directa, asegurate de tener exactamente 4, 8, 16 o 32 parejas pagadas antes de iniciar. Si tenés más inscriptos esperando, podés pedirles que completen el pago.
+          </div>
+        </div>
+      </details>
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Listado</h2>

@@ -5,6 +5,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
 
@@ -105,6 +106,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 pb-28 pt-6 md:pb-10">
+      <TournamentRealtimeRefresh tournamentId={id} />
       <Link href="/admin/torneos" className="inline-flex items-center gap-1 text-sm font-medium text-[#0461C4] dark:text-sky-400">
         <ChevronLeft size={18} />
         Torneos
@@ -118,9 +120,16 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         </p>
         {tour.description ? <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{tour.description}</p> : null}
         <p className="mt-2 text-xs text-slate-500">
-          Categoría: {formatCategoryRange(tour.category_min, tour.category_max)} · Fee plataforma (no visible al jugador): $
-          {TOURNAMENT_PLATFORM_FEE_ARS} ARS por pareja
+          Categoría: {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
+        <div className="mt-2">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} para el club · Los jugadores pagan ${(Math.round(Number(tour.price_per_pair)) + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} por pareja
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Comisión PadeLibre: ${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} por pareja (incluida en el precio al jugador)
+          </p>
+        </div>
       </header>
 
       <section className="flex flex-wrap gap-2">

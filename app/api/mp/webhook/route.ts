@@ -144,6 +144,7 @@ async function handleTournamentPaymentIfPresent(
       .update({
         payment_status: "cancelled",
         mp_payment_id: params.paymentId,
+        amount: null,
       })
       .eq("id", registrationId);
     await createNotification(admin, {

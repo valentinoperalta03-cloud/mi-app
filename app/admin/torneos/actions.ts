@@ -45,6 +45,8 @@ export async function createTournamentAction(
   }
   if (!Number.isFinite(maxPairs) || maxPairs < 2) return { ok: false, message: "Máximo de parejas inválido." };
   if (!Number.isFinite(pricePerPair) || pricePerPair < 0) return { ok: false, message: "Precio inválido." };
+  if (startDate > endDate) return { ok: false, message: "La fecha de inicio debe ser anterior o igual a la fecha de fin." };
+  if (registrationDeadline.slice(0, 10) > startDate) return { ok: false, message: "El cierre de inscripción debe ser anterior o en la misma fecha que el inicio del torneo." };
 
   const category_min = categoryMinRaw === "" ? null : Number(categoryMinRaw);
   const category_max = categoryMaxRaw === "" ? null : Number(categoryMaxRaw);
