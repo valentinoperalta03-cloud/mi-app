@@ -233,7 +233,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
           Seleccioná la apertura y el cierre del club. Todos los turnos son de 90 minutos y se aplican a todas las canchas automáticamente.
         </p>
         {flash(hoursOk, hoursErr)}
-        <ClubHoursForm defaultOpen={clubOpenDefault} defaultClose={clubCloseDefault} />
+        <ClubHoursForm defaultOpen={clubOpenDefault} />
       </section>
 
       <section className={`${adminCard} p-6`}>
