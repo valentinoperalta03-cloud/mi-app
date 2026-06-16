@@ -1,6 +1,7 @@
 import { addDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
+import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -179,6 +180,58 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
         <h1 className={adminTitle}>Turnos fijos</h1>
         <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores.</p>
       </header>
+
+      <details className="group overflow-hidden rounded-3xl border border-sky-200/80 bg-sky-50/80 dark:border-sky-800/60 dark:bg-sky-950/30">
+        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
+          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
+          ¿Cómo funcionan los turnos fijos?
+          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
+          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
+        </summary>
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-sky-950 dark:border-sky-800/40 dark:text-sky-100">
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">¿Qué es un turno fijo?</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Un turno fijo es un horario recurrente que se repite todas las semanas en el mismo día y hora. Podés asignar hasta 4 jugadores a cada turno. Sirve para grupos habituales que tienen su slot reservado permanentemente.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Cómo crear un turno fijo</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-sky-800 dark:text-sky-300">
+              <li>Seleccioná la cancha, el día de la semana, la hora de inicio y la duración.</li>
+              <li>Hacé clic en <strong>Agregar turno</strong>. El turno aparece en la lista de turnos activos.</li>
+              <li>Usá el botón <strong>Agregar jugador</strong> dentro de cada turno para asignar hasta 4 personas por el nombre o email.</li>
+            </ol>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Confirmación de asistencia</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Los jugadores reciben una notificación con X horas de anticipación (según lo que configurés) para confirmar si van o no. Podés ver el estado de cada jugador en la tarjeta del turno: ✅ Confirmado, ❌ No va, ⏳ Sin confirmar. Si todos confirman, la cancha queda reservada automáticamente.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Excepciones (cancelar una fecha puntual)</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Si un día específico no se puede jugar (feriado, mantenimiento, etc.), agregá una excepción con la fecha exacta y un motivo opcional. Esa semana el turno no se genera, sin afectar los demás. Podés ver y eliminar todas las excepciones futuras desde la tarjeta de cada turno.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Desactivar un turno</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Si el grupo deja de jugar permanentemente, hacé clic en <strong>Desactivar</strong>. El turno deja de generarse hacia adelante. No afecta partidos pasados ni reservas ya confirmadas.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="font-bold">Consejo:</span> Configurá las horas de anticipación según tus horarios de apertura. Si el club abre a las 8hs y el turno es a las 10hs, con 48 horas de anticipación los jugadores reciben la notificación dos días antes.
+          </div>
+        </div>
+      </details>
 
       <section className={`${adminCard} p-5`}>
         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmación de asistencia</h2>

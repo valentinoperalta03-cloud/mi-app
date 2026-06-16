@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { GraduationCap, Plus } from "lucide-react";
+import { GraduationCap, Info, Plus } from "lucide-react";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
@@ -46,6 +46,69 @@ export default async function AdminClasesPage() {
           Crear
         </Link>
       </div>
+
+      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200/80 bg-sky-50/80 dark:border-sky-800/60 dark:bg-sky-950/30">
+        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
+          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
+          ¿Cómo funciona la sección de clases?
+          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
+          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
+        </summary>
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-sky-950 dark:border-sky-800/40 dark:text-sky-100">
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">¿Qué es una clase en PadeLibre?</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Las clases son sesiones de entrenamiento o práctica que tu club ofrece a los jugadores. Pueden ser únicas (un solo día) o recurrentes (todas las semanas en el mismo día y hora). Los jugadores las ven en la app, se inscriben y pagan directamente.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Tipos de recurrencia</p>
+            <ul className="mt-1.5 space-y-1.5 text-sky-800 dark:text-sky-300">
+              <li><span className="font-semibold">Clase única:</span> Se dicta una sola vez en la fecha que indiques. Ideal para clínicas o eventos especiales.</li>
+              <li><span className="font-semibold">Semanal:</span> Se repite cada semana entre la fecha de inicio y la de fin. PadeLibre genera automáticamente una sesión por cada semana.</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Paso a paso para crear una clase</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-sky-800 dark:text-sky-300">
+              <li>Hacé clic en <strong>Crear</strong> y completá los datos: título, tipo, fechas, hora, precio, cupos y cancha.</li>
+              <li>Asigná un coach desde el detalle de la clase (opcional).</li>
+              <li>Publicá la clase con el botón <strong>Publicar</strong>. A partir de ahí los jugadores la pueden ver y anotarse.</li>
+              <li>Cuando un jugador se inscribe, el cupo se descuenta en tiempo real. El pago puede ser Mercado Pago, efectivo o transferencia.</li>
+            </ol>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Estados de una clase</p>
+            <ul className="mt-1.5 space-y-1.5 text-sky-800 dark:text-sky-300">
+              <li><span className="font-semibold">Borrador:</span> Sólo la ves vos. Podés editarla antes de publicar.</li>
+              <li><span className="font-semibold">Publicada:</span> Visible para todos los jugadores en la app.</li>
+              <li><span className="font-semibold">Finalizada:</span> Terminó el período de clases. Ya no acepta nuevas inscripciones.</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Precios y comisión</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Configurás el precio base por sesión. PadeLibre agrega un 5% como comisión de servicio, que se suma al precio que ve el jugador. Vos recibís el precio base directamente. Por ejemplo, si ponés $2.000, el jugador paga $2.100.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Cobros offline (efectivo / transferencia)</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Si un jugador elige pagar en persona, aparece en la sección <strong>Cobros</strong> del panel admin. Confirmás el pago ahí cuando recibís el dinero.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="font-bold">Consejo:</span> Publicá la clase con suficiente anticipación para que los jugadores puedan inscribirse. Para clases semanales, publicá al inicio de la semana o con una semana de adelanto.
+          </div>
+        </div>
+      </details>
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

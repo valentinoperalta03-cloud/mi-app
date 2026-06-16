@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -267,6 +268,59 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       {practicePendErr ? (
         <p className="text-sm text-rose-600">No se pudieron cargar clases pendientes: {practicePendErr.message}</p>
       ) : null}
+
+      <details className="group overflow-hidden rounded-3xl border border-sky-200/80 bg-sky-50/80 dark:border-sky-800/60 dark:bg-sky-950/30">
+        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
+          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
+          ¿Cómo funciona la sección de cobros?
+          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
+          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
+        </summary>
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-sky-950 dark:border-sky-800/40 dark:text-sky-100">
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">¿Qué aparece acá?</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Sólo los pagos que el jugador eligió hacer en persona: <strong>efectivo</strong> o <strong>transferencia bancaria</strong>. Los pagos con Mercado Pago se confirman automáticamente y no aparecen aquí.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Flujo de un pago offline</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-sky-800 dark:text-sky-300">
+              <li>El jugador reserva una cancha o se anota a una clase y elige pagar en persona.</li>
+              <li>El sistema registra el cobro como <strong>pendiente</strong> y aparece en esta pantalla.</li>
+              <li>Cuando el jugador te entrega el dinero o te hace la transferencia, hacé clic en <strong>Confirmar cobro</strong>. El pago queda registrado y el lugar confirmado.</li>
+              <li>Si el jugador no se presentó, marcalo con <strong>No se presentó</strong> para liberar el turno.</li>
+            </ol>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Resumen del día</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Las tarjetas del encabezado muestran cuántos cobros están pendientes, cuántos se confirmaron hoy y el total cobrado separado por efectivo y transferencia. Estos números se resetean con cada día nuevo.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Deudas PadeLibre</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              Cuando un jugador no paga con Mercado Pago y el club confirma el cobro igualmente, se registra internamente como una <strong>deuda con PadeLibre</strong> por la comisión de servicio correspondiente. Estas deudas se liquidan periódicamente según el acuerdo con PadeLibre.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-sky-900 dark:text-sky-200">Historial reciente</p>
+            <p className="mt-1 leading-relaxed text-sky-800 dark:text-sky-300">
+              La sección <strong>Confirmados hoy</strong> muestra todos los cobros offline que ya procesaste en el día. Los últimos 20 cobros aprobados de reservas también son visibles en la lista de historial.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <span className="font-bold">Consejo:</span> Si activás los métodos de pago en <strong>Configuración → Métodos de pago</strong>, podés habilitar o deshabilitar efectivo y transferencia para controlar qué opciones ven los jugadores al reservar.
+          </div>
+        </div>
+      </details>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={adminCard}>
