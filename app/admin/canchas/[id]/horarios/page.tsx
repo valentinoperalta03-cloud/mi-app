@@ -11,10 +11,8 @@ const SLOT_DURATION = 90;
 
 function buildCourtTurns(openTime: string) {
   const rawOpen = parseClockToMinutes(openTime || "09:00");
-  const open = Math.ceil(rawOpen / SLOT_DURATION) * SLOT_DURATION;
-  const close = 24 * 60; // siempre hasta medianoche
   const turns: { start: string; end: string }[] = [];
-  for (let t = open; t + SLOT_DURATION <= close; t += SLOT_DURATION) {
+  for (let t = rawOpen; t < 24 * 60; t += SLOT_DURATION) {
     turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
   }
   return turns;

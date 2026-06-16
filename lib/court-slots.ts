@@ -17,18 +17,14 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
 
 /**
- * Genera una grilla de slots entre snappedOpen y closeMin.
- * openMin se snappea al múltiplo de durationMinutes más cercano hacia arriba,
- * lo que preserva la grilla tradicional argentina (alineada a 09:00 = 6×90).
- * Ejemplos con 90 min:
- *   open=07:30 (450) → ceil(450/90)*90=450 → 07:30, 09:00, 10:30…  ✓
- *   open=08:00 (480) → ceil(480/90)*90=540 → 09:00, 10:30, 12:00… ✓
- *   open=09:00 (540) → 540                 → 09:00, 10:30…         ✓
+ * Genera una grilla de slots desde openMin hasta que el inicio del turno
+ * alcanza closeMin. El último slot puede terminar después de closeMin
+ * (ej. 23:00→00:30 cuando closeMin=1440), lo que es correcto: el club
+ * indicó que abre a X y los turnos van hasta cruzar medianoche.
  */
 function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
-  const snapped = Math.ceil(openMin / durationMinutes) * durationMinutes;
   const slots: GeneratedSlot[] = [];
-  for (let t = snapped; t + durationMinutes <= closeMin; t += durationMinutes) {
+  for (let t = openMin; t < closeMin; t += durationMinutes) {
     slots.push({ time: minutesToClock(t), duration: durationMinutes });
   }
   return slots;
