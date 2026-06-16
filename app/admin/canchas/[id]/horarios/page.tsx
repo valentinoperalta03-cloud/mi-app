@@ -4,23 +4,23 @@ import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import type { CourtScheduleRow } from "@/lib/database.types";
+import { minutesToClock, parseClockToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import { saveCourtHourlyPrices } from "../precios/actions";
 import { saveSchedules } from "./actions";
 
 const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-const COURT_TURNS = [
-  { start: "09:00", end: "10:30" },
-  { start: "10:30", end: "12:00" },
-  { start: "12:00", end: "13:30" },
-  { start: "13:30", end: "15:00" },
-  { start: "15:00", end: "16:30" },
-  { start: "16:30", end: "18:00" },
-  { start: "18:00", end: "19:30" },
-  { start: "19:30", end: "21:00" },
-  { start: "21:00", end: "22:30" },
-  { start: "22:30", end: "23:59" },
-] as const;
+
+function buildCourtTurns(openTime: string, closeTime: string, durationMin: number) {
+  const open = parseClockToMinutes(openTime || "09:00");
+  const rawClose = parseClockToMinutes(closeTime || "23:59");
+  const close = rawClose === 0 ? 24 * 60 : rawClose;
+  const turns: { start: string; end: string }[] = [];
+  for (let t = open; t + durationMin <= close; t += durationMin) {
+    turns.push({ start: minutesToClock(t), end: minutesToClock(t + durationMin) });
+  }
+  return turns;
+}
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -196,7 +196,8 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
         <form action={saveCourtHourlyPrices} className="space-y-4">
           <input type="hidden" name="court_id" value={courtId} />
-          {COURT_TURNS.map((turn) => (
+          <input type="hidden" name="slot_duration_minutes" value={slotDuration} />
+          {buildCourtTurns(clubOpen || "09:00", clubClose || "23:59", slotDuration).map((turn) => (
             <label key={`${turn.start}-${turn.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
               <span className="text-sm font-semibold text-slate-700">
                 {turn.start} - {turn.end}

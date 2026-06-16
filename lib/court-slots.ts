@@ -16,24 +16,6 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 /** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
 
-/**
- * Grilla fija de 90 min alineada al cierre de las 22:30.
- * Se usa cuando slot_duration_minutes === 90 para preservar compatibilidad
- * con reservas ya creadas en esos horarios.
- */
-const FIXED_90MIN_GRID = [
-  9 * 60,       // 09:00
-  10 * 60 + 30, // 10:30
-  12 * 60,      // 12:00
-  13 * 60 + 30, // 13:30
-  15 * 60,      // 15:00
-  16 * 60 + 30, // 16:30
-  18 * 60,      // 18:00
-  19 * 60 + 30, // 19:30
-  21 * 60,      // 21:00
-  22 * 60 + 30, // 22:30 — último turno siempre
-] as const;
-
 /** Genera una grilla dinámica de slots entre openMin y closeMin con el paso dado. */
 function buildDynamicGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
   const slots: GeneratedSlot[] = [];
@@ -44,10 +26,6 @@ function buildDynamicGrid(openMin: number, closeMin: number, durationMinutes: nu
 }
 
 function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
-  if (durationMinutes === 90) {
-    const filtered = FIXED_90MIN_GRID.filter((t) => t >= openMin && t < closeMin);
-    return filtered.map((t) => ({ time: minutesToClock(t), duration: 90 }));
-  }
   return buildDynamicGrid(openMin, closeMin, durationMinutes);
 }
 
@@ -72,7 +50,7 @@ export function courtBlockStartsFromRows(
   ]);
 }
 
-function parseClockToMinutes(clock: string): number {
+export function parseClockToMinutes(clock: string): number {
   let s = clock.trim();
   const tIdx = s.indexOf("T");
   if (tIdx >= 0) s = s.slice(tIdx + 1);
@@ -95,7 +73,7 @@ function scheduleMatchesDay(dayOfWeekRaw: number | null | undefined, dow: number
   return Number(dayOfWeekRaw) === dow;
 }
 
-function minutesToClock(total: number): string {
+export function minutesToClock(total: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -157,10 +135,13 @@ export function buildSlotsForDay(
     }
   }
 
+  const fallbackOpen = cb?.lo ?? 9 * 60;
+  const fallbackClose = cb?.hi ?? 22 * 60 + 30;
+
   if (maxM <= minM) {
-    return buildGrid(9 * 60, 22 * 60 + 30, slotDurationMinutes);
+    return buildGrid(fallbackOpen, fallbackClose, slotDurationMinutes);
   }
 
   const slots = buildGrid(minM, maxM, slotDurationMinutes);
-  return slots.length ? slots : buildGrid(9 * 60, 22 * 60 + 30, slotDurationMinutes);
+  return slots.length ? slots : buildGrid(fallbackOpen, fallbackClose, slotDurationMinutes);
 }
