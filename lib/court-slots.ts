@@ -16,17 +16,22 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 /** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
 
-/** Genera una grilla dinámica de slots entre openMin y closeMin con el paso dado. */
-function buildDynamicGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
+/**
+ * Genera una grilla de slots entre snappedOpen y closeMin.
+ * openMin se snappea al múltiplo de durationMinutes más cercano hacia arriba,
+ * lo que preserva la grilla tradicional argentina (alineada a 09:00 = 6×90).
+ * Ejemplos con 90 min:
+ *   open=07:30 (450) → ceil(450/90)*90=450 → 07:30, 09:00, 10:30…  ✓
+ *   open=08:00 (480) → ceil(480/90)*90=540 → 09:00, 10:30, 12:00… ✓
+ *   open=09:00 (540) → 540                 → 09:00, 10:30…         ✓
+ */
+function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
+  const snapped = Math.ceil(openMin / durationMinutes) * durationMinutes;
   const slots: GeneratedSlot[] = [];
-  for (let t = openMin; t + durationMinutes <= closeMin; t += durationMinutes) {
+  for (let t = snapped; t + durationMinutes <= closeMin; t += durationMinutes) {
     slots.push({ time: minutesToClock(t), duration: durationMinutes });
   }
   return slots;
-}
-
-function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
-  return buildDynamicGrid(openMin, closeMin, durationMinutes);
 }
 
 /** Normaliza HH:MM desde columnas `blocked_time` o `start_time`. */
@@ -62,10 +67,15 @@ export function parseClockToMinutes(clock: string): number {
   return h * 60 + m;
 }
 
-/** Parsea un horario de cierre: "00:00" se trata como medianoche (1440 min). */
+/**
+ * Parsea un horario de cierre.
+ * "00:00" y "23:59" se tratan como medianoche (1440 min), porque un club
+ * que cierra "a las 23:59" quiere que el turno 22:30→00:00 aparezca.
+ */
 function parseCloseTimeToMinutes(clock: string): number {
   const m = parseClockToMinutes(clock);
-  return m === 0 ? 1440 : m;
+  if (m === 0 || m >= 23 * 60 + 59) return 1440;
+  return m;
 }
 
 function scheduleMatchesDay(dayOfWeekRaw: number | null | undefined, dow: number): boolean {

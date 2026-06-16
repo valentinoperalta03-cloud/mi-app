@@ -12,9 +12,12 @@ import { saveSchedules } from "./actions";
 const dayLabels = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function buildCourtTurns(openTime: string, closeTime: string, durationMin: number) {
-  const open = parseClockToMinutes(openTime || "09:00");
+  const rawOpen = parseClockToMinutes(openTime || "09:00");
   const rawClose = parseClockToMinutes(closeTime || "23:59");
-  const close = rawClose === 0 ? 24 * 60 : rawClose;
+  // Misma lógica que buildGrid: snap al múltiplo de durationMin
+  const open = Math.ceil(rawOpen / durationMin) * durationMin;
+  // 23:59 y 00:00 = medianoche
+  const close = rawClose === 0 || rawClose >= 23 * 60 + 59 ? 24 * 60 : rawClose;
   const turns: { start: string; end: string }[] = [];
   for (let t = open; t + durationMin <= close; t += durationMin) {
     turns.push({ start: minutesToClock(t), end: minutesToClock(t + durationMin) });
