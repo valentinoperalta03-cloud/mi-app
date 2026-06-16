@@ -11,9 +11,10 @@ const SLOT_DURATION = 90;
 
 function buildCourtTurns(openTime: string, closeTime: string) {
   const rawOpen = parseClockToMinutes(openTime || "09:00");
-  const rawClose = parseClockToMinutes(closeTime || "23:30");
+  // closeTime es el FIN del último turno; "00:00" = medianoche
+  const rawClose = parseClockToMinutes(closeTime || "22:30");
   const open = Math.ceil(rawOpen / SLOT_DURATION) * SLOT_DURATION;
-  const close = rawClose === 0 || rawClose >= 23 * 60 + 59 ? 24 * 60 : rawClose;
+  const close = rawClose === 0 ? 24 * 60 : rawClose;
   const turns: { start: string; end: string }[] = [];
   for (let t = open; t + SLOT_DURATION <= close; t += SLOT_DURATION) {
     turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
@@ -85,7 +86,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
       {clubOpen && clubClose ? (
         <div className="rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
-          <span className="font-semibold">Horario del club:</span> {clubOpen} a {clubClose} · turnos de 90 min.{" "}
+          <span className="font-semibold">Horario del club:</span> abre {clubOpen} hs · último turno termina {clubClose === "00:00" ? "00:00 (medianoche)" : `${clubClose} hs`} · turnos de 90 min.{" "}
           <a href="/admin/config" className="underline underline-offset-2 opacity-70 hover:opacity-100">
             Cambiar en Configuración
           </a>

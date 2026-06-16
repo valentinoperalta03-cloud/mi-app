@@ -14,11 +14,12 @@ const VALID_OPEN = new Set([
   "07:30", "08:00", "08:30", "09:00", "09:30",
   "10:00", "10:30", "11:00", "11:30", "12:00",
 ]);
+// Finales válidos de turno de 90 min (múltiplos de 90 desde medianoche)
+// "00:00" representa medianoche (el turno 22:30→00:00)
 const VALID_CLOSE = new Set([
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
-  "20:00", "20:30", "21:00", "21:30", "22:00", "22:30",
-  "23:00", "23:30",
+  "01:30", "03:00", "04:30", "06:00", "07:30", "09:00",
+  "10:30", "12:00", "13:30", "15:00", "16:30", "18:00",
+  "19:30", "21:00", "22:30", "00:00",
 ]);
 
 export async function saveClubHours(formData: FormData) {
@@ -29,10 +30,11 @@ export async function saveClubHours(formData: FormData) {
     redirect(`/admin/config?error=${enc("Horario de apertura no válido.")}`);
   }
   if (!VALID_CLOSE.has(close)) {
-    redirect(`/admin/config?error=${enc("Horario de cierre no válido.")}`);
+    redirect(`/admin/config?error=${enc("Último turno no válido.")}`);
   }
-  if (close <= open) {
-    redirect(`/admin/config?error=${enc("El horario de cierre debe ser posterior al de apertura.")}`);
+  // "00:00" = medianoche, siempre es posterior a cualquier apertura
+  if (close !== "00:00" && close <= open) {
+    redirect(`/admin/config?error=${enc("El último turno debe finalizar después de la apertura.")}`);
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
