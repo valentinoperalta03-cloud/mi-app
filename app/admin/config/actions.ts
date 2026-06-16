@@ -10,15 +10,30 @@ function enc(msg: string) {
   return encodeURIComponent(msg);
 }
 
-function normalizeClockInput(raw: string, fallback: string) {
-  const s = String(raw ?? "").trim();
-  if (s.length >= 5 && /^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 5);
-  return fallback;
-}
+const VALID_OPEN = new Set([
+  "07:30", "08:00", "08:30", "09:00", "09:30",
+  "10:00", "10:30", "11:00", "11:30", "12:00",
+]);
+const VALID_CLOSE = new Set([
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+  "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+  "20:00", "20:30", "21:00", "21:30", "22:00", "22:30",
+  "23:00", "23:30",
+]);
 
 export async function saveClubHours(formData: FormData) {
-  const open = normalizeClockInput(String(formData.get("open_time") ?? ""), "09:00");
-  const close = normalizeClockInput(String(formData.get("close_time") ?? ""), "22:30");
+  const open = String(formData.get("open_time") ?? "").trim().slice(0, 5);
+  const close = String(formData.get("close_time") ?? "").trim().slice(0, 5);
+
+  if (!VALID_OPEN.has(open)) {
+    redirect(`/admin/config?error=${enc("Horario de apertura no válido.")}`);
+  }
+  if (!VALID_CLOSE.has(close)) {
+    redirect(`/admin/config?error=${enc("Horario de cierre no válido.")}`);
+  }
+  if (close <= open) {
+    redirect(`/admin/config?error=${enc("El horario de cierre debe ser posterior al de apertura.")}`);
+  }
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
@@ -41,6 +56,26 @@ export async function saveClubHours(formData: FormData) {
 
   if (clubErr) {
     redirect(`/admin/config?error=${enc(clubErr.message)}`);
+  }
+
+  // Eliminar horarios por día configurados en canchas individuales
+  // para que todas hereden el horario del club
+  const { data: courts } = await supabase
+    .from(DB_TABLES.courts)
+    .select("id")
+    .eq("club_id", clubId);
+  if (courts && courts.length > 0) {
+    const ids = (courts as Array<{ id: string }>).map((c) => c.id);
+    await supabase
+      .from(DB_TABLES.courtSchedules)
+      .delete()
+      .in("court_id", ids)
+      .not("day_of_week", "is", null);
+    // Fijar slot_duration_minutes = 90 en todas las canchas
+    await supabase
+      .from(DB_TABLES.courts)
+      .update({ slot_duration_minutes: 90 })
+      .in("id", ids);
   }
 
   revalidatePath("/admin/config");

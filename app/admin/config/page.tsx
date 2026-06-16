@@ -11,7 +11,8 @@ import ConfigClubDataForm from "./config-club-data-form";
 import ConfigClubLocationForm from "./config-club-location-form";
 import ConfigClubPhotosForm from "./config-club-photos-form";
 import ConfigPaymentMethodsForm from "./config-payment-methods-form";
-import { saveClubHours, updateFinancePin } from "./actions";
+import ClubHoursForm from "./club-hours-form";
+import { updateFinancePin } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -229,37 +230,10 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
       <section className={`${adminCard} p-6`}>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">2. Horarios del club</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Apertura y cierre generales del club. Se aplican a canchas que no tengan horarios propios configurados. Para que el turno de 22:30 aparezca, el cierre debe ser mayor a 22:30 (p. ej. 23:59).
+          Seleccioná la apertura y el cierre del club. Todos los turnos son de 90 minutos y se aplican a todas las canchas automáticamente.
         </p>
         {flash(hoursOk, hoursErr)}
-        <form action={saveClubHours} className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-            Hora de apertura
-            <input
-              name="open_time"
-              type="time"
-              defaultValue={clubOpenDefault}
-              required
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-            Hora de cierre
-            <input
-              name="close_time"
-              type="time"
-              defaultValue={clubCloseDefault}
-              required
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded-xl bg-[#0585FC] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
-          >
-            Guardar horarios
-          </button>
-        </form>
+        <ClubHoursForm defaultOpen={clubOpenDefault} defaultClose={clubCloseDefault} />
       </section>
 
       <section className={`${adminCard} p-6`}>
