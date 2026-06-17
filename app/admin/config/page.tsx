@@ -20,7 +20,7 @@ const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@g
 const CLUB_ADMIN_COLUMNS =
   "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu,fixed_slot_confirmation_hours" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
-  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu,fixed_slot_confirmation_hours" as const;
+  "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id,mp_access_token,mp_user_id,finance_pin,accepts_cash,accepts_transfer,bank_alias,bank_cbu,fixed_slot_confirmation_hours" as const;
 
 async function signOutAction() {
   "use server";

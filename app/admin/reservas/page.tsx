@@ -8,6 +8,7 @@ import { PaymentStatusPill, PlayerAvatar } from "@/components/admin/admin-status
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { parseClockToMinutes, minutesToClock } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import {
   addClubClosedDayAction,
@@ -77,10 +78,6 @@ function reservationMethodLabel(paymentStatus: string | null | undefined) {
   return s || "—";
 }
 
-function buildSlots() {
-  return ["09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00", "22:30"];
-}
-
 export default async function AdminReservasPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const supabase = await createClient();
@@ -118,13 +115,26 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const blocks = (blocksRaw ?? []) as BlockRow[];
 
   const mainClubId = ctx.clubIds[0];
-  const { data: closedDaysRaw } = await supabase
-    .from(DB_TABLES.clubClosedDays)
-    .select("id,closed_date,reason")
-    .eq("club_id", mainClubId)
-    .gte("closed_date", getTodayYmdInArgentina())
-    .order("closed_date", { ascending: true });
+  const [{ data: closedDaysRaw }, { data: clubOpenRow }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.clubClosedDays)
+      .select("id,closed_date,reason")
+      .eq("club_id", mainClubId)
+      .gte("closed_date", getTodayYmdInArgentina())
+      .order("closed_date", { ascending: true }),
+    supabase
+      .from(DB_TABLES.clubs)
+      .select("open_time")
+      .eq("id", mainClubId)
+      .maybeSingle(),
+  ]);
   const closedDays = (closedDaysRaw ?? []) as Array<{ id: string; closed_date: string; reason: string | null }>;
+  const clubOpenTime = String((clubOpenRow as { open_time?: string | null } | null)?.open_time ?? "09:00").trim().slice(0, 5) || "09:00";
+  const rawOpenMin = parseClockToMinutes(clubOpenTime);
+  const slots: string[] = [];
+  for (let t = rawOpenMin; t < 24 * 60; t += 90) {
+    slots.push(minutesToClock(t));
+  }
 
   const creatorIds = Array.from(new Set(matches.map((m) => m.owner_id).filter(Boolean))) as string[];
   const { data: profilesData } = creatorIds.length
@@ -209,7 +219,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const paidReservas = reservationMatches.filter((m) => String(m.payment_status ?? "").toLowerCase() === "paid").length;
   const pendingReservas = reservationMatches.filter((m) => String(m.payment_status ?? "").toLowerCase() === "pending").length;
 
-  const slots = buildSlots();
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
   const closedErr = sp.closed_error ? decodeURIComponent(sp.closed_error.replace(/\+/g, " ")) : "";
 

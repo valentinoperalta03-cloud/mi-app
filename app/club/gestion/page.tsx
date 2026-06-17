@@ -4,22 +4,9 @@ import { LayoutGrid } from "lucide-react";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { DB_TABLES } from "@/lib/db-tables";
+import { parseClockToMinutes, minutesToClock } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import SlotToggleForm from "./slot-toggle-form";
-
-const SLOT_TIMES = [
-  "07:30",
-  "09:00",
-  "10:30",
-  "12:00",
-  "13:30",
-  "15:00",
-  "16:30",
-  "18:00",
-  "19:30",
-  "21:00",
-  "22:30",
-] as const;
 
 type GestionPageProps = {
   searchParams?: Promise<{
@@ -31,6 +18,7 @@ type GestionPageProps = {
 type ClubRow = {
   id: string;
   name: string | null;
+  open_time?: string | null;
 };
 
 type CourtRow = {
@@ -77,12 +65,18 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
 
   const { data: clubsData, error: clubsError } = await supabase
     .from(DB_TABLES.clubs)
-    .select("id,name")
+    .select("id,name,open_time")
     .eq("owner_id", user.id)
     .order("name");
 
   const clubs = (clubsData ?? []) as ClubRow[];
   const defaultClubId = clubs[0]?.id ?? "";
+  const clubOpenTime = String(clubs[0]?.open_time ?? "09:00").trim().slice(0, 5) || "09:00";
+  const rawOpenMin = parseClockToMinutes(clubOpenTime);
+  const SLOT_TIMES: string[] = [];
+  for (let t = rawOpenMin; t < 24 * 60; t += 90) {
+    SLOT_TIMES.push(minutesToClock(t));
+  }
   const clubIds = clubs.map((club) => club.id);
 
   const { data: courtsData, error: courtsError } = clubIds.length
@@ -157,8 +151,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
           Gestion de disponibilidad
         </h1>
         <p className="max-w-lg text-sm font-medium text-slate-500">
-          Turnos fijos de 90 minutos entre 07:30 y 22:30. Bloquea o libera franjas segun tu operacion
-          del dia.
+          Turnos fijos de 90 minutos desde las {clubOpenTime} hasta las 00:00. Bloqueá o liberá franjas según tu operación del día.
         </p>
       </header>
 

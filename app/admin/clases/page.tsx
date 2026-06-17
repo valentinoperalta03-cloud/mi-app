@@ -47,7 +47,7 @@ export default async function AdminClasesPage() {
         </Link>
       </div>
 
-      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200/80 bg-sky-50/80 dark:border-sky-800/60 dark:bg-sky-950/30">
+      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-50 dark:border-sky-800/60 dark:bg-sky-900/60">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
           ¿Cómo funciona la sección de clases?

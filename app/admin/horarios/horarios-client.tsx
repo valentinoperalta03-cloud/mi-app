@@ -179,14 +179,14 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
               onClick={() => handleToggle(slot.start)}
               className={`flex flex-col items-center rounded-2xl border px-3 py-3 text-sm font-semibold transition-all disabled:opacity-60 ${
                 blocked
-                  ? "border-rose-200 bg-rose-50 text-rose-700 ring-1 ring-rose-200/60 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-                  : "border-emerald-200 bg-emerald-50/80 text-emerald-800 hover:bg-emerald-100/80 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+                  ? "border-rose-300 bg-rose-100 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-200 dark:border-rose-700 dark:bg-rose-900/50 dark:text-rose-200"
+                  : "border-emerald-300 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
               }`}
             >
               <span>
                 {slot.start} → {slot.end}
               </span>
-              <span className={`mt-0.5 text-[11px] font-medium ${blocked ? "text-rose-500 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+              <span className={`mt-0.5 text-[11px] font-medium ${blocked ? "text-rose-600 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}`}>
                 {blocked ? "Bloqueado" : "Disponible"}
               </span>
             </button>

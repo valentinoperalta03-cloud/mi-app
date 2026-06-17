@@ -4,29 +4,17 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { createManualCourtBlockAction, type ManualBlockState } from "./actions";
 
-const SLOT_TIMES = [
-  "07:30",
-  "09:00",
-  "10:30",
-  "12:00",
-  "13:30",
-  "15:00",
-  "16:30",
-  "18:00",
-  "19:30",
-  "21:00",
-  "22:30",
-] as const;
-
 const initial: ManualBlockState = { success: false, message: "" };
 
 type CourtOption = { id: string; name: string };
 
 function ManualBlockDialog({
   courts,
+  slotTimes,
   onClose,
 }: {
   courts: CourtOption[];
+  slotTimes: string[];
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createManualCourtBlockAction, initial);
@@ -84,7 +72,7 @@ function ManualBlockDialog({
               required
               className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             >
-              {SLOT_TIMES.map((t) => (
+              {slotTimes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -126,7 +114,7 @@ function ManualBlockDialog({
   );
 }
 
-export default function ManualBlockFab({ courts }: { courts: CourtOption[] }) {
+export default function ManualBlockFab({ courts, slotTimes }: { courts: CourtOption[]; slotTimes: string[] }) {
   const [open, setOpen] = useState(false);
   const [dialogKey, setDialogKey] = useState(0);
   const closeDialog = useCallback(() => setOpen(false), []);
@@ -148,7 +136,7 @@ export default function ManualBlockFab({ courts }: { courts: CourtOption[] }) {
       </button>
 
       {open ? (
-        <ManualBlockDialog key={dialogKey} courts={courts} onClose={closeDialog} />
+        <ManualBlockDialog key={dialogKey} courts={courts} slotTimes={slotTimes} onClose={closeDialog} />
       ) : null}
     </>
   );
