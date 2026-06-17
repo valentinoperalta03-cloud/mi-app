@@ -121,11 +121,11 @@ jobs:
           print(f"Service account OK: {data['client_email']}")
           PY
 
-      - name: Upload AAB to Google Play (closed testing)
+      - name: Upload AAB to Google Play (internal testing)
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.padelibre.app
           releaseFiles: android/app/build/outputs/bundle/release/*.aab
-          track: alpha
+          track: internal
           status: completed
