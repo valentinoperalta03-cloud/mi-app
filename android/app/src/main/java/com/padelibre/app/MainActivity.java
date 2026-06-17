@@ -43,6 +43,10 @@ public class MainActivity extends BridgeActivity {
         WebView webView = bridge.getWebView();
         if (webView != null) {
             webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
+            // Hide native scrollbars — CSS scrollbar-width:none is unreliable
+            // on older Samsung WebView versions.
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
         }
     }
 
