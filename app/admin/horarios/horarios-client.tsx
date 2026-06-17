@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Network } from "@capacitor/network";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
 import { toggleClubScheduleBlock } from "./actions";
@@ -50,33 +52,53 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
   // Realtime: escucha cambios en club_schedule_blocks para este club
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`club-blocks-${clubId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: DB_TABLES.clubScheduleBlocks,
-          filter: `club_id=eq.${clubId}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from(DB_TABLES.clubScheduleBlocks)
-            .select("day_of_week,blocked_time")
-            .eq("club_id", clubId);
-          if (data) {
-            setBlocks(
-              new Set((data as Array<{ day_of_week: number; blocked_time: string }>).map(
-                (b) => `${b.day_of_week}__${b.blocked_time}`
-              ))
-            );
-          }
-        }
-      )
-      .subscribe();
+
+    async function onBlockChange() {
+      const { data } = await supabase
+        .from(DB_TABLES.clubScheduleBlocks)
+        .select("day_of_week,blocked_time")
+        .eq("club_id", clubId);
+      if (data) {
+        setBlocks(
+          new Set(
+            (data as Array<{ day_of_week: number; blocked_time: string }>).map(
+              (b) => `${b.day_of_week}__${b.blocked_time}`
+            )
+          )
+        );
+      }
+    }
+
+    function subscribe() {
+      return supabase
+        .channel(`club-blocks-${clubId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: DB_TABLES.clubScheduleBlocks, filter: `club_id=eq.${clubId}` },
+          () => void onBlockChange()
+        )
+        .subscribe();
+    }
+
+    let channel = subscribe();
+    let cleanupNetwork: (() => void) | undefined;
+
+    if (Capacitor.isNativePlatform()) {
+      void Network.addListener("networkStatusChange", (status) => {
+        if (!status.connected) return;
+        void supabase.removeChannel(channel).then(() => {
+          channel = subscribe();
+          // Re-fetch current state after reconnect in case changes were missed.
+          void onBlockChange();
+        });
+      }).then((handle) => {
+        cleanupNetwork = () => void handle.remove();
+      });
+    }
+
     return () => {
       void supabase.removeChannel(channel);
+      cleanupNetwork?.();
     };
   }, [clubId]);
 

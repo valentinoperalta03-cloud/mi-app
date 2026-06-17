@@ -253,6 +253,12 @@ export default function TopNav() {
     }
   }, [pathname]);
 
+  // Close drawer on any route change (handles Android hardware back button
+  // and programmatic navigation that bypasses the drawer's Link onClick).
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     document.body.classList.toggle("player-drawer-open", open);
     document.body.style.overflow = open ? "hidden" : "";

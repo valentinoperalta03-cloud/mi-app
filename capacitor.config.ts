@@ -17,6 +17,7 @@ const config: CapacitorConfig = {
     includePlugins: [
       '@capacitor/app',
       '@capacitor/browser',
+      '@capacitor/network',
       '@capacitor/status-bar',
       '@capacitor/preferences',
       '@onesignal/capacitor-plugin',
@@ -24,9 +25,12 @@ const config: CapacitorConfig = {
   },
   android: {
     backgroundColor: STATUS_BAR_COLOR,
+    /** OneSignal maneja notificaciones; evita conflictos con el bridge de Capacitor. */
+    handleApplicationNotifications: false,
     includePlugins: [
       '@capacitor/app',
       '@capacitor/browser',
+      '@capacitor/network',
       '@capacitor/status-bar',
       '@capacitor/preferences',
       '@onesignal/capacitor-plugin',

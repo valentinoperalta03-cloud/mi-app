@@ -123,13 +123,18 @@ export async function requestPushPermissionAndRegister(): Promise<boolean> {
 export async function maybePromptPushOnAppOpen(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   if (typeof window === "undefined") return;
-  if (window.localStorage.getItem(PUSH_PROMPT_KEY) === "1") return;
+
+  try {
+    if (window.localStorage.getItem(PUSH_PROMPT_KEY) === "1") return;
+  } catch {
+    // localStorage blocked (private mode or Samsung WebView restriction) — continue
+  }
 
   const OneSignal = await ensureOneSignalInitialized();
   if (!OneSignal) return;
 
   if (await OneSignal.Notifications.hasPermission()) {
-    window.localStorage.setItem(PUSH_PROMPT_KEY, "1");
+    try { window.localStorage.setItem(PUSH_PROMPT_KEY, "1"); } catch { /* ignore */ }
     await registerOneSignalUser();
     return;
   }
@@ -138,7 +143,7 @@ export async function maybePromptPushOnAppOpen(): Promise<void> {
   if (!canAsk) return;
 
   const ok = await requestPushPermissionAndRegister();
-  window.localStorage.setItem(PUSH_PROMPT_KEY, "1");
+  try { window.localStorage.setItem(PUSH_PROMPT_KEY, "1"); } catch { /* ignore */ }
   if (!ok) {
     console.warn("[OneSignal] Permiso OK pero sin token — reinstalá con build iOS que incluya Push");
   }

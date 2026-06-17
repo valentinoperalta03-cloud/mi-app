@@ -17,11 +17,12 @@ export default function CapacitorStatusBarInit() {
       root.classList.add("capacitor-ipad");
     }
 
-    applyNativeSafeAreaCssVars(root);
-
     void (async () => {
       try {
         await StatusBar.setOverlaysWebView({ overlay: true });
+        // Measure AFTER overlay is applied so env(safe-area-inset-top)
+        // returns the actual status bar height (not 0).
+        applyNativeSafeAreaCssVars(root);
         await StatusBar.setStyle({ style: Style.Light });
         if (Capacitor.getPlatform() === "android") {
           await StatusBar.setBackgroundColor({ color: STATUS_BAR_COLOR });
@@ -29,6 +30,7 @@ export default function CapacitorStatusBarInit() {
         await StatusBar.show();
       } catch {
         // Plugin unavailable in preview; header CSS covers safe area on iOS.
+        applyNativeSafeAreaCssVars(root);
       } finally {
         applyNativeSafeAreaCssVars(root);
       }

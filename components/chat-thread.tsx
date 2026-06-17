@@ -3,6 +3,8 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Network } from "@capacitor/network";
 import { loadMoreMessages, sendChatMessage, type ChatMessageRow } from "@/app/(player)/comunidad/mensajes/actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -91,27 +93,45 @@ export function ChatThread({
 
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`messages-dm:${myId}:${peerId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
-          const row = payload.new as ChatMessageRow;
-          const involved =
-            (row.sender_id === myId && row.receiver_id === peerId) ||
-            (row.sender_id === peerId && row.receiver_id === myId);
-          if (!involved) return;
-          setItems((prev) => {
-            if (prev.some((m) => m.id === row.id)) return prev;
-            return [...prev, row];
-          });
-        }
-      )
-      .subscribe();
+
+    function subscribe() {
+      return supabase
+        .channel(`messages-dm:${myId}:${peerId}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages" },
+          (payload) => {
+            const row = payload.new as ChatMessageRow;
+            const involved =
+              (row.sender_id === myId && row.receiver_id === peerId) ||
+              (row.sender_id === peerId && row.receiver_id === myId);
+            if (!involved) return;
+            setItems((prev) => {
+              if (prev.some((m) => m.id === row.id)) return prev;
+              return [...prev, row];
+            });
+          }
+        )
+        .subscribe();
+    }
+
+    let channel = subscribe();
+    let cleanupNetwork: (() => void) | undefined;
+
+    if (Capacitor.isNativePlatform()) {
+      void Network.addListener("networkStatusChange", (status) => {
+        if (!status.connected) return;
+        void supabase.removeChannel(channel).then(() => {
+          channel = subscribe();
+        });
+      }).then((handle) => {
+        cleanupNetwork = () => void handle.remove();
+      });
+    }
 
     return () => {
       void supabase.removeChannel(channel);
+      cleanupNetwork?.();
     };
   }, [myId, peerId]);
 

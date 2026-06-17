@@ -258,12 +258,13 @@ body {
   padding-bottom: var(--player-bottom-nav-offset);
 }
 
-/* Android/iPhone nativo: mínimo extra si env(safe-area-inset-bottom) es 0 */
+/* Android/iPhone nativo: mínimo 3rem (48 px) como fallback para Samsung donde
+   env(safe-area-inset-bottom) puede devolver 0 con gesture navigation. */
 html.capacitor-native:not(.capacitor-ipad) {
   --player-bottom-nav-safe-padding: max(
     var(--player-bottom-nav-edge-padding),
     var(--cap-safe-bottom, env(safe-area-inset-bottom, 0px)),
-    1.25rem
+    3rem
   );
   --player-bottom-nav-offset: calc(
     var(--player-bottom-nav-inner-height) + var(--player-bottom-nav-safe-padding)

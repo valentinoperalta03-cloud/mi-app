@@ -12,14 +12,18 @@ import {
 } from "@/lib/native-oauth";
 
 // ─── OAuth tracking ───────────────────────────────────────────────────────────
+// Uses Preferences (native SQLite storage) instead of sessionStorage.
+// sessionStorage is cleared when Samsung kills the WebView background process,
+// causing handled OAuth URLs to appear unhandled on the next resume, which
+// triggers a double-execution of the OAuth completion flow and breaks sign-in.
 
 const HANDLED_OAUTH_URLS_KEY = "padelibre:handled-oauth-urls";
 
-function getHandledOAuthUrls(): Set<string> {
+async function getHandledOAuthUrls(): Promise<Set<string>> {
   try {
-    const raw = sessionStorage.getItem(HANDLED_OAUTH_URLS_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as unknown;
+    const { value } = await Preferences.get({ key: HANDLED_OAUTH_URLS_KEY });
+    if (!value) return new Set();
+    const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed)) return new Set();
     return new Set(parsed.filter((item): item is string => typeof item === "string"));
   } catch {
@@ -27,29 +31,29 @@ function getHandledOAuthUrls(): Set<string> {
   }
 }
 
-function markOAuthUrlHandled(url: string): void {
+async function markOAuthUrlHandled(url: string): Promise<void> {
   try {
-    const handled = getHandledOAuthUrls();
+    const handled = await getHandledOAuthUrls();
     handled.add(url);
-    sessionStorage.setItem(HANDLED_OAUTH_URLS_KEY, JSON.stringify([...handled]));
+    await Preferences.set({ key: HANDLED_OAUTH_URLS_KEY, value: JSON.stringify([...handled]) });
   } catch {
-    // sessionStorage unavailable
+    // Preferences unavailable in web preview
   }
 }
 
-function wasOAuthUrlHandled(url: string): boolean {
-  return getHandledOAuthUrls().has(url);
+async function wasOAuthUrlHandled(url: string): Promise<boolean> {
+  return (await getHandledOAuthUrls()).has(url);
 }
 
 // ─── Deep link (Universal Link / App Link) tracking ──────────────────────────
 
 const HANDLED_DEEPLINK_KEY = "padelibre:handled-deeplinks";
 
-function getHandledDeepLinks(): Set<string> {
+async function getHandledDeepLinks(): Promise<Set<string>> {
   try {
-    const raw = sessionStorage.getItem(HANDLED_DEEPLINK_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as unknown;
+    const { value } = await Preferences.get({ key: HANDLED_DEEPLINK_KEY });
+    if (!value) return new Set();
+    const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed)) return new Set();
     return new Set(parsed.filter((item): item is string => typeof item === "string"));
   } catch {
@@ -57,16 +61,16 @@ function getHandledDeepLinks(): Set<string> {
   }
 }
 
-function markDeepLinkHandled(url: string): void {
+async function markDeepLinkHandled(url: string): Promise<void> {
   try {
-    const handled = getHandledDeepLinks();
+    const handled = await getHandledDeepLinks();
     handled.add(url);
-    sessionStorage.setItem(HANDLED_DEEPLINK_KEY, JSON.stringify([...handled]));
+    await Preferences.set({ key: HANDLED_DEEPLINK_KEY, value: JSON.stringify([...handled]) });
   } catch {}
 }
 
-function wasDeepLinkHandled(url: string): boolean {
-  return getHandledDeepLinks().has(url);
+async function wasDeepLinkHandled(url: string): Promise<boolean> {
+  return (await getHandledDeepLinks()).has(url);
 }
 
 // ─── Deep link parser ─────────────────────────────────────────────────────────
@@ -101,10 +105,10 @@ async function handleOAuthDeepLink(url: string) {
   }
 
   // getLaunchUrl() persiste en iOS y se re-ejecuta en cada recarga del WebView.
-  if (wasOAuthUrlHandled(url)) {
+  if (await wasOAuthUrlHandled(url)) {
     return;
   }
-  markOAuthUrlHandled(url);
+  await markOAuthUrlHandled(url);
 
   try {
     await Browser.close();
@@ -149,13 +153,13 @@ export default function CapacitorNativeAuthCallback() {
 
     // 2. Cold start — puede ser OAuth o Universal Link
     void App.getLaunchUrl()
-      .then((launch) => {
+      .then(async (launch) => {
         if (!launch?.url) return;
 
         // Universal Link de padelibre.online
         const deepPath = extractDeepLinkPath(launch.url);
-        if (deepPath && !wasDeepLinkHandled(launch.url)) {
-          markDeepLinkHandled(launch.url);
+        if (deepPath && !(await wasDeepLinkHandled(launch.url))) {
+          await markDeepLinkHandled(launch.url);
           router.push(deepPath);
           return;
         }
