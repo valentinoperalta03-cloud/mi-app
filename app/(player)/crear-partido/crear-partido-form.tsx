@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { courtBlockStartsFromRows, normalizeSlotTime, type ScheduleInput } from "@/lib/court-slots";
+import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
@@ -42,6 +42,7 @@ export type ClubOption = {
   bankAlias?: string | null;
   bankCbu?: string | null;
   mpConnected?: boolean;
+  openTime?: string;
 };
 
 export type CourtOption = {
@@ -76,18 +77,28 @@ type TurnSlot = {
 };
 type Step = "clubs" | "club-detail" | "options" | "payment";
 
-const COURT_TURNS: TurnSlot[] = [
-  { time: "09:00", endTime: "10:30", duration: 90 },
-  { time: "10:30", endTime: "12:00", duration: 90 },
-  { time: "12:00", endTime: "13:30", duration: 90 },
-  { time: "13:30", endTime: "15:00", duration: 90 },
-  { time: "15:00", endTime: "16:30", duration: 90 },
-  { time: "16:30", endTime: "18:00", duration: 90 },
-  { time: "18:00", endTime: "19:30", duration: 90 },
-  { time: "19:30", endTime: "21:00", duration: 90 },
-  { time: "21:00", endTime: "22:30", duration: 90 },
-  { time: "22:30", endTime: "23:59", duration: 89 },
-];
+function buildClubSlots(openTime: string): TurnSlot[] {
+  const parseT = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const fmt = (min: number) => {
+    const h = Math.floor(min / 60) % 24;
+    const m = min % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+  const openMin = parseT(openTime || "09:00");
+  const slots: TurnSlot[] = [];
+  for (let t = openMin; t < 24 * 60; t += 90) {
+    const end = t + 90;
+    slots.push({
+      time: fmt(t),
+      endTime: end >= 24 * 60 ? "00:00" : fmt(end),
+      duration: 90,
+    });
+  }
+  return slots;
+}
 
 function clockToMinutes(clock: string): number {
   const t = clock.trim().slice(0, 5);
@@ -102,17 +113,6 @@ function overlapsSlot(slotStartMin: number, slotDur: number, otherStartMin: numb
   return slotStartMin < otherEnd && otherStartMin < slotEnd;
 }
 
-function slotFitsInWindows(slot: TurnSlot, windows: ScheduleInput[]): boolean {
-  if (windows.length === 0) return true;
-  const slotStart = clockToMinutes(slot.time);
-  const slotEnd = clockToMinutes(slot.endTime);
-  return windows.some((window) => {
-    if (!window.open_time || !window.close_time) return false;
-    const winStart = clockToMinutes(String(window.open_time).slice(0, 5));
-    const winEnd = clockToMinutes(String(window.close_time).slice(0, 5));
-    return slotStart >= winStart && slotEnd <= winEnd;
-  });
-}
 
 function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): string {
   if (defaultClubId && clubs.some((c) => c.id === defaultClubId)) return defaultClubId;
@@ -231,17 +231,17 @@ export default function CrearPartidoForm({
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
       const dayOfWeek = getDay(dayDate);
 
+      // Obtener club_id de la cancha seleccionada para filtrar bloques del club
+      const courtClubId = courts.find((c) => c.id === selectedCourtId)
+        ? selectedClub?.id ?? ""
+        : "";
+
       const [
-        { data: scheduleRows, error: scheduleError },
         { data: matchRows, error: matchError },
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
+        { data: clubBlockRows },
       ] = await Promise.all([
-        supabase
-          .from(DB_TABLES.courtSchedules)
-          .select("court_id,day_of_week,open_time,close_time")
-          .eq("court_id", selectedCourtId)
-          .not("day_of_week", "is", null),
         supabase
           .from(DB_TABLES.matches)
           .select("scheduled_time,duration_minutes")
@@ -258,26 +258,38 @@ export default function CrearPartidoForm({
           .select("start_time")
           .eq("court_id", selectedCourtId)
           .eq("date", selectedDate),
+        courtClubId
+          ? supabase
+              .from(DB_TABLES.clubScheduleBlocks)
+              .select("blocked_time")
+              .eq("club_id", courtClubId)
+              .eq("day_of_week", dayOfWeek)
+          : Promise.resolve({ data: [] }),
       ]);
 
-      if (scheduleError || matchError || blockErrModern || blockErrLegacy) {
+      if (matchError || blockErrModern || blockErrLegacy) {
         setSlots([]);
         setError("No se pudieron cargar los horarios disponibles.");
         return;
       }
 
-      const schedules = (scheduleRows ?? []).filter(
-        (r) => Number((r as ScheduleInput).day_of_week) === dayOfWeek
-      ) as ScheduleInput[];
       const matches = (matchRows ?? []) as MatchRow[];
-      const blockStarts = courtBlockStartsFromRows(
+      const courtBlockStarts = courtBlockStartsFromRows(
         blockRowsModern as { blocked_time: string | null }[] | null,
         blockRowsLegacy as { start_time: string | null }[] | null
       );
+      const clubBlockedTimes = new Set(
+        ((clubBlockRows ?? []) as Array<{ blocked_time: string }>).map((r) =>
+          normalizeSlotTime(r.blocked_time)
+        )
+      );
 
-      const available = COURT_TURNS.filter((slot) => {
-        if (!slotFitsInWindows(slot, schedules)) return false;
-        if (blockStarts.has(normalizeSlotTime(slot.time))) return false;
+      // Generar slots dinámicos desde la apertura del club seleccionado
+      const allSlots = buildClubSlots(selectedClub?.openTime ?? "09:00");
+
+      const available = allSlots.filter((slot) => {
+        if (courtBlockStarts.has(normalizeSlotTime(slot.time))) return false;
+        if (clubBlockedTimes.has(normalizeSlotTime(slot.time))) return false;
         const slotStart = clockToMinutes(slot.time);
         for (const match of matches) {
           const otherStart = clockToMinutes(String(match.scheduled_time ?? ""));

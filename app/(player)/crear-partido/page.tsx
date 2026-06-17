@@ -47,7 +47,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token"
+        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time"
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -87,6 +87,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bank_alias?: string | null;
     bank_cbu?: string | null;
     mp_access_token?: string | null;
+    open_time?: string | null;
   }>).map((club) => ({
     id: club.id,
     name: club.name ?? "Club sin nombre",
@@ -100,6 +101,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bankAlias: club.bank_alias?.trim() || null,
     bankCbu: club.bank_cbu?.trim() || null,
     mpConnected: Boolean(club.mp_access_token),
+    openTime: String(club.open_time ?? "09:00").trim().slice(0, 5) || "09:00",
   }));
   const courtsDeduped = Array.from(
     new Map(

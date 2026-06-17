@@ -162,6 +162,21 @@ function NuevaReservaContent() {
 
       const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
       const slotDurationMinutes = Number((courtRow as { slot_duration_minutes?: number | null } | null)?.slot_duration_minutes ?? 90) || 90;
+
+      // Bloques recurrentes del club para este día de la semana
+      const { data: clubBlockRows } = clubId
+        ? await supabase
+            .from(DB_TABLES.clubScheduleBlocks)
+            .select("blocked_time")
+            .eq("club_id", clubId)
+            .eq("day_of_week", dow)
+        : { data: [] };
+      const clubBlockedTimes = new Set(
+        ((clubBlockRows ?? []) as Array<{ blocked_time: string }>).map((r) =>
+          normalizeSlotTime(r.blocked_time)
+        )
+      );
+
       if (clubId) {
         const { data: closedRow } = await supabase
           .from(DB_TABLES.clubClosedDays)
@@ -217,6 +232,9 @@ function NuevaReservaContent() {
         const slotDur = slot.duration;
 
         if (blockStarts.has(normalizeSlotTime(slot.time))) {
+          return { ...slot, available: false, reason: "Bloqueado por el club" } satisfies SlotView;
+        }
+        if (clubBlockedTimes.has(normalizeSlotTime(slot.time))) {
           return { ...slot, available: false, reason: "Bloqueado por el club" } satisfies SlotView;
         }
 

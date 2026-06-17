@@ -234,6 +234,14 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
         </p>
         {flash(hoursOk, hoursErr)}
         <ClubHoursForm defaultOpen={clubOpenDefault} />
+        <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <a
+            href="/admin/horarios"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            Gestionar horarios bloqueados →
+          </a>
+        </div>
       </section>
 
       <section className={`${adminCard} p-6`}>

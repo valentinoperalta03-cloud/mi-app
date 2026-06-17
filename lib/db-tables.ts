@@ -10,6 +10,7 @@ export const DB_TABLES = {
   profiles: "profiles",
   clubs: "clubs",
   clubClosedDays: "club_closed_days",
+  clubScheduleBlocks: "club_schedule_blocks",
   courts: "courts",
   courtSchedules: "court_schedules",
   courtBlocks: "court_blocks",
