@@ -4,6 +4,7 @@ import CapacitorNativeAuthCallback from "@/components/capacitor-native-auth-call
 import CapacitorOfflineBanner from "@/components/capacitor-offline-banner";
 import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
+import TouchDebug from "@/components/touch-debug";
 import { ThemeProvider } from "@/components/theme-provider";
 import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
 import "./globals.css";
@@ -94,6 +95,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
         <CapacitorStatusBarInit />
+        <TouchDebug />
         <CapacitorNativeAuthCallback />
         <CapacitorOfflineBanner />
         <CapacitorSplashHide />
