@@ -248,9 +248,14 @@ body {
   max-width: 100%;
 }
 
-/* Barra inferior fija: respeta home indicator (iOS) y gestos (Android immersive) */
+/* Barra inferior fija: respeta home indicator (iOS) y gestos (Android).
+   Usamos bottom positioning en lugar de padding-bottom para que el elemento
+   nav no cubra físicamente la zona de safe area — en Android WebView los
+   gestos de scroll que empiezan dentro de pointer-events:none no se propagan
+   al documento, bloqueando el scroll cuando el usuario empieza desde abajo. */
 .player-bottom-nav {
-  padding-bottom: var(--player-bottom-nav-safe-padding);
+  bottom: var(--player-bottom-nav-safe-padding);
+  touch-action: pan-y;
 }
 
 /* Contenido principal: espacio para la barra inferior + safe area */

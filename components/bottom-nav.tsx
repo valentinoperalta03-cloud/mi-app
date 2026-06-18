@@ -67,7 +67,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className={`player-bottom-nav pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-transparent px-4 transition-all duration-200 ${
+      className={`player-bottom-nav pointer-events-none fixed left-0 right-0 z-50 flex justify-center bg-transparent px-4 transition-all duration-200 ${
         drawerOpen ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
       }`}
       aria-label="Navegación principal"
