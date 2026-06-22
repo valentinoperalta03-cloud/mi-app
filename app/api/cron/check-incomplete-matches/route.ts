@@ -15,6 +15,7 @@ type MatchRow = {
   scheduled_time: string | null;
   match_type: string | null;
   match_status: string | null;
+  es_turno_fijo: boolean | null;
   incomplete_reminder_sent: boolean | null;
 };
 
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,incomplete_reminder_sent"
+      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,es_turno_fijo,incomplete_reminder_sent"
     )
     .gte("scheduled_date", today)
     .lte("scheduled_date", until)
@@ -79,7 +80,9 @@ export async function GET(req: Request) {
 
   for (const m of list) {
     const mt = String(m.match_type ?? "").toLowerCase();
-    if (mt !== "amistoso" && mt !== "competitivo") continue;
+    const isTurnoFijo = Boolean(m.es_turno_fijo);
+    // Procesar amistosos, competitivos, y turnos fijos (reservas con jugadores asignados)
+    if (mt !== "amistoso" && mt !== "competitivo" && !(mt === "reservation" && isTurnoFijo)) continue;
     const ms = String(m.match_status ?? "").toLowerCase();
     if (ms === "cancelled") continue;
 

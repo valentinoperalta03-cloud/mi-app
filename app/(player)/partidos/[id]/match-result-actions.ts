@@ -212,7 +212,7 @@ async function applyEloForConfirmedMatch(params: {
 
     const { error: upErr } = await supabase
       .from(DB_TABLES.profiles)
-      .update({ level: next, level_of_play: classifyCategory(next), category: classifyCategory(next) })
+      .update({ level: next, level_of_play: classifyCategory(next) })
       .eq("user_id", playerId);
     if (upErr) return { ok: false as const, message: upErr.message };
 

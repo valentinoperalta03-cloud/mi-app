@@ -250,17 +250,27 @@ export async function createReservation(formData: FormData): Promise<CreateReser
 
   const dateIso = toIsoDateTime(scheduledDate, timeNorm);
 
-  const { data: courtPriceRow, error: priceErr } = await supabase
-    .from(DB_TABLES.courts)
-    .select("price")
-    .eq("id", courtId)
-    .maybeSingle();
+  const [{ data: courtPriceRow, error: priceErr }, { data: slotPriceRow }] = await Promise.all([
+    supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle(),
+    supabase
+      .from(DB_TABLES.courtSchedules)
+      .select("price_override")
+      .eq("court_id", courtId)
+      .is("day_of_week", null)
+      .eq("start_time", timeNorm)
+      .not("price_override", "is", null)
+      .maybeSingle(),
+  ]);
 
   if (priceErr || !courtPriceRow) {
     return { error: "No se pudo obtener el precio del turno." };
   }
 
-  const baseAmount = Number((courtPriceRow as { price: number | null }).price ?? 0);
+  const slotOverride = (slotPriceRow as { price_override?: number | null } | null)?.price_override;
+  const baseAmount =
+    typeof slotOverride === "number" && slotOverride > 0
+      ? slotOverride
+      : Number((courtPriceRow as { price: number | null }).price ?? 0);
   if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
     return { error: "Precio del turno inválido." };
   }

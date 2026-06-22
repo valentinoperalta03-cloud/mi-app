@@ -387,7 +387,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
 
     const mp = await createMPPreference({
       matchId: data.id,
-      amount: perPlayerTotal,
+      amount: perPlayerBase,
       clubName,
       courtName,
       date: scheduledDate,

@@ -131,7 +131,9 @@ export async function updateMatch(formData: FormData): Promise<void> {
     .select("id,scheduled_time,duration_minutes")
     .eq("court_id", m.court_id)
     .eq("scheduled_date", scheduledDate)
-    .neq("match_status", "cancelled");
+    .neq("match_status", "cancelled")
+    .neq("payment_status", "expired")
+    .neq("payment_status", "rejected");
 
   for (const row of conflicts ?? []) {
     const r = row as { id: string; scheduled_time: string | null; duration_minutes: number | null };
@@ -502,6 +504,20 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=pago`);
   }
 
+  // Si el checkout genera el cuarto pago pendiente, bloquear el slot optimísticamente
+  const { count: pendingOrApproved } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id", { count: "exact", head: true })
+    .eq("match_id", matchId)
+    .in("status", ["pending", "approved"]);
+  if ((pendingOrApproved ?? 0) >= 4) {
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: "full" })
+      .eq("id", matchId)
+      .neq("match_status", "cancelled");
+  }
+
   await createNotification(supabase, {
     user_id: playerId,
     type: "payment_approved",
@@ -593,7 +609,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,location_name,match_status,court_id,scheduled_time")
+    .select("id,owner_id,location_name,match_status,match_type,court_id,scheduled_time")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr || !matchRow) {
@@ -604,6 +620,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     owner_id: string | null;
     location_name: string | null;
     match_status: string | null;
+    match_type: string | null;
     court_id: string | null;
     scheduled_time: string | null;
   };
@@ -714,7 +731,9 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
       }
     }
   } else if (remaining < 4 && !matchCancelled) {
-    await supabase.from(DB_TABLES.matches).update({ match_status: "scheduled" }).eq("id", matchId);
+    const isReservationType = String(m.match_type ?? "").toLowerCase() === "reservation";
+    const downgradedStatus = isReservationType ? "reserved" : "scheduled";
+    await supabase.from(DB_TABLES.matches).update({ match_status: downgradedStatus }).eq("id", matchId);
   }
 
   if (matchCancelled) {
@@ -834,7 +853,19 @@ export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; 
   }
 
   await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).eq("player_id", user.id);
-  await supabase.from(DB_TABLES.payments).update({ status: "cancelled" }).eq("match_id", matchId).eq("user_id", user.id);
+  // Pagos aprobados → solicitar reembolso; pagos pendientes/invitados → cancelar
+  await supabase
+    .from(DB_TABLES.payments)
+    .update({ status: "refund_requested" })
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .eq("status", "approved");
+  await supabase
+    .from(DB_TABLES.payments)
+    .update({ status: "cancelled" })
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .in("status", ["pending", "invited"]);
 
   const { data: profileRow } = await supabase
     .from(DB_TABLES.profiles)

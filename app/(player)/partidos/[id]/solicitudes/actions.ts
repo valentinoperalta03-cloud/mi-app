@@ -82,10 +82,21 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}/solicitudes`);
   }
 
-  // Mayoría gana
+  // Mayoría gana — actualización atómica: solo continúa si la request sigue en "pending"
   if (approvals > rejections) {
-    // Aprobar — generar pago, NO insertar en match_participants todavía
-    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "approved" }).eq("id", requestId);
+    const { data: resolved } = await supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .update({ status: "approved" })
+      .eq("id", requestId)
+      .eq("status", "pending")
+      .select("id");
+
+    if (!resolved?.length) {
+      // Otra ejecución concurrente ya resolvió esta solicitud
+      revalidatePath(`/partidos/${matchId}/solicitudes`);
+      revalidatePath(`/partidos/${matchId}`);
+      redirect(`/partidos/${matchId}/solicitudes`);
+    }
 
     const mpRes = await createParticipantMercadoPagoCheckout({
       supabase,
@@ -111,8 +122,20 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
       });
     }
   } else {
-    // Rechazar por mayoría
-    await supabase.from(DB_TABLES.matchJoinRequests).update({ status: "rejected" }).eq("id", requestId);
+    // Rechazar por mayoría — también atómico
+    const { data: resolved } = await supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .update({ status: "rejected" })
+      .eq("id", requestId)
+      .eq("status", "pending")
+      .select("id");
+
+    if (!resolved?.length) {
+      revalidatePath(`/partidos/${matchId}/solicitudes`);
+      revalidatePath(`/partidos/${matchId}`);
+      redirect(`/partidos/${matchId}/solicitudes`);
+    }
+
     await createNotification(supabase, {
       user_id: requesterId,
       type: "join_rejected",

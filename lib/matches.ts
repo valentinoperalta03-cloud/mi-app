@@ -100,6 +100,7 @@ export async function fetchNextMatchForPlayer(
       .select(matchListSelect)
       .eq("owner_id", userId)
       .gte("date", now)
+      .neq("match_status", "cancelled")
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle(),
@@ -116,6 +117,7 @@ export async function fetchNextMatchForPlayer(
       .select(matchListSelect)
       .in("id", ids)
       .gte("date", now)
+      .neq("match_status", "cancelled")
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle();

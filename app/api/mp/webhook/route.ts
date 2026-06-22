@@ -305,6 +305,14 @@ async function handlePracticePaymentIfPresent(
     return true;
   }
 
+  // Statuses intermedios (in_process, authorized, etc.): MP enviará la notificación final.
+  // Actualizar mp_payment_id para trazabilidad y esperar la notificación definitiva.
+  if (params.paymentId) {
+    await admin
+      .from(DB_TABLES.practiceRegistrations)
+      .update({ mp_payment_id: params.paymentId })
+      .eq("id", registrationId);
+  }
   return true;
 }
 

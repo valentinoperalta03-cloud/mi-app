@@ -74,8 +74,8 @@ function NuevaReservaContent() {
   const clubName = searchParams.get("club_name") ?? "";
   const courtName = searchParams.get("court_name") ?? "";
   const priceRaw = searchParams.get("price") ?? "0";
-  /** Precio total del turno (90 min) desde la cancha. */
-  const precioTurno = Number.parseInt(priceRaw, 10) || 0;
+  /** Precio base de la cancha (fallback si no hay precio por horario). */
+  const precioBase = Number.parseInt(priceRaw, 10) || 0;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -83,6 +83,8 @@ function NuevaReservaContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState<SlotView[]>([]);
+  const [slotPrices, setSlotPrices] = useState<Map<string, number>>(new Map());
+  const [precioTurno, setPrecioTurno] = useState(precioBase);
   const [pendingConfirm, startConfirm] = useTransition();
   const [clubPay, setClubPay] = useState<ClubPayLoad | null>(null);
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
@@ -122,6 +124,7 @@ function NuevaReservaContent() {
         { data: matchRows, error: matchErr },
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
+        { data: slotPriceRows },
       ] = await Promise.all([
         supabase.from(DB_TABLES.courts).select("club_id,slot_duration_minutes").eq("id", courtId).maybeSingle(),
         supabase
@@ -145,6 +148,13 @@ function NuevaReservaContent() {
           .select("start_time")
           .eq("court_id", courtId)
           .eq("date", selectedDate),
+        supabase
+          .from(DB_TABLES.courtSchedules)
+          .select("start_time,price_override")
+          .eq("court_id", courtId)
+          .is("day_of_week", null)
+          .not("start_time", "is", null)
+          .not("price_override", "is", null),
       ]);
 
       if (courtErr || schedErr || matchErr || blockErrModern || blockErrLegacy) {
@@ -259,6 +269,13 @@ function NuevaReservaContent() {
         return { ...slot, available: true } satisfies SlotView;
       });
 
+      const priceMap = new Map<string, number>();
+      for (const row of (slotPriceRows ?? []) as Array<{ start_time: string | null; price_override: number | null }>) {
+        if (row.start_time && typeof row.price_override === "number" && row.price_override > 0) {
+          priceMap.set(row.start_time.slice(0, 5), row.price_override);
+        }
+      }
+      setSlotPrices(priceMap);
       setSlots(resolvedSlots);
     } finally {
       setLoading(false);
@@ -419,6 +436,8 @@ function NuevaReservaContent() {
                     onClick={() => {
                       if (!slot.available) return;
                       setSelectedSlot(slot);
+                      const slotKey = slot.time.slice(0, 5);
+                      setPrecioTurno(slotPrices.get(slotKey) ?? precioBase);
                       setError(null);
                       setStep(3);
                     }}
