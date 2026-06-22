@@ -220,7 +220,7 @@ export default async function AdminCanchasPage({
                     href={`/admin/canchas/${c.id}/horarios`}
                     className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:text-slate-200"
                   >
-                    Horarios y precios
+                    Precios
                   </Link>
                 </div>
               </div>

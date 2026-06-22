@@ -167,9 +167,11 @@ export async function deleteFixedSlot(formData: FormData) {
 
   await supabase.from(DB_TABLES.fixedSlots).update({ is_active: false }).eq("id", fixedSlotId);
 
-  // Cancelar partidos futuros generados para este slot
+  // Cancelar partidos futuros — usar serviceClient para bypasear RLS,
+  // ya que el owner_id de los matches es un jugador, no el admin.
+  const serviceSupabase = createServiceClient();
   const today = getArgentinaNow().toISOString().slice(0, 10);
-  const { data: futureMatches } = await supabase
+  const { data: futureMatches } = await serviceSupabase
     .from(DB_TABLES.matches)
     .select("id")
     .eq("fixed_slot_id", fixedSlotId)
@@ -179,19 +181,19 @@ export async function deleteFixedSlot(formData: FormData) {
 
   const matchIds = ((futureMatches ?? []) as Array<{ id: string }>).map((m) => m.id);
   if (matchIds.length > 0) {
-    await supabase
+    await serviceSupabase
       .from(DB_TABLES.matches)
       .update({ match_status: "cancelled" })
       .in("id", matchIds);
 
     // Notificar a los participantes de cada partido cancelado
-    const { data: participants } = await supabase
+    const { data: participants } = await serviceSupabase
       .from(DB_TABLES.matchParticipants)
       .select("player_id, match_id")
       .in("match_id", matchIds);
 
     for (const p of (participants ?? []) as Array<{ player_id: string; match_id: string }>) {
-      await createNotification(supabase, {
+      await createNotification(serviceSupabase, {
         user_id: p.player_id,
         type: "reservation_cancelled",
         title: "Turno fijo cancelado",
