@@ -285,7 +285,7 @@ export default async function AdminJugadoresPage() {
         <div className={adminCard}>
           <p className={adminKicker}>Nuevos vs recurrentes</p>
           <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{nuevos} / {recurrentes}</p>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-[#0585FC]"
               style={{ width: `${Math.max(0, Math.min(100, nuevosRatio))}%` }}

@@ -222,7 +222,7 @@ export default async function AdminAnalyticsPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {totalReservations} reservas / {totalAvailableSlots} slots
           </p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, globalOccupancy)}%` }} />
           </div>
         </div>
@@ -256,7 +256,7 @@ export default async function AdminAnalyticsPage() {
             return (
               <div key={slot} className="grid grid-cols-[56px_1fr_40px] items-center gap-2 text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-300">{slot}</span>
-                <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full ${isTop ? "bg-[#0461C4]" : "bg-[#7CC0FF]"}`}
                     style={{ width: `${Math.max(3, (count / maxSlotCount) * 100)}%` }}
@@ -279,7 +279,7 @@ export default async function AdminAnalyticsPage() {
             return (
               <div key={day} className="grid grid-cols-[70px_1fr_36px] items-center gap-2 text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-300">{day.slice(0, 3)}</span>
-                <div className="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full ${
                       isMax ? "bg-[#0585FC]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
@@ -309,7 +309,7 @@ export default async function AdminAnalyticsPage() {
                   <span className="font-semibold text-slate-800 dark:text-slate-200">{court.name ?? "Cancha"}</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100">{ratio}%</span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/60">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, ratio)}%` }} />
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

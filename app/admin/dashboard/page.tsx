@@ -387,7 +387,7 @@ export default async function AdminDashboardPage() {
           <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
             {occupiedNowCount} <span className="text-base font-semibold text-slate-500">de {totalCourts}</span>
           </p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
           </div>
         </Link>
