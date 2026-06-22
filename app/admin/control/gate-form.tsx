@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -41,7 +41,7 @@ export default function GateForm() {
       </label>
 
       {state.message ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+        <p className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
           {state.message}
         </p>
       ) : null}

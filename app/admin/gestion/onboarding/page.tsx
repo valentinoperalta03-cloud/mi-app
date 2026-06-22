@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminCard, adminKicker, adminPressable, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -87,8 +87,8 @@ export default async function ClubOnboardingPage({ searchParams }: PageProps) {
         <p
           className={`rounded-2xl border px-4 py-3 text-sm font-medium shadow-sm ${
             status === "ok"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-rose-200 bg-rose-50 text-rose-700"
+              ? "border-emerald-200 bg-emerald-100/60 text-emerald-800"
+              : "border-rose-200 bg-rose-100/60 text-rose-700"
           }`}
         >
           {message}

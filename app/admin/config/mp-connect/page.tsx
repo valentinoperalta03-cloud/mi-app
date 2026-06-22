@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle, CreditCard, ExternalLink } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -50,7 +50,7 @@ export default async function MpConnectPage() {
       <div className={`${adminCard} flex items-start gap-4`}>
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-            isConnected ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-amber-50 dark:bg-amber-950/30"
+            isConnected ? "bg-emerald-100/60 dark:bg-emerald-950/30" : "bg-amber-100/60 dark:bg-amber-950/30"
           }`}
         >
           {isConnected ? (

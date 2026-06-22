@@ -1,4 +1,4 @@
-import { format, subDays } from "date-fns";
+﻿import { format, subDays } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -366,7 +366,7 @@ export default async function AdminAnalyticsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="rounded-2xl border border-amber-200 bg-amber-100/60 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <h2 className="text-base font-bold text-amber-900 dark:text-amber-300">
             💡 Horarios con baja ocupación — considerá promociones
           </h2>

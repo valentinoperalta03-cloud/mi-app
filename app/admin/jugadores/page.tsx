@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+﻿import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -411,7 +411,7 @@ export default async function AdminJugadoresPage() {
                           />
                           <button
                             type="submit"
-                            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                            className="rounded-lg border border-rose-300 bg-rose-100/60 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                           >
                             Bloquear
                           </button>
@@ -421,7 +421,7 @@ export default async function AdminJugadoresPage() {
                           <input type="hidden" name="user_id" value={row.uid} />
                           <button
                             type="submit"
-                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                            className="rounded-lg border border-emerald-300 bg-emerald-100/60 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
                           >
                             Desbloquear
                           </button>

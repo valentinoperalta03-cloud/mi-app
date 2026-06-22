@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useState } from "react";
 import { MAX_PAIRS_OPTIONS, TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
@@ -16,7 +16,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
     <form action={formAction} className="mt-4 space-y-4 text-sm">
       <input type="hidden" name="club_id" value={clubId} />
       {state.message && !state.ok ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+        <p className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           {state.message}
         </p>
       ) : null}
@@ -105,7 +105,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
           onChange={(e) => setClubPrice(Number(e.target.value) || 0)}
           className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
         />
-        <p className="mt-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+        <p className="mt-1.5 rounded-lg bg-amber-100/60 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           Los jugadores verán{" "}
           <span className="font-bold">
             ${(clubPrice + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} por pareja

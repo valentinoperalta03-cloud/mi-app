@@ -1,4 +1,4 @@
-import { addDays, format, parseISO } from "date-fns";
+﻿import { addDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { Info } from "lucide-react";
@@ -181,7 +181,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
         <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores.</p>
       </header>
 
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-50 dark:border-sky-800/60 dark:bg-sky-900/60">
+      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100/60 dark:border-sky-800/60 dark:bg-sky-900/60">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
           ¿Cómo funcionan los turnos fijos?
@@ -227,7 +227,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-100/60 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
             <span className="font-bold">Consejo:</span> Configurá las horas de anticipación según tus horarios de apertura. Si el club abre a las 8hs y el turno es a las 10hs, con 48 horas de anticipación los jugadores reciben la notificación dos días antes.
           </div>
         </div>
@@ -239,11 +239,11 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
           Con cuántas horas de anticipación los jugadores deben confirmar asistencia. Aplica a todos los turnos del club.
         </p>
         {fixedOk ? (
-          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-100/60 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
             Cambios guardados.
           </p>
         ) : fixedErr ? (
-          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
             {fixedErr}
           </p>
         ) : null}
@@ -311,7 +311,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         <input type="hidden" name="fixed_slot_id" value={slot.id} />
                         <button
                           type="submit"
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                          className="rounded-lg border border-rose-300 bg-rose-100/60 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                         >
                           Desactivar
                         </button>
@@ -450,7 +450,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                                 <input type="hidden" name="exception_id" value={ex.id} />
                                 <button
                                   type="submit"
-                                  className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
+                                  className="rounded-lg border border-rose-300 bg-rose-100/60 px-2 py-1 text-xs font-semibold text-rose-700"
                                 >
                                   Eliminar
                                 </button>
@@ -480,7 +480,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         </label>
                         <button
                           type="submit"
-                          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800"
+                          className="rounded-lg border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-semibold text-amber-800"
                         >
                           Agregar excepción
                         </button>

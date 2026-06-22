@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { Lock, LogOut, Mail, MessageCircle, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import ThemeToggleButton from "@/components/theme-toggle-button";
@@ -32,14 +32,14 @@ async function signOutAction() {
 function flash(ok: boolean, err: string) {
   if (ok) {
     return (
-      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-100/60 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
         Cambios guardados correctamente.
       </p>
     );
   }
   if (err) {
     return (
-      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
         {err}
       </p>
     );
@@ -431,7 +431,7 @@ export default async function AdminConfigPage({ searchParams }: PageProps) {
         <form action={signOutAction} className="mt-4">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-100/60 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
           >
             <LogOut size={16} />
             Cerrar sesión

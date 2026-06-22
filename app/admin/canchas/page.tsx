@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
@@ -271,7 +271,7 @@ export default async function AdminCanchasPage({
                       formAction={deleteCourt}
                       name="court_id"
                       value={c.id}
-                      className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                      className="rounded-xl border border-rose-300 bg-rose-100/60 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                     >
                       Eliminar
                     </button>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { AlertCircle, CheckCircle } from "lucide-react";
@@ -26,8 +26,8 @@ export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, init
         href="/admin/config/mp-connect"
         className={`block rounded-2xl border p-5 transition ${adminPressable} ${
           isMpConnected
-            ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
-            : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
+            ? "border-emerald-200 bg-emerald-100/60 dark:border-emerald-800 dark:bg-emerald-950/30"
+            : "border-amber-200 bg-amber-100/60 dark:border-amber-800 dark:bg-amber-950/30"
         }`}
       >
         <div className="flex items-center gap-2">

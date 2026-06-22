@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Check } from "lucide-react";
 import { adminCard, adminPressable } from "@/components/admin/admin-premium";
 import type { OnboardingItems } from "@/lib/admin/onboarding-check";
@@ -82,14 +82,14 @@ export default function OnboardingChecklist({
       </header>
 
       {!canReceiveReservations ? (
-        <div className="rounded-2xl border border-rose-200/90 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+        <div className="rounded-2xl border border-rose-200/90 bg-rose-100/60 px-4 py-3 text-sm font-semibold text-rose-900 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
           🚫 Tu club no puede recibir reservas todavía. Completá al menos: datos básicos, canchas con precio, horarios y
           un método de pago.
         </div>
       ) : null}
 
       {canReceiveReservations && !allCompleted ? (
-        <div className="rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-100/60 px-4 py-3 text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
           ⚠️ Podés recibir reservas pero te faltan algunos pasos para tener el perfil completo.
         </div>
       ) : null}

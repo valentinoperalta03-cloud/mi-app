@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -47,7 +47,7 @@ export default async function AdminClasesPage() {
         </Link>
       </div>
 
-      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-50 dark:border-sky-800/60 dark:bg-sky-900/60">
+      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-100/60 dark:border-sky-800/60 dark:bg-sky-900/60">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
           ¿Cómo funciona la sección de clases?
@@ -104,7 +104,7 @@ export default async function AdminClasesPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-100/60 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
             <span className="font-bold">Consejo:</span> Publicá la clase con suficiente anticipación para que los jugadores puedan inscribirse. Para clases semanales, publicá al inicio de la semana o con una semana de adelanto.
           </div>
         </div>
