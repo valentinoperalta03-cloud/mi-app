@@ -269,7 +269,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         <p className="text-sm text-rose-600">No se pudieron cargar clases pendientes: {practicePendErr.message}</p>
       ) : null}
 
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100/60 dark:border-sky-800/60 dark:bg-sky-900/60">
+      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
           ¿Cómo funciona la sección de cobros?
@@ -316,7 +316,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-100/60 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className="rounded-2xl border border-amber-200/80 bg-amber-100 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
             <span className="font-bold">Consejo:</span> Si activás los métodos de pago en <strong>Configuración → Métodos de pago</strong>, podés habilitar o deshabilitar efectivo y transferencia para controlar qué opciones ven los jugadores al reservar.
           </div>
         </div>
@@ -555,7 +555,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       {court} · {time || "—"}
                     </p>
                   </div>
-                  <span className="rounded-full border border-rose-200 bg-rose-100/60 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+                  <span className="rounded-full border border-rose-200 bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
                     No show
                   </span>
                 </li>

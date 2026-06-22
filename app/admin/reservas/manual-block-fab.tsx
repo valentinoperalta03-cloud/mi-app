@@ -84,8 +84,8 @@ function ManualBlockDialog({
             <p
               className={`rounded-xl border px-3 py-2 text-sm font-medium ${
                 state.success
-                  ? "border-emerald-200 bg-emerald-100/60 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
-                  : "border-rose-200 bg-rose-100/60 text-rose-800 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-200"
+                  ? "border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                  : "border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-200"
               }`}
             >
               {state.message}

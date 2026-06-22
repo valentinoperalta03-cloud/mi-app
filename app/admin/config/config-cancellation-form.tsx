@@ -37,7 +37,7 @@ export default function ConfigCancellationForm({ initialPolicy, initialHours }: 
       </label>
       <input type="hidden" name="cancellation_policy" value={preset.policy} />
       <input type="hidden" name="cancellation_hours" value={String(preset.hours)} />
-      <p className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+      <p className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
         {preset.description}
       </p>
       <button

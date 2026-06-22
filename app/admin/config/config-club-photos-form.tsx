@@ -162,7 +162,7 @@ export default function ConfigClubPhotosForm({ clubId, initial }: Props) {
         {slots.map((slot, idx) => (
           <div
             key={slot.pathBase}
-            className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50"
+            className="rounded-2xl border border-slate-200 bg-transparent p-4 dark:border-slate-700"
           >
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
             <div className="relative mt-3 inline-block">

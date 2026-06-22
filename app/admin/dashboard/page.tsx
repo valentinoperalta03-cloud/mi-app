@@ -414,7 +414,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         {totalAlerts === 0 ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-100/60 p-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-100 p-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
             ✅ Sin alertas pendientes. Todo en orden.
           </div>
         ) : (
@@ -423,7 +423,7 @@ export default async function AdminDashboardPage() {
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-100/60 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+                className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-100 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
               >
                 <span>🔴 {a.text}</span>
                 <ChevronRight size={16} />
@@ -433,7 +433,7 @@ export default async function AdminDashboardPage() {
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-100/60 p-4 text-sm font-semibold text-amber-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-100 p-4 text-sm font-semibold text-amber-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
               >
                 <span>🟡 {a.text}</span>
                 <ChevronRight size={16} />

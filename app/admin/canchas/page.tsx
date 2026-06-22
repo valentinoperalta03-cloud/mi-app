@@ -54,38 +54,27 @@ export default async function AdminCanchasPage({
   const { data: schedulesRaw } = courtIds.length
     ? await supabase
         .from(DB_TABLES.courtSchedules)
-        .select("court_id,range_name,price")
+        .select("court_id,start_time,price_override")
         .in("court_id", courtIds)
-        .not("range_name", "is", null)
+        .is("day_of_week", null)
+        .not("start_time", "is", null)
+        .not("price_override", "is", null)
+        .order("start_time", { ascending: true })
     : { data: [] };
-  const schedules = (schedulesRaw ?? []) as Array<{ court_id: string; range_name: string | null; price: number | null }>;
-  const priceRangesByCourt = new Map<string, Map<string, number>>();
+  const schedules = (schedulesRaw ?? []) as Array<{ court_id: string; start_time: string | null; price_override: number | null }>;
+  const slotPricesByCourt = new Map<string, Array<{ time: string; price: number }>>();
   for (const row of schedules) {
-    const range = String(row.range_name ?? "").trim().toLowerCase();
-    if (!range) continue;
-    const courtMap = priceRangesByCourt.get(row.court_id) ?? new Map<string, number>();
-    if (typeof row.price === "number" && Number.isFinite(row.price)) {
-      courtMap.set(range, row.price);
-    }
-    priceRangesByCourt.set(row.court_id, courtMap);
+    const time = String(row.start_time ?? "").slice(0, 5);
+    if (!time || typeof row.price_override !== "number") continue;
+    const list = slotPricesByCourt.get(row.court_id) ?? [];
+    list.push({ time, price: row.price_override });
+    slotPricesByCourt.set(row.court_id, list);
   }
 
   function getPriceSummary(courtId: string) {
-    const ranges = priceRangesByCourt.get(courtId);
-    if (!ranges || ranges.size === 0) return "Sin precios dinámicos";
-    const morning = ranges.get("mañana") ?? ranges.get("manana");
-    const afternoon = ranges.get("tarde");
-    const night = ranges.get("noche");
-    const parts: string[] = [];
-    if (typeof morning === "number") parts.push(`Mañana: $${morning}`);
-    if (typeof afternoon === "number") parts.push(`Tarde: $${afternoon}`);
-    if (typeof night === "number") parts.push(`Noche: $${night}`);
-    if (parts.length === 0) {
-      for (const [name, amount] of ranges.entries()) {
-        parts.push(`${name.charAt(0).toUpperCase()}${name.slice(1)}: $${amount}`);
-      }
-    }
-    return parts.join(" · ");
+    const slots = slotPricesByCourt.get(courtId);
+    if (!slots || slots.length === 0) return "Sin precios por horario";
+    return slots.map((s) => `${s.time}: $${new Intl.NumberFormat("es-AR").format(s.price)}`).join(" · ");
   }
 
   return (
@@ -224,7 +213,7 @@ export default async function AdminCanchasPage({
                   </Link>
                 </div>
               </div>
-              <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+              <details className="mt-4 rounded-2xl border border-slate-200 bg-transparent p-4 dark:border-slate-700">
                 <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                   <span className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                     Editar
@@ -271,7 +260,7 @@ export default async function AdminCanchasPage({
                       formAction={deleteCourt}
                       name="court_id"
                       value={c.id}
-                      className="rounded-xl border border-rose-300 bg-rose-100/60 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                      className="rounded-xl border border-rose-300 bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                     >
                       Eliminar
                     </button>

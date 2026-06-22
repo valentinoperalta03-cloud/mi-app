@@ -25,7 +25,7 @@ export default async function AdminFinanzasPage() {
       </header>
       <Link
         href="/admin/finanzas/reembolsos"
-        className="inline-flex w-fit rounded-2xl border border-emerald-200 bg-emerald-100/60 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+        className="inline-flex w-fit rounded-2xl border border-emerald-200 bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
       >
         Reembolsos
       </Link>

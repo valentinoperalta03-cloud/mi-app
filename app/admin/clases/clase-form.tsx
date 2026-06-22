@@ -29,7 +29,7 @@ export default function ClaseForm({
     <form action={formAction} className="mt-4 space-y-4 text-sm">
       <input type="hidden" name="club_id" value={clubId} />
       {state.message && !state.ok ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+        <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           {state.message}
         </p>
       ) : null}

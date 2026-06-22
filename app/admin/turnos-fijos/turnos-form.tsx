@@ -145,7 +145,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
               <button
                 type="button"
                 onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
-                className="rounded-lg border border-rose-300 bg-rose-100/60 px-2 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                className="rounded-lg border border-rose-300 bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
               >
                 Quitar
               </button>
@@ -158,7 +158,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
 
       <input type="hidden" name="players_payload" value={playersPayload} />
 
-      {error ? <p className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
+      {error ? <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
 
       <button
         type="submit"

@@ -182,7 +182,7 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
                 if (isBlocked(selectedDay, s.start)) handleToggle(s.start);
               });
             }}
-            className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+            className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
           >
             Desbloquear todos
           </button>

@@ -304,7 +304,7 @@ export default async function AdminAnalyticsPage() {
             const completos = completeByCourt.get(court.id) ?? 0;
             const incompletos = incompleteByCourt.get(court.id) ?? 0;
             return (
-              <li key={court.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/30">
+              <li key={court.id} className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-slate-800 dark:text-slate-200">{court.name ?? "Cancha"}</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100">{ratio}%</span>
@@ -366,7 +366,7 @@ export default async function AdminAnalyticsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-100/60 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="rounded-2xl border border-amber-200 bg-amber-100 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <h2 className="text-base font-bold text-amber-900 dark:text-amber-300">
             💡 Horarios con baja ocupación — considerá promociones
           </h2>

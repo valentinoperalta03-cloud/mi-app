@@ -268,7 +268,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           </p>
         </div>
         {closedErr ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-100/60 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
             {closedErr}
           </p>
         ) : null}
@@ -317,7 +317,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   <input type="hidden" name="return_date" value={selectedDate} />
                   <button
                     type="submit"
-                    className="rounded-full border border-rose-200 bg-rose-100/60 px-3 py-1 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                    className="rounded-full border border-rose-200 bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
                   >
                     Eliminar
                   </button>
@@ -352,10 +352,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           <div className="overflow-x-auto">
             <div className="min-w-[1100px]">
               <div
-                className="grid border-b border-slate-200/80 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/40"
+                className="grid border-b border-slate-200/80 bg-transparent dark:border-slate-700"
                 style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
               >
-                <div className="sticky left-0 z-20 border-r border-slate-200/80 bg-slate-50/95 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900">
+                <div className="sticky left-0 z-20 border-r border-slate-200/80 bg-white px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">
                   Hora
                 </div>
                 {ctx.courts.map((court) => (
@@ -385,7 +385,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                       return (
                         <div
                           key={slotKey}
-                          className="min-h-16 border-r border-slate-100/90 bg-slate-50/70 px-2 py-2 dark:border-slate-800 dark:bg-slate-900/20"
+                          className="min-h-16 border-r border-slate-200/60 bg-transparent px-2 py-2 dark:border-slate-800"
                         >
                           {blocked ? (
                             <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-600 bg-rose-500 p-2 text-white dark:border-rose-500 dark:bg-rose-600">
@@ -587,7 +587,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
                   <button
                     type="submit"
-                    className="inline-flex rounded-full border border-emerald-300 bg-emerald-100/60 px-3 py-1.5 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                    className="inline-flex rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
                   >
                     {selectedPaySt === "cash_pending" ? "Confirmar cobro en efectivo" : "Confirmar transferencia recibida"}
                   </button>
@@ -599,7 +599,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   <input type="hidden" name="date" value={selectedDate} />
                   <button
                     type="submit"
-                    className="inline-flex rounded-full border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+                    className="inline-flex rounded-full border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
                   >
                     Reembolsar
                   </button>
@@ -611,7 +611,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   <input type="hidden" name="date" value={selectedDate} />
                   <button
                     type="submit"
-                    className="inline-flex rounded-full border border-rose-300 bg-rose-100/60 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
+                    className="inline-flex rounded-full border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
                   >
                     Cancelar reserva
                   </button>

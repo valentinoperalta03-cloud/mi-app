@@ -26,8 +26,8 @@ export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, init
         href="/admin/config/mp-connect"
         className={`block rounded-2xl border p-5 transition ${adminPressable} ${
           isMpConnected
-            ? "border-emerald-200 bg-emerald-100/60 dark:border-emerald-800 dark:bg-emerald-950/30"
-            : "border-amber-200 bg-amber-100/60 dark:border-amber-800 dark:bg-amber-950/30"
+            ? "border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30"
+            : "border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -50,11 +50,11 @@ export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, init
         </span>
       </Link>
 
-      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950/50">
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-transparent px-3 py-2.5 dark:border-slate-700">
         <input type="checkbox" name="accepts_cash" defaultChecked={initial.accepts_cash} className="h-4 w-4 rounded border-slate-300" />
         <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Efectivo en el club</span>
       </label>
-      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950/50">
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-transparent px-3 py-2.5 dark:border-slate-700">
         <input
           type="checkbox"
           name="accepts_transfer"

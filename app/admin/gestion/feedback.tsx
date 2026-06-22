@@ -31,8 +31,8 @@ function FormMessage({ state }: { state: ActionState }) {
     <p
       className={`rounded-2xl border px-3 py-2 text-xs ${
         state.success
-          ? "border-emerald-200 bg-emerald-100/60 text-emerald-700"
-          : "border-rose-200 bg-rose-100/60 text-rose-700"
+          ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+          : "border-rose-200 bg-rose-100 text-rose-700"
       }`}
     >
       {state.message}
