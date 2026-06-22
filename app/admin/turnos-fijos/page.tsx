@@ -311,7 +311,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         <input type="hidden" name="fixed_slot_id" value={slot.id} />
                         <button
                           type="submit"
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                         >
                           Desactivar
                         </button>

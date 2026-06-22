@@ -279,7 +279,7 @@ export default async function AdminJugadoresPage() {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className={adminCard}>
           <p className={adminKicker}>Total jugadores únicos (mes)</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{totalUniqueMonth}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{totalUniqueMonth}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{newThisMonth} jugadores nuevos este mes</p>
         </div>
         <div className={adminCard}>
@@ -336,14 +336,14 @@ export default async function AdminJugadoresPage() {
                   <div className="min-w-0 flex-1 space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-lg font-bold text-slate-900">{row.name}</p>
+                        <p className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{row.name}</p>
                         <p className="mt-0.5 text-xs font-medium text-slate-400">
                           ID: {row.uid.slice(0, 8)}…
                         </p>
                       </div>
                       <PlayerSegmentPill segment={row.segment} />
                     </div>
-                    <dl className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
+                    <dl className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2 dark:border-slate-800">
                       <div>
                         <dt className={adminKicker}>Reservas creadas</dt>
                         <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{row.reservationsCreated}</dd>
@@ -407,11 +407,11 @@ export default async function AdminJugadoresPage() {
                           <input
                             name="reason"
                             placeholder="Motivo (opcional)"
-                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
                           />
                           <button
                             type="submit"
-                            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                           >
                             Bloquear
                           </button>
@@ -421,7 +421,7 @@ export default async function AdminJugadoresPage() {
                           <input type="hidden" name="user_id" value={row.uid} />
                           <button
                             type="submit"
-                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
                           >
                             Desbloquear
                           </button>
@@ -429,7 +429,7 @@ export default async function AdminJugadoresPage() {
                       )}
                       <Link
                         href={`/admin/reservas?selected=&date=${format(parseISO(row.last), "yyyy-MM-dd")}`}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                       >
                         Ver reservas
                       </Link>

@@ -117,7 +117,7 @@ export default async function AdminCanchasPage({
               <select
                 name="club_id"
                 required
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 defaultValue={ctx.clubs[0]?.id ?? ""}
               >
                 {ctx.clubs.map((c) => (
@@ -134,7 +134,7 @@ export default async function AdminCanchasPage({
                 type="text"
                 required
                 placeholder="Ej. Cancha 1"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </label>
             <label className="block space-y-1.5">
@@ -147,7 +147,7 @@ export default async function AdminCanchasPage({
                 min={0}
                 required
                 placeholder="0"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </label>
             <label className="block space-y-1.5">
@@ -155,7 +155,7 @@ export default async function AdminCanchasPage({
               <select
                 name="surface"
                 required
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 defaultValue="cemento"
               >
                 <option value="cemento">Cemento</option>
@@ -164,7 +164,7 @@ export default async function AdminCanchasPage({
                 <option value="moqueta">Moqueta</option>
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200">
               <input type="checkbox" name="indoor" className="h-4 w-4 rounded border-slate-300" />
               Techada
             </label>
@@ -237,7 +237,7 @@ export default async function AdminCanchasPage({
                     type="text"
                     required
                     defaultValue={c.name ?? ""}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                   <input
                     name="price"
@@ -245,19 +245,19 @@ export default async function AdminCanchasPage({
                     min={0}
                     required
                     defaultValue={c.price ?? 0}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   />
                   <select
                     name="surface"
                     defaultValue={c.surface ?? "cemento"}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   >
                     <option value="cemento">Cemento</option>
                     <option value="cristal">Cristal</option>
                     <option value="cesped sintetico">Césped sintético</option>
                     <option value="moqueta">Moqueta</option>
                   </select>
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                     <input type="checkbox" name="indoor" defaultChecked={Boolean(c.indoor)} className="h-4 w-4 rounded border-slate-300" />
                     Techada
                   </label>
@@ -271,7 +271,7 @@ export default async function AdminCanchasPage({
                       formAction={deleteCourt}
                       name="court_id"
                       value={c.id}
-                      className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
+                      className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
                     >
                       Eliminar
                     </button>

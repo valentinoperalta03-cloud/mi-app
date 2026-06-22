@@ -22,7 +22,7 @@ const CACHE_PREFIX = "admin_finance_matches_v1:";
 const CACHE_TTL_MS = 90_000;
 
 const btnPrimary = `rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-[0_2px_8px_-2px_rgba(15,23,42,0.25)] ${adminPressable} hover:bg-slate-800 disabled:opacity-60 disabled:hover:scale-100 disabled:active:scale-100`;
-const btnSecondary = `rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ${adminPressable} hover:bg-slate-50/90`;
+const btnSecondary = `rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ${adminPressable} hover:bg-slate-50/90 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800`;
 
 type Court = { id: string; name: string | null };
 type FinanceRow = MatchMoneyRow & {
@@ -325,7 +325,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         onSubmit={tryPin}
         className={`mx-auto max-w-sm space-y-5 ${adminCard}`}
       >
-        <h2 className="text-lg font-bold text-slate-900">Módulo financiero</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Módulo financiero</h2>
         <p className="text-sm font-medium text-slate-500">
           Ingresá el PIN de administrador (6 dígitos) para ver agregados de ingresos.
         </p>
@@ -338,7 +338,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6));
             setPinError(false);
           }}
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="······"
           autoComplete="one-time-code"
         />
@@ -355,7 +355,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   return (
     <div className="flex flex-col gap-6">
       <div className={`${adminCard} flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between`}>
-        <p className="text-sm font-semibold text-emerald-800">
+        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
           Sesión financiera activa (solo este dispositivo)
         </p>
         <button type="button" onClick={() => setUnlocked(false)} className={btnSecondary}>
@@ -375,7 +375,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         <>
           <section className={adminCard}>
             <h3 className="text-sm font-semibold text-slate-500">Ingresos confirmados (paid)</h3>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+            <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               ${total.toFixed(2)}
             </p>
           </section>
@@ -387,15 +387,15 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             </div>
             <div className={adminCard}>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ticket promedio</p>
-              <p className="mt-2 text-xl font-bold text-slate-900">${avgTicket.toFixed(2)}</p>
-              <p className="mt-1 text-xs font-medium text-slate-500">Por reserva pagada</p>
+              <p className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">${avgTicket.toFixed(2)}</p>
+              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Por reserva pagada</p>
             </div>
             <div className={adminCard}>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Cancha más rentable (mes)</p>
-              <p className="mt-2 text-base font-bold text-slate-900">
+              <p className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">
                 {topCourtMonth ? `${courtName.get(topCourtMonth[0]) ?? "Cancha"}` : "Sin datos"}
               </p>
-              <p className="mt-1 text-xs font-medium text-slate-500">
+              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                 {topCourtMonth ? `$${topCourtMonth[1].toFixed(2)}` : "Sin ingresos del mes"}
               </p>
             </div>
@@ -406,19 +406,19 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           </section>
 
           <section className={adminCard}>
-            <h3 className="text-base font-bold text-slate-900">Este mes vs mes anterior</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Este mes vs mes anterior</h3>
             <div className="mt-5 grid gap-6 sm:grid-cols-2">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   Mes actual
                 </p>
-                <p className="mt-1 text-xl font-bold text-slate-900">${compare.current.toFixed(2)}</p>
+                <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">${compare.current.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   Mes anterior
                 </p>
-                <p className="mt-1 text-xl font-semibold text-slate-700">
+                <p className="mt-1 text-xl font-semibold text-slate-700 dark:text-slate-300">
                   ${compare.previous.toFixed(2)}
                 </p>
               </div>
@@ -435,17 +435,17 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           </section>
 
           <section className={adminCard}>
-            <h3 className="text-base font-bold text-slate-900">Por cancha</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Por cancha</h3>
             <ul className="mt-5 flex flex-col gap-2">
               {Array.from(byCourt.entries())
                 .sort((a, b) => b[1] - a[1])
                 .map(([id, amount]) => (
                   <li
                     key={id}
-                    className="flex items-center justify-between rounded-2xl border border-slate-100/90 bg-slate-50/40 px-4 py-3 text-sm font-medium ring-1 ring-slate-100/60"
+                    className="flex items-center justify-between rounded-2xl border border-slate-100/90 bg-slate-50/40 px-4 py-3 text-sm font-medium ring-1 ring-slate-100/60 dark:border-slate-800 dark:bg-slate-900/40 dark:ring-slate-800/60"
                   >
                     <span>{courtName.get(id) ?? id}</span>
-                    <span className="font-bold text-slate-900">${amount.toFixed(2)}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">${amount.toFixed(2)}</span>
                   </li>
                 ))}
               {byCourt.size === 0 ? (
@@ -456,7 +456,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
 
           <section className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
             <div className={adminCard}>
-              <h4 className="text-sm font-bold text-slate-900">Por día</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Por día</h4>
               <div className="mt-4 flex flex-col gap-3">
                 {byDay.map((d) => (
                   <div key={d.key} className="space-y-1.5">
@@ -464,7 +464,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
                       <span>{d.label}</span>
                       <span>${d.total.toFixed(2)}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/40">
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/40 dark:bg-slate-800 dark:ring-slate-700/40">
                       <div
                         className="h-full rounded-full bg-emerald-500 shadow-sm"
                         style={{
@@ -477,29 +477,29 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
               </div>
             </div>
             <div className={adminCard}>
-              <h4 className="text-sm font-bold text-slate-900">Por semana</h4>
-              <ul className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-600">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Por semana</h4>
+              <ul className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
                 {byWeek.map((w) => (
                   <li
                     key={w.key}
-                    className="flex justify-between rounded-xl border border-transparent px-1 py-1.5 hover:border-slate-100 hover:bg-slate-50/60"
+                    className="flex justify-between rounded-xl border border-transparent px-1 py-1.5 hover:border-slate-100 hover:bg-slate-50/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
                   >
                     <span>{w.key}</span>
-                    <span className="font-semibold text-slate-800">${w.total.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">${w.total.toFixed(2)}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <div className={adminCard}>
-              <h4 className="text-sm font-bold text-slate-900">Por mes</h4>
-              <ul className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-600">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Por mes</h4>
+              <ul className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
                 {byMonth.map((m) => (
                   <li
                     key={m.key}
-                    className="flex justify-between rounded-xl border border-transparent px-1 py-1.5 hover:border-slate-100 hover:bg-slate-50/60"
+                    className="flex justify-between rounded-xl border border-transparent px-1 py-1.5 hover:border-slate-100 hover:bg-slate-50/60 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
                   >
                     <span>{m.label}</span>
-                    <span className="font-semibold text-slate-800">${m.total.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">${m.total.toFixed(2)}</span>
                   </li>
                 ))}
               </ul>

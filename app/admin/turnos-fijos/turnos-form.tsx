@@ -62,12 +62,12 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
         const res = await createFixedSlot(formData);
         if (res?.error) setError(res.error);
       }}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4"
+      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Cancha
-          <select name="court_id" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <select name="court_id" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             <option value="">Seleccionar</option>
             {courts.map((court) => (
               <option key={court.id} value={court.id}>
@@ -76,9 +76,9 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
             ))}
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-700">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Dia
-          <select name="day_of_week" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <select name="day_of_week" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             {DAY_OPTIONS.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}
@@ -89,9 +89,9 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Horario
-          <select name="start_time" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <select name="start_time" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             {SLOT_OPTIONS.map((slot) => (
               <option key={slot} value={slot}>
                 {slot}
@@ -99,31 +99,31 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
             ))}
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-700">
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Duracion
           <input
             name="duration_minutes"
             defaultValue="90"
             required
-            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </label>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-700">Buscar jugadores</label>
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Buscar jugadores</label>
         <input
           value={query}
           onChange={(e) => void searchPlayers(e.target.value)}
           placeholder="Nombre del jugador"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         {loading ? <p className="text-xs text-slate-500">Buscando...</p> : null}
         {results.length > 0 ? (
-          <ul className="space-y-1 rounded-xl border border-slate-200 p-2">
+          <ul className="space-y-1 rounded-xl border border-slate-200 p-2 dark:border-slate-700">
             {results.map((r) => (
               <li key={r.user_id} className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-700">{r.name ?? "Jugador"}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-200">{r.name ?? "Jugador"}</span>
                 <button
                   type="button"
                   onClick={() => addPlayer(r)}
@@ -140,12 +140,12 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
       {selected.length > 0 ? (
         <ul className="space-y-2">
           {selected.map((p) => (
-            <li key={p.playerId} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-              <span className="flex-1 text-sm font-medium text-slate-800">{p.name}</span>
+            <li key={p.playerId} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
+              <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">{p.name}</span>
               <button
                 type="button"
                 onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
-                className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700"
+                className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
               >
                 Quitar
               </button>
@@ -158,7 +158,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
 
       <input type="hidden" name="players_payload" value={playersPayload} />
 
-      {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
+      {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
 
       <button
         type="submit"

@@ -33,8 +33,8 @@ function ManualBlockDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-xl">
-        <h2 id="block-title" className="text-lg font-semibold text-slate-900">
+      <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <h2 id="block-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           Bloqueo manual
         </h2>
         <p className="mt-1 text-sm font-medium text-slate-500">
@@ -84,8 +84,8 @@ function ManualBlockDialog({
             <p
               className={`rounded-xl border px-3 py-2 text-sm font-medium ${
                 state.success
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-rose-200 bg-rose-50 text-rose-800"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                  : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-200"
               }`}
             >
               {state.message}
@@ -96,7 +96,7 @@ function ManualBlockDialog({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700"
+              className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
             >
               Cancelar
             </button>

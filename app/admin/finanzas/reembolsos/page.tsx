@@ -79,7 +79,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
       <form className={`${adminCard} flex items-end gap-3`}>
         <label className="flex-1 space-y-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mes</span>
-          <input type="month" name="month" defaultValue={monthParam} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800" />
+          <input type="month" name="month" defaultValue={monthParam} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
         </label>
         <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
           Filtrar
@@ -92,12 +92,12 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((row) => (
-              <li key={row.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm">
+              <li key={row.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/40">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-100">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
                   <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">{row.status ?? "—"}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                   {courtNameById.get(row.matches?.[0]?.court_id ?? "") ?? "Cancha"} · {row.matches?.[0]?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
                 </p>
               </li>
