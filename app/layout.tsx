@@ -1,10 +1,10 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import CapacitorNativeAuthCallback from "@/components/capacitor-native-auth-callback";
 import CapacitorOfflineBanner from "@/components/capacitor-offline-banner";
 import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
-import TouchDebug from "@/components/touch-debug";
+
 import { ThemeProvider } from "@/components/theme-provider";
 import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
 import "./globals.css";
@@ -15,11 +15,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PadeLibre — Que organizar no sea un problema.",
+  title: "PadeLibre â€” Que organizar no sea un problema.",
   description:
-    "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo. La app de pádel argentina.",
+    "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo. La app de pÃ¡del argentina.",
   keywords:
-    "pádel, reservar cancha de pádel, pádel Argentina, jugadores de pádel, torneos de pádel",
+    "pÃ¡del, reservar cancha de pÃ¡del, pÃ¡del Argentina, jugadores de pÃ¡del, torneos de pÃ¡del",
   alternates: {
     canonical: "https://www.padelibre.online",
   },
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   openGraph: {
-    title: "PadeLibre — Que organizar no sea un problema.",
-    description: "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.",
+    title: "PadeLibre â€” Que organizar no sea un problema.",
+    description: "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo.",
     url: "https://www.padelibre.online",
     siteName: "PadeLibre",
     locale: "es_AR",
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PadeLibre — Que organizar no sea un problema.",
-    description: "Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.",
+    title: "PadeLibre â€” Que organizar no sea un problema.",
+    description: "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo.",
     images: ["https://www.padelibre.online/og-image.png"],
   },
   icons: {
@@ -93,9 +93,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-full w-full max-w-full overflow-x-hidden">
+      <body suppressHydrationWarning className="min-h-full w-full max-w-full [overflow-x:clip]">
         <CapacitorStatusBarInit />
-        <TouchDebug />
         <CapacitorNativeAuthCallback />
         <CapacitorOfflineBanner />
         <CapacitorSplashHide />
@@ -104,3 +103,4 @@ export default function RootLayout({
     </html>
   );
 }
+

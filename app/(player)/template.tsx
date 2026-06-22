@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Capacitor } from "@capacitor/core";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -41,14 +41,14 @@ export default function PlayerTemplate({ children }: { children: ReactNode }) {
 
   if (skipMotion) {
     return (
-      <div className="player-route-root relative min-h-full overflow-x-hidden bg-[var(--bg-app)]">
+      <div className="player-route-root relative min-h-full [overflow-x:clip] bg-[var(--bg-app)]">
         <PlayerRouteContent key={pathname}>{children}</PlayerRouteContent>
       </div>
     );
   }
 
   return (
-    <div className="player-route-root relative min-h-full overflow-x-hidden bg-[var(--bg-app)]">
+    <div className="player-route-root relative min-h-full [overflow-x:clip] bg-[var(--bg-app)]">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={pathname}
@@ -66,3 +66,4 @@ export default function PlayerTemplate({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

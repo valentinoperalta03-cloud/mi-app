@@ -81,7 +81,7 @@ html {
   height: 100%;
   min-height: 100%;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip;
   background-color: var(--bg-app);
 }
 
@@ -233,7 +233,7 @@ body {
   min-height: 100dvh;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   font-family: -apple-system, BlinkMacSystemFont, "Roboto", var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg-app);
