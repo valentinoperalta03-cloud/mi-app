@@ -132,8 +132,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
     .eq("court_id", m.court_id)
     .eq("scheduled_date", scheduledDate)
     .neq("match_status", "cancelled")
-    .neq("payment_status", "expired")
-    .neq("payment_status", "rejected");
+    .or("payment_status.is.null,and(payment_status.neq.expired,payment_status.neq.rejected)");
 
   for (const row of conflicts ?? []) {
     const r = row as { id: string; scheduled_time: string | null; duration_minutes: number | null };
