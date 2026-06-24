@@ -133,7 +133,7 @@ export async function HomeSuggestedClubs() {
                 {imgUrl ? (
                   <img src={imgUrl} alt={label} className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-lg font-bold text-[#0585FC]">
+                  <span className="text-base font-semibold text-[#0585FC]">
                     {label.slice(0, 2).toUpperCase()}
                   </span>
                 )}

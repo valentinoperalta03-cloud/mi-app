@@ -132,7 +132,7 @@ export default function ClubsListClient({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-lg font-bold tracking-tight text-slate-950 dark:text-slate-100">
+                    <h2 className="truncate text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100">
                       {club.name ?? "Club sin nombre"}
                     </h2>
                     <p className="truncate text-sm font-light text-slate-500 dark:text-slate-400">

@@ -54,14 +54,14 @@ export function PartidoPagoReturn({ matchId, paymentId, dbStatus, collectionStat
     <div className="space-y-6">
       {effectiveStatus === "approved" ? (
         <Card variant="highlight" className="space-y-2">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">{PAYMENT_COPY.approvedTitle}</h1>
+          <h1 className="text-lg font-semibold text-[var(--text-primary)]">{PAYMENT_COPY.approvedTitle}</h1>
           <p className="text-sm text-[var(--text-secondary)]">{PAYMENT_COPY.approvedBody}</p>
         </Card>
       ) : null}
 
       {effectiveStatus === "failure" ? (
         <Card variant="default" className="space-y-3 border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30">
-          <h1 className="text-xl font-bold text-rose-900 dark:text-rose-100">{PAYMENT_COPY.failureTitle}</h1>
+          <h1 className="text-lg font-semibold text-rose-900 dark:text-rose-100">{PAYMENT_COPY.failureTitle}</h1>
           <p className="text-sm text-rose-800 dark:text-rose-200">{PAYMENT_COPY.failureBody}</p>
           <Link
             href={`/partidos/${matchId}`}
@@ -75,7 +75,7 @@ export function PartidoPagoReturn({ matchId, paymentId, dbStatus, collectionStat
 
       {effectiveStatus === "pending" ? (
         <Card variant="default" className="space-y-3 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-          <h1 className="text-xl font-bold text-amber-950 dark:text-amber-100">{PAYMENT_COPY.pendingTitle}</h1>
+          <h1 className="text-lg font-semibold text-amber-950 dark:text-amber-100">{PAYMENT_COPY.pendingTitle}</h1>
           <p className="text-sm text-amber-900 dark:text-amber-200">
             {timedOut ? PAYMENT_COPY.pendingSlow : PAYMENT_COPY.pendingBody}
           </p>

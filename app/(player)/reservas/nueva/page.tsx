@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -379,7 +379,7 @@ function NuevaReservaContent() {
       {step === 1 ? (
         <>
           <StepIndicator active={1} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">¿Cuándo querés jugar?</h1>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-slate-100">¿Cuándo querés jugar?</h1>
           <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {dateChips.map((chip) => {
               const selected = selectedDate === chip.key;
@@ -413,7 +413,7 @@ function NuevaReservaContent() {
       {step === 2 ? (
         <>
           <StepIndicator active={2} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Elegí un horario</h1>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Elegí un horario</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{selectedDateLabel}</p>
 
           {loading ? (
@@ -474,7 +474,7 @@ function NuevaReservaContent() {
       {step === 3 && selectedDate && selectedSlot ? (
         <>
           <StepIndicator active={3} />
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Confirmá tu reserva</h1>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-slate-100">Confirmá tu reserva</h1>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <dl className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
@@ -504,7 +504,7 @@ function NuevaReservaContent() {
           <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700">
             <p className="text-base font-bold text-slate-900 dark:text-slate-100">
               Total a pagar:{" "}
-              <span className="text-lg font-bold text-[#0585FC] dark:text-sky-400">${fmtAr(totalPagar)}</span>
+              <span className="text-base font-semibold text-[#0585FC] dark:text-sky-400">${fmtAr(totalPagar)}</span>
             </p>
           </div>
 

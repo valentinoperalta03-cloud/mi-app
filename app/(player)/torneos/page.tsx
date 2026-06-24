@@ -128,14 +128,14 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                       // eslint-disable-next-line @next/next/no-img-element -- URLs externas de storage
                       <img src={club.logo_url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-lg font-bold text-[#0461C4]">
+                      <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#0461C4]">
                         {(club?.name ?? "C").slice(0, 1).toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{club?.name ?? "Club"}</p>
-                    <h2 className="line-clamp-2 text-lg font-bold leading-snug break-words text-[var(--text-primary)]">{t.name}</h2>
+                    <h2 className="line-clamp-2 text-base font-semibold leading-snug break-words text-[var(--text-primary)]">{t.name}</h2>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
                         {badge}

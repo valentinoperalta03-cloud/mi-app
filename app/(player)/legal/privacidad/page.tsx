@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export default function PrivacidadPage() {
   return (
@@ -9,7 +9,7 @@ export default function PrivacidadPage() {
 
       <header className="mb-6 mt-3 space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Legal</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Política de Privacidad</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Política de Privacidad</h1>
         <p className="text-xs text-slate-400">Última actualización: Abril 2026</p>
       </header>
 

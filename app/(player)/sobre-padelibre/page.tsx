@@ -1,4 +1,4 @@
-import { MessageCircle } from "lucide-react";
+﻿import { MessageCircle } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 
@@ -18,7 +18,7 @@ export default function SobrePadelibrePage() {
       >
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
         <p className="text-sm font-semibold uppercase tracking-widest text-white/70">Nuestra historia</p>
-        <h2 className="mt-3 text-2xl font-bold leading-tight">Nació en un viaje. Creció en Argentina.</h2>
+        <h2 className="mt-3 text-xl font-semibold leading-tight">Nació en un viaje. Creció en Argentina.</h2>
         <p className="mt-4 text-sm leading-relaxed text-white/85">
           En Europa vimos cómo los clubes deportivos tenían todo automatizado y digitalizado. Reservas online, pagos
           divididos, comunidades activas. Volvimos a Argentina con una pregunta: ¿por qué acá no existe algo así para el
@@ -33,7 +33,7 @@ export default function SobrePadelibrePage() {
       <section className="space-y-4">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-[#0585FC]">Para jugadores</p>
-          <h3 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Los problemas que eliminamos</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Los problemas que eliminamos</h3>
         </div>
         <div className="space-y-3">
           {[
@@ -80,7 +80,7 @@ export default function SobrePadelibrePage() {
       <section className="space-y-4">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-[#0585FC]">Para clubes</p>
-          <h3 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Tu club en piloto automático</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Tu club en piloto automático</h3>
         </div>
         <div className="space-y-3">
           {[
@@ -125,7 +125,7 @@ export default function SobrePadelibrePage() {
       </section>
 
       <section className="space-y-3 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5">
-        <h3 className="text-lg font-bold text-[var(--text-primary)]">Un modelo justo para todos</h3>
+        <h3 className="text-base font-semibold text-[var(--text-primary)]">Un modelo justo para todos</h3>
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
           Para los clubes es completamente gratis. Sin abono mensual, sin costo de alta. Ganamos solo cuando vos ganás —
           una pequeña comisión del 5% sobre cada reserva pagada con Mercado Pago.
@@ -136,7 +136,7 @@ export default function SobrePadelibrePage() {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-bold text-[var(--text-primary)]">Seguinos y escribinos</h3>
+        <h3 className="text-base font-semibold text-[var(--text-primary)]">Seguinos y escribinos</h3>
         <div className="space-y-3">
           <a
             href="https://www.instagram.com/padelibre_"

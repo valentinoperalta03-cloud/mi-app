@@ -75,7 +75,7 @@ export default function OnboardingChecklist({
       className={`${adminCard} space-y-5 border-[#0585FC]/20 bg-gradient-to-br from-slate-50 via-white to-sky-50/40 ring-1 ring-[#0585FC]/10 dark:border-sky-900/30 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950/20 dark:ring-sky-500/10`}
     >
       <header className="space-y-1">
-        <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">👋 Bienvenido a PadeLibre</p>
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">👋 Bienvenido a PadeLibre</p>
         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
           Completá estos pasos para empezar a recibir reservas
         </p>

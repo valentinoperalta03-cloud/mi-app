@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -69,7 +69,7 @@ export default function ActivityTabs({
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight">Tu actividad</h1>
+        <h1 className="text-xl font-semibold leading-tight tracking-tight">Tu actividad</h1>
       </header>
 
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800">

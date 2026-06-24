@@ -557,7 +557,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Detalle del partido</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-white">Detalle del partido</h1>
       </header>
 
       <section
@@ -716,7 +716,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]`}
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">{detail.club_name ?? "Club"}</h2>
+          <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{detail.club_name ?? "Club"}</h2>
           <span
             className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
               isPrivate
@@ -738,7 +738,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
           <div>
             <p className="text-xs font-medium text-[var(--text-tertiary)]">Precio total</p>
-            <p className="text-xl font-bold text-[#0461C4]">
+            <p className="text-lg font-semibold text-[#0461C4]">
               ${Math.round((detail.total_price ?? 0) * 1.05).toLocaleString("es-AR")}
             </p>
           </div>
@@ -765,7 +765,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       {isOwner ? (
         <section className="rounded-2xl border border-[var(--border-subtle)] border-l-[3px] border-l-[#0585FC] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Tu partido</h2>
+            <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">Tu partido</h2>
             <span className="shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-emerald-500">
               Organizás
             </span>
@@ -939,7 +939,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {isPrivate && !isOwner && !isParticipant && inviteOpen ? (
         <section className="rounded-2xl border border-[#0585FC]/20/80 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">Unirte al partido</h2>
+          <h2 className="text-base font-semibold tracking-tight text-slate-900">Unirte al partido</h2>
           <p className="mt-2 text-sm text-slate-600">
             Este partido es privado. Enviá una solicitud al creador para sumarte.
           </p>
@@ -957,7 +957,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {isOwner && accessRequests.length > 0 ? (
         <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
-          <h2 className="text-lg font-bold tracking-tight text-slate-950">Solicitudes de acceso</h2>
+          <h2 className="text-base font-semibold tracking-tight text-slate-950">Solicitudes de acceso</h2>
           <p className="mt-1 text-xs font-medium text-slate-500">
             Jugadores que pidieron unirse a tu partido privado.
           </p>
@@ -1028,7 +1028,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {isParticipant && !isMatchFinished && matchStatusNorm !== "cancelled" ? (
         <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
-          <h2 className="text-lg font-bold tracking-tight text-slate-950">Tu cupo</h2>
+          <h2 className="text-base font-semibold tracking-tight text-slate-950">Tu cupo</h2>
           <p className="mt-1 text-sm text-slate-600">
             Si ya no podés jugar, cancelá tu lugar. El organizador será notificado.
           </p>
@@ -1160,7 +1160,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {canJoinAsNewPlayer && !isMatchFinished && !isPrivate && !match.level_restricted ? (
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
-          <h2 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">Sumate al partido</h2>
+          <h2 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white">Sumate al partido</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Confirmás tu lugar con el pago del turno.</p>
           <div className="mt-4">
             <JoinWithTeamForm

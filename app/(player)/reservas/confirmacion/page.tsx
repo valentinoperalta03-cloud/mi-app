@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { headers } from "next/headers";
@@ -128,7 +128,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl text-emerald-700 shadow-inner">
           ✓
         </div>
-        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950">
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950">
           {isReservation ? "¡Reserva confirmada!" : "¡Pago registrado!"}
         </h1>
         <p className="text-center text-sm font-medium text-slate-600">El pago se acreditó correctamente.</p>
@@ -141,7 +141,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl text-emerald-700 shadow-inner dark:bg-emerald-950/50 dark:text-emerald-300">
           ✓
         </div>
-        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-100">
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">
           {isCash ? "Reserva registrada" : "Reserva con transferencia"}
         </h1>
         <p className="text-center text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -157,7 +157,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-3xl text-amber-700 shadow-inner">
           …
         </div>
-        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950">Pago en proceso…</h1>
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950">Pago en proceso…</h1>
         <p className="text-center text-sm font-medium text-amber-800">
           Tu pago está siendo procesado por Mercado Pago. Te confirmaremos cuando se acredite.
         </p>
@@ -169,7 +169,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-rose-100 text-3xl text-rose-700 shadow-inner">
           ✕
         </div>
-        <h1 className="text-center text-2xl font-bold tracking-tight text-slate-950">Pago rechazado</h1>
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950">Pago rechazado</h1>
         <p className="text-center text-sm font-medium text-rose-800">
           No se pudo completar el pago. Probá con otro medio o contactá a tu banco.
         </p>

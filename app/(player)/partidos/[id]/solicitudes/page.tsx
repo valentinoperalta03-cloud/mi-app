@@ -87,7 +87,7 @@ export default async function MatchRequestsPage({ params }: PageProps) {
         <Link href={`/partidos/${matchId}`} className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
           ← Volver al partido
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Solicitudes de acceso</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-950">Solicitudes de acceso</h1>
         <p className="text-sm text-slate-500">Votá quién puede entrar al partido cuando hay nivel restringido.</p>
       </header>
 

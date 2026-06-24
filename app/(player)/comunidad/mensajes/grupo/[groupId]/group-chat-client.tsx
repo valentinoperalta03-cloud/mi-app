@@ -95,7 +95,7 @@ export function GroupChatClient({
             </button>
           ) : null}
         </div>
-        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
         {description ? <p className="text-xs text-slate-500 whitespace-pre-line">{description}</p> : null}
       </header>
 

@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+﻿import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -51,7 +51,7 @@ function ReservationCard({
     <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">{club}</h2>
+          <h2 className="truncate text-base font-semibold tracking-tight text-slate-950">{club}</h2>
           <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{court}</p>
         </div>
         {badgeReserved ? (
@@ -154,7 +154,7 @@ function FixedSlotCard({ slot }: { slot: FixedSlotEntry }) {
     <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-bold tracking-tight text-slate-950">{slot.clubName}</h2>
+          <h2 className="truncate text-base font-semibold tracking-tight text-slate-950">{slot.clubName}</h2>
           <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{slot.courtName}</p>
         </div>
         <Badge variant="brand" className="shrink-0">
@@ -396,7 +396,7 @@ export default async function ReservasPage({
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Reservas</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Mis reservas</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-950">Mis reservas</h1>
         <p className="text-sm font-light text-[var(--text-tertiary)]">Canchas que reservaste con FaltaUno.</p>
       </header>
 

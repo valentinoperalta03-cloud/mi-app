@@ -18,7 +18,7 @@ export default function SuperadminSidebar() {
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-white/10 bg-slate-900/95 px-3 py-6 backdrop-blur md:w-64">
       <div className="px-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/90">PadeLibre</p>
-        <p className="mt-1 text-lg font-bold text-white">Superadmin</p>
+        <p className="mt-1 text-base font-semibold text-white">Superadmin</p>
       </div>
       <nav className="mt-8 flex flex-col gap-1">
         {links.map((l) => {

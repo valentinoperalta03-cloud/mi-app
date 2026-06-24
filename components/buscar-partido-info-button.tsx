@@ -25,7 +25,7 @@ export function BuscarPartidoInfoButton() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Cómo buscar partido</h3>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Cómo buscar partido</h3>
               <button
                 type="button"
                 onClick={() => setShowInfo(false)}

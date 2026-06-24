@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
@@ -31,7 +31,7 @@ export default async function ParaTiPage() {
               >
                 <ChevronLeft size={20} className="text-[var(--text-secondary)]" />
               </Link>
-              <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Para Ti</h1>
+              <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Para Ti</h1>
             </div>
             <p className="mt-1 pl-11 text-sm text-[var(--text-tertiary)]">
               Novedades y sugerencias de la comunidad

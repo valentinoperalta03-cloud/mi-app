@@ -31,7 +31,7 @@ export default async function RankingsPage() {
       />
 
       <section className="mb-8 rounded-3xl bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] dark:ring-white/10">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">🏆 Top 10 de la semana</h2>
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">🏆 Top 10 de la semana</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Jugadores con más victorias en partidos con confirmación de resultado en los últimos 7 días
         </p>
@@ -46,7 +46,7 @@ export default async function RankingsPage() {
                 key={row.user_id}
                 className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-white/60 px-3 py-2.5 dark:bg-white/5"
               >
-                <span className="w-8 shrink-0 text-center text-lg font-bold" aria-hidden>
+                <span className="w-8 shrink-0 text-center text-base font-semibold" aria-hidden>
                   {medalForPosition(i + 1)}
                 </span>
                 <ProfileAvatar avatarUrl={row.avatar_url} name={row.name ?? "?"} size={40} />
@@ -65,7 +65,7 @@ export default async function RankingsPage() {
       </section>
 
       <section className="rounded-3xl bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] dark:ring-white/10">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">🎾 Más partidos jugados</h2>
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">🎾 Más partidos jugados</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Jugadores con más participaciones registradas en partidos
         </p>
@@ -80,7 +80,7 @@ export default async function RankingsPage() {
                 key={row.user_id}
                 className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-white/60 px-3 py-2.5 dark:bg-white/5"
               >
-                <span className="w-8 shrink-0 text-center text-lg font-bold" aria-hidden>
+                <span className="w-8 shrink-0 text-center text-base font-semibold" aria-hidden>
                   {medalForPosition(i + 1)}
                 </span>
                 <ProfileAvatar avatarUrl={row.avatar_url} name={row.name ?? "?"} size={40} />

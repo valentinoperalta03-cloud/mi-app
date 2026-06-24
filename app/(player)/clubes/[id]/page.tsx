@@ -115,12 +115,12 @@ export default async function ClubDetailPage({ params }: PageProps) {
                 className="h-16 w-16 shrink-0 rounded-2xl border-2 border-white object-cover shadow-lg"
               />
             ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white bg-white/15 text-lg font-bold text-white backdrop-blur-sm">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white bg-white/15 text-base font-semibold text-white backdrop-blur-sm">
                 {clubName.slice(0, 2).toUpperCase()}
               </div>
             )}
             <div className="min-w-0 flex-1 pb-0.5">
-              <h1 className="text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm">{clubName}</h1>
+              <h1 className="text-lg font-semibold leading-tight tracking-tight text-white drop-shadow-sm">{clubName}</h1>
               {club.business_hours?.trim() ? (
                 <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
                   <Clock className="h-3 w-3" />

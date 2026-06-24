@@ -126,7 +126,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
 
       <header className="mt-4 min-w-0 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{tour.clubs?.name ?? "Club"}</p>
-        <h1 className="mt-1 break-words text-2xl font-bold leading-tight text-[var(--text-primary)]">{tour.name}</h1>
+        <h1 className="mt-1 break-words text-xl font-semibold leading-tight text-[var(--text-primary)]">{tour.name}</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">{badge}</p>
         <p className="mt-2 text-sm capitalize text-[var(--text-secondary)]">
           {dateLabel} · {timeLabel}hs
@@ -173,7 +173,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
       )}
 
       <section className="mt-8">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">Parejas inscriptas</h2>
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">Parejas inscriptas</h2>
         <ul className="mt-3 space-y-2">
           {regList
             .filter((r) => r.payment_status === "approved")
@@ -195,7 +195,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
 
       {((matches ?? []) as Array<unknown>).length > 0 ? (
         <section className="mt-8">
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">Fixture</h2>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">Fixture</h2>
           <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
             {((matches ?? []) as Array<{
               id: string;

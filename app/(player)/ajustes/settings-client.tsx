@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
@@ -130,7 +130,7 @@ export default function SettingsClient({
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Ajustes</p>
-        <h1 className="text-2xl font-bold">Configuración</h1>
+        <h1 className="text-xl font-semibold">Configuración</h1>
       </header>
 
       {levelDowngraded ? (

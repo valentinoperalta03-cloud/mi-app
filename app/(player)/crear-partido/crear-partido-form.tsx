@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -366,7 +366,7 @@ export default function CrearPartidoForm({
             <Link href="/home" className="text-sm font-semibold text-[#0585FC]">
               ← Volver
             </Link>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">¿Dónde querés jugar?</h1>
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">¿Dónde querés jugar?</h1>
             <p className="text-sm text-slate-500">Elegí un club para ver sus canchas</p>
           </header>
 
@@ -507,12 +507,12 @@ export default function CrearPartidoForm({
                         className="h-16 w-16 shrink-0 rounded-2xl border-2 border-white object-cover shadow-lg"
                       />
                     ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white bg-white/15 text-lg font-bold text-white backdrop-blur-sm">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-white bg-white/15 text-base font-semibold text-white backdrop-blur-sm">
                         {clubName.slice(0, 2).toUpperCase()}
                       </div>
                     )}
                     <div className="min-w-0 flex-1 pb-0.5">
-                      <h1 className="text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm">
+                      <h1 className="text-lg font-semibold leading-tight tracking-tight text-white drop-shadow-sm">
                         {clubName}
                       </h1>
                       <p className="mt-0.5 flex items-center gap-1 text-sm text-white/85">
@@ -549,7 +549,7 @@ export default function CrearPartidoForm({
                   }`}
                 >
                   <span className="text-[10px] font-semibold uppercase">{date.top}</span>
-                  <span className="text-lg font-bold leading-tight">{date.bottom}</span>
+                  <span className="text-base font-semibold leading-tight">{date.bottom}</span>
                 </button>
               ))}
             </div>
@@ -631,7 +631,7 @@ export default function CrearPartidoForm({
           </button>
 
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Opciones del partido</h1>
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Opciones del partido</h1>
             <p className="mt-1 text-sm text-slate-500">
               {selectedClub?.name} ·{" "}
               {selectedDate
@@ -850,7 +850,7 @@ export default function CrearPartidoForm({
             ← Volver a opciones
           </button>
 
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Confirmá tu partido</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Confirmá tu partido</h1>
 
           <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06]">
             <div
@@ -890,7 +890,7 @@ export default function CrearPartidoForm({
               <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
                 <p className="text-base font-bold text-slate-900 dark:text-white">
                   Total a pagar:{" "}
-                  <span className="text-lg font-bold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
+                  <span className="text-base font-semibold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
                 </p>
               </div>
             </div>

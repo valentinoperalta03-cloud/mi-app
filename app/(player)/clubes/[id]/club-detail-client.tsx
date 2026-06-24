@@ -167,7 +167,7 @@ export default function ClubDetailClient({
             className="h-16 w-16 rounded-2xl object-cover"
           />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-950">
+            <h1 className="text-xl font-semibold tracking-tight text-slate-950">
               {club.name ?? "Club"}
             </h1>
             <p className="mt-1 text-sm font-light text-slate-500">

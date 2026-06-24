@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import { ChevronDown, CircleDollarSign, Search, TrendingUp, Users } from "lucide-react";
@@ -89,7 +89,7 @@ export default function ComoFuncionaContent() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Para jugadores</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             Soluciones reales para jugar más y organizar menos
           </h2>
         </div>
@@ -123,7 +123,7 @@ export default function ComoFuncionaContent() {
       >
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[#0585FC]">Te damos una mano</p>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             Preguntas frecuentes
           </h2>
         </div>

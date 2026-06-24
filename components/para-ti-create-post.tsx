@@ -72,7 +72,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
   return (
     <>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 id="post-modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
+        <h2 id="post-modal-title" className="text-base font-semibold text-slate-900 dark:text-white">
           Nueva publicación
         </h2>
         <button

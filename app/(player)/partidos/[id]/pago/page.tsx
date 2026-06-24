@@ -56,7 +56,7 @@ export default async function PartidoPagoPage({ params, searchParams }: PageProp
         >
           ← Volver al partido
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Estado del pago</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Estado del pago</h1>
       </header>
 
       <PartidoPagoReturn

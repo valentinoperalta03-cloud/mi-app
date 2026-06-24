@@ -40,7 +40,7 @@ export function HomeSocialSection() {
     >
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0585FC]">Comunidad</p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-[var(--text-primary)]">Seguinos en redes</h2>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Seguinos en redes</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Enterate de sorteos, memes de pádel y las últimas novedades de la app.
         </p>

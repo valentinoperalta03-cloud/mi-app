@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Suspense } from "react";
 import { HomeSuggestedClubs, HomeSuggestionsSection } from "@/components/home-suggestions-section";
 import { HomeSuggestionsSkeleton } from "@/components/home-loading-skeletons";
@@ -109,7 +109,7 @@ export function ComunidadClient({
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
       <header className="mx-4 mb-6 space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Comunidad</h1>
         <p className="text-sm text-[var(--text-tertiary)]">Conectate con otros jugadores</p>
         {rankingsPreview.myGlobalPosition != null && rankingsPreview.totalRankedPlayers > 0 ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--bg-subtle)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">

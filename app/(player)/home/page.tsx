@@ -104,7 +104,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <span className="h-1.5 w-1.5 rounded-full bg-black" />
             En línea
           </span>
-          <h1 className="text-xl font-bold leading-tight tracking-tight">¡Vamos, {displayName}!</h1>
+          <h1 className="text-lg font-semibold leading-tight tracking-tight">¡Vamos, {displayName}!</h1>
           <p className="mt-1 text-sm text-white/75">¿Qué querés hacer hoy?</p>
         </div>
       </section>
@@ -205,7 +205,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {pendingForMe.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Resultados pendientes</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Resultados pendientes</h2>
           {pendingForMe.slice(0, 2).map((p) => (
             <CompetitiveResultConfirmationCard
               key={p.match_id}
@@ -227,14 +227,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Tu resumen</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
         </Suspense>
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">Mis Reservas</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Mis Reservas</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>

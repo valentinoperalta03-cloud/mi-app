@@ -100,7 +100,7 @@ export function JoinMatchPaymentModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Unirse al Equipo {team}</h3>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Unirse al Equipo {team}</h3>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

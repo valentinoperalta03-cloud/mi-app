@@ -53,7 +53,7 @@ export default function FriendsSearchClient({
   return (
     <div className="space-y-6">
       <header className="mb-6 space-y-3">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">Jugadores</h1>
+        <h1 className="text-lg font-semibold text-[var(--text-primary)]">Jugadores</h1>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-3.5 text-[var(--text-tertiary)]" />
           <input

@@ -153,7 +153,7 @@ export default async function ClaseDetallePage({
 
       <header className="mt-4 min-w-0 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{club?.name ?? "Club"}</p>
-        <h1 className="mt-1 break-words text-2xl font-bold leading-tight text-[var(--text-primary)]">{practice.title}</h1>
+        <h1 className="mt-1 break-words text-xl font-semibold leading-tight text-[var(--text-primary)]">{practice.title}</h1>
         <p className="mt-2 text-sm capitalize text-[var(--text-secondary)]">
           {format(dt, "EEEE d 'de' MMMM · HH:mm", { locale: es })}
         </p>
@@ -164,7 +164,7 @@ export default async function ClaseDetallePage({
         {practice.description ? (
           <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{practice.description}</p>
         ) : null}
-        <p className="mt-3 text-lg font-bold text-[var(--text-primary)]">
+        <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">
           ${price.playerTotal.toLocaleString("es-AR")}
         </p>
         {price.platformFee > 0 ? (

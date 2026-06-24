@@ -3,7 +3,7 @@ import { createClubAction } from "@/app/superadmin/actions";
 export default function CreateClubForm() {
   return (
     <section className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-950/40 to-slate-900/60 p-6">
-      <h2 className="text-lg font-bold text-white">Alta de club</h2>
+      <h2 className="text-base font-semibold text-white">Alta de club</h2>
       <p className="mt-1 text-sm text-slate-400">
         Creá un club y asignalo al email del dueño (usuario registrado en la app).
       </p>

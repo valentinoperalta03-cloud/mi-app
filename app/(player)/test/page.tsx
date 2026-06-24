@@ -1,9 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export default function TestPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 px-4 py-6">
-      <h1 className="text-2xl font-bold text-slate-900">Pagina de prueba</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Pagina de prueba</h1>
       <p className="text-sm text-slate-600">
         Esta ruta confirma que el boton de Ver detalles navega correctamente.
       </p>

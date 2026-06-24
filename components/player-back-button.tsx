@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 export function PlayerBackButton({
@@ -36,7 +36,7 @@ export function PlayerStackHeader({
     <header className={`flex items-center gap-3 ${className}`}>
       <PlayerBackButton href={backHref} label={backLabel} />
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">{title}</h1>
         {subtitle ? <p className="text-sm text-[var(--text-tertiary)]">{subtitle}</p> : null}
       </div>
     </header>

@@ -21,7 +21,7 @@ export default function ClubAnalyticsGrid({ row }: { row: SuperadminClubOverview
 
   return (
     <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
-      <h2 className="text-lg font-bold text-white">Análisis del club</h2>
+      <h2 className="text-base font-semibold text-white">Análisis del club</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <div
@@ -29,7 +29,7 @@ export default function ClubAnalyticsGrid({ row }: { row: SuperadminClubOverview
             className="rounded-xl border border-white/5 bg-slate-950/50 px-4 py-3"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{c.label}</p>
-            <p className="mt-1 text-lg font-bold text-white">{c.value}</p>
+            <p className="mt-1 text-base font-semibold text-white">{c.value}</p>
           </div>
         ))}
       </div>

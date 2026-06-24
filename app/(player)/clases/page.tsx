@@ -92,7 +92,7 @@ export default async function ClasesPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
                   {club?.name ?? "Club"}
                 </p>
-                <h2 className="mt-1 break-words text-lg font-bold text-[var(--text-primary)]">{p.title}</h2>
+                <h2 className="mt-1 break-words text-base font-semibold text-[var(--text-primary)]">{p.title}</h2>
                 <p className="mt-2 text-sm capitalize text-[var(--text-secondary)]">
                   {format(dt, "EEEE d MMM · HH:mm", { locale: es })}
                 </p>

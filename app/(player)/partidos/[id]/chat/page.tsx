@@ -87,7 +87,7 @@ export default async function MatchChatPage({
         <Link href={`/partidos/${id}`} className="text-sm font-semibold text-[#0585FC]">
           ← Volver al partido
         </Link>
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">
+        <h1 className="text-lg font-semibold text-[var(--text-primary)]">
           Chat del partido
         </h1>
       </header>

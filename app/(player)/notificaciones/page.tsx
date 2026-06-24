@@ -1,4 +1,4 @@
-import { formatDistanceToNow, isThisWeek, isToday, parseISO } from "date-fns";
+﻿import { formatDistanceToNow, isThisWeek, isToday, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -104,7 +104,7 @@ export default async function NotificacionesPage() {
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-[#0585FC]">Notificaciones</p>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Tu actividad reciente</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Tu actividad reciente</h1>
         </div>
         <NotificationsPermissionButton />
       </header>

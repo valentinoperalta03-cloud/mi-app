@@ -1,4 +1,4 @@
-import EmptyStateCard from "@/components/empty-state-card";
+﻿import EmptyStateCard from "@/components/empty-state-card";
 import { BuscarPartidoInfoButton } from "@/components/buscar-partido-info-button";
 import MatchesFilterBoard, { type MatchCardData } from "@/components/matches-filter-board";
 import MotionPage from "@/components/motion-page";
@@ -248,7 +248,7 @@ export default async function OpenMatchesBoard({
       ) : (
         <header className="space-y-2">
           <p className="text-sm font-medium text-[#0585FC]">{kicker}</p>
-          <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{title}</h1>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight text-slate-900">{title}</h1>
           <p className="text-sm text-slate-500">{effectiveDescription}</p>
         </header>
       )}

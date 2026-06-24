@@ -179,7 +179,7 @@ export default async function PerfilPage() {
                 ringClassName="ring-2 ring-[var(--border-subtle)]"
               />
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">{displayName}</h1>
+                <h1 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">{displayName}</h1>
                 {levelParts ? (
                   <span
                     className="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest"

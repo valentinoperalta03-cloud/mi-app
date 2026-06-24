@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -26,7 +26,7 @@ export default async function PartidosPage() {
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Inicio</p>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Matches</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Matches</h1>
         <p className="text-sm font-light text-[var(--text-tertiary)]">
           Partidos abiertos y proximos en la tabla{" "}
           <code className="rounded bg-[var(--bg-subtle)] px-1 text-xs">matches</code>.
@@ -59,7 +59,7 @@ export default async function PartidosPage() {
                   className="h-16 w-16 rounded-2xl object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-xl font-bold leading-tight tracking-tight text-slate-950">
+                  <h2 className="truncate text-lg font-semibold leading-tight tracking-tight text-slate-950">
                     {matchCourtName(item)}
                   </h2>
                   <p className="truncate text-sm font-light text-[var(--text-tertiary)]">{clubName}</p>
@@ -70,7 +70,7 @@ export default async function PartidosPage() {
               </div>
               <p className="mt-2 text-sm font-light text-[var(--text-tertiary)]">{when}</p>
               <div className="mt-2 flex items-center justify-between">
-                <p className="shrink-0 text-lg font-bold tracking-tight text-slate-950">
+                <p className="shrink-0 text-base font-semibold tracking-tight text-slate-950">
                   {courtPrice != null ? `$${courtPrice}` : "Consultar"}
                 </p>
                 <Link

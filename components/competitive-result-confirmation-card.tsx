@@ -126,7 +126,7 @@ export function CompetitiveResultConfirmationCard(props: {
           className="mt-4 rounded-2xl p-4 text-center"
           style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
         >
-          <p className="text-lg font-bold text-white">🏆 ¡Resultado confirmado!</p>
+          <p className="text-base font-semibold text-white">🏆 ¡Resultado confirmado!</p>
           <p className="mt-1 text-sm text-white/80">
             Tu nivel fue actualizado. Revisá tu perfil para ver la evolución.
           </p>

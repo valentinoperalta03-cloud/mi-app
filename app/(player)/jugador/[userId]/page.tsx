@@ -228,7 +228,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
             <ProfileAvatar avatarUrl={row.avatar_url} name={displayName} size={108} />
           </div>
         </div>
-        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{displayName}</h1>
+        <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900">{displayName}</h1>
         {!isMe && isMutual ? (
           <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             Amigos ✓
@@ -281,7 +281,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Preferencias del jugador</h2>
+        <h2 className="text-base font-semibold tracking-tight text-slate-900">Preferencias del jugador</h2>
         <div className="space-y-2 rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
           <p className="text-sm text-slate-700">
             <span className="font-semibold text-slate-900">Mano hábil:</span> {row.preferred_hand || "No definida"}
@@ -296,7 +296,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Partidos que jugó</h2>
+        <h2 className="text-base font-semibold tracking-tight text-slate-900">Partidos que jugó</h2>
         {ultimosCinco.length === 0 ? (
           <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
             Todavía no hay partidos con resultado para mostrar.
@@ -332,23 +332,23 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Estadísticas</h2>
+        <h2 className="text-base font-semibold tracking-tight text-slate-900">Estadísticas</h2>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-400">Victorias</p>
-            <p className="text-lg font-bold text-emerald-600">{victoriasTotales}</p>
+            <p className="text-base font-semibold text-emerald-600">{victoriasTotales}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-400">Derrotas</p>
-            <p className="text-lg font-bold text-rose-500">{derrotasTotales}</p>
+            <p className="text-base font-semibold text-rose-500">{derrotasTotales}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-400">Empates</p>
-            <p className="text-lg font-bold text-amber-500">{empatesTotales}</p>
+            <p className="text-base font-semibold text-amber-500">{empatesTotales}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-slate-400">Efectividad</p>
-            <p className="text-lg font-bold text-[#0461C4]">
+            <p className="text-base font-semibold text-[#0461C4]">
               {partidosJugados > 0 ? `${Math.round((victoriasTotales / partidosJugados) * 100)}%` : "—"}
             </p>
           </div>
@@ -356,7 +356,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">
+        <h2 className="text-base font-semibold tracking-tight text-slate-900">
           Jugadores con quien más juega
         </h2>
         {topCoPlayersWithCount.length === 0 ? (
@@ -376,7 +376,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Clubes donde juega {displayName}</h2>
+        <h2 className="text-base font-semibold tracking-tight text-slate-900">Clubes donde juega {displayName}</h2>
         {topClubs.length === 0 ? (
           <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
             Todavía no hay clubes suficientes para mostrar.

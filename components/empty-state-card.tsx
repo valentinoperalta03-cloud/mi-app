@@ -75,7 +75,7 @@ export default function EmptyStateCard({
 
         {/* Text */}
         <div className="space-y-2">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h2>
           <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-xs mx-auto">{subtitle}</p>
         </div>
 

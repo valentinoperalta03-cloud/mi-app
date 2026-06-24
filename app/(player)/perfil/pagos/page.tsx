@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -33,7 +33,7 @@ export default async function PerfilPagosPage() {
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-[#0585FC]">Perfil</p>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight">Tus pagos</h1>
+        <h1 className="text-xl font-semibold leading-tight tracking-tight">Tus pagos</h1>
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
