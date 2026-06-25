@@ -142,16 +142,21 @@
         offline.classList.remove("visible");
       }
 
+      function doRedirect() {
+        splash.classList.add("fading");
+        setTimeout(function () {
+          window.location.replace(LOGIN_URL);
+        }, 180);
+      }
+
       function tryLoad() {
         showSplash();
         if (!navigator.onLine) {
           showOffline();
           return;
         }
-        splash.classList.add("fading");
-        setTimeout(function () {
-          window.location.replace(LOGIN_URL);
-        }, 180);
+        // Esperar primer paint + bounce visible antes de redirigir
+        setTimeout(doRedirect, 700);
       }
 
       retryBtn.addEventListener("click", tryLoad);
@@ -162,7 +167,10 @@
         }
       });
 
-      tryLoad();
+      // Doble rAF garantiza que el logo pintó antes de arrancar el timer
+      requestAnimationFrame(function () {
+        requestAnimationFrame(tryLoad);
+      });
     })();
   </script>
 </body>

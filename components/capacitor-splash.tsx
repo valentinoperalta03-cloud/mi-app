@@ -8,9 +8,7 @@ import { prefetchPlayerHomeData } from "@/lib/player-route-prefetch";
 const SPLASH_MAX_MS = 4000;
 
 function hideSplash() {
-  void SplashScreen.hide().catch(() => {
-    // Splash may already be hidden on some platforms.
-  });
+  void SplashScreen.hide({ fadeOutDuration: 200 }).catch(() => {});
 }
 
 export default function CapacitorSplashHide() {
