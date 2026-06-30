@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserCircle } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
 type Props = {
   hasName: boolean;
@@ -12,40 +12,40 @@ export default function PlayerProfileIncompleteBanner({ hasName, hasGender, hasO
   const pct = Math.round((completedCount / 3) * 100);
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#0585FC]/25 bg-[var(--bg-card)] p-5 ring-1 ring-[#0585FC]/10">
-      <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0585FC]/10">
-          <UserCircle className="h-6 w-6 text-[#0585FC]" />
+    <section
+      className="overflow-hidden rounded-3xl p-5"
+      style={{ background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" }}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <TriangleAlert className="h-5 w-5 shrink-0 text-white" />
+        <p className="text-sm font-bold text-white uppercase tracking-wide">
+          Perfil incompleto
+        </p>
+      </div>
+
+      <p className="text-sm text-red-100 mb-4 leading-snug">
+        Para unirte o crear tu primer partido necesitás completar tu perfil con tu nombre, género y nivel de juego.
+      </p>
+
+      <div className="space-y-1.5 mb-4">
+        <div className="flex items-center justify-between text-xs text-red-200">
+          <span>Completado</span>
+          <span className="font-bold text-white">{pct}%</span>
         </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <p className="text-sm font-bold text-[var(--text-primary)]">Activá tu cuenta</p>
-            <p className="mt-0.5 text-sm text-[var(--text-tertiary)]">
-              Para unirte o crear tu primer partido necesitás completar tu perfil con tu nombre, género y nivel de juego.
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-              <span>Perfil completo</span>
-              <span className="font-semibold text-[#0585FC]">{pct}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div
-                className="h-full rounded-full bg-[#0585FC] transition-[width] duration-500 ease-out"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0585FC] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0461C4] active:scale-[0.98]"
-          >
-            Completar perfil →
-          </Link>
+        <div className="h-2 overflow-hidden rounded-full bg-red-900/50">
+          <div
+            className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
+
+      <Link
+        href="/onboarding"
+        className="flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-bold text-red-600 transition active:scale-[0.98] active:bg-red-50"
+      >
+        Completar perfil ahora →
+      </Link>
     </section>
   );
 }
