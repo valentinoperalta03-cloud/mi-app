@@ -637,6 +637,10 @@ async function handleNotification(req: Request) {
     await payUpd;
 
     if (payerUserId) {
+      await admin
+        .from(DB_TABLES.matches)
+        .update({ match_status: "cancelled", payment_status: dbPayStatus })
+        .eq("id", matchId);
       await createNotification(admin, {
         user_id: payerUserId,
         type: "payment_rejected",
@@ -703,7 +707,12 @@ async function handleNotification(req: Request) {
     }
     await payUpd;
 
-    if (!payerUserId) {
+    if (payerUserId) {
+      await admin
+        .from(DB_TABLES.matches)
+        .update({ match_status: "cancelled", payment_status: "refunded" })
+        .eq("id", matchId);
+    } else if (!payerUserId) {
       const { data: mBefore } = await admin
         .from(DB_TABLES.matches)
         .select("match_status,payment_status")

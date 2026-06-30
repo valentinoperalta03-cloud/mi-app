@@ -69,6 +69,7 @@ export async function adminCancelReservation(formData: FormData): Promise<void> 
   }
 
   revalidatePath("/admin/reservas");
+  revalidatePath("/reservas");
   redirect("/admin/reservas");
 }
 
@@ -222,12 +223,13 @@ export async function requestReservationRefundAction(formData: FormData): Promis
 
   await supabase
     .from(DB_TABLES.matches)
-    .update({ payment_status: "refund_requested" })
+    .update({ match_status: "cancelled", payment_status: "refund_requested" })
     .eq("id", matchId);
   await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
 
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/finanzas/reembolsos");
+  revalidatePath("/reservas");
   redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}`);
 }
 
@@ -268,6 +270,7 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/finanzas/reembolsos");
+  revalidatePath("/reservas");
   redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
 }
 

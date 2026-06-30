@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id,owner_id")
-    .eq("payment_status", "pending")
+    .in("payment_status", ["pending", "rejected", "expired"])
     .in("match_status", ["pending", "scheduled", "reserved"])
     .in("match_type", ["reservation", "amistoso", "competitivo"])
     .lt("created_at", thresholdIso);
