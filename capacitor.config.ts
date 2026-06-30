@@ -46,6 +46,10 @@ const config: CapacitorConfig = {
       'www.padelibre.online',
       'vercel.app',
       '*.vercel.app',
+      'accounts.google.com',
+      '*.accounts.google.com',
+      '*.supabase.co',
+      'appleid.apple.com',
     ],
   },
   plugins: {

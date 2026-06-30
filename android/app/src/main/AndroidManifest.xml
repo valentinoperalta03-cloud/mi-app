@@ -61,4 +61,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required for @capacitor/network to detect connectivity changes -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required for push notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required for OneSignal notification vibration -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Required for OneSignal to reschedule notifications after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

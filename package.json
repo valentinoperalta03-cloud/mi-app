@@ -33,7 +33,6 @@
     "mercadopago": "^2.12.0",
     "next": "16.2.2",
     "next-themes": "^0.4.6",
-    "onesignal-cordova-plugin": "^5.3.11",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-icons": "^5.6.0",

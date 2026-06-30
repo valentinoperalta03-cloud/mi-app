@@ -1,6 +1,7 @@
 "use client";
 
 import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 import { createClient } from "@/utils/supabase/client";
 
 const PUSH_PROMPT_KEY = "padelibre_onesignal_prompted_v1";
@@ -122,19 +123,15 @@ export async function requestPushPermissionAndRegister(): Promise<boolean> {
  */
 export async function maybePromptPushOnAppOpen(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  if (typeof window === "undefined") return;
 
-  try {
-    if (window.localStorage.getItem(PUSH_PROMPT_KEY) === "1") return;
-  } catch {
-    // localStorage blocked (private mode or Samsung WebView restriction) — continue
-  }
+  const { value: alreadyPrompted } = await Preferences.get({ key: PUSH_PROMPT_KEY });
+  if (alreadyPrompted === "1") return;
 
   const OneSignal = await ensureOneSignalInitialized();
   if (!OneSignal) return;
 
   if (await OneSignal.Notifications.hasPermission()) {
-    try { window.localStorage.setItem(PUSH_PROMPT_KEY, "1"); } catch { /* ignore */ }
+    await Preferences.set({ key: PUSH_PROMPT_KEY, value: "1" });
     await registerOneSignalUser();
     return;
   }
@@ -143,7 +140,7 @@ export async function maybePromptPushOnAppOpen(): Promise<void> {
   if (!canAsk) return;
 
   const ok = await requestPushPermissionAndRegister();
-  try { window.localStorage.setItem(PUSH_PROMPT_KEY, "1"); } catch { /* ignore */ }
+  await Preferences.set({ key: PUSH_PROMPT_KEY, value: "1" });
   if (!ok) {
     console.warn("[OneSignal] Permiso OK pero sin token — reinstalá con build iOS que incluya Push");
   }

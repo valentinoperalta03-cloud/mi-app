@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,6 +14,11 @@ function closePlayerDrawer() {
 export default function CapacitorNativeBackButton() {
   const router = useRouter();
   const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
@@ -33,7 +38,7 @@ export default function CapacitorNativeBackButton() {
         return;
       }
 
-      const path = pathname ?? "/";
+      const path = pathnameRef.current ?? "/";
       if (!PLAYER_TAB_ROOTS.has(path)) {
         router.push("/home");
         return;
@@ -45,7 +50,7 @@ export default function CapacitorNativeBackButton() {
     });
 
     return () => removeListener?.();
-  }, [pathname, router]);
+  }, [router]);
 
   return null;
 }

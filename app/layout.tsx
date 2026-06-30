@@ -4,6 +4,8 @@ import CapacitorNativeAuthCallback from "@/components/capacitor-native-auth-call
 import CapacitorOfflineBanner from "@/components/capacitor-offline-banner";
 import CapacitorSplashHide from "@/components/capacitor-splash";
 import CapacitorStatusBarInit from "@/components/capacitor-status-bar";
+import CapacitorExternalLinks from "@/components/capacitor-external-links";
+import CapacitorSupabaseRefresh from "@/components/capacitor-supabase-refresh";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { STATUS_BAR_COLOR } from "@/lib/status-bar-color";
@@ -98,6 +100,8 @@ export default function RootLayout({
         <CapacitorNativeAuthCallback />
         <CapacitorOfflineBanner />
         <CapacitorSplashHide />
+        <CapacitorExternalLinks />
+        <CapacitorSupabaseRefresh />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

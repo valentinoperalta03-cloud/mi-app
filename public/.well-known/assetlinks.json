@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.padelibre.app",
+      "sha256_cert_fingerprints": [
+        "08:B0:C2:34:66:13:30:43:5E:01:B1:E5:36:C6:E6:F9:61:FC:12:6C:58:F1:C5:16:85:08:AE:45:15:44:DC:B2"
+      ]
+    }
+  }
+]
