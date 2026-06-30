@@ -188,6 +188,12 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect("/login");
   }
 
+  const { isOnboardingComplete } = await import("@/lib/onboarding-check");
+  const complete = await isOnboardingComplete(supabase, user.id);
+  if (!complete) {
+    redirect("/onboarding");
+  }
+
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id,owner_id,visibility,match_status,level_restricted,level,gender_category")

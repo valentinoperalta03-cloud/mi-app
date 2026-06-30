@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
 import OpenMatchesBoard from "@/components/open-matches-board";
 import { CreateMatchFab } from "@/components/create-match-fab";
+import { isOnboardingComplete } from "@/lib/onboarding-check";
+import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +13,14 @@ type PageProps = {
   }>;
 };
 
-export default function BuscarPartidoPage({ searchParams }: PageProps) {
+export default async function BuscarPartidoPage({ searchParams }: PageProps) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const complete = await isOnboardingComplete(supabase, user.id);
+  if (!complete) redirect("/onboarding");
+
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] pb-24">
       <OpenMatchesBoard

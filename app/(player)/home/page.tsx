@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Building2, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
+import PlayerProfileIncompleteBanner from "@/components/player-profile-incomplete-banner";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
@@ -61,14 +62,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profileSlides } = await supabase
+  const { data: profileData } = await supabase
     .from(DB_TABLES.profiles)
-    .select("slides_seen")
+    .select("slides_seen, onboarding_completed, name, gender")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const slidesSeen = Boolean((profileSlides as { slides_seen?: boolean | null } | null)?.slides_seen);
+  const profileRow = profileData as {
+    slides_seen?: boolean | null;
+    onboarding_completed?: boolean | null;
+    name?: string | null;
+    gender?: string | null;
+  } | null;
+
+  const slidesSeen = Boolean(profileRow?.slides_seen);
   if (!slidesSeen) redirect("/bienvenida");
+
+  const hasName = Boolean(profileRow?.name?.trim());
+  const hasGender = Boolean(profileRow?.gender?.trim());
+  const hasOnboarding = Boolean(profileRow?.onboarding_completed);
+  const profileComplete = hasOnboarding && hasName && hasGender;
 
   const [displayName, pendingForMe, userLocation] = await Promise.all([
     getCachedProfileDisplayName(user.id),
@@ -124,9 +137,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Link>
       </section>
 
-      <section className="flex flex-col gap-3">
+      {!profileComplete ? (
+        <PlayerProfileIncompleteBanner
+          hasName={hasName}
+          hasGender={hasGender}
+          hasOnboarding={hasOnboarding}
+        />
+      ) : null}
+
+      <section className={`flex flex-col gap-3 ${!profileComplete ? "pointer-events-none opacity-40 select-none" : ""}`}>
         <Link
-          href={quickActions[0].href}
+          href={profileComplete ? quickActions[0].href : "/onboarding"}
           prefetch
           className="group relative flex items-center gap-4 overflow-hidden rounded-3xl p-5 text-white transition active:scale-[0.98]"
           style={{
@@ -146,7 +167,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Link>
 
         <Link
-          href={quickActions[1].href}
+          href={profileComplete ? quickActions[1].href : "/onboarding"}
           prefetch
           className="flex items-center gap-4 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)] transition active:scale-[0.98]"
         >
