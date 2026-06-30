@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { CreditCard, House, Settings, Target, Trophy, Users, Banknote } from "lucide-react";
+import { Activity, House, LayoutGrid, DollarSign, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
   { href: "/admin/reservas", label: "Reservas", icon: Target },
-  { href: "/admin/torneos", label: "Torneos", icon: Trophy },
-  { href: "/admin/pagos", label: "Pagos", icon: CreditCard },
-  { href: "/admin/cobros", label: "Cobros", icon: Banknote },
+  { href: "/admin/canchas", label: "Canchas", icon: LayoutGrid },
+  { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
+  { href: "/admin/analytics", label: "Ocupación", icon: Activity },
   { href: "/admin/jugadores", label: "Jugadores", icon: Users },
   { href: "/admin/config", label: "Config", icon: Settings },
 ] as const;

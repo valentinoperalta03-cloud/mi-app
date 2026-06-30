@@ -130,14 +130,14 @@ export default async function SuperadminClubesPage({
             <tr>
               <th className="px-4 py-3">Club</th>
               <th className="px-4 py-3">Salud</th>
-              <th className="px-4 py-3">Owner</th>
-              <th className="px-4 py-3">Canchas</th>
-              <th className="px-4 py-3">Res. mes</th>
-              <th className="px-4 py-3">Part. abiertos</th>
-              <th className="px-4 py-3">Ingresos mes</th>
-              <th className="px-4 py-3">Jug. 30d</th>
-              <th className="px-4 py-3">Deuda</th>
-              <th className="px-4 py-3">MP</th>
+              <th className="hidden px-4 py-3 md:table-cell">Owner</th>
+              <th className="hidden px-4 py-3 lg:table-cell">Canchas</th>
+              <th className="hidden px-4 py-3 md:table-cell">Res. mes</th>
+              <th className="hidden px-4 py-3 lg:table-cell">Part. abiertos</th>
+              <th className="hidden px-4 py-3 md:table-cell">Ingresos mes</th>
+              <th className="hidden px-4 py-3 lg:table-cell">Jug. 30d</th>
+              <th className="hidden px-4 py-3 md:table-cell">Deuda</th>
+              <th className="hidden px-4 py-3 md:table-cell">MP</th>
               <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
@@ -160,14 +160,14 @@ export default async function SuperadminClubesPage({
                     <td className="px-4 py-3">
                       <ClubHealthBadge row={c} />
                     </td>
-                    <td className="max-w-[160px] truncate px-4 py-3 text-slate-400">{c.owner_email ?? "—"}</td>
-                    <td className="px-4 py-3">{c.courts_count}</td>
-                    <td className="px-4 py-3">{c.reservations_this_month}</td>
-                    <td className="px-4 py-3">{c.open_matches_this_month}</td>
-                    <td className="px-4 py-3">{moneyArs(Number(c.revenue_paid_this_month))}</td>
-                    <td className="px-4 py-3">{c.unique_players_30d}</td>
-                    <td className="px-4 py-3">{moneyArs(debt)}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden max-w-[160px] truncate px-4 py-3 text-slate-400 md:table-cell">{c.owner_email ?? "—"}</td>
+                    <td className="hidden px-4 py-3 lg:table-cell">{c.courts_count}</td>
+                    <td className="hidden px-4 py-3 md:table-cell">{c.reservations_this_month}</td>
+                    <td className="hidden px-4 py-3 lg:table-cell">{c.open_matches_this_month}</td>
+                    <td className="hidden px-4 py-3 md:table-cell">{moneyArs(Number(c.revenue_paid_this_month))}</td>
+                    <td className="hidden px-4 py-3 lg:table-cell">{c.unique_players_30d}</td>
+                    <td className="hidden px-4 py-3 md:table-cell">{moneyArs(debt)}</td>
+                    <td className="hidden px-4 py-3 md:table-cell">
                       <span className={c.mp_connected ? "text-emerald-300" : "text-amber-300"}>
                         {c.mp_connected ? "Sí" : "No"}
                       </span>

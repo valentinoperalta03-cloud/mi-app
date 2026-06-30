@@ -326,7 +326,7 @@ export default async function AdminAnalyticsPage() {
 
       <section className={adminCard}>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Tendencia semanal (últimas 4 semanas)</h2>
-        <div className="mt-4 grid grid-cols-4 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {weekBuckets.map((value, idx) => (
             <div key={idx} className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Semana {idx + 1}</p>
