@@ -18,6 +18,7 @@ export type MatchCardData = {
   gender_category: "masculino" | "femenino" | "mixto";
   clubName: string;
   clubLocation: string;
+  clubCity: string;
   playersCount: number;
   freeSlots: number;
   joinShare: number;
@@ -42,31 +43,43 @@ export type MatchCardData = {
 type Props = {
   matches: MatchCardData[];
   userId: string | null;
+  userCity: string;
 };
 
 type StatusFilter = "todos" | "amistoso" | "competitivo" | "con_lugar";
 type GenderFilter = "todos" | "masculino" | "femenino" | "mixto";
+type CityFilter = "todas" | "mi_ciudad";
 
 const chip = (active: boolean) =>
   active
     ? "rounded-full bg-[color:var(--color-brand-mid)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
     : "rounded-full border border-slate-200 bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600";
 
-export default function MatchesFilterBoard({ matches, userId }: Props) {
+export default function MatchesFilterBoard({ matches, userId, userCity }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("todos");
+  const [cityFilter, setCityFilter] = useState<CityFilter>("todas");
 
   const filtered = matches.filter((m) => {
     if (statusFilter === "amistoso" && m.is_competitive) return false;
     if (statusFilter === "competitivo" && !m.is_competitive) return false;
     if (statusFilter === "con_lugar" && m.freeSlots <= 0) return false;
     if (genderFilter !== "todos" && m.gender_category !== genderFilter) return false;
+    if (cityFilter === "mi_ciudad" && m.clubCity !== userCity) return false;
     return true;
   });
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button type="button" onClick={() => setCityFilter("todas")} className={chip(cityFilter === "todas")}>
+            Todos los lugares
+          </button>
+          <button type="button" onClick={() => setCityFilter("mi_ciudad")} className={chip(cityFilter === "mi_ciudad")}>
+            Mi ciudad
+          </button>
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {(["todos", "amistoso", "competitivo", "con_lugar"] as StatusFilter[]).map((f) => (
             <button key={f} type="button" onClick={() => setStatusFilter(f)} className={chip(statusFilter === f)}>

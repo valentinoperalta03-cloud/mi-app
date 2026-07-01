@@ -161,14 +161,6 @@ export default async function OpenMatchesBoard({
   const rawMatches = (data ?? []) as unknown as MatchFeedRow[];
   const matches = rawMatches
     .filter((match) => {
-      const club = match.courts?.clubs;
-      const rawCity = club?.city?.trim()
-        ? club.city
-        : (club?.location ?? "").split(",")[0].trim();
-      const clubCity = normalizeCity(rawCity);
-      return clubCity === userCity;
-    })
-    .filter((match) => {
       if (!isMatchPrivate(match.visibility)) return true;
       if (user?.id && match.owner_id && user.id === match.owner_id) return true;
       if (!match.owner_id) return true;
@@ -203,6 +195,8 @@ export default async function OpenMatchesBoard({
         nivelDescription: nivelParts.description ?? "",
       };
     });
+    const club = match.courts?.clubs;
+    const rawCity = club?.city?.trim() ? club.city : (club?.location ?? "").split(",")[0].trim();
     return {
       id: match.id,
       date: match.date,
@@ -210,8 +204,9 @@ export default async function OpenMatchesBoard({
       is_competitive: Boolean(match.is_competitive),
       level_restricted: Boolean(match.level_restricted),
       gender_category: genderCategory,
-      clubName: match.courts?.clubs?.name ?? "Club sin nombre",
-      clubLocation: match.courts?.clubs?.location ?? "Ubicación pendiente",
+      clubName: club?.name ?? "Club sin nombre",
+      clubLocation: club?.location ?? "Ubicación pendiente",
+      clubCity: normalizeCity(rawCity),
       playersCount,
       freeSlots,
       joinShare,
@@ -227,7 +222,7 @@ export default async function OpenMatchesBoard({
     };
   });
 
-  const effectiveDescription = `${description} Partidos en ${userCityLabel}.`;
+  const effectiveDescription = description;
 
   return (
     <MotionPage
@@ -284,7 +279,7 @@ export default async function OpenMatchesBoard({
       ) : null}
 
       {matches.length > 0 ? (
-        <MatchesFilterBoard matches={cardData} userId={user?.id ?? null} />
+        <MatchesFilterBoard matches={cardData} userId={user?.id ?? null} userCity={userCity} />
       ) : null}
     </MotionPage>
   );
