@@ -162,7 +162,10 @@ export default async function OpenMatchesBoard({
   const matches = rawMatches
     .filter((match) => {
       const club = match.courts?.clubs;
-      const clubCity = normalizeCity(club?.city || club?.location || "");
+      const rawCity = club?.city?.trim()
+        ? club.city
+        : (club?.location ?? "").split(",")[0].trim();
+      const clubCity = normalizeCity(rawCity);
       return clubCity === userCity;
     })
     .filter((match) => {
