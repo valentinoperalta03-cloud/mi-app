@@ -146,7 +146,7 @@ export default function LandingPage() {
               rel="noreferrer"
               className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
             >
-              <span className="text-2xl leading-none text-white"></span>
+              <Image src="/app-store.png" alt="App Store" width={28} height={28} className="shrink-0" />
               <div className="text-left">
                 <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
                 <p className="text-base font-bold leading-tight text-white">App Store</p>
@@ -158,12 +158,7 @@ export default function LandingPage() {
               rel="noreferrer"
               className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
             >
-              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none">
-                <path d="M3.6 1.4 13.2 11 3.6 20.6c-.4-.2-.6-.6-.6-1V2.4c0-.4.2-.8.6-1Z" fill="#EA4335"/>
-                <path d="m13.2 11 3 3-10.5 6.1 7.5-9.1Z" fill="#FBBC04"/>
-                <path d="M20 12c0 .7-.4 1.3-1 1.7L16.2 14l-3-3 3-3 2.8 1.3c.6.4 1 1 1 1.7Z" fill="#4285F4"/>
-                <path d="M5.7 4.9 16.2 11l-3 3-9.5-9.1Z" fill="#34A853"/>
-              </svg>
+              <Image src="/google-play.png" alt="Google Play" width={28} height={28} className="shrink-0" />
               <div className="text-left">
                 <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
                 <p className="text-base font-bold leading-tight text-white">Google Play</p>
@@ -224,50 +219,6 @@ export default function LandingPage() {
                 </motion.div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA final */}
-      <section
-        className="px-4 py-14 text-center sm:px-6"
-        style={{ background: "linear-gradient(135deg, #031733 0%, #0461C4 100%)" }}
-      >
-        <div className="mx-auto max-w-md">
-          <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
-            Descargá la app y empezá a jugar
-          </h2>
-          <p className="mt-2 text-sm text-white/70">Gratis para jugadores.</p>
-          <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <a
-              href="https://apps.apple.com/us/app/padelibre/id6769852990"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 transition hover:bg-white/90 active:scale-[0.98]"
-            >
-              <span className="text-2xl leading-none"></span>
-              <div className="text-left">
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Disponible en</p>
-                <p className="text-base font-bold leading-tight text-slate-900">App Store</p>
-              </div>
-            </a>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.padelibre.app"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 transition hover:bg-white/90 active:scale-[0.98]"
-            >
-              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none">
-                <path d="M3.6 1.4 13.2 11 3.6 20.6c-.4-.2-.6-.6-.6-1V2.4c0-.4.2-.8.6-1Z" fill="#EA4335"/>
-                <path d="m13.2 11 3 3-10.5 6.1 7.5-9.1Z" fill="#FBBC04"/>
-                <path d="M20 12c0 .7-.4 1.3-1 1.7L16.2 14l-3-3 3-3 2.8 1.3c.6.4 1 1 1 1.7Z" fill="#4285F4"/>
-                <path d="M5.7 4.9 16.2 11l-3 3-9.5-9.1Z" fill="#34A853"/>
-              </svg>
-              <div className="text-left">
-                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Disponible en</p>
-                <p className="text-base font-bold leading-tight text-slate-900">Google Play</p>
-              </div>
-            </a>
           </div>
         </div>
       </section>
