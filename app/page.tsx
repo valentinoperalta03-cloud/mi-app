@@ -26,7 +26,7 @@ const features = [
   {
     icon: CreditCard,
     title: "Cada uno paga su parte",
-    description: "Cada jugador paga su cuarto vía Mercado Pago. Sin transferencias, sin "te debo".",
+    description: "Cada jugador paga su cuarto vía Mercado Pago. Sin transferencias, sin 'te debo'.",
   },
   {
     icon: BarChart2,
