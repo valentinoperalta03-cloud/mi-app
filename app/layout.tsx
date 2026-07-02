@@ -17,48 +17,48 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PadeLibre â€” Que organizar no sea un problema.",
+  title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
   description:
-    "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo. La app de pÃ¡del argentina.",
+    “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo. La app de pádel argentina.”,
   keywords:
-    "pÃ¡del, reservar cancha de pÃ¡del, pÃ¡del Argentina, jugadores de pÃ¡del, torneos de pÃ¡del",
+    “pádel, reservar cancha de pádel, pádel Argentina, jugadores de pádel, torneos de pádel”,
   alternates: {
-    canonical: "https://www.padelibre.online",
+    canonical: “https://www.padelibre.online”,
   },
-  manifest: "/manifest.json",
+  manifest: “/manifest.json”,
   appleWebApp: {
     capable: true,
-    title: "Padelibre",
-    statusBarStyle: "black-translucent",
+    title: “PadeLibre”,
+    statusBarStyle: “black-translucent”,
   },
   openGraph: {
-    title: "PadeLibre â€” Que organizar no sea un problema.",
-    description: "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo.",
-    url: "https://www.padelibre.online",
-    siteName: "PadeLibre",
-    locale: "es_AR",
-    type: "website",
+    title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
+    description: “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.”,
+    url: “https://www.padelibre.online”,
+    siteName: “PadeLibre”,
+    locale: “es_AR”,
+    type: “website”,
     images: [
       {
-        url: "https://www.padelibre.online/og-image.png",
+        url: “https://www.padelibre.online/og-image.png”,
         width: 1200,
         height: 630,
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: "PadeLibre â€” Que organizar no sea un problema.",
-    description: "ReservÃ¡ canchas, armÃ¡ partidos y encontrÃ¡ jugadores de pÃ¡del cerca tuyo.",
-    images: ["https://www.padelibre.online/og-image.png"],
+    card: “summary_large_image”,
+    title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
+    description: “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.”,
+    images: [“https://www.padelibre.online/og-image.png”],
   },
   icons: {
     icon: [
-      { url: "/logo.png", type: "image/png" },
-      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+      { url: “/logo.png”, type: “image/png” },
+      { url: “/logo.png”, sizes: “512x512”, type: “image/png” },
     ],
-    apple: [{ url: "/logo.png", type: "image/png" }],
-    shortcut: ["/logo.png"],
+    apple: [{ url: “/logo.png”, type: “image/png” }],
+    shortcut: [“/logo.png”],
   },
   robots: { index: true, follow: true },
 };
