@@ -52,14 +52,6 @@ export const metadata: Metadata = {
     description: “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.”,
     images: [“https://www.padelibre.online/og-image.png”],
   },
-  icons: {
-    icon: [
-      { url: “/logo.png”, type: “image/png” },
-      { url: “/logo.png”, sizes: “512x512”, type: “image/png” },
-    ],
-    apple: [{ url: “/logo.png”, type: “image/png” }],
-    shortcut: [“/logo.png”],
-  },
   robots: { index: true, follow: true },
 };
 
