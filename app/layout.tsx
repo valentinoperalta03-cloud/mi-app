@@ -17,11 +17,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
+  title: “PadeLibre - Reserva canchas y arma partidos de padel”,
   description:
-    “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo. La app de pádel argentina.”,
+    “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo. La app de padel argentina.”,
   keywords:
-    “pádel, reservar cancha de pádel, pádel Argentina, jugadores de pádel, torneos de pádel”,
+    “padel, reservar cancha de padel, padel Argentina, jugadores de padel, torneos de padel”,
   alternates: {
     canonical: “https://www.padelibre.online”,
   },
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
     statusBarStyle: “black-translucent”,
   },
   openGraph: {
-    title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
-    description: “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.”,
+    title: “PadeLibre - Reserva canchas y arma partidos de padel”,
+    description: “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.”,
     url: “https://www.padelibre.online”,
     siteName: “PadeLibre”,
     locale: “es_AR”,
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: “summary_large_image”,
-    title: “PadeLibre — Reservá canchas y armá partidos de pádel”,
-    description: “Reservá canchas, armá partidos y encontrá jugadores de pádel cerca tuyo.”,
+    title: “PadeLibre - Reserva canchas y arma partidos de padel”,
+    description: “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.”,
     images: [“https://www.padelibre.online/og-image.png”],
   },
   robots: { index: true, follow: true },
