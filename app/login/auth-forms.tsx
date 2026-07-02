@@ -59,8 +59,9 @@ export function GoogleAuthForm() {
       if (!result.ok) {
         setGoogleError(result.message);
       }
-    } catch {
-      setGoogleError("No se pudo abrir Google. Intentá de nuevo.");
+    } catch (err) {
+      console.error("[GoogleAuth] unexpected error:", err);
+      setGoogleError(err instanceof Error ? err.message : "No se pudo abrir Google. Intentá de nuevo.");
     } finally {
       setGooglePending(false);
     }

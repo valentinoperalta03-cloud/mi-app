@@ -40,28 +40,49 @@ async function startNativeOAuth(
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const supabase = createSupabaseBrowserClient();
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: NATIVE_AUTH_CALLBACK_URL,
-      skipBrowserRedirect: true,
-      queryParams: options?.queryParams,
-      scopes: options?.scopes,
-    },
-  });
+  let oauthUrl: string | null = null;
 
-  if (error) {
-    return { ok: false, message: formatAuthErrorMessage(error.message) };
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: NATIVE_AUTH_CALLBACK_URL,
+        skipBrowserRedirect: true,
+        queryParams: options?.queryParams,
+        scopes: options?.scopes,
+      },
+    });
+
+    if (error) {
+      return { ok: false, message: formatAuthErrorMessage(error.message) };
+    }
+
+    oauthUrl = data?.url ?? null;
+  } catch (err) {
+    console.error("[NativeOAuth] signInWithOAuth error:", err);
+    return {
+      ok: false,
+      message: `Error al generar URL de autenticación: ${err instanceof Error ? err.message : String(err)}`,
+    };
   }
 
-  if (!data.url) {
+  if (!oauthUrl) {
     return {
       ok: false,
       message: `No se pudo iniciar sesión con ${provider === "apple" ? "Apple" : "Google"}.`,
     };
   }
 
-  await Browser.open({ url: data.url });
+  try {
+    await Browser.open({ url: oauthUrl });
+  } catch (err) {
+    console.error("[NativeOAuth] Browser.open error:", err);
+    return {
+      ok: false,
+      message: `No se pudo abrir el navegador: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
   return { ok: true };
 }
 
