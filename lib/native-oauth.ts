@@ -1,4 +1,5 @@
 import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 import type { Provider } from "@supabase/supabase-js";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { resolveHomePath } from "@/lib/auth-redirect";
@@ -74,13 +75,22 @@ async function startNativeOAuth(
   }
 
   try {
-    await Browser.open({ url: oauthUrl });
+    if (Capacitor.isPluginAvailable("Browser")) {
+      await Browser.open({ url: oauthUrl });
+    } else {
+      // Fallback: Browser plugin no disponible en este build — abrir en Chrome directamente
+      window.open(oauthUrl, "_system");
+    }
   } catch (err) {
-    console.error("[NativeOAuth] Browser.open error:", err);
-    return {
-      ok: false,
-      message: `No se pudo abrir el navegador: ${err instanceof Error ? err.message : String(err)}`,
-    };
+    console.error("[NativeOAuth] Browser.open error, intentando fallback:", err);
+    try {
+      window.open(oauthUrl, "_system");
+    } catch {
+      return {
+        ok: false,
+        message: `No se pudo abrir Google. Actualiza la app desde Google Play.`,
+      };
+    }
   }
 
   return { ok: true };
