@@ -3,364 +3,297 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import {
+  CalendarCheck,
+  Users,
+  CreditCard,
+  BarChart2,
+  MessageCircle,
+  Search,
+} from "lucide-react";
 
-const problems = [
+const features = [
   {
-    title: "El grupo de WhatsApp",
-    description:
-      "50 mensajes para confirmar 4 jugadores. Alguien no lee, otro cancela a último momento y nadie sabe si la cancha está reservada.",
+    icon: CalendarCheck,
+    title: "Reservá canchas al instante",
+    description: "Ves disponibilidad en tiempo real, el precio y la cancha. Reservás en segundos sin llamar a nadie.",
   },
   {
-    title: "El precio misterioso",
-    description:
-      "¿Cuánto salía? ¿Lo dividimos en 4? ¿Quién le transfiere al club? Siempre hay uno que 'te paga después'.",
+    icon: Users,
+    title: "Armá o unite a partidos",
+    description: "Creá un partido y abrilo para que otros jugadores se sumen, o unite a uno ya armado cerca tuyo.",
   },
   {
-    title: "La incertidumbre",
-    description:
-      "¿Está confirmado el turno? ¿A qué hora era? ¿En qué cancha? Tres llamadas para algo que debería tomar 30 segundos.",
-  },
-];
-
-const steps = [
-  {
-    number: "01",
-    title: "Elegís el club y la cancha",
-    description:
-      "Entrás a PadeLibre, buscás los clubes disponibles cerca tuyo y ves en tiempo real qué canchas tienen horarios libres. Ves el precio, la superficie, si es techada o no. Todo antes de comprometerte con algo.",
-  },
-  {
-    number: "02",
-    title: "Armás el partido",
-    description:
-      "Elegís la fecha, el horario y el tipo de partido: amistoso o competitivo. Podés abrirlo para que cualquiera se una, o hacerlo privado e invitar solo a tus amigos. Vos controlás quién juega.",
-  },
-  {
-    number: "03",
+    icon: CreditCard,
     title: "Cada uno paga su parte",
-    description:
-      "No más transferencias, no más 'te debo'. Cada jugador paga su cuarto del turno directo por la app vía Mercado Pago. El dinero va al club automáticamente. PadeLibre nunca toca tu plata.",
+    description: "Cada jugador paga su cuarto vía Mercado Pago. Sin transferencias, sin "te debo".",
   },
   {
-    number: "04",
-    title: "A jugar",
-    description:
-      "Con los 4 jugadores confirmados y pagados, recibís toda la info del partido: club, cancha, horario y el chat grupal del partido para coordinarse antes de llegar. Nada más que hacer. Solo jugar.",
+    icon: BarChart2,
+    title: "Nivel ELO real",
+    description: "Tu nivel se actualiza con cada partido competitivo. De Principiante a Elite, medido en serio.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Chat del partido",
+    description: "Coordiná con tu equipo desde la misma app antes y después de cada partido.",
+  },
+  {
+    icon: Search,
+    title: "Encontrá jugadores de tu nivel",
+    description: "Filtrá partidos por nivel, género y ciudad. Jugá con gente que va en serio.",
   },
 ];
 
-const playerItems = [
-  "Reservás la cancha en segundos, ves disponibilidad en tiempo real y pagás tu parte sin transferencias",
-  "Armás un partido y lo abrís para que otros jugadores de tu nivel se unan — ideal cuando no tenés los 4",
-  "Chateás con tu equipo antes y después del partido desde la misma app",
-  "Seguís tu evolución con el sistema ELO y ves cómo progresás con cada partido que jugás",
-];
+function AppleBadge() {
+  return (
+    <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg" className="h-10 w-auto">
+      <rect width="135" height="40" rx="8" fill="#000" />
+      <text x="40" y="14" fill="white" fontSize="8" fontFamily="system-ui, sans-serif">Disponible en el</text>
+      <text x="40" y="27" fill="white" fontSize="14" fontWeight="bold" fontFamily="system-ui, sans-serif">App Store</text>
+      <text x="12" y="27" fill="white" fontSize="22" fontFamily="system-ui, sans-serif"></text>
+    </svg>
+  );
+}
 
-const clubItems = [
-  "Tus canchas aparecen visibles para todos los jugadores de la zona que buscan dónde jugar",
-  "Los cobros son automáticos vía Mercado Pago — el dinero va directo a tu cuenta sin intermediarios",
-  "Panel de administración completo: canchas, horarios, precios dinámicos por horario, historial de pagos",
-  "Llenás los horarios muertos con jugadores que buscan canchas disponibles en tiempo real",
-  "Sin costo para el club — PadeLibre cobra solo al jugador",
-];
+function GooglePlayBadge() {
+  return (
+    <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg" className="h-10 w-auto">
+      <rect width="135" height="40" rx="8" fill="#000" />
+      <text x="40" y="14" fill="white" fontSize="8" fontFamily="system-ui, sans-serif">Disponible en</text>
+      <text x="40" y="27" fill="white" fontSize="14" fontWeight="bold" fontFamily="system-ui, sans-serif">Google Play</text>
+      <text x="12" y="28" fill="#4FC3F7" fontSize="22" fontFamily="system-ui, sans-serif">▶</text>
+    </svg>
+  );
+}
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen scroll-smooth bg-[var(--bg-app)] text-[var(--text-primary)]">
+    <main className="min-h-screen bg-[var(--bg-app)] text-[var(--text-primary)]">
+      {/* Nav */}
       <nav
-        className="sticky top-0 z-30 border-b border-white/20"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        className="sticky top-0 z-30 border-b border-white/10"
+        style={{ background: "linear-gradient(135deg, #031733 0%, #0461C4 100%)" }}
       >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.png" alt="PadeLibre" width={36} height={36} className="rounded-xl" />
-            <span className="text-lg font-bold text-white">PadeLibre</span>
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-xl" />
+            <span className="text-base font-bold text-white">PadeLibre</span>
           </Link>
           <Link
             href="/login"
-            className="rounded-xl border border-white/40 bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+            className="rounded-xl border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20"
           >
             Entrar
           </Link>
         </div>
       </nav>
 
-      <motion.section
-        className="relative overflow-hidden px-4 pb-16 pt-12 sm:px-6"
-        style={{ background: "linear-gradient(180deg, #031733 0%, #0461C4 100%)" }}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.5 }}
+      {/* Hero */}
+      <section
+        className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24"
+        style={{ background: "linear-gradient(180deg, #031733 0%, #0461C4 60%, #0585FC 100%)" }}
       >
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
-          <Image
-            src="/logo.png"
-            alt="PadeLibre logo"
-            width={132}
-            height={132}
-            className="mx-auto mb-6 rounded-3xl shadow-2xl"
-            priority
-          />
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl">
-            El pádel que querés jugar, sin el caos de organizarlo.
-          </h1>
-          <p className="mt-5 text-base leading-relaxed text-white/90 sm:text-lg">
-            Son las 20hs del viernes. Querés jugar. Pero el grupo de WhatsApp no responde, nadie sabe el precio de la
-            cancha, y cuando alguien confirma ya es tarde. ¿Te suena familiar? PadeLibre nació para que eso no vuelva
-            a pasar.
-          </p>
-          <Link
-            href="#como-funciona"
-            className="mt-8 rounded-2xl bg-white px-7 py-3 text-base font-bold text-[#0461C4] transition hover:bg-white/90"
+        {/* Glow */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="h-[500px] w-[500px] rounded-full bg-white/5 blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto flex max-w-lg flex-col items-center text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45 }}
           >
-            Descubrí cómo funciona ↓
-          </Link>
-          <Link
-            href="/login"
-            className="mt-3 rounded-2xl border border-white/40 bg-white/10 px-7 py-3 text-base font-semibold text-white transition hover:bg-white/20"
+            <Image
+              src="/logo.png"
+              alt="PadeLibre"
+              width={100}
+              height={100}
+              className="mx-auto mb-7 rounded-[28px] shadow-2xl"
+              priority
+            />
+          </motion.div>
+
+          <motion.h1
+            className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.1 }}
           >
-            Empezar gratis
-          </Link>
-          <p className="mt-4 text-xs font-medium text-white/70 sm:text-sm">
-            Gratis para jugadores · Sin descargas · Funciona desde el celular
-          </p>
-        </div>
-      </motion.section>
+            PadeLibre
+          </motion.h1>
 
-      <motion.section
-        className="bg-[var(--bg-app)] px-4 py-14 sm:px-6"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <h2 className="text-center text-3xl font-extrabold tracking-tight">¿Cuántas veces te pasó esto?</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {problems.map((problem, idx) => (
-              <motion.article
-                key={problem.title}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.35, delay: idx * 0.08 }}
-                className="rounded-3xl border border-rose-200/70 bg-[var(--bg-card)] p-6 shadow-sm dark:border-rose-400/20"
-              >
-                <p className="text-2xl">😤</p>
-                <h3 className="mt-3 text-xl font-bold">{problem.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{problem.description}</p>
-              </motion.article>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+          <motion.p
+            className="mt-3 text-lg font-medium text-white/80 sm:text-xl"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.18 }}
+          >
+            Reservá canchas, armá partidos y pagá tu parte. Todo desde el celular.
+          </motion.p>
 
-      <motion.section
-        id="como-funciona"
-        className="bg-[var(--bg-card)] px-4 py-16 sm:px-6"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-4xl">
-          <h2 className="text-center text-3xl font-extrabold tracking-tight">Así funciona PadeLibre</h2>
-          <p className="mt-3 text-center text-[var(--text-secondary)]">
-            Cuatro pasos. Todo desde el celular. Sin llamadas.
-          </p>
-          <div className="mt-9 space-y-4">
-            {steps.map((step, idx) => (
-              <motion.article
-                key={step.number}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.35, delay: idx * 0.08 }}
-                className="rounded-3xl border border-[var(--border-default)] bg-[var(--bg-app)] p-5 shadow-sm"
-              >
-                <div className="flex items-start gap-4">
-                  <p className="text-3xl font-extrabold text-[#0585FC]">{step.number}</p>
-                  <div>
-                    <h3 className="text-xl font-bold">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        className="px-4 py-16 text-white sm:px-6"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <h2 className="text-center text-3xl font-extrabold tracking-tight">Tu nivel, medido en serio.</h2>
-          <p className="mx-auto mt-4 max-w-4xl text-center text-sm leading-relaxed text-white/90 sm:text-base">
-            En PadeLibre cada partido cuenta. Usamos un sistema ELO — el mismo que se usa en ajedrez y fútbol
-            profesional — para medir tu nivel real en base a tus resultados. No es un número inventado. Es tu progreso
-            real, partido a partido.
-          </p>
-          <div className="mt-8 grid gap-3 md:grid-cols-3">
-            {[
-              "📈 Subís ganando contra jugadores de tu nivel o superior",
-              "📉 Bajás si perdés contra jugadores de menor nivel",
-              "🏆 Tu categoría se actualiza automáticamente: de Principiante a Elite",
-            ].map((item, idx) => (
-              <motion.div
-                key={item}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.35, delay: idx * 0.08 }}
-                className="rounded-2xl border border-white/30 bg-white/10 p-4 text-sm font-semibold"
-              >
-                {item}
-              </motion.div>
-            ))}
-          </div>
-          <p className="mx-auto mt-6 max-w-3xl text-center text-sm text-white/80 sm:text-base">
-            ¿Competitivo o amistoso? Vos elegís. En los partidos amistosos el ELO no se mueve — podés jugar tranquilo
-            sin presión.
-          </p>
-        </div>
-      </motion.section>
-
-      <motion.section
-        className="bg-[var(--bg-app)] px-4 py-16 sm:px-6"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-6xl">
-          <h2 className="text-center text-3xl font-extrabold tracking-tight">Hecho para jugadores de verdad.</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <article className="rounded-3xl border border-[#0585FC]/30 bg-[var(--bg-card)] p-6 shadow-sm">
-              <h3 className="text-2xl font-bold">Si jugás al pádel</h3>
-              <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                {playerItems.map((item) => (
-                  <li key={item}>✅ {item}</li>
-                ))}
-              </ul>
-            </article>
-            <article className="rounded-3xl border border-emerald-400/40 bg-[var(--bg-card)] p-6 shadow-sm">
-              <h3 className="text-2xl font-bold">Si tenés un club</h3>
-              <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                {clubItems.map((item) => (
-                  <li key={item}>✅ {item}</li>
-                ))}
-              </ul>
-            </article>
-          </div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        className="bg-[var(--bg-card)] px-4 py-16 sm:px-6"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-4xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight">Disponible en App Store y Google Play</h2>
-          <p className="mt-3 text-[var(--text-secondary)]">Descargá la app gratis y empezá a jugar hoy.</p>
-          <div className="mx-auto mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
+          {/* Download buttons */}
+          <motion.div
+            className="mt-10 flex flex-col items-center gap-3 sm:flex-row"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.28 }}
+          >
             <a
-              href="https://apps.apple.com/app/id6769852990"
+              href="https://apps.apple.com/us/app/padelibre/id6769852990"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold transition hover:bg-[var(--bg-subtle)]"
+              className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
             >
-              📱 Descargar en App Store
+              <span className="text-2xl leading-none text-white"></span>
+              <div className="text-left">
+                <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
+                <p className="text-base font-bold leading-tight text-white">App Store</p>
+              </div>
             </a>
             <a
               href="https://play.google.com/store/apps/details?id=com.padelibre.app"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-app)] px-4 py-3 font-semibold transition hover:bg-[var(--bg-subtle)]"
+              className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
             >
-              🤖 Descargar en Google Play
+              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none">
+                <path d="M3.6 1.4 13.2 11 3.6 20.6c-.4-.2-.6-.6-.6-1V2.4c0-.4.2-.8.6-1Z" fill="#EA4335"/>
+                <path d="m13.2 11 3 3-10.5 6.1 7.5-9.1Z" fill="#FBBC04"/>
+                <path d="M20 12c0 .7-.4 1.3-1 1.7L16.2 14l-3-3 3-3 2.8 1.3c.6.4 1 1 1 1.7Z" fill="#4285F4"/>
+                <path d="M5.7 4.9 16.2 11l-3 3-9.5-9.1Z" fill="#34A853"/>
+              </svg>
+              <div className="text-left">
+                <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
+                <p className="text-base font-bold leading-tight text-white">Google Play</p>
+              </div>
             </a>
-          </div>
-          <p className="mt-5 text-sm text-[var(--text-secondary)]">
-            También disponible en padelibre.online desde el navegador
-          </p>
-        </div>
-      </motion.section>
+          </motion.div>
 
-      <motion.section
-        className="px-4 py-16 text-center sm:px-6"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="mx-auto w-full max-w-4xl">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">¿Listo para jugar sin el caos?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-white/90">
-            Unite a PadeLibre hoy. Es gratis para jugadores. Reservá canchas, armá partidos y encontrá tu nivel.
-          </p>
-          <Link
-            href="/login"
-            className="mt-7 inline-flex rounded-2xl bg-white px-8 py-3 text-base font-bold text-[#0461C4] transition hover:bg-white/90"
+          <motion.p
+            className="mt-5 text-xs text-white/50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
           >
-            Empezar gratis
-          </Link>
-          <p className="mt-4 text-sm text-white/85">
-            ¿Ya tenés cuenta?{" "}
-            <Link href="/login" className="font-semibold text-white underline underline-offset-2">
-              Iniciá sesión →
-            </Link>
-          </p>
+            También disponible en{" "}
+            <Link href="/login" className="underline underline-offset-2 hover:text-white/80">
+              padelibre.online
+            </Link>{" "}
+            desde el navegador · Gratis para jugadores
+          </motion.p>
         </div>
-      </motion.section>
+      </section>
 
-      <footer className="border-t border-[var(--border-default)] px-4 py-8 sm:px-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-lg" />
-            <span className="font-semibold">PadeLibre</span>
+      {/* Features */}
+      <section className="px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto w-full max-w-5xl">
+          <motion.div
+            className="mb-10 text-center"
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.4 }}
+          >
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+              ¿Qué puedo hacer en PadeLibre?
+            </h2>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Todo lo que necesitás para organizar tu pádel en un solo lugar.
+            </p>
+          </motion.div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f, idx) => {
+              const Icon = f.icon;
+              return (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.35, delay: idx * 0.06 }}
+                  className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5 shadow-sm"
+                >
+                  <div className="mb-3 inline-flex rounded-xl bg-[#0585FC]/10 p-2.5">
+                    <Icon className="h-5 w-5 text-[#0585FC]" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-base font-bold">{f.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">{f.description}</p>
+                </motion.div>
+              );
+            })}
           </div>
-          <p className="text-sm text-[var(--text-secondary)]">© 2026 PadeLibre. Hecho en Argentina 🇦🇷</p>
-          <div className="flex flex-wrap gap-4 text-sm">
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section
+        className="px-4 py-14 text-center sm:px-6"
+        style={{ background: "linear-gradient(135deg, #031733 0%, #0461C4 100%)" }}
+      >
+        <div className="mx-auto max-w-md">
+          <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
+            Descargá la app y empezá a jugar
+          </h2>
+          <p className="mt-2 text-sm text-white/70">Gratis para jugadores.</p>
+          <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <a
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="mailto:soporte.padelibre@gmail.com"
-            >
-              Email
-            </a>
-            <a
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="https://instagram.com/padelibre_"
+              href="https://apps.apple.com/us/app/padelibre/id6769852990"
               target="_blank"
               rel="noreferrer"
+              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 transition hover:bg-white/90 active:scale-[0.98]"
             >
-              Instagram
+              <span className="text-2xl leading-none"></span>
+              <div className="text-left">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Disponible en</p>
+                <p className="text-base font-bold leading-tight text-slate-900">App Store</p>
+              </div>
             </a>
             <a
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="https://www.padelibre.online/legal/privacidad"
+              href="https://play.google.com/store/apps/details?id=com.padelibre.app"
               target="_blank"
               rel="noreferrer"
+              className="flex items-center gap-3 rounded-2xl bg-white px-5 py-3 transition hover:bg-white/90 active:scale-[0.98]"
             >
-              Privacidad
+              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none">
+                <path d="M3.6 1.4 13.2 11 3.6 20.6c-.4-.2-.6-.6-.6-1V2.4c0-.4.2-.8.6-1Z" fill="#EA4335"/>
+                <path d="m13.2 11 3 3-10.5 6.1 7.5-9.1Z" fill="#FBBC04"/>
+                <path d="M20 12c0 .7-.4 1.3-1 1.7L16.2 14l-3-3 3-3 2.8 1.3c.6.4 1 1 1 1.7Z" fill="#4285F4"/>
+                <path d="M5.7 4.9 16.2 11l-3 3-9.5-9.1Z" fill="#34A853"/>
+              </svg>
+              <div className="text-left">
+                <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Disponible en</p>
+                <p className="text-base font-bold leading-tight text-slate-900">Google Play</p>
+              </div>
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[var(--border-default)] px-4 py-7 sm:px-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="PadeLibre" width={24} height={24} className="rounded-lg" />
+            <span className="text-sm font-semibold">PadeLibre</span>
+          </div>
+          <p className="text-xs text-[var(--text-secondary)]">© 2026 PadeLibre · Hecho en Argentina 🇦🇷</p>
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.instagram.com/padelibre_" target="_blank" rel="noreferrer">Instagram</a>
+            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.tiktok.com/@padelibre" target="_blank" rel="noreferrer">TikTok</a>
+            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.padelibre.online/legal/privacidad" target="_blank" rel="noreferrer">Privacidad</a>
             <a
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              href="https://wa.me/5493413741000"
+              href="https://api.whatsapp.com/send/?phone=5493413741000&text&type=phone_number&app_absent=0"
               target="_blank"
               rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-full border border-[var(--border-default)] px-3 py-1 text-[var(--text-secondary)] transition hover:border-[#25D366] hover:text-[#25D366]"
             >
-              WhatsApp
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+              </svg>
+              Soporte
             </a>
           </div>
         </div>
