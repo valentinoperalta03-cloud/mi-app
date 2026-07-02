@@ -1,4 +1,4 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import CapacitorNativeAuthCallback from "@/components/capacitor-native-auth-callback";
 import CapacitorOfflineBanner from "@/components/capacitor-offline-banner";
