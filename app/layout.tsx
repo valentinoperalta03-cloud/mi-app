@@ -17,40 +17,32 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: “PadeLibre - Reserva canchas y arma partidos de padel”,
-  description:
-    “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo. La app de padel argentina.”,
-  keywords:
-    “padel, reservar cancha de padel, padel Argentina, jugadores de padel, torneos de padel”,
+  title: "PadeLibre - Reserva canchas y arma partidos de padel",
+  description: "Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo. La app de padel argentina.",
+  keywords: "padel, reservar cancha de padel, padel Argentina, jugadores de padel, torneos de padel",
   alternates: {
-    canonical: “https://www.padelibre.online”,
+    canonical: "https://www.padelibre.online",
   },
-  manifest: “/manifest.json”,
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: “PadeLibre”,
-    statusBarStyle: “black-translucent”,
+    title: "PadeLibre",
+    statusBarStyle: "black-translucent",
   },
   openGraph: {
-    title: “PadeLibre - Reserva canchas y arma partidos de padel”,
-    description: “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.”,
-    url: “https://www.padelibre.online”,
-    siteName: “PadeLibre”,
-    locale: “es_AR”,
-    type: “website”,
-    images: [
-      {
-        url: “https://www.padelibre.online/og-image.png”,
-        width: 1200,
-        height: 630,
-      },
-    ],
+    title: "PadeLibre - Reserva canchas y arma partidos de padel",
+    description: "Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.",
+    url: "https://www.padelibre.online",
+    siteName: "PadeLibre",
+    locale: "es_AR",
+    type: "website",
+    images: [{ url: "https://www.padelibre.online/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
-    card: “summary_large_image”,
-    title: “PadeLibre - Reserva canchas y arma partidos de padel”,
-    description: “Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.”,
-    images: [“https://www.padelibre.online/og-image.png”],
+    card: "summary_large_image",
+    title: "PadeLibre - Reserva canchas y arma partidos de padel",
+    description: "Reserva canchas, arma partidos y encontra jugadores de padel cerca tuyo.",
+    images: ["https://www.padelibre.online/og-image.png"],
   },
   robots: { index: true, follow: true },
 };
@@ -99,4 +91,3 @@ export default function RootLayout({
     </html>
   );
 }
-
