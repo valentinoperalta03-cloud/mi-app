@@ -112,11 +112,8 @@ export async function saveTournamentMatchResultAndElo(params: {
   const winnerReg = pair1Score > pair2Score ? regA : regB;
   const loserReg = pair1Score > pair2Score ? regB : regA;
 
-  const aWon = pair1Score > pair2Score;
-  const setsWonA = aWon ? 2 : pair1Score < pair2Score ? 0 : 1;
-  const setsLostA = aWon ? 0 : 2;
-  const setsWonB = aWon ? 0 : 2;
-  const setsLostB = aWon ? 2 : 0;
+  const winnerSets = Math.max(pair1Score, pair2Score);
+  const loserSets = Math.min(pair1Score, pair2Score);
 
   const playerIds = [...new Set([...teamPlayers(regA), ...teamPlayers(regB)])];
   const { data: profiles } = await admin.from(DB_TABLES.profiles).select("user_id, level").in("user_id", playerIds);
@@ -198,8 +195,8 @@ export async function saveTournamentMatchResultAndElo(params: {
       partnerId: partner,
       opponentAvg: avgLos,
       outcome: "win",
-      setsWon: winnerReg.player2_id ? setsWonA : 2,
-      setsLost: winnerReg.player2_id ? setsLostA : 0,
+      setsWon: winnerSets,
+      setsLost: loserSets,
     });
   }
   for (const pid of teamPlayers(loserReg)) {
@@ -209,8 +206,8 @@ export async function saveTournamentMatchResultAndElo(params: {
       partnerId: partner,
       opponentAvg: avgWin,
       outcome: "loss",
-      setsWon: loserReg.player2_id ? setsWonB : 0,
-      setsLost: loserReg.player2_id ? setsLostB : 2,
+      setsWon: loserSets,
+      setsLost: winnerSets,
     });
   }
 

@@ -38,8 +38,8 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
           className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
         >
           {TOURNAMENT_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
+            <option key={o.value} value={o.value} disabled={o.value === "grupos_eliminacion"}>
+              {o.value === "grupos_eliminacion" ? `${o.label} (Proximamente)` : o.label}
             </option>
           ))}
         </select>

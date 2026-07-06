@@ -7,19 +7,15 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createNotification } from "@/lib/notifications";
 import { saveTournamentMatchResultAndElo } from "@/lib/tournament-elo-apply";
+import {
+  buildAmericanoMatches,
+  buildEliminationFirstRound,
+  buildEliminationNextLayer,
+  buildMixingRound1,
+} from "@/lib/tournament/fixture";
+import { validatePairsForType } from "@/lib/tournament/validation";
+import type { TournamentTypeKey } from "@/lib/tournament-constants";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
-
-function isPowerOfTwo(n: number): boolean {
-  return n > 0 && (n & (n - 1)) === 0;
-}
-
-function roundNameByMatches(matchesInRound: number): string {
-  if (matchesInRound >= 8) return "Octavos de final";
-  if (matchesInRound === 4) return "Cuartos de final";
-  if (matchesInRound === 2) return "Semifinal";
-  if (matchesInRound === 1) return "Final";
-  return `Ronda (${matchesInRound} partidos)`;
-}
 
 async function assertTournamentOwner(supabase: SupabaseClient, tournamentId: string) {
   const ctx = await getOwnerAdminContext(supabase);
@@ -61,94 +57,40 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     .eq("waitlist", false);
 
   const pairIds = ((regs ?? []) as Array<{ id: string }>).map((r) => r.id);
-  const ttype = String((gate.row as { tournament_type?: string }).tournament_type ?? "");
+  const ttype = String((gate.row as { tournament_type?: string }).tournament_type ?? "") as TournamentTypeKey;
 
-  if (pairIds.length < 2) {
-    return { ok: false, message: "Se necesitan al menos 2 inscripciones pagadas." };
-  }
-
-  if ((ttype === "eliminacion" || ttype === "grupos_eliminacion") && !isPowerOfTwo(pairIds.length)) {
-    return { ok: false, message: "Eliminación requiere cantidad de parejas potencia de 2 (p. ej. 8, 16)." };
-  }
-
-  if (ttype === "mixing" && pairIds.length % 2 !== 0) {
-    return { ok: false, message: "Mixing requiere un número par de parejas inscriptas." };
-  }
+  const validation = validatePairsForType(ttype, pairIds.length);
+  if (!validation.ok) return validation;
 
   await service.from(DB_TABLES.tournamentMatches).delete().eq("tournament_id", tournamentId);
 
-  if (ttype === "americano" || ttype === "grupos_eliminacion") {
-    let round = 1;
-    const rows: Array<Record<string, unknown>> = [];
-    for (let i = 0; i < pairIds.length; i++) {
-      for (let j = i + 1; j < pairIds.length; j++) {
-        rows.push({
-          tournament_id: tournamentId,
-          round,
-          round_name: `Todos contra todos · ${round}`,
-          pair1_id: pairIds[i],
-          pair2_id: pairIds[j],
-          status: "pending",
-        });
-        round += 1;
-      }
-    }
+  if (ttype === "americano") {
+    const rows = buildAmericanoMatches(tournamentId, pairIds);
     if (rows.length) {
       const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
       if (error) return { ok: false, message: error.message };
     }
   } else if (ttype === "mixing") {
-    const shuffled = [...pairIds].sort(() => Math.random() - 0.5);
-    const rows: Array<Record<string, unknown>> = [];
-    for (let i = 0; i + 1 < shuffled.length; i += 2) {
-      rows.push({
-        tournament_id: tournamentId,
-        round: 1,
-        round_name: "Ronda 1 (sorteo)",
-        pair1_id: shuffled[i],
-        pair2_id: shuffled[i + 1],
-        status: "pending",
-      });
-    }
+    const rows = buildMixingRound1(tournamentId, pairIds);
     if (rows.length) {
       const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
       if (error) return { ok: false, message: error.message };
     }
-  } else {
-    let layerIds: string[] = [];
-    const r1: Array<Record<string, unknown>> = [];
-    const rn = pairIds.length / 2;
-    for (let i = 0; i < pairIds.length; i += 2) {
-      r1.push({
-        tournament_id: tournamentId,
-        round: 1,
-        round_name: roundNameByMatches(rn),
-        pair1_id: pairIds[i],
-        pair2_id: pairIds[i + 1],
-        status: "pending",
-      });
-    }
-    const { data: ins1, error: e1 } = await service.from(DB_TABLES.tournamentMatches).insert(r1).select("id");
+  } else if (ttype === "eliminacion") {
+    const firstRound = buildEliminationFirstRound(tournamentId, pairIds);
+    const { data: ins1, error: e1 } = await service.from(DB_TABLES.tournamentMatches).insert(firstRound).select("id");
     if (e1) return { ok: false, message: e1.message };
-    layerIds = ((ins1 ?? []) as { id: string }[]).map((x) => x.id);
+    let layerIds = ((ins1 ?? []) as { id: string }[]).map((x) => x.id);
     let roundNum = 2;
     while (layerIds.length > 1) {
-      const next: Array<Record<string, unknown>> = [];
-      for (let i = 0; i < layerIds.length; i += 2) {
-        next.push({
-          tournament_id: tournamentId,
-          round: roundNum,
-          round_name: roundNameByMatches(layerIds.length / 2),
-          feeder_left_match_id: layerIds[i],
-          feeder_right_match_id: layerIds[i + 1],
-          status: "pending",
-        });
-      }
+      const next = buildEliminationNextLayer(tournamentId, roundNum, layerIds);
       const { data: insN, error: eN } = await service.from(DB_TABLES.tournamentMatches).insert(next).select("id");
       if (eN) return { ok: false, message: eN.message };
       layerIds = ((insN ?? []) as { id: string }[]).map((x) => x.id);
-      roundNum += 1;
+      roundNum++;
     }
+  } else {
+    return { ok: false, message: `Tipo de torneo "${ttype}" no implementado.` };
   }
 
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
@@ -286,64 +228,6 @@ export async function saveTournamentMatchAction(
     });
   }
 
-  if (res.ok) {
-    const { data: matchRow } = await service
-      .from(DB_TABLES.tournamentMatches)
-      .select("winner_pair_id, pair1_id, pair2_id")
-      .eq("id", matchId)
-      .maybeSingle();
-
-    const winnerId = (matchRow as { winner_pair_id?: string | null } | null)?.winner_pair_id;
-    if (winnerId) {
-      const { data: nextLeft } = await service
-        .from(DB_TABLES.tournamentMatches)
-        .select("id, pair1_id")
-        .eq("feeder_left_match_id", matchId)
-        .maybeSingle();
-
-      const { data: nextRight } = await service
-        .from(DB_TABLES.tournamentMatches)
-        .select("id, pair2_id")
-        .eq("feeder_right_match_id", matchId)
-        .maybeSingle();
-
-      if (nextLeft) {
-        await service
-          .from(DB_TABLES.tournamentMatches)
-          .update({ pair1_id: winnerId })
-          .eq("id", (nextLeft as { id: string }).id);
-      }
-      if (nextRight) {
-        await service
-          .from(DB_TABLES.tournamentMatches)
-          .update({ pair2_id: winnerId })
-          .eq("id", (nextRight as { id: string }).id);
-      }
-    }
-
-    const m = matchRow as { pair1_id: string | null; pair2_id: string | null } | null;
-    const pairIds = [m?.pair1_id, m?.pair2_id].filter(Boolean) as string[];
-    if (pairIds.length > 0) {
-      const { data: regRows } = await service
-        .from(DB_TABLES.tournamentRegistrations)
-        .select("player1_id, player2_id")
-        .in("id", pairIds);
-
-      const playerIds = ((regRows ?? []) as Array<{ player1_id: string; player2_id: string | null }>).flatMap(
-        (r) => [r.player1_id, r.player2_id].filter(Boolean) as string[]
-      );
-
-      for (const uid of playerIds) {
-        await createNotification(service, {
-          user_id: uid,
-          type: "tournament_event",
-          title: "Resultado cargado",
-          body: `Se cargó el resultado de tu partido en el torneo "${tname}". Revisá el fixture.`,
-        });
-      }
-    }
-  }
-
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/torneos/${tournamentId}`);
   return res;
@@ -354,6 +238,31 @@ export async function saveTournamentMatchFormAction(formData: FormData): Promise
   const matchId = String(formData.get("match_id") ?? "").trim();
   if (!tournamentId || !matchId) return;
   await saveTournamentMatchAction(tournamentId, matchId, formData);
+}
+
+export async function saveMatchScheduleAction(formData: FormData): Promise<{ ok: boolean; message: string }> {
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
+  const matchId = String(formData.get("match_id") ?? "").trim();
+  if (!tournamentId || !matchId) return { ok: false, message: "Datos incompletos." };
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+
+  const courtId = String(formData.get("court_id") ?? "").trim() || null;
+  const scheduledDate = String(formData.get("scheduled_date") ?? "").trim() || null;
+  const scheduledTime = String(formData.get("scheduled_time") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .update({ court_id: courtId, scheduled_date: scheduledDate, scheduled_time: scheduledTime, notes })
+    .eq("id", matchId);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: "Horario guardado." };
 }
 
 export async function removeRegistrationAction(registrationId: string, tournamentId: string) {

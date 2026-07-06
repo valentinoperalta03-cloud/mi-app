@@ -76,7 +76,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     .from(DB_TABLES.tournamentRegistrations)
     .select("id, payment_status")
     .eq("tournament_id", tournamentId)
-    .eq("player1_id", user.id)
+    .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
     .maybeSingle();
   if (existing) {
     const row = existing as { id: string; payment_status: string };

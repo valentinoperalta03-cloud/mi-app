@@ -8,6 +8,8 @@ import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
+import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
+import { TournamentScheduler } from "./TournamentScheduler";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -48,7 +50,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
   const service = createServiceClient();
-  const [{ data: regs }, { data: matches }] = await Promise.all([
+  const [{ data: regs }, { data: matches }, { data: courts }] = await Promise.all([
     service
       .from(DB_TABLES.tournamentRegistrations)
       .select("id, player1_id, player2_id, payment_status, waitlist, registered_at")
@@ -56,9 +58,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       .order("registered_at", { ascending: true }),
     service
       .from(DB_TABLES.tournamentMatches)
-      .select("id, round, round_name, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id")
+      .select("id, round, round_name, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes")
       .eq("tournament_id", id)
       .order("round", { ascending: true }),
+    service
+      .from(DB_TABLES.courts)
+      .select("id, name")
+      .eq("club_id", tour.club_id)
+      .order("name", { ascending: true }),
   ]);
 
   const regList = (regs ?? []) as Array<{
@@ -91,6 +98,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const waitlist = regList.filter((r) => r.waitlist);
   const pending = regList.filter((r) => r.payment_status === "pending");
 
+  const courtList = (courts ?? []) as Array<{ id: string; name: string }>;
+
   const matchRows = (matches ?? []) as Array<{
     id: string;
     round: number;
@@ -100,6 +109,10 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     pair1_score: number | null;
     pair2_score: number | null;
     status: string;
+    court_id: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    notes: string | null;
   }>;
 
   const courtHours = Math.round((matchRows.length * 90) / 60);
@@ -194,6 +207,31 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           </ul>
         </section>
       ) : null}
+
+      {(tour.tournament_type === "americano" || tour.tournament_type === "grupos_eliminacion") &&
+        tour.status === "in_progress" && (
+          <AmericanoLeaderboard
+            matches={matchRows}
+            pairNameMap={pairNameMap}
+          />
+        )}
+
+      {tour.status === "in_progress" && courtList.length > 0 && (
+        <TournamentScheduler
+          tournamentId={id}
+          courts={courtList}
+          matches={matchRows.map((m) => ({
+            id: m.id,
+            round_name: m.round_name,
+            pair1_name: m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "—" : "—",
+            pair2_name: m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "—" : "—",
+            court_id: m.court_id,
+            scheduled_date: m.scheduled_date,
+            scheduled_time: m.scheduled_time,
+            notes: m.notes,
+          }))}
+        />
+      )}
 
       <section>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fixture</h2>
