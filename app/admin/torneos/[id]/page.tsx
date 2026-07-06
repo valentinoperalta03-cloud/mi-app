@@ -212,7 +212,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         tour.status === "in_progress" && (
           <AmericanoLeaderboard
             matches={matchRows}
-            pairNameMap={pairNameMap}
+            pairNames={Object.fromEntries(pairNameMap)}
           />
         )}
 
