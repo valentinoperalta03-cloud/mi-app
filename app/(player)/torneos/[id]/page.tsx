@@ -102,7 +102,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.tournamentMatches)
-    .select("id, round, round_name, pair1_score, pair2_score, status, winner_pair_id, pair1_id, pair2_id")
+    .select("id, round, round_name, pair1_score, pair2_score, status, winner_pair_id, pair1_id, pair2_id, scheduled_date, scheduled_time, court_id, courts(name)")
     .eq("tournament_id", id)
     .order("round", { ascending: true });
 
@@ -207,11 +207,21 @@ export default async function TorneoDetallePage({ params }: PageProps) {
               pair2_score: number | null;
               winner_pair_id: string | null;
               status: string;
+              scheduled_date: string | null;
+              scheduled_time: string | null;
+              court_id: string | null;
+              courts: { name: string }[] | { name: string } | null;
             }>).map((m) => {
               const name1 = m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "Por definir";
               const name2 = m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "Por definir";
               const finished = m.status === "finished";
               const winner = m.winner_pair_id;
+              const courtName = Array.isArray(m.courts) ? m.courts[0]?.name : m.courts?.name;
+              const scheduleLabel = [
+                m.scheduled_date ? format(parseISO(m.scheduled_date), "d MMM", { locale: es }) : null,
+                m.scheduled_time ? m.scheduled_time.slice(0, 5) + "hs" : null,
+                courtName ?? null,
+              ].filter(Boolean).join(" · ");
               return (
                 <li key={m.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3">
                   <span className="text-xs font-semibold text-[var(--text-tertiary)]">
@@ -228,15 +238,20 @@ export default async function TorneoDetallePage({ params }: PageProps) {
                       {name2}
                     </span>
                   </div>
-                  {!finished ? (
-                    <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                      Pendiente
-                    </span>
-                  ) : (
-                    <span className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                      Finalizado
-                    </span>
-                  )}
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {!finished ? (
+                      <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        Pendiente
+                      </span>
+                    ) : (
+                      <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        Finalizado
+                      </span>
+                    )}
+                    {scheduleLabel ? (
+                      <span className="text-[10px] text-[var(--text-tertiary)]">{scheduleLabel}</span>
+                    ) : null}
+                  </div>
                 </li>
               );
             })}

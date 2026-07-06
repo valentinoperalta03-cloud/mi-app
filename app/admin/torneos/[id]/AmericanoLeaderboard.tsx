@@ -4,10 +4,10 @@ import { buildAmericanoRanking, type MatchForRanking } from "@/lib/tournament/ra
 
 type Props = {
   matches: MatchForRanking[];
-  pairNameMap: Map<string, string>;
+  pairNames: Record<string, string>;
 };
 
-export function AmericanoLeaderboard({ matches, pairNameMap }: Props) {
+export function AmericanoLeaderboard({ matches, pairNames }: Props) {
   const ranking = buildAmericanoRanking(matches);
   if (ranking.length === 0) return null;
 
@@ -37,7 +37,7 @@ export function AmericanoLeaderboard({ matches, pairNameMap }: Props) {
               >
                 <td className="px-3 py-2 font-mono text-xs text-slate-400">{i + 1}</td>
                 <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">
-                  {pairNameMap.get(row.pairId) ?? "—"}
+                  {pairNames[row.pairId] ?? "—"}
                 </td>
                 <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-slate-600 dark:text-slate-300">{row.played}</td>
                 <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-300">{row.won}</td>
