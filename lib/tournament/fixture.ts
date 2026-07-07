@@ -100,15 +100,16 @@ export function buildEliminationFirstRound(
   if (!isPowerOfTwo(pairIds.length)) {
     throw new Error("Eliminacion directa requiere potencia de 2");
   }
-  const rn = pairIds.length / 2;
+  const shuffled = [...pairIds].sort(() => Math.random() - 0.5);
+  const rn = shuffled.length / 2;
   const rows: MatchInsert[] = [];
-  for (let i = 0; i < pairIds.length; i += 2) {
+  for (let i = 0; i < shuffled.length; i += 2) {
     rows.push({
       tournament_id: tournamentId,
       round: 1,
       round_name: roundName(rn),
-      pair1_id: pairIds[i],
-      pair2_id: pairIds[i + 1],
+      pair1_id: shuffled[i],
+      pair2_id: shuffled[i + 1],
       status: "pending",
     });
   }

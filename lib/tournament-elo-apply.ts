@@ -33,7 +33,7 @@ async function countFinishedTournamentMatchesForPlayer(
   return n;
 }
 
-async function propagateBracket(admin: SupabaseClient, finishedMatchId: string, winnerPairId: string | null) {
+export async function propagateBracket(admin: SupabaseClient, finishedMatchId: string, winnerPairId: string | null) {
   if (!winnerPairId) return;
   const { data: children } = await admin
     .from(DB_TABLES.tournamentMatches)

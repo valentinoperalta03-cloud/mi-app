@@ -6,11 +6,12 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createNotification } from "@/lib/notifications";
-import { saveTournamentMatchResultAndElo } from "@/lib/tournament-elo-apply";
+import { propagateBracket, saveTournamentMatchResultAndElo } from "@/lib/tournament-elo-apply";
 import {
   buildAmericanoMatches,
   buildEliminationFirstRound,
   buildEliminationNextLayer,
+  buildMixingNextRound,
   buildMixingRound1,
 } from "@/lib/tournament/fixture";
 import { validatePairsForType } from "@/lib/tournament/validation";
@@ -106,7 +107,10 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     await service.from(DB_TABLES.tournaments).update({ group_chat_id: chat.groupId }).eq("id", tournamentId);
   }
 
-  await service.from(DB_TABLES.tournaments).update({ status: "in_progress" }).eq("id", tournamentId);
+  await service
+    .from(DB_TABLES.tournaments)
+    .update({ status: "in_progress", fixture_locked: true })
+    .eq("id", tournamentId);
 
   for (const uid of memberIds) {
     await createNotification(service, {
@@ -129,6 +133,15 @@ export async function finishTournamentAction(tournamentId: string): Promise<{ ok
   if (!gate.ok) return gate;
   const service = createServiceClient();
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
+
+  const { count } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId)
+    .neq("status", "finished");
+  if ((count ?? 0) > 0) {
+    return { ok: false, message: `Hay ${count} partido${count === 1 ? "" : "s"} sin resultado. Cargalos antes de cerrar el torneo.` };
+  }
 
   await service.from(DB_TABLES.tournaments).update({ status: "finished" }).eq("id", tournamentId);
 
@@ -193,11 +206,16 @@ export async function saveTournamentMatchAction(
 
   const { data: existing } = await service
     .from(DB_TABLES.tournamentMatches)
-    .select("pair1_id, pair2_id, status")
+    .select("pair1_id, pair2_id, status, winner_pair_id")
     .eq("id", matchId)
     .maybeSingle();
 
-  const em = existing as { pair1_id: string | null; pair2_id: string | null; status: string } | null;
+  const em = existing as {
+    pair1_id: string | null;
+    pair2_id: string | null;
+    status: string;
+    winner_pair_id: string | null;
+  } | null;
   if (!em?.pair1_id || !em.pair2_id) {
     return { ok: false, message: "Faltan parejas en el partido." };
   }
@@ -216,7 +234,16 @@ export async function saveTournamentMatchAction(
         status: "finished",
       })
       .eq("id", matchId);
-    res = error ? { ok: false, message: error.message } : { ok: true, message: "Resultado actualizado." };
+    if (error) {
+      res = { ok: false, message: error.message };
+    } else {
+      // Re-propagar bracket solo si el ganador cambió
+      if (em.winner_pair_id !== winnerPairId) {
+        await propagateBracket(service, matchId, winnerPairId);
+      }
+      // ELO no se recalcula en ediciones (level_evolution no almacena match_id para poder revertir el delta anterior)
+      res = { ok: true, message: "Resultado actualizado." };
+    }
   } else {
     res = await saveTournamentMatchResultAndElo({
       admin: service,
@@ -263,6 +290,69 @@ export async function saveMatchScheduleAction(formData: FormData): Promise<{ ok:
   if (error) return { ok: false, message: error.message };
   revalidatePath(`/admin/torneos/${tournamentId}`);
   return { ok: true, message: "Horario guardado." };
+}
+
+export async function advanceMixingRoundFormAction(formData: FormData): Promise<void> {
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
+  if (!tournamentId) return;
+  await advanceMixingRoundAction(tournamentId);
+}
+
+export async function advanceMixingRoundAction(tournamentId: string): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+
+  if ((gate.row as { tournament_type?: string }).tournament_type !== "mixing") {
+    return { ok: false, message: "Solo aplica a torneos mixing." };
+  }
+
+  const service = createServiceClient();
+  const { data: allMatches } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .select("id, round, status, winner_pair_id, pair1_id, pair2_id")
+    .eq("tournament_id", tournamentId)
+    .order("round", { ascending: false });
+
+  const rows = (allMatches ?? []) as Array<{
+    id: string;
+    round: number;
+    status: string;
+    winner_pair_id: string | null;
+    pair1_id: string | null;
+    pair2_id: string | null;
+  }>;
+
+  if (rows.length === 0) return { ok: false, message: "No hay partidos aun." };
+
+  const maxRound = rows[0].round;
+  const currentRound = rows.filter((r) => r.round === maxRound);
+  const pending = currentRound.filter((r) => r.status !== "finished");
+  if (pending.length > 0) {
+    return {
+      ok: false,
+      message: `Hay ${pending.length} partido${pending.length === 1 ? "" : "s"} pendiente${pending.length === 1 ? "" : "s"} en la ronda actual.`,
+    };
+  }
+
+  const winners = currentRound.map((r) => r.winner_pair_id).filter(Boolean) as string[];
+  if (winners.length < 2) {
+    return { ok: false, message: "No hay suficientes ganadores para generar una nueva ronda." };
+  }
+
+  const playedKeys = new Set<string>();
+  for (const m of rows) {
+    if (m.pair1_id && m.pair2_id) {
+      playedKeys.add([m.pair1_id, m.pair2_id].sort().join(":"));
+    }
+  }
+
+  const nextMatches = buildMixingNextRound(tournamentId, maxRound + 1, winners, playedKeys);
+  const { error } = await service.from(DB_TABLES.tournamentMatches).insert(nextMatches);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: `Ronda ${maxRound + 1} generada.` };
 }
 
 export async function removeRegistrationAction(registrationId: string, tournamentId: string) {

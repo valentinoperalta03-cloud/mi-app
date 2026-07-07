@@ -7,7 +7,7 @@ import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { formatCategoryRange } from "@/lib/tournament-utils";
-import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
+import { advanceMixingRoundFormAction, finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
 import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
 import { TournamentScheduler } from "./TournamentScheduler";
 
@@ -154,6 +154,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
               className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
             >
               Iniciar torneo
+            </button>
+          </form>
+        ) : null}
+        {tour.status === "in_progress" && tour.tournament_type === "mixing" ? (
+          <form action={advanceMixingRoundFormAction}>
+            <input type="hidden" name="tournament_id" value={id} />
+            <button type="submit" className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500">
+              Generar siguiente ronda
             </button>
           </form>
         ) : null}
