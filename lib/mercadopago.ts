@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Payment, PaymentRefund, Preference } from "mercadopago";
+import { MercadoPagoConfig, Payment, PaymentRefund, Preference, PreApproval } from "mercadopago";
 
 export function getMPClient() {
   return new MercadoPagoConfig({
@@ -16,4 +16,9 @@ export function getPaymentClient() {
 
 export function getPaymentRefundClient() {
   return new PaymentRefund(getMPClient());
+}
+
+/** Suscripciones (debito automatico) del plan mensual PadeLibre a clubes. */
+export function getPreApprovalClient() {
+  return new PreApproval(getMPClient());
 }
