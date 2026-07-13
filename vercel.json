@@ -13,10 +13,6 @@
       "schedule": "0 4 * * *"
     },
     {
-      "path": "/api/cron/match-refund",
-      "schedule": "0 5 * * *"
-    },
-    {
       "path": "/api/cron/result-reminder",
       "schedule": "0 6 * * *"
     },

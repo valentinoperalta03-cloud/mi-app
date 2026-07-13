@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { utcMsForArgentinaWallClock, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { getPaymentRefundClient } from "@/lib/mercadopago";
 import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 
@@ -17,12 +16,7 @@ type MatchRow = {
   match_status: string | null;
   es_turno_fijo: boolean | null;
   incomplete_reminder_sent: boolean | null;
-};
-
-type PaymentRow = {
-  id: string;
-  user_id: string;
-  mp_payment_id: string | null;
+  financial_status: string | null;
 };
 
 function addDaysYmd(ymd: string, days: number): string {
@@ -53,7 +47,7 @@ export async function GET(req: Request) {
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,es_turno_fijo,incomplete_reminder_sent"
+      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,es_turno_fijo,incomplete_reminder_sent,financial_status"
     )
     .gte("scheduled_date", today)
     .lte("scheduled_date", until)
@@ -135,6 +129,11 @@ export async function GET(req: Request) {
       continue;
     }
 
+    const financialStatus = String(m.financial_status ?? "unpaid");
+    // El club ya cobro la sena (o el total): el turno queda confirmado, no
+    // se cancela ni se reembolsa aunque falten jugadores.
+    if (financialStatus === "partially_paid" || financialStatus === "fully_paid") continue;
+
     if (diffMin <= 30 && diffMin >= -10) {
       const { data: fresh } = await supabase
         .from(DB_TABLES.matches)
@@ -145,59 +144,24 @@ export async function GET(req: Request) {
         continue;
       }
 
-      const notified = new Set<string>();
-
-      const { data: payments } = await supabase
-        .from(DB_TABLES.payments)
-        .select("id,user_id,mp_payment_id")
-        .eq("match_id", m.id)
-        .eq("status", "approved");
-
-      for (const payment of (payments ?? []) as PaymentRow[]) {
-        const mpId = payment.mp_payment_id?.trim();
-        if (mpId && mpId !== "dev_simulated" && mpId !== "club_counter") {
-          try {
-            await getPaymentRefundClient().total({ payment_id: mpId });
-          } catch (e) {
-            log.error({ event: "cron.incomplete_matches.refund_failed", matchId: m.id, err: e });
-          }
-        }
-
-        await supabase
-          .from(DB_TABLES.payments)
-          .update({ status: "refund_requested", updated_at: new Date().toISOString() })
-          .eq("id", payment.id);
-
-        notified.add(payment.user_id);
-        await createNotification(supabase, {
-          user_id: payment.user_id,
-          type: "match_cancelled",
-          title: "Partido cancelado",
-          body: "Partido cancelado por falta de jugadores. Se solicitó el reembolso.",
-          match_id: m.id,
-        });
-      }
-
       const { data: partList } = await supabase
         .from(DB_TABLES.matchParticipants)
         .select("player_id")
         .eq("match_id", m.id);
       for (const row of partList ?? []) {
         const uid = String((row as { player_id: string }).player_id);
-        if (notified.has(uid)) continue;
-        notified.add(uid);
         await createNotification(supabase, {
           user_id: uid,
           type: "match_cancelled",
           title: "Partido cancelado",
-          body: "Partido cancelado por falta de jugadores.",
+          body: "Partido cancelado por falta de jugadores y no se completó el pago de la seña a tiempo.",
           match_id: m.id,
         });
       }
 
       const { data: upData, error: cancelErr } = await supabase
         .from(DB_TABLES.matches)
-        .update({ match_status: "cancelled", payment_status: "refund_requested" })
+        .update({ match_status: "cancelled", payment_status: "expired" })
         .eq("id", m.id)
         .in("match_status", ["scheduled", "full", "reserved", "pending"])
         .select("id");
