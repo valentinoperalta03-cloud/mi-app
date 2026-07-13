@@ -71,7 +71,7 @@ async function handleTournamentPaymentIfPresent(
   const { registrationId, payerUserId } = parsed;
   const { data: reg } = await admin
     .from(DB_TABLES.tournamentRegistrations)
-    .select("id, player1_id, tournament_id, payment_status")
+    .select("id, player1_id, tournament_id, payment_status, mp_payment_id, total_price, amount_paid")
     .eq("id", registrationId)
     .maybeSingle();
   const regRow = reg as {
@@ -79,6 +79,9 @@ async function handleTournamentPaymentIfPresent(
     player1_id?: string;
     tournament_id?: string;
     payment_status?: string | null;
+    mp_payment_id?: string | null;
+    total_price?: number | null;
+    amount_paid?: number | null;
   } | null;
   if (!regRow?.id || regRow.player1_id !== payerUserId) {
     log.warn({
@@ -93,12 +96,32 @@ async function handleTournamentPaymentIfPresent(
   const paidAmount = Number(params.mpPayment.transaction_amount ?? 0);
 
   if (params.status === "approved") {
+    if (regRow.payment_status === "approved" && regRow.mp_payment_id === params.paymentId) {
+      log.info({
+        event: "mp.webhook.tournament.idempotent_skip",
+        requestId: params.requestId,
+        registrationId,
+      });
+      return true;
+    }
+
+    const totalPrice = Number(regRow.total_price ?? 0);
+    const amountPaid = Math.min(
+      Number(regRow.amount_paid ?? 0) + (Number.isFinite(paidAmount) ? paidAmount : 0),
+      totalPrice > 0 ? totalPrice : Number.MAX_SAFE_INTEGER
+    );
+    const amountPending = Math.max(totalPrice - amountPaid, 0);
+    const financialStatus = amountPaid >= totalPrice && totalPrice > 0 ? "fully_paid" : amountPaid > 0 ? "partially_paid" : "unpaid";
+
     await admin
       .from(DB_TABLES.tournamentRegistrations)
       .update({
         payment_status: "approved",
         mp_payment_id: params.paymentId,
         amount: Number.isFinite(paidAmount) ? paidAmount : null,
+        amount_paid: amountPaid,
+        amount_pending: amountPending,
+        financial_status: financialStatus,
       })
       .eq("id", registrationId);
 
@@ -429,170 +452,120 @@ async function handleNotification(req: Request) {
       mpPaymentId: paymentId,
     });
 
-    if (payerUserId) {
-      const { data: rpcRows, error: rpcErr } = await admin.rpc("confirm_participant_payment_atomic", {
-        p_match_id: matchId,
-        p_user_id: payerUserId,
-        p_mp_payment_id: paymentId,
-      });
-      if (rpcErr) {
-        log.error({
-          event: "payment.rpc.confirm_failed",
-          requestId,
-          matchId,
-          userId: payerUserId,
-          mpPaymentId: paymentId,
-          err: rpcErr,
-        });
-        void sendAlert({
-          source: "app",
-          kind: "mp_webhook",
-          title: "confirm_participant_payment_atomic falló",
-          detail: rpcErr.message,
-          requestId,
-        });
-        return NextResponse.json({ ok: false }, { status: 500 });
-      }
-      const row = (rpcRows as { payment_row_id?: string; idempotent_ok?: boolean }[] | null)?.[0];
-      log.info({
-        event: "payment.rpc.confirm_ok",
+    const { data: existingPayment } = await admin
+      .from(DB_TABLES.payments)
+      .select("id,status,mp_payment_id")
+      .eq("match_id", matchId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const existingPay = existingPayment as { id?: string; status?: string | null; mp_payment_id?: string | null } | null;
+    if (existingPay?.status === "approved" && existingPay.mp_payment_id === paymentId) {
+      log.info({ event: "mp.webhook.match.idempotent_skip", requestId, matchId, paymentId });
+      return NextResponse.json({ ok: true });
+    }
+
+    const { data: matchBefore } = await admin
+      .from(DB_TABLES.matches)
+      .select("owner_id,match_status,payment_status,total_price,amount_paid,scheduled_date,court_id,courts(name,club_id)")
+      .eq("id", matchId)
+      .maybeSingle();
+    const mb = matchBefore as {
+      owner_id?: string | null;
+      match_status?: string | null;
+      payment_status?: string | null;
+      total_price?: number | null;
+      amount_paid?: number | null;
+      scheduled_date?: string | null;
+      courts?: { name?: string | null; club_id?: string | null } | null;
+    } | null;
+
+    const totalPrice = Number(mb?.total_price ?? 0);
+    const transactionAmount = Number(
+      (mpPayment as { transaction_amount?: number | null }).transaction_amount ?? 0
+    );
+    const amountPaid = Math.min(
+      Number(mb?.amount_paid ?? 0) + (Number.isFinite(transactionAmount) ? transactionAmount : 0),
+      totalPrice > 0 ? totalPrice : Number.MAX_SAFE_INTEGER
+    );
+    const amountPending = Math.max(totalPrice - amountPaid, 0);
+    const financialStatus = amountPaid >= totalPrice && totalPrice > 0 ? "fully_paid" : amountPaid > 0 ? "partially_paid" : "unpaid";
+
+    try {
+      assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
         requestId,
         matchId,
-        paymentId: row?.payment_row_id,
-        idempotent: row?.idempotent_ok,
+        trigger: "webhook.approved_match",
       });
+      assertMatchTransition(mb?.match_status, "reserved", {
+        requestId,
+        matchId,
+        trigger: "webhook.approved_match",
+      });
+    } catch {
+      /* logging ya en asserts */
+    }
 
-      const { data: group } = await admin
-        .from(DB_TABLES.groupChats)
-        .select("id")
-        .eq("match_id", matchId)
-        .maybeSingle();
-      const groupId = (group as { id?: string } | null)?.id;
-      if (groupId) {
-        const { error: memErr } = await admin
-          .from(DB_TABLES.groupChatMembers)
-          .insert({ group_id: groupId, user_id: payerUserId, role: "member" });
-        if (memErr && memErr.code !== "23505") {
-          log.error({
-            event: "mp.webhook.group_chat_failed",
-            requestId,
-            matchId,
-            userId: payerUserId,
-            err: memErr,
-          });
-        }
-      }
+    const { error: payErr } = await admin
+      .from(DB_TABLES.payments)
+      .update({
+        status: "approved",
+        mp_payment_id: paymentId,
+        updated_at: now,
+      })
+      .eq("match_id", matchId);
+    if (payErr) {
+      log.error({ event: "mp.webhook.update_payment_reserva", requestId, matchId, err: payErr });
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
 
+    await admin
+      .from(DB_TABLES.matches)
+      .update({
+        payment_status: "paid",
+        match_status: "reserved",
+        amount_paid: amountPaid,
+        amount_pending: amountPending,
+        financial_status: financialStatus,
+      })
+      .eq("id", matchId);
+
+    const ownerId = String(mb?.owner_id ?? "").trim();
+    if (ownerId) {
+      const body =
+        financialStatus === "fully_paid"
+          ? `Tu reserva fue confirmada por $${Math.round(amountPaid)}.`
+          : `Tu seña de $${Math.round(amountPaid)} fue confirmada. Tu turno quedó reservado. Resta $${Math.round(amountPending)}.`;
       await createNotification(admin, {
-        user_id: payerUserId,
+        user_id: ownerId,
         type: "payment_approved",
         title: "¡Pago confirmado!",
-        body: "Tu pago fue procesado correctamente.",
+        body,
         match_id: matchId,
       });
-      const { data: ownerRow } = await admin
-        .from(DB_TABLES.matches)
+    }
+    const clubId = String(mb?.courts?.club_id ?? "").trim();
+    if (clubId) {
+      const { data: clubRow } = await admin
+        .from(DB_TABLES.clubs)
         .select("owner_id")
-        .eq("id", matchId)
+        .eq("id", clubId)
         .maybeSingle();
-      const ownerId = String((ownerRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-      if (ownerId && ownerId !== payerUserId) {
+      const clubOwnerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+      if (clubOwnerId) {
+        const courtName = String(mb?.courts?.name ?? "Cancha");
+        const date = String(mb?.scheduled_date ?? "");
+        const body =
+          financialStatus === "fully_paid"
+            ? `Reserva pagada por $${amountPaid.toFixed(2)}. Cancha ${courtName} el ${date}.`
+            : `Reserva confirmada con seña de $${amountPaid.toFixed(2)} (resta $${amountPending.toFixed(2)}). Cancha ${courtName} el ${date}.`;
         await createNotification(admin, {
-          user_id: ownerId,
+          user_id: clubOwnerId,
           type: "payment_approved",
-          title: "Pago confirmado de jugador",
-          body: "Un jugador confirmó su pago y su lugar en el partido.",
+          title: "Nueva reserva confirmada",
+          body,
           match_id: matchId,
         });
-      }
-    } else {
-      const { data: matchBefore } = await admin
-        .from(DB_TABLES.matches)
-        .select("match_status,payment_status")
-        .eq("id", matchId)
-        .maybeSingle();
-      const mb = matchBefore as { match_status?: string | null; payment_status?: string | null } | null;
-
-      if (mb?.payment_status === "paid") {
-        log.info({ event: "mp.webhook.reserva.idempotent_skip", requestId, matchId });
-        return NextResponse.json({ ok: true });
-      }
-
-      try {
-        assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
-          requestId,
-          matchId,
-          trigger: "webhook.approved_reserva",
-        });
-        assertMatchTransition(mb?.match_status, "reserved", {
-          requestId,
-          matchId,
-          trigger: "webhook.approved_reserva",
-        });
-      } catch {
-        /* logging ya en asserts */
-      }
-
-      const payUpd = admin
-        .from(DB_TABLES.payments)
-        .update({
-          status: "approved",
-          mp_payment_id: paymentId,
-          updated_at: now,
-        })
-        .eq("match_id", matchId);
-
-      const { error: payErr } = await payUpd;
-      if (payErr) {
-        log.error({ event: "mp.webhook.update_payment_reserva", requestId, matchId, err: payErr });
-        return NextResponse.json({ ok: false }, { status: 500 });
-      }
-
-      await admin
-        .from(DB_TABLES.matches)
-        .update({ payment_status: "paid", match_status: "reserved" })
-        .eq("id", matchId);
-      const { data: matchRow } = await admin
-        .from(DB_TABLES.matches)
-        .select("owner_id,total_price,scheduled_date,court_id,courts(name,club_id)")
-        .eq("id", matchId)
-        .maybeSingle();
-      const ownerId = String((matchRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-      if (ownerId) {
-        const amount = Number((matchRow as { total_price?: number | null } | null)?.total_price ?? 0);
-        await createNotification(admin, {
-          user_id: ownerId,
-          type: "payment_approved",
-          title: "¡Pago confirmado!",
-          body: `Tu reserva fue confirmada por $${Number.isFinite(amount) ? Math.round(amount) : 0}.`,
-          match_id: matchId,
-        });
-      }
-      const matchTyped = matchRow as {
-        total_price?: number | null;
-        scheduled_date?: string | null;
-        courts?: { name?: string | null; club_id?: string | null } | null;
-      } | null;
-      const clubId = String(matchTyped?.courts?.club_id ?? "").trim();
-      if (clubId) {
-        const { data: clubRow } = await admin
-          .from(DB_TABLES.clubs)
-          .select("owner_id")
-          .eq("id", clubId)
-          .maybeSingle();
-        const clubOwnerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-        if (clubOwnerId) {
-          const amount = Number(matchTyped?.total_price ?? 0);
-          const courtName = String(matchTyped?.courts?.name ?? "Cancha");
-          const date = String(matchTyped?.scheduled_date ?? "");
-          await createNotification(admin, {
-            user_id: clubOwnerId,
-            type: "payment_approved",
-            title: "Nueva reserva confirmada",
-            body: `Reserva pagada por $${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}. Cancha ${courtName} el ${date}.`,
-            match_id: matchId,
-          });
-        }
       }
     }
   } else if (status === "rejected" || status === "cancelled" || status === "expired") {
