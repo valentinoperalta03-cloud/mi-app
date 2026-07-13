@@ -6,7 +6,7 @@ import { MessageCircle } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { formatCategoryRange, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 import TournamentRegisterForm from "../tournament-register-form";
@@ -109,13 +109,15 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const approved = regList.filter((r) => r.payment_status === "approved" && !r.waitlist).length;
   const open = tour.status === "open" && new Date(tour.registration_deadline).getTime() > Date.now();
   const canRegister = open && levelOk && approved < tour.max_pairs;
-  const already = regList.some((r) => r.player1_id === user.id && r.payment_status === "approved");
+  const already = regList.some(
+    (r) => (r.player1_id === user.id || r.player2_id === user.id) && r.payment_status === "approved"
+  );
 
   const badge = TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)?.badge ?? tour.tournament_type;
   const dt = parseISO(`${tour.start_date}T${String(tour.start_time).slice(0, 5)}:00`);
   const dateLabel = format(dt, "EEEE d 'de' MMMM", { locale: es });
   const timeLabel = format(dt, "HH:mm");
-  const priceDisplay = Math.round(Number(tour.price_per_pair) + TOURNAMENT_PLATFORM_FEE_ARS);
+  const priceDisplay = Math.round(Number(tour.price_per_pair));
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
@@ -138,9 +140,6 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         <div className="mt-2">
           <p className="text-sm font-bold text-[var(--text-primary)]">
             ${priceDisplay.toLocaleString("es-AR")} por pareja
-          </p>
-          <p className="text-xs text-[var(--text-tertiary)]">
-            ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} al club + ${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} servicio PadeLibre
           </p>
         </div>
         {tour.prize ? <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">🏅 Premio: {tour.prize}</p> : null}

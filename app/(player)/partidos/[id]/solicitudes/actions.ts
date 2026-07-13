@@ -3,9 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createParticipantMercadoPagoCheckout } from "@/lib/match-payments";
+import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification } from "@/lib/notifications";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+
+async function addPlayerToMatchGroup(matchId: string, playerId: string) {
+  const service = createServiceClient();
+  const { data: group } = await service
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (!groupId) return;
+  const { error } = await service
+    .from(DB_TABLES.groupChatMembers)
+    .insert({ group_id: groupId, user_id: playerId, role: "member" });
+  if (error && error.code !== "23505") {
+    console.error("[group-chats] add member", error.message);
+  }
+}
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -98,26 +115,31 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
       redirect(`/partidos/${matchId}/solicitudes`);
     }
 
-    const mpRes = await createParticipantMercadoPagoCheckout({
-      supabase,
-      matchId,
-      payerUserId: requesterId,
-    });
-
-    if (mpRes.ok) {
+    const pickedTeam = await pickTeamForMatch(supabase, matchId);
+    if (pickedTeam == null) {
       await createNotification(supabase, {
         user_id: requesterId,
         type: "join_approved",
         title: "¡Solicitud aprobada!",
-        body: "La mayoría del partido aprobó tu ingreso. Completá el pago para confirmar tu lugar.",
+        body: "La mayoría del partido aprobó tu ingreso, pero el partido ya no tiene cupos libres.",
         match_id: matchId,
       });
     } else {
+      const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+        match_id: matchId,
+        player_id: requesterId,
+        team: pickedTeam,
+      });
+      if (!partErr) {
+        await addPlayerToMatchGroup(matchId, requesterId);
+      }
       await createNotification(supabase, {
         user_id: requesterId,
         type: "join_approved",
         title: "¡Solicitud aprobada!",
-        body: "Tu solicitud fue aprobada pero hubo un error al generar el pago. Ingresá al partido para intentar nuevamente.",
+        body: partErr
+          ? "Tu solicitud fue aprobada pero hubo un error al confirmarte. Ingresá al partido para intentar nuevamente."
+          : "La mayoría del partido aprobó tu ingreso. ¡Ya estás confirmado!",
         match_id: matchId,
       });
     }

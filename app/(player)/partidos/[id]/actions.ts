@@ -4,13 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import {
-  createParticipantMercadoPagoCheckout,
-  createParticipantMercadoPagoPreference,
-  regenerateParticipantMercadoPagoLink,
-} from "@/lib/match-payments";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { log } from "@/lib/logger";
+import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -227,60 +223,6 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}`);
   }
 
-  const { data: alreadyApprovedPayment } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id")
-    .eq("match_id", matchId)
-    .eq("user_id", user.id)
-    .eq("status", "approved")
-    .maybeSingle();
-  if (alreadyApprovedPayment) {
-    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Ya pagaste este partido.")}`);
-  }
-
-  const { data: invitedPayment } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id,status")
-    .eq("match_id", matchId)
-    .eq("user_id", user.id)
-    .eq("status", "invited")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (invitedPayment) {
-    const mpRes = await createParticipantMercadoPagoPreference({
-      supabase,
-      matchId,
-      payerUserId: user.id,
-      requestedTeam,
-    });
-    if (!mpRes.ok) {
-      revalidatePath(`/partidos/${matchId}`);
-      revalidatePath("/home");
-      revalidatePath("/buscar-partido");
-      redirect(`/partidos/${matchId}?join_error=pago`);
-    }
-
-    const { error: updateInvitedErr } = await supabase
-      .from(DB_TABLES.payments)
-      .update({
-        status: "pending",
-        mp_preference_id: mpRes.prefId,
-        team_preference: requestedTeam,
-      })
-      .eq("id", (invitedPayment as { id: string }).id);
-    if (updateInvitedErr) {
-      console.error("[requestToJoin] invited payment update", updateInvitedErr);
-      redirect(`/partidos/${matchId}?join_error=db`);
-    }
-
-    revalidatePath(`/partidos/${matchId}`);
-    revalidatePath("/home");
-    revalidatePath("/buscar-partido");
-    redirect(mpRes.initPoint);
-  }
-
   const { data: userProfile } = await supabase
     .from(DB_TABLES.profiles)
     .select("gender")
@@ -386,42 +328,24 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
-  const { data: existingPay } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id,status,mp_preference_id")
-    .eq("match_id", matchId)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const ex = existingPay as { status?: string | null; mp_preference_id?: string | null } | null;
-  if (
-    ex &&
-    String(ex.status ?? "").toLowerCase() === "pending" &&
-    String(ex.mp_preference_id ?? "").trim().length > 0
-  ) {
-    const pref = encodeURIComponent(String(ex.mp_preference_id).trim());
-    revalidatePath(`/partidos/${matchId}`);
-    redirect(`https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${pref}`);
-  }
-
-  const mpRes = await createParticipantMercadoPagoCheckout({
-    supabase,
-    matchId,
-    payerUserId: user.id,
-    requestedTeam,
+  const { error: joinErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: matchId,
+    player_id: user.id,
+    team: requestedTeam,
   });
-  if (!mpRes.ok) {
+  if (joinErr) {
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     revalidatePath("/buscar-partido");
-    redirect(`/partidos/${matchId}?join_error=pago`);
+    redirect(`/partidos/${matchId}?join_error=db`);
   }
+
+  await addPlayerToMatchGroup(supabase, matchId, user.id);
 
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
-  redirect(mpRes.initPoint);
+  redirect(`/partidos/${matchId}?join_accepted=1`);
 }
 
 export async function acceptJoinRequest(formData: FormData): Promise<void> {
@@ -462,17 +386,6 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
 
   const playerId = String((reqRow as { player_id: string }).player_id);
 
-  const { data: alreadyApprovedPayment } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id")
-    .eq("match_id", matchId)
-    .eq("user_id", playerId)
-    .eq("status", "approved")
-    .maybeSingle();
-  if (alreadyApprovedPayment) {
-    redirect(`/partidos/${matchId}?join_error=${encodeURIComponent("Ya pagaste este partido.")}`);
-  }
-
   const { count, error: cErr } = await supabase
     .from(DB_TABLES.matchParticipants)
     .select("player_id", { count: "exact", head: true })
@@ -493,29 +406,38 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=db`);
   }
 
-  const mpRes = await createParticipantMercadoPagoCheckout({
-    supabase,
-    matchId,
-    payerUserId: playerId,
-    requestedTeam: null,
+  const pickedTeam = await pickTeamForMatch(supabase, matchId);
+  if (pickedTeam == null) {
+    await supabase
+      .from(DB_TABLES.matchJoinRequests)
+      .update({ status: "pending" })
+      .eq("id", requestId)
+      .eq("match_id", matchId);
+    redirect(`/partidos/${matchId}?join_error=cupos`);
+  }
+
+  const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: matchId,
+    player_id: playerId,
+    team: pickedTeam,
   });
-  if (!mpRes.ok) {
+  if (partErr) {
     await supabase
       .from(DB_TABLES.matchJoinRequests)
       .update({ status: "pending" })
       .eq("id", requestId)
       .eq("match_id", matchId);
     revalidatePath(`/partidos/${matchId}`);
-    redirect(`/partidos/${matchId}?join_error=pago`);
+    redirect(`/partidos/${matchId}?join_error=db`);
   }
 
-  // Si el checkout genera el cuarto pago pendiente, bloquear el slot optimísticamente
-  const { count: pendingOrApproved } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id", { count: "exact", head: true })
-    .eq("match_id", matchId)
-    .in("status", ["pending", "approved"]);
-  if ((pendingOrApproved ?? 0) >= 4) {
+  await addPlayerToMatchGroup(supabase, matchId, playerId);
+
+  const { count: participantsAfter } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  if ((participantsAfter ?? 0) >= 4) {
     await supabase
       .from(DB_TABLES.matches)
       .update({ match_status: "full" })
@@ -525,9 +447,9 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
 
   await createNotification(supabase, {
     user_id: playerId,
-    type: "payment_approved",
+    type: "join_approved",
     title: "Solicitud aceptada",
-    body: `Tu solicitud fue aceptada. Completá el pago para confirmar tu lugar: ${mpRes.initPoint}`,
+    body: "Tu solicitud fue aceptada. ¡Ya estás confirmado en el partido!",
     match_id: matchId,
   });
 
@@ -799,28 +721,8 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 }
 
 export async function regenerarLinkPago(formData: FormData): Promise<void> {
-  const paymentId = getField(formData, "payment_id");
   const matchId = getField(formData, "match_id");
-  if (!paymentId || !matchId) {
-    redirect("/buscar-partido");
-  }
-  const supabase = await createClient({ allowCookieWrites: true });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-  const res = await regenerateParticipantMercadoPagoLink({
-    supabase,
-    paymentId,
-    payerUserId: user.id,
-  });
-  if (!res.ok) {
-    redirect(`/partidos/${matchId}?pay_regen_error=1`);
-  }
-  revalidatePath(`/partidos/${matchId}`);
-  redirect(res.initPoint);
+  redirect(`/partidos/${matchId}?pay_regen_error=1`);
 }
 
 export async function confirmCashPayment(matchId: string): Promise<{ ok?: true; error?: string }> {

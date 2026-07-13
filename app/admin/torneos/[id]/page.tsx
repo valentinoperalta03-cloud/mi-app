@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
-import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { advanceMixingRoundFormAction, finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
@@ -137,10 +137,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         </p>
         <div className="mt-2">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-            Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} para el club · Los jugadores pagan ${(Math.round(Number(tour.price_per_pair)) + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} por pareja
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Comisión PadeLibre: ${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} por pareja (incluida en el precio al jugador)
+            Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} por pareja
           </p>
         </div>
       </header>

@@ -184,10 +184,7 @@ export async function simulatePaymentApproved(formData: FormData) {
   }
 
   const total = Number((match as { total_price: number | null }).total_price ?? 0);
-  const feeRate = Number.parseFloat(process.env.MP_MARKETPLACE_FEE ?? "0.05");
-  const safeRate = Number.isFinite(feeRate) && feeRate >= 0 ? feeRate : 0.05;
-  const marketplaceFee = Math.round(total * safeRate * 100) / 100;
-  const amount = Math.round((total + marketplaceFee) * 100) / 100;
+  const amount = total;
 
   const { data: payRow } = await supabase
     .from(DB_TABLES.payments)
@@ -213,18 +210,21 @@ export async function simulatePaymentApproved(formData: FormData) {
       status: "approved",
       mp_payment_id: "dev_simulated",
       amount,
-      marketplace_fee: marketplaceFee,
       payment_method: "mercadopago",
     });
   }
 
   await supabase
     .from(DB_TABLES.matches)
-    .update({ payment_status: "paid", match_status: "reserved" })
+    .update({
+      payment_status: "paid",
+      match_status: "reserved",
+      amount_paid: total,
+      amount_pending: 0,
+      financial_status: "fully_paid",
+    })
     .eq("id", matchId);
-  const tplApproved = NOTIFICATION_TEMPLATES.payment_approved(
-    String(Math.round(Number((match as { total_price?: number | null }).total_price ?? 0) * 1.05))
-  );
+  const tplApproved = NOTIFICATION_TEMPLATES.payment_approved(String(Math.round(total)));
   await createNotification(supabase, {
     user_id: user.id,
     type: "payment_approved",

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Info, Plus, Trophy } from "lucide-react";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +93,7 @@ export default async function AdminTorneosPage() {
           <div>
             <p className="font-bold text-slate-900 dark:text-slate-100">Inscripción y pagos</p>
             <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
-              Los jugadores pagan con Mercado Pago directamente desde la app. Vos recibís el precio que configuraste. PadeLibre cobra una comisión fija de <strong>${TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} por pareja</strong> por encima del precio del club. Por ejemplo, si ponés $3.000, el jugador paga $4.000 y vos recibís $3.000.
+              Los jugadores pagan con Mercado Pago directamente desde la app. El 100% del precio que configuraste va a tu cuenta.
             </p>
           </div>
 

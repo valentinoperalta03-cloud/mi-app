@@ -1,7 +1,6 @@
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { DB_TABLES } from "@/lib/db-tables";
 import { log } from "@/lib/logger";
-import { TOURNAMENT_PLATFORM_FEE_ARS } from "@/lib/tournament-constants";
 import { createServiceClient } from "@/utils/supabase/server";
 
 export function tournamentExternalReference(registrationId: string, payerUserId: string): string {
@@ -31,8 +30,8 @@ function getPublicBaseUrl(): string {
 }
 
 /**
- * Preferencia MP para inscripción a torneo: `unit_price` = precio club + fee fija PadeLibre;
- * `marketplace_fee` = fee fija (el club recibe el precio publicado de la inscripción).
+ * Preferencia MP para inscripción a torneo: `unit_price` = price_per_pair del
+ * torneo, sin fee de plataforma. El 100% va a la cuenta del club.
  */
 export async function createTournamentMercadoPagoPreference(params: {
   tournamentId: string;
@@ -40,16 +39,13 @@ export async function createTournamentMercadoPagoPreference(params: {
   payerUserId: string;
   clubName: string;
   tournamentName: string;
-  /** Precio que recibe el club por la pareja (sin sumar la fee de plataforma). */
+  /** Precio que recibe el club por la pareja. */
   clubPricePerPair: number;
   payerEmail?: string;
   payerFirstName?: string;
   payerLastName?: string;
   backUrls?: { success: string; failure: string; pending: string };
-}): Promise<
-  | { error: string }
-  | { prefId: string; initPoint: string; total: number; marketplaceFee: number }
-> {
+}): Promise<{ error: string } | { prefId: string; initPoint: string; total: number }> {
   const service = createServiceClient();
   const { data: t } = await service
     .from(DB_TABLES.tournaments)
@@ -68,10 +64,9 @@ export async function createTournamentMercadoPagoPreference(params: {
   if (!clubToken) return { error: "El club no tiene Mercado Pago configurado." };
 
   const clubPrice = Number(params.clubPricePerPair);
-  if (!Number.isFinite(clubPrice) || clubPrice < 0) return { error: "Precio inválido." };
+  if (!Number.isFinite(clubPrice) || clubPrice <= 0) return { error: "Precio inválido." };
 
-  const marketplaceFee = TOURNAMENT_PLATFORM_FEE_ARS;
-  const total = Math.round((clubPrice + marketplaceFee) * 100) / 100;
+  const total = clubPrice;
 
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
@@ -105,7 +100,6 @@ export async function createTournamentMercadoPagoPreference(params: {
           email: params.payerEmail,
         },
         statement_descriptor: "PADELIBRE",
-        marketplace_fee: marketplaceFee,
         back_urls: {
           success: successUrl,
           failure: failureUrl,
@@ -123,7 +117,7 @@ export async function createTournamentMercadoPagoPreference(params: {
     if (!prefId || !initPoint) {
       return { error: "La respuesta de Mercado Pago fue incompleta." };
     }
-    return { prefId, initPoint, total, marketplaceFee };
+    return { prefId, initPoint, total };
   } catch (e) {
     log.error({ event: "mp.tournament.preference_failed", tournamentId: params.tournamentId, err: e });
     return { error: "Mercado Pago no pudo crear el pago. Intentá más tarde." };

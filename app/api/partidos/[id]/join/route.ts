@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createParticipantMercadoPagoCheckout } from "@/lib/match-payments";
 import { createNotification } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -31,10 +30,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!user) return NextResponse.json({ redirect: "/login" });
 
   const formData = await request.formData();
-  const paymentMethod = String(formData.get("payment_method") ?? "").trim() as
-    | "mercadopago"
-    | "cash"
-    | "transfer";
   const teamRaw = String(formData.get("team") ?? "");
   const requestedTeam: 1 | 2 | null = teamRaw === "1" ? 1 : teamRaw === "2" ? 2 : null;
 
@@ -81,63 +76,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (alreadyIn) return NextResponse.json({ redirect: `/partidos/${matchId}` });
 
-  if (paymentMethod === "cash" || paymentMethod === "transfer") {
-    const { error: payErr } = await supabase.from(DB_TABLES.payments).insert({
-      match_id: matchId,
-      user_id: user.id,
-      status: "invited",
-      amount: 0,
-      payment_method: paymentMethod,
-      team_preference: requestedTeam,
-    });
-    if (payErr) return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
-
-    const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-      match_id: matchId,
-      player_id: user.id,
-      team: requestedTeam,
-    });
-    if (partErr) {
-      await supabase
-        .from(DB_TABLES.payments)
-        .delete()
-        .eq("match_id", matchId)
-        .eq("user_id", user.id)
-        .eq("status", "invited");
-      return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
-    }
-
-    await addPlayerToGroup(matchId, user.id);
-
-    if (m.owner_id && m.owner_id !== user.id) {
-      const { data: joinerProfile } = await supabase
-        .from(DB_TABLES.profiles)
-        .select("name")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const joinerName = (joinerProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
-      const methodLabel = paymentMethod === "cash" ? "efectivo" : "transferencia";
-      await createNotification(supabase, {
-        user_id: m.owner_id,
-        type: "player_joined",
-        title: "Nuevo jugador",
-        body: `${joinerName} se unió a tu partido. Abonará por ${methodLabel}.`,
-        match_id: matchId,
-      });
-    }
-
-    return NextResponse.json({ redirect: `/partidos/${matchId}?join_accepted=1` });
-  }
-
-  const mpRes = await createParticipantMercadoPagoCheckout({
-    supabase,
-    matchId,
-    payerUserId: user.id,
-    requestedTeam,
+  const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: matchId,
+    player_id: user.id,
+    team: requestedTeam,
   });
-
-  if (!mpRes.ok) {
-    return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=pago` });
+  if (partErr) {
+    return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
   }
 
   await addPlayerToGroup(matchId, user.id);
@@ -153,10 +98,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       user_id: m.owner_id,
       type: "player_joined",
       title: "Nuevo jugador",
-      body: `${joinerName} se unió a tu partido. Abonará por Mercado Pago.`,
+      body: `${joinerName} se unió a tu partido.`,
       match_id: matchId,
     });
   }
 
-  return NextResponse.json({ redirect: mpRes.initPoint });
+  return NextResponse.json({ redirect: `/partidos/${matchId}?join_accepted=1` });
 }

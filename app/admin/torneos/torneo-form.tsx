@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useActionState, useState } from "react";
-import { MAX_PAIRS_OPTIONS, TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { MAX_PAIRS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
 import { createTournamentAction, type CreateTournamentState } from "./actions";
@@ -107,11 +107,8 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         />
         <p className="mt-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           Los jugadores verán{" "}
-          <span className="font-bold">
-            ${(clubPrice + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} por pareja
-          </span>{" "}
-          (tu precio ${clubPrice.toLocaleString("es-AR")} + $
-          {TOURNAMENT_PLATFORM_FEE_ARS.toLocaleString("es-AR")} comisión PadeLibre).
+          <span className="font-bold">${clubPrice.toLocaleString("es-AR")} por pareja</span>. Ese monto va
+          entero a tu cuenta de Mercado Pago.
         </p>
       </div>
 

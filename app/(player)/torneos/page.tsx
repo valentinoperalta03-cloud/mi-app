@@ -4,7 +4,7 @@ import { es } from "date-fns/locale";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_PLATFORM_FEE_ARS, TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 
@@ -146,7 +146,7 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                       {dateLabel} · {timeLabel}hs
                     </p>
                     <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">
-                      ${Math.round(Number(t.price_per_pair) + TOURNAMENT_PLATFORM_FEE_ARS).toLocaleString("es-AR")} / pareja · {n}/{t.max_pairs} parejas ·{" "}
+                      ${Math.round(Number(t.price_per_pair)).toLocaleString("es-AR")} / pareja · {n}/{t.max_pairs} parejas ·{" "}
                       {formatCategoryRange(t.category_min, t.category_max)}
                     </p>
                     {t.prize ? (

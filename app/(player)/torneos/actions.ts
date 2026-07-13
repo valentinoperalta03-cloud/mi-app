@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createTournamentMercadoPagoPreference } from "@/lib/mp-tournament-preference";
+import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
 import { playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 
@@ -37,6 +38,10 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     category_max: number | null;
     club_id: string;
   };
+
+  if (await isClubSubscriptionBlocked(tour.club_id)) {
+    return { ok: false, message: "Este club no puede recibir inscripciones en este momento." };
+  }
 
   if (tour.status !== "open") return { ok: false, message: "Las inscripciones no están abiertas." };
   if (new Date(tour.registration_deadline).getTime() < Date.now()) {
@@ -92,6 +97,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
       player2_id: isMixing ? null : partnerId,
       payment_status: "pending",
       waitlist: false,
+      total_price: Number(tour.price_per_pair),
     })
     .select("id")
     .single();

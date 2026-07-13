@@ -1,5 +1,3 @@
-export const TOURNAMENT_PLATFORM_FEE_ARS = 1000;
-
 export type TournamentTypeKey = "americano" | "eliminacion" | "grupos_eliminacion" | "mixing";
 
 export const TOURNAMENT_TYPE_OPTIONS: { value: TournamentTypeKey; label: string; badge: string }[] = [
