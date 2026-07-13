@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Activity, House, LayoutGrid, DollarSign, Settings, Target, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
+import { isFacturacionPath } from "@/lib/auth-redirect";
 
 const items = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
@@ -18,6 +19,7 @@ const items = [
 
 function AdminBottomNavInner() {
   const pathname = usePathname();
+  if (isFacturacionPath(pathname)) return null;
 
   return (
     <nav

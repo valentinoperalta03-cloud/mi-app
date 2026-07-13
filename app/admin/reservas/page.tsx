@@ -18,7 +18,6 @@ import {
   requestReservationRefundAction,
 } from "./actions";
 import { confirmOfflineCobro } from "../cobros/actions";
-import { clubPadelibreDebtFromTurn } from "@/lib/offline-payments";
 
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
@@ -31,6 +30,9 @@ type MatchRow = {
   owner_id: string | null;
   payment_status: string | null;
   total_price: number | null;
+  amount_paid: number | null;
+  amount_pending: number | null;
+  financial_status: string | null;
   match_status: string | null;
   location_name: string | null;
   match_type: string | null;
@@ -99,7 +101,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const { data: matchesRaw, error: matchesError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,match_status,location_name,match_type,es_turno_fijo,courts(id,name)"
+      "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,courts(id,name)"
     )
     .in("court_id", ctx.courtIds)
     .eq("scheduled_date", selectedDate)
@@ -211,8 +213,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const selectedIsReservation = selectedMatch
     ? String(selectedMatch.match_type ?? "").toLowerCase() === "reservation"
     : false;
-  const padelibreFee =
-    selectedMatch?.total_price != null ? clubPadelibreDebtFromTurn(Number(selectedMatch.total_price)) : null;
 
   const reservationMatches = matches.filter((m) => String(m.match_type ?? "").toLowerCase() === "reservation");
   const totalReservas = reservationMatches.length;
@@ -443,6 +443,20 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                         : isReservation
                           ? "Reserva"
                           : "Partido abierto";
+                    const finStatus = String(reservation.financial_status ?? "").toLowerCase();
+                    const finIndicator =
+                      finStatus === "fully_paid" ? (
+                        <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Abonado
+                        </p>
+                      ) : finStatus === "partially_paid" ? (
+                        <p
+                          className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90"
+                          title={`Pagó $${Number(reservation.amount_paid ?? 0).toLocaleString("es-AR")} · Saldo $${Number(reservation.amount_pending ?? 0).toLocaleString("es-AR")} en club`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-300" /> Seña abonada
+                        </p>
+                      ) : null;
                     return (
                       <Link
                         key={slotKey}
@@ -453,6 +467,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                           <p className="truncate text-sm font-semibold">{player}</p>
                           <p className="text-xs opacity-90">{getTimeFromMatch(reservation)}</p>
                           <p className="text-xs font-semibold">{statusText}</p>
+                          {finIndicator}
                         </div>
                       </Link>
                     );
@@ -526,19 +541,19 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
               <dt className={adminKicker}>Precio total del turno</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
-                {selectedMatch.total_price != null ? `$${(Number(selectedMatch.total_price) * 1.05).toFixed(2)}` : "—"}
+                {selectedMatch.total_price != null ? `$${Number(selectedMatch.total_price).toLocaleString("es-AR")}` : "—"}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-              <dt className={adminKicker}>PadeLibre (5% del turno)</dt>
+              <dt className={adminKicker}>Pagado (seña o total)</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
-                {padelibreFee != null ? `$${padelibreFee.toFixed(2)}` : "—"}
+                ${Number(selectedMatch.amount_paid ?? 0).toLocaleString("es-AR")}
               </dd>
             </div>
             <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-              <dt className={adminKicker}>Precio por jugador (aprox.)</dt>
+              <dt className={adminKicker}>Saldo pendiente en club</dt>
               <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
-                {selectedMatch.total_price != null ? `$${((Number(selectedMatch.total_price) / 4) * 1.05).toFixed(2)}` : "—"}
+                ${Number(selectedMatch.amount_pending ?? 0).toLocaleString("es-AR")}
               </dd>
             </div>
           </dl>

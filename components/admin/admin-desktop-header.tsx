@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Activity, Banknote, CalendarCheck, CreditCard, DollarSign, GraduationCap, House, LayoutGrid, Settings, Target, Trophy, Users } from "lucide-react";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
+import { isFacturacionPath } from "@/lib/auth-redirect";
 
 const desktopLinks = [
   { href: "/admin/dashboard", label: "Inicio", icon: House },
@@ -28,6 +29,7 @@ type AdminDesktopHeaderProps = {
 
 function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps) {
   const pathname = usePathname();
+  if (isFacturacionPath(pathname)) return null;
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-slate-800 bg-slate-950 md:block">

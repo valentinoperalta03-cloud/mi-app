@@ -63,6 +63,11 @@ export async function updateCourt(formData: FormData): Promise<void> {
   const surface = getField(formData, "surface");
   const indoor = formData.get("indoor") === "on";
   const imageUrl = getField(formData, "image_url");
+  const requiresDeposit = formData.get("requires_deposit") === "on";
+  const depositTypeRaw = getField(formData, "deposit_type");
+  const depositType = depositTypeRaw === "percentage" || depositTypeRaw === "fixed" ? depositTypeRaw : null;
+  const depositValueRaw = getField(formData, "deposit_value");
+  const depositValue = depositValueRaw ? Number(depositValueRaw) : 0;
 
   if (!courtId || !name) {
     redirectCanchasError("Completá los datos de la cancha.");
@@ -70,6 +75,20 @@ export async function updateCourt(formData: FormData): Promise<void> {
   const price = Number.parseInt(priceRaw, 10);
   if (!Number.isFinite(price) || price < 0) {
     redirectCanchasError("Precio inválido.");
+  }
+  if (requiresDeposit) {
+    if (depositType !== "percentage" && depositType !== "fixed") {
+      redirectCanchasError("Elegí el tipo de seña.");
+    }
+    if (!Number.isFinite(depositValue)) {
+      redirectCanchasError("Monto de seña inválido.");
+    }
+    if (depositType === "percentage" && (depositValue < 1 || depositValue > 100)) {
+      redirectCanchasError("El porcentaje de seña debe estar entre 1 y 100.");
+    }
+    if (depositType === "fixed" && depositValue <= 0) {
+      redirectCanchasError("El monto fijo de seña debe ser mayor a 0.");
+    }
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -81,7 +100,16 @@ export async function updateCourt(formData: FormData): Promise<void> {
 
   const { error } = await supabase
     .from(DB_TABLES.courts)
-    .update({ name, price, surface: surface || null, indoor, image_url: imageUrl || null })
+    .update({
+      name,
+      price,
+      surface: surface || null,
+      indoor,
+      image_url: imageUrl || null,
+      requires_deposit: requiresDeposit,
+      deposit_type: requiresDeposit ? depositType : null,
+      deposit_value: requiresDeposit ? depositValue : 0,
+    })
     .eq("id", courtId);
 
   if (error) {

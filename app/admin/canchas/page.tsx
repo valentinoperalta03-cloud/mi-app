@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import CourtDepositFields from "@/components/admin/court-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -16,6 +17,9 @@ type CourtRow = {
   surface?: string | null;
   indoor?: boolean | null;
   image_url?: string | null;
+  requires_deposit?: boolean | null;
+  deposit_type?: "percentage" | "fixed" | null;
+  deposit_value?: number | null;
 };
 
 export default async function AdminCanchasPage({
@@ -33,7 +37,7 @@ export default async function AdminCanchasPage({
     ctx.courtIds.length > 0
       ? await supabase
           .from(DB_TABLES.courts)
-          .select("id,name,price,club_id,surface,indoor,image_url")
+          .select("id,name,price,club_id,surface,indoor,image_url,requires_deposit,deposit_type,deposit_value")
           .in("id", ctx.courtIds)
           .order("name")
       : { data: [], error: null };
@@ -251,6 +255,11 @@ export default async function AdminCanchasPage({
                     Techada
                   </label>
                   <CourtImageUploader courtId={c.id} initialUrl={c.image_url ?? ""} label="Imagen de cancha" />
+                  <CourtDepositFields
+                    defaultRequiresDeposit={Boolean(c.requires_deposit)}
+                    defaultDepositType={c.deposit_type ?? null}
+                    defaultDepositValue={Number(c.deposit_value ?? 0)}
+                  />
                   <div className="flex flex-wrap gap-2">
                     <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
                       Guardar cambios
