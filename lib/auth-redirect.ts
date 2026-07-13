@@ -22,6 +22,11 @@ export function isAdminPanelPath(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+/** Paywall de suscripcion y sus subflujos: siempre accesibles aunque el club este bloqueado. */
+export function isFacturacionPath(pathname: string): boolean {
+  return pathname === "/admin/facturacion" || pathname.startsWith("/admin/facturacion/");
+}
+
 export function isSuperadminPath(pathname: string): boolean {
   return pathname === "/superadmin" || pathname.startsWith("/superadmin/");
 }

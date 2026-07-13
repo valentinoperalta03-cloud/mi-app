@@ -3,13 +3,17 @@ import {
   fetchIsGloballyBlocked,
   GLOBAL_BLOCK_LOGIN_MESSAGE,
   isAdminPanelPath,
+  isFacturacionPath,
   isGlobalBlockExemptPath,
   isJugadorAppPath,
   isPublicAuthPath,
   isSuperadminPath,
   resolveHomePath,
 } from "@/lib/auth-redirect";
+import { SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS, SUBSCRIPTION_COOKIE_NAME } from "@/lib/club-subscription-cookie";
+import { DB_TABLES } from "@/lib/db-tables";
 import { SUPERADMIN_EMAILS } from "@/lib/superadmin/constants";
+import { evaluateClubSubscriptionGate } from "@/lib/subscription-gate";
 import { createMiddlewareClient } from "@/utils/supabase/middleware";
 
 /**
@@ -37,10 +41,20 @@ function redirectGloballyBlocked(request: NextRequest, sessionResponse: NextResp
   return redirectPreservingSupabaseCookies(request, `${loginUrl.pathname}${loginUrl.search}`, sessionResponse);
 }
 
-const API_PUBLIC_PREFIXES = ["/api/mp/webhook", "/api/cron/"] as const;
+const API_PUBLIC_PREFIXES = ["/api/mp/webhook", "/api/mp/subscriptions/webhook", "/api/cron/"] as const;
 
 function isApiPublicPath(pathname: string): boolean {
   return API_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
+function setSubscriptionCookie(response: NextResponse, value: string) {
+  response.cookies.set(SUBSCRIPTION_COOKIE_NAME, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS,
+    path: "/",
+  });
 }
 
 export async function proxy(request: NextRequest) {
@@ -126,6 +140,40 @@ export async function proxy(request: NextRequest) {
       }
       return redirectPreservingSupabaseCookies(request, "/admin/dashboard", response);
     }
+
+    if (isAdminPanelPath(pathname) && !isFacturacionPath(pathname)) {
+      const { data: ownedClub } = await supabase
+        .from(DB_TABLES.clubs)
+        .select("id")
+        .eq("owner_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      const clubId = String((ownedClub as { id?: string } | null)?.id ?? "").trim();
+
+      if (clubId) {
+        const gate = await evaluateClubSubscriptionGate(
+          request.cookies.get(SUBSCRIPTION_COOKIE_NAME)?.value,
+          clubId
+        );
+
+        if (gate.blockReason) {
+          const blockedResponse = redirectPreservingSupabaseCookies(
+            request,
+            `/admin/facturacion?reason=${gate.blockReason}`,
+            response
+          );
+          if (gate.refreshedCookieValue) {
+            setSubscriptionCookie(blockedResponse, gate.refreshedCookieValue);
+          }
+          return blockedResponse;
+        }
+
+        if (gate.refreshedCookieValue) {
+          setSubscriptionCookie(response, gate.refreshedCookieValue);
+        }
+      }
+    }
+
     return response;
   }
 
