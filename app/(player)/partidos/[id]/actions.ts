@@ -536,7 +536,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,location_name,match_status,match_type,court_id,scheduled_time")
+    .select("id,owner_id,location_name,match_status,match_type,court_id,scheduled_time,total_price")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr || !matchRow) {
@@ -550,6 +550,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     match_type: string | null;
     court_id: string | null;
     scheduled_time: string | null;
+    total_price: number | null;
   };
   const matchStatusNorm = String(m.match_status ?? "").toLowerCase();
   if (matchStatusNorm === "cancelled") {
@@ -633,9 +634,16 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   }
 
   if (remaining === 0) {
+    const totalPrice = m.total_price != null ? Number(m.total_price) : null;
     await supabase
       .from(DB_TABLES.matches)
-      .update({ match_status: "cancelled", payment_status: "cancelled" })
+      .update({
+        match_status: "cancelled",
+        payment_status: "cancelled",
+        financial_status: "unpaid",
+        amount_paid: 0,
+        amount_pending: totalPrice ?? 0,
+      })
       .eq("id", matchId);
     matchCancelled = true;
 

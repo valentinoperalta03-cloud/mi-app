@@ -256,7 +256,7 @@ export async function cancelReservation(formData: FormData) {
 
   const { data: match, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, scheduled_date, scheduled_time, payment_status")
+    .select("id, owner_id, court_id, scheduled_date, scheduled_time, payment_status, total_price")
     .eq("id", id)
     .maybeSingle();
 
@@ -269,6 +269,7 @@ export async function cancelReservation(formData: FormData) {
     redirect(`/reservas?error=${encodeURIComponent(cancellationGuard.message)}`);
   }
 
+  const totalPrice = Number((match as { total_price: number | null }).total_price ?? 0);
   const payStatus = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
   const scheduledDate = String((match as { scheduled_date: string | null }).scheduled_date ?? "");
   const scheduledTime = String((match as { scheduled_time: string | null }).scheduled_time ?? "");
@@ -338,6 +339,9 @@ export async function cancelReservation(formData: FormData) {
         .update({
           match_status: "cancelled",
           payment_status: "refunded",
+          financial_status: "unpaid",
+          amount_paid: 0,
+          amount_pending: totalPrice,
         })
         .eq("id", id);
       if (cancelRefundErr) {
