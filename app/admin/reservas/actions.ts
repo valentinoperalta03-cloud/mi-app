@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -12,65 +11,6 @@ export type ManualBlockState = { success: boolean; message: string };
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
-}
-
-export async function adminCancelReservation(formData: FormData): Promise<void> {
-  const matchId = getField(formData, "match_id");
-  if (!matchId) {
-    redirect("/admin/reservas");
-  }
-
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) {
-    redirect("/login");
-  }
-
-  const { data: row, error: fetchErr } = await supabase
-    .from(DB_TABLES.matches)
-    .select("court_id,match_type,owner_id")
-    .eq("id", matchId)
-    .maybeSingle();
-
-  if (fetchErr || !row) {
-    redirect("/admin/reservas");
-  }
-
-  const typed = row as { court_id: string; match_type: string | null; owner_id: string | null };
-  if (!ctx.courtIds.includes(typed.court_id) || typed.match_type !== "reservation") {
-    redirect("/admin/reservas");
-  }
-
-  if (typed.owner_id) {
-    const cancellationGuard = await checkCancellationLimit(supabase, typed.owner_id);
-    if (!cancellationGuard.allowed) {
-      redirect(`/admin/reservas?error=${encodeURIComponent("cancel_limit")}`);
-    }
-  }
-
-  const { error } = await supabase
-    .from(DB_TABLES.matches)
-    .update({ match_status: "cancelled" })
-    .eq("id", matchId);
-
-  if (error) {
-    redirect("/admin/reservas");
-  }
-
-  if (typed.owner_id) {
-    const tpl = NOTIFICATION_TEMPLATES.reservation_cancelled("la cancha");
-    await createNotification(supabase, {
-      user_id: typed.owner_id,
-      type: "reservation_cancelled",
-      title: tpl.title,
-      body: "Tu reserva fue cancelada por la administración del club.",
-      match_id: matchId,
-    });
-  }
-
-  revalidatePath("/admin/reservas");
-  revalidatePath("/reservas");
-  redirect("/admin/reservas");
 }
 
 export async function createManualCourtBlockAction(
@@ -210,10 +150,16 @@ export async function requestReservationRefundAction(formData: FormData): Promis
 
   const { data: row } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,court_id,match_type,payment_status")
+    .select("id,court_id,match_type,payment_status,total_price")
     .eq("id", matchId)
     .maybeSingle();
-  const typed = row as { id: string; court_id: string; match_type: string | null; payment_status: string | null } | null;
+  const typed = row as {
+    id: string;
+    court_id: string;
+    match_type: string | null;
+    payment_status: string | null;
+    total_price: number | null;
+  } | null;
   if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
@@ -223,7 +169,13 @@ export async function requestReservationRefundAction(formData: FormData): Promis
 
   await supabase
     .from(DB_TABLES.matches)
-    .update({ match_status: "cancelled", payment_status: "refund_requested" })
+    .update({
+      match_status: "cancelled",
+      payment_status: "refund_requested",
+      financial_status: "unpaid",
+      amount_paid: 0,
+      amount_pending: Number(typed.total_price ?? 0),
+    })
     .eq("id", matchId);
   await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
 
@@ -244,17 +196,29 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
   const { data: row } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,court_id,owner_id,match_type")
+    .select("id,court_id,owner_id,match_type,total_price")
     .eq("id", matchId)
     .maybeSingle();
-  const typed = row as { id: string; court_id: string; owner_id: string | null; match_type: string | null } | null;
+  const typed = row as {
+    id: string;
+    court_id: string;
+    owner_id: string | null;
+    match_type: string | null;
+    total_price: number | null;
+  } | null;
   if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
   await supabase
     .from(DB_TABLES.matches)
-    .update({ match_status: "cancelled", payment_status: "refund_requested" })
+    .update({
+      match_status: "cancelled",
+      payment_status: "refund_requested",
+      financial_status: "unpaid",
+      amount_paid: 0,
+      amount_pending: Number(typed.total_price ?? 0),
+    })
     .eq("id", matchId);
   await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
 

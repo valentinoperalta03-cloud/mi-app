@@ -102,6 +102,32 @@ export function PaymentStatusPill({ status }: { status: string }) {
   }
 }
 
+/** Estado financiero de una inscripción (torneo/clase): distingue seña parcial de pago completo. */
+export function FinancialStatusPill({
+  financialStatus,
+  amountPaid,
+  amountPending,
+}: {
+  financialStatus: string | null | undefined;
+  amountPaid?: number | null;
+  amountPending?: number | null;
+}) {
+  const status = String(financialStatus ?? "unpaid").toLowerCase();
+
+  if (status === "fully_paid") {
+    return <Pill Icon={Ticket} label="Abonado" variant="success" className="" />;
+  }
+  if (status === "partially_paid") {
+    const title = `Pagó $${Number(amountPaid ?? 0).toLocaleString("es-AR")} · Saldo $${Number(amountPending ?? 0).toLocaleString("es-AR")} en el club`;
+    return (
+      <span title={title}>
+        <Pill Icon={Clock} label="Seña abonada" variant="warning" className="" />
+      </span>
+    );
+  }
+  return <Pill Icon={Clock} label="Pendiente" variant="neutral" className="" />;
+}
+
 export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null }) {
   if (isCompetitive === null || isCompetitive === undefined) {
     return null;

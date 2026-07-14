@@ -1,7 +1,6 @@
 "use client";
 
-import { endOfMonth, format, parseISO, startOfMonth, startOfWeek, subDays, subMonths } from "date-fns";
-import { es } from "date-fns/locale";
+import { endOfMonth, parseISO, startOfMonth, startOfWeek, subDays, subMonths } from "date-fns";
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
@@ -28,18 +27,6 @@ type Court = { id: string; name: string | null };
 type FinanceRow = MatchMoneyRow & {
   owner_id: string | null;
   scheduled_date: string | null;
-};
-
-type ClubDebtUiRow = {
-  id: string;
-  amount: number | null;
-  payment_method: string | null;
-  confirmed_at: string;
-  match_id: string | null;
-  matches:
-    | { scheduled_date: string | null; scheduled_time: string | null }
-    | { scheduled_date: string | null; scheduled_time: string | null }[]
-    | null;
 };
 
 const inflightByKey = new Map<string, Promise<{ rows: FinanceRow[]; error: string | null }>>();
@@ -82,7 +69,7 @@ async function fetchPaidMatchesDeduped(courtIds: string[]): Promise<{
     const supabase = createClient();
     const { data, error } = await supabase
       .from(DB_TABLES.matches)
-      .select("id,date,court_id,total_price,payment_status,owner_id,scheduled_date")
+      .select("id,date,court_id,total_price,amount_paid,payment_status,owner_id,scheduled_date")
       .in("court_id", courtIds)
       .eq("match_type", "reservation")
       .order("date", { ascending: false });
@@ -141,8 +128,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [debtRows, setDebtRows] = useState<ClubDebtUiRow[]>([]);
-  const [debtLoadError, setDebtLoadError] = useState<string | null>(null);
+  const [hasHistoricDebt, setHasHistoricDebt] = useState(false);
   const courtIdsRef = useRef(courtIds);
 
   useEffect(() => {
@@ -186,7 +172,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     void (async () => {
       const ids = courtIdsRef.current;
       if (!ids.length) {
-        setDebtRows([]);
+        setHasHistoricDebt(false);
         return;
       }
       const supabase = createClient();
@@ -198,24 +184,14 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         .maybeSingle();
       const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
       if (!clubId) {
-        if (!cancelled) setDebtRows([]);
+        if (!cancelled) setHasHistoricDebt(false);
         return;
       }
-      const { data, error } = await supabase
-        .from(DB_TABLES.clubDebts)
-        .select("id, amount, payment_method, confirmed_at, match_id, matches(scheduled_date, scheduled_time)")
-        .eq("club_id", clubId)
-        .eq("status", "pending")
-        .order("confirmed_at", { ascending: false })
-        .limit(20);
+      // club_debts es del modelo de comisiones discontinuado: solo se usa para
+      // detectar si quedan saldos historicos que consultar en Supabase.
+      const { data } = await supabase.from(DB_TABLES.clubDebts).select("id").eq("club_id", clubId).limit(1);
       if (cancelled) return;
-      if (error) {
-        setDebtLoadError(error.message);
-        setDebtRows([]);
-        return;
-      }
-      setDebtLoadError(null);
-      setDebtRows((data ?? []) as ClubDebtUiRow[]);
+      setHasHistoricDebt((data ?? []).length > 0);
     })();
     return () => {
       cancelled = true;
@@ -285,7 +261,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           const d = parseISO(r.date);
           return d >= weekStart && d <= now;
         })
-        .reduce((acc, r) => acc + Number(r.total_price ?? 0), 0),
+        .reduce((acc, r) => acc + Number(r.amount_paid ?? 0), 0),
     [now, rows, weekStart]
   );
   const paidRows = useMemo(
@@ -300,7 +276,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     for (const row of paidRows) {
       const d = parseISO(row.date);
       if (d < thisMonthStart || d > thisMonthEnd) continue;
-      map.set(row.court_id, (map.get(row.court_id) ?? 0) + Number(row.total_price ?? 0));
+      map.set(row.court_id, (map.get(row.court_id) ?? 0) + Number(row.amount_paid ?? 0));
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
   }, [paidRows, thisMonthEnd, thisMonthStart]);
@@ -314,11 +290,6 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         }).length,
     [rows, thisMonthEnd, thisMonthStart]
   );
-  const debtTotal = useMemo(
-    () => debtRows.reduce((s, r) => s + Number(r.amount ?? 0), 0),
-    [debtRows]
-  );
-
   if (!unlocked) {
     return (
       <form
@@ -514,61 +485,15 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             </Link>
           </section>
 
-          <section className={adminCard}>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Saldo deudor con PadeLibre</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Comisión del 5% sobre turnos cobrados en efectivo o transferencia en el club.
-            </p>
-            {debtLoadError ? (
-              <p className="mt-3 text-sm font-medium text-rose-600 dark:text-rose-400">{debtLoadError}</p>
-            ) : null}
-            <p className="mt-4 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
-              ${debtTotal.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Total deuda pendiente</p>
-            <ul className="mt-5 flex flex-col gap-2">
-              {debtRows.map((row) => {
-                const rel = row.matches;
-                const m = Array.isArray(rel) ? rel[0] ?? null : rel;
-                const d = m?.scheduled_date ?? "";
-                const t = (m?.scheduled_time ?? "").toString().trim().slice(0, 5);
-                const partidoLabel =
-                  d.length >= 10
-                    ? `${format(parseISO(`${d}T12:00:00`), "d MMM yyyy", { locale: es })}${t ? ` · ${t}` : ""}`
-                    : "—";
-                const met = String(row.payment_method ?? "").toLowerCase();
-                const metLabel = met === "cash" ? "Efectivo" : met === "transfer" ? "Transferencia" : met || "—";
-                return (
-                  <li
-                    key={row.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100/90 bg-slate-50/50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/40"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 dark:text-slate-100">
-                        {format(new Date(row.confirmed_at), "d MMM yyyy, HH:mm", { locale: es })}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Partido {partidoLabel} · {metLabel}
-                      </p>
-                    </div>
-                    <span className="shrink-0 font-bold text-rose-700 dark:text-rose-300">
-                      ${Number(row.amount ?? 0).toFixed(2)}
-                    </span>
-                  </li>
-                );
-              })}
-              {debtRows.length === 0 && !debtLoadError ? (
-                <li className="text-sm font-medium text-slate-500 dark:text-slate-400">Sin deuda pendiente.</li>
-              ) : null}
-            </ul>
-            <p className="mt-5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              Este saldo corresponde al 5% de reservas cobradas en efectivo o transferencia. Contactá a PadeLibre
-              para saldar:{" "}
-              <a className="font-semibold text-[#0585FC] hover:underline" href="mailto:soporte.padelibre@gmail.com">
-                soporte.padelibre@gmail.com
-              </a>
-            </p>
-          </section>
+          {hasHistoricDebt ? (
+            <section className={adminCard}>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Saldos históricos</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                El modelo de comisiones fue discontinuado. Los saldos históricos pueden consultarse directamente en
+                Supabase.
+              </p>
+            </section>
+          ) : null}
         </>
       ) : null}
 

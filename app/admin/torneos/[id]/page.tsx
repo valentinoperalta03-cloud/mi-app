@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { FinancialStatusPill } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
@@ -24,7 +26,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id"
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id"
     )
     .eq("id", id)
     .maybeSingle();
@@ -37,6 +39,9 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     status: string;
     max_pairs: number;
     price_per_pair: number;
+    requires_deposit: boolean;
+    deposit_type: "percentage" | "fixed" | null;
+    deposit_value: number;
     prize: string | null;
     start_date: string;
     end_date: string;
@@ -53,7 +58,9 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const [{ data: regs }, { data: matches }, { data: courts }] = await Promise.all([
     service
       .from(DB_TABLES.tournamentRegistrations)
-      .select("id, player1_id, player2_id, payment_status, waitlist, registered_at")
+      .select(
+        "id, player1_id, player2_id, payment_status, waitlist, registered_at, financial_status, amount_paid, amount_pending"
+      )
       .eq("tournament_id", id)
       .order("registered_at", { ascending: true }),
     service
@@ -74,6 +81,9 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     player2_id: string | null;
     payment_status: string;
     waitlist: boolean;
+    financial_status: string | null;
+    amount_paid: number | null;
+    amount_pending: number | null;
   }>;
   const playerIds = [...new Set(regList.flatMap((r) => [r.player1_id, r.player2_id].filter(Boolean) as string[]))];
   const { data: profiles } = playerIds.length
@@ -139,6 +149,11 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
             Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} por pareja
           </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {tour.requires_deposit
+              ? `Con seña: $${calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value)).toLocaleString("es-AR")} al inscribirse, saldo en el club.`
+              : "Sin seña: se cobra el precio completo al inscribirse."}
+          </p>
         </div>
       </header>
 
@@ -184,7 +199,11 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                 {profileMap.get(r.player1_id)?.name ?? "Jugador"}
                 {r.player2_id ? ` + ${profileMap.get(r.player2_id)?.name ?? ""}` : " (individual)"}
               </span>
-              <span className="text-xs font-medium text-emerald-700">Pagado</span>
+              <FinancialStatusPill
+                financialStatus={r.financial_status}
+                amountPaid={r.amount_paid}
+                amountPending={r.amount_pending}
+              />
             </li>
           ))}
           {pending.map((r) => (
@@ -193,7 +212,11 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                 {profileMap.get(r.player1_id)?.name ?? "Jugador"}
                 {r.player2_id ? ` + ${profileMap.get(r.player2_id)?.name ?? ""}` : ""}
               </span>
-              <span className="text-xs text-amber-800 dark:text-amber-200">Pago pendiente</span>
+              <FinancialStatusPill
+                financialStatus={r.financial_status}
+                amountPaid={r.amount_paid}
+                amountPending={r.amount_pending}
+              />
             </li>
           ))}
         </ul>

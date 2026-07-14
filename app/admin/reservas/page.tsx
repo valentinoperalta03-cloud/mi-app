@@ -215,8 +215,15 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const reservationMatches = matches.filter((m) => String(m.match_type ?? "").toLowerCase() === "reservation");
   const totalReservas = reservationMatches.length;
-  const paidReservas = reservationMatches.filter((m) => String(m.payment_status ?? "").toLowerCase() === "paid").length;
-  const pendingReservas = reservationMatches.filter((m) => String(m.payment_status ?? "").toLowerCase() === "pending").length;
+  const fullyPaidReservas = reservationMatches.filter(
+    (m) => String(m.financial_status ?? "").toLowerCase() === "fully_paid"
+  ).length;
+  const partiallyPaidReservas = reservationMatches.filter(
+    (m) => String(m.financial_status ?? "").toLowerCase() === "partially_paid"
+  ).length;
+  const unpaidReservas = reservationMatches.filter(
+    (m) => String(m.financial_status ?? "").toLowerCase() === "unpaid"
+  ).length;
 
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
   const closedErr = sp.closed_error ? decodeURIComponent(sp.closed_error.replace(/\+/g, " ")) : "";
@@ -327,18 +334,22 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         )}
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={adminCard}>
           <p className={adminKicker}>Total reservas del día</p>
           <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{totalReservas}</p>
         </div>
         <div className={adminCard}>
-          <p className={adminKicker}>Pagadas</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{paidReservas}</p>
+          <p className={adminKicker}>Abonado</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600">{fullyPaidReservas}</p>
         </div>
         <div className={adminCard}>
-          <p className={adminKicker}>Pendientes de pago</p>
-          <p className="mt-2 text-2xl font-bold text-amber-500">{pendingReservas}</p>
+          <p className={adminKicker}>Seña abonada</p>
+          <p className="mt-2 text-2xl font-bold text-amber-500">{partiallyPaidReservas}</p>
+        </div>
+        <div className={adminCard}>
+          <p className={adminKicker}>Pendiente</p>
+          <p className="mt-2 text-2xl font-bold text-slate-500">{unpaidReservas}</p>
         </div>
       </section>
 
