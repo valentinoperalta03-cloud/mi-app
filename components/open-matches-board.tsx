@@ -95,7 +95,7 @@ export default async function OpenMatchesBoard({
   emptyTitle = "Nadie armó partido para hoy todavía",
   emptySubtitle = "Dale movimiento a la comunidad y crea un partido para que otros jugadores se sumen.",
   emptyCtaLabel = "Armar el primer partido",
-  emptyCtaHref = "/partidos/nuevo",
+  emptyCtaHref = "/crear-partido",
   mobileFirst = false,
   backHref,
   backLabel = "Volver al inicio",

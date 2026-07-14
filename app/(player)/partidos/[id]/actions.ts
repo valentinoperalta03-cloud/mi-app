@@ -733,11 +733,6 @@ export async function regenerarLinkPago(formData: FormData): Promise<void> {
   redirect(`/partidos/${matchId}?pay_regen_error=1`);
 }
 
-export async function confirmCashPayment(matchId: string): Promise<{ ok?: true; error?: string }> {
-  void matchId;
-  return { error: "Los turnos fijos se confirman solo con Mercado Pago." };
-}
-
 export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; error?: string }> {
   if (!matchId) return { error: "Partido inválido." };
   const supabase = await createClient({ allowCookieWrites: true });
@@ -810,12 +805,6 @@ export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; 
 
   revalidatePath(`/partidos/${matchId}`);
   return { ok: true };
-}
-
-export async function confirmCashPaymentAction(formData: FormData): Promise<void> {
-  const matchId = getField(formData, "match_id");
-  const res = await confirmCashPayment(matchId);
-  redirect(`/partidos/${matchId}?join_error=${encodeURIComponent(res.error ?? "pago")}`);
 }
 
 export async function cancelFixedSlotDayAction(formData: FormData): Promise<void> {

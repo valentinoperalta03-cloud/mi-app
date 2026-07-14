@@ -60,13 +60,13 @@ All table names are centralized in [`lib/db-tables.ts`](lib/db-tables.ts). Alway
 | `level-logic.ts` / `level-evolution-elo.ts` | Player ELO / level calculation |
 | `technical-score.ts` / `apply-match-technical-rating.ts` | Post-match skill rating |
 | `court-slots.ts` | Court availability slot computation |
-| `mercadopago.ts` | Payment processing with 5% marketplace split fee |
+| `mercadopago.ts` | Payment processing (100% to the club, no per-transaction fee) |
 | `notifications.ts` | In-app notification creation helpers |
 | `matches.ts` / `match-level.ts` | Match filtering and level-based matching |
 
 ### Payments
 
-Mercado Pago handles reservations with a **5% marketplace fee** split at charge time. API routes live under `app/api/mp/`. Test credentials are in `.env.local`; production keys are separate.
+PadeLibre is B2B SaaS: clubs pay a fixed **$50,000 ARS/month subscription** (see `app/api/mp/subscriptions/`), and there are no per-transaction commissions. 100% of every reservation payment goes directly to the club's own Mercado Pago account — PadeLibre never takes a cut. Clubs can optionally require a deposit (seña) to confirm a reservation, configured per club via `clubs.deposit_type` / `clubs.deposit_value` (see `lib/deposit-utils.ts`); when unset, the player pays the full price upfront. API routes live under `app/api/mp/`. Test credentials are in `.env.local`; production keys are separate.
 
 ### AI Chatbot
 
