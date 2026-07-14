@@ -90,7 +90,6 @@ export async function generateMatchForSlotOnDate(
       user_id: player.player_id,
       status: "invited",
       amount: 0,
-      marketplace_fee: 0,
     });
     await createNotification(supabase, {
       user_id: player.player_id,

@@ -288,9 +288,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     whatsapp?: string | null;
   } | null;
 
-  const clubHasMp = Boolean(clubPayment?.mp_access_token?.trim());
-  const clubAcceptsCash = Boolean(clubPayment?.accepts_cash);
-  const clubAcceptsTransfer = Boolean(clubPayment?.accepts_transfer);
   const bankAlias = clubPayment?.bank_alias?.trim() ?? null;
   const bankCbu = clubPayment?.bank_cbu?.trim() ?? null;
   const clubWhatsapp = clubPayment?.whatsapp?.trim() ?? null;
@@ -615,13 +612,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   clubName={detail.club_name ?? "Club"}
                   matchDate={clubWhenDurationLine}
                   courtName={detail.court_name ?? "Cancha"}
-                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4 * 1.05)}
-                  clubHasMp={clubHasMp}
-                  clubAcceptsCash={clubAcceptsCash}
-                  clubAcceptsTransfer={clubAcceptsTransfer}
-                  bankAlias={bankAlias}
-                  bankCbu={bankCbu}
-                  clubWhatsapp={clubWhatsapp}
                   onboardingComplete={onboardingComplete}
                 />
               </div>
@@ -682,13 +672,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   clubName={detail.club_name ?? "Club"}
                   matchDate={clubWhenDurationLine}
                   courtName={detail.court_name ?? "Cancha"}
-                  pricePerPlayer={Math.round((detail.total_price ?? 0) / 4 * 1.05)}
-                  clubHasMp={clubHasMp}
-                  clubAcceptsCash={clubAcceptsCash}
-                  clubAcceptsTransfer={clubAcceptsTransfer}
-                  bankAlias={bankAlias}
-                  bankCbu={bankCbu}
-                  clubWhatsapp={clubWhatsapp}
                   onboardingComplete={onboardingComplete}
                 />
               </div>
@@ -739,14 +722,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <div>
             <p className="text-xs font-medium text-[var(--text-tertiary)]">Precio total</p>
             <p className="text-lg font-semibold text-[#0461C4]">
-              ${Math.round((detail.total_price ?? 0) * 1.05).toLocaleString("es-AR")}
+              ${Math.round(detail.total_price ?? 0).toLocaleString("es-AR")}
             </p>
           </div>
           {isParticipant ? (
             <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
               <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu parte</p>
               <p className="text-base font-bold text-[var(--text-primary)]">
-                ${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")}
+                ${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")}
               </p>
               {hasPaid ? (
                 <p className="mt-0.5 text-xs font-semibold text-emerald-600">✓ Pagado</p>
@@ -870,7 +853,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </p>
           <ConfirmTransferWhatsappButton
             clubWhatsapp={clubWhatsapp}
-            message={`Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4 * 1.05).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`}
+            message={`Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`}
           />
         </section>
       ) : null}

@@ -41,7 +41,7 @@ export default async function SuperadminUsuarioDetailPage({ params }: PageProps)
       .limit(40),
     svc
       .from(DB_TABLES.payments)
-      .select("id,created_at,amount,status,payment_method,marketplace_fee,match_id")
+      .select("id,created_at,amount,status,payment_method,match_id")
       .eq("user_id", id)
       .order("created_at", { ascending: false })
       .limit(40),
@@ -174,7 +174,6 @@ export default async function SuperadminUsuarioDetailPage({ params }: PageProps)
                 amount: number | null;
                 status: string | null;
                 payment_method: string | null;
-                marketplace_fee: number | null;
                 match_id: string | null;
               };
               return (
@@ -182,12 +181,7 @@ export default async function SuperadminUsuarioDetailPage({ params }: PageProps)
                   <span className="text-slate-300">
                     {format(new Date(row.created_at), "dd/MM/yy HH:mm")} · {row.payment_method ?? "—"} · {row.status ?? "—"}
                   </span>
-                  <span className="text-slate-200">
-                    {money(Number(row.amount ?? 0))}
-                    {row.marketplace_fee != null ? (
-                      <span className="ml-2 text-xs text-slate-500">com. {money(Number(row.marketplace_fee))}</span>
-                    ) : null}
-                  </span>
+                  <span className="text-slate-200">{money(Number(row.amount ?? 0))}</span>
                 </li>
               );
             })

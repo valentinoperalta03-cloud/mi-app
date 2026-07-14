@@ -8,12 +8,6 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-function feeRate() {
-  const raw = process.env.MP_MARKETPLACE_FEE ?? "0.05";
-  const n = Number.parseFloat(raw);
-  return Number.isFinite(n) && n >= 0 ? n : 0.05;
-}
-
 type PageProps = {
   searchParams: Promise<{ club?: string; mes?: string; metodo?: string }>;
 };
@@ -21,8 +15,6 @@ type PageProps = {
 export default async function SuperadminFinanzasPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const { svc } = await requireSuperadminAction();
-  const rate = feeRate();
-  const ratePct = Math.round(rate * 100);
 
   const now = new Date();
   const monthParam = String(sp.mes ?? "").trim();
@@ -40,7 +32,7 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
     svc
       .from(DB_TABLES.payments)
       .select(
-        "id,created_at,amount,status,payment_method,marketplace_fee,user_id,match_id,matches!inner(scheduled_date,match_type,court_id)"
+        "id,created_at,amount,status,payment_method,user_id,match_id,matches!inner(scheduled_date,match_type,court_id)"
       )
       .eq("matches.match_type", "reservation")
       .order("created_at", { ascending: false })
@@ -58,7 +50,6 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
     amount: number | null;
     status: string | null;
     payment_method: string | null;
-    marketplace_fee: number | null;
     user_id: string;
     match_id: string | null;
     matches:
@@ -68,26 +59,6 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
   };
 
   const payments = (paymentsRaw ?? []) as PayRow[];
-
-  const isApproved = (s: string | null) => {
-    const x = String(s ?? "").toLowerCase();
-    return x === "approved" || x === "paid";
-  };
-
-  const isMp = (m: string | null) => String(m ?? "").toLowerCase().includes("mercadopago");
-
-  let mpMonthTotal = 0;
-  let mpHistoricTotal = 0;
-  for (const p of payments) {
-    const m = Array.isArray(p.matches) ? p.matches[0] : p.matches;
-    if (!m?.scheduled_date) continue;
-    if (!isApproved(p.status) || !isMp(p.payment_method)) continue;
-    const fee = Number(p.marketplace_fee ?? 0);
-    mpHistoricTotal += fee;
-    if (m.scheduled_date >= monthStart && m.scheduled_date <= monthEnd) {
-      mpMonthTotal += fee;
-    }
-  }
 
   const debtTotal = (pendingDebts ?? []).reduce((a, r) => a + Number((r as { amount: number | null }).amount ?? 0), 0);
 
@@ -147,17 +118,11 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
     <div className="mx-auto flex max-w-6xl flex-col gap-10">
       <header>
         <h1 className="text-3xl font-bold text-white">Finanzas globales</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Comisión PadeLibre ({ratePct}% en Mercado Pago) y deudas por reservas en efectivo/transferencia.
-        </p>
+        <p className="mt-1 text-sm text-slate-400">Deudas por reservas en efectivo/transferencia.</p>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        {[
-          { label: `Ingresos PadeLibre (${ratePct}% MP) este mes`, value: money(mpMonthTotal) },
-          { label: "Deuda pendiente clubes (efectivo/transf.)", value: money(debtTotal) },
-          { label: "Comisión MP histórica (aprobadas)", value: money(mpHistoricTotal) },
-        ].map((c) => (
+        {[{ label: "Deuda pendiente clubes (efectivo/transf.)", value: money(debtTotal) }].map((c) => (
           <div key={c.label} className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{c.label}</p>
             <p className="mt-2 text-xl font-bold text-white">{c.value}</p>
@@ -281,14 +246,13 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
                 <th className="py-2 pr-4">Turno</th>
                 <th className="py-2 pr-4">Método</th>
                 <th className="py-2 pr-4">Estado</th>
-                <th className="py-2 pr-4">Monto</th>
-                <th className="py-2">Comisión</th>
+                <th className="py-2">Monto</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {historialFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-500">
+                  <td colSpan={6} className="py-6 text-center text-slate-500">
                     Sin resultados con estos filtros.
                   </td>
                 </tr>
@@ -300,8 +264,7 @@ export default async function SuperadminFinanzasPage({ searchParams }: PageProps
                     <td className="py-2 pr-4 text-slate-500">{row.scheduled_date ?? "—"}</td>
                     <td className="py-2 pr-4">{row.payment_method ?? "—"}</td>
                     <td className="py-2 pr-4">{row.status ?? "—"}</td>
-                    <td className="py-2 pr-4">{money(Number(row.amount ?? 0))}</td>
-                    <td className="py-2">{money(Number(row.marketplace_fee ?? 0))}</td>
+                    <td className="py-2">{money(Number(row.amount ?? 0))}</td>
                   </tr>
                 ))
               )}

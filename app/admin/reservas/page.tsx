@@ -184,7 +184,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const selectedPaymentsRaw = selectedMatch
     ? await supabase
         .from(DB_TABLES.payments)
-        .select("user_id,status,payment_method,amount,marketplace_fee")
+        .select("user_id,status,payment_method,amount")
         .eq("match_id", selectedMatch.id)
     : { data: [] };
   const selectedPayments = (selectedPaymentsRaw.data ?? []) as Array<{
@@ -192,7 +192,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     status: string | null;
     payment_method: string | null;
     amount: number | null;
-    marketplace_fee: number | null;
   }>;
 
   const { data: ownerProfileRow } =

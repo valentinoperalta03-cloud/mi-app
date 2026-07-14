@@ -77,18 +77,18 @@ export default async function MpConnectPage() {
           {[
             {
               n: "1",
-              title: "Jugador paga la reserva",
-              desc: "El jugador abona su parte del turno más el 5% de servicio de Padelibre.",
+              title: "El organizador paga la seña (si la configuraste)",
+              desc: "Si activaste seña para tu cancha, el organizador la paga al crear la reserva o el partido.",
             },
             {
               n: "2",
-              title: "MP divide automáticamente",
-              desc: "Mercado Pago envía el dinero del turno directamente a tu cuenta y la comisión a Padelibre.",
+              title: "El 100% va a tu cuenta",
+              desc: "Mercado Pago envía el dinero directamente a tu cuenta. PadeLibre no cobra comisión por reserva.",
             },
             {
               n: "3",
               title: "Recibís el dinero",
-              desc: "El monto del turno aparece en tu cuenta de MP sin intermediarios.",
+              desc: "El monto de la seña aparece en tu cuenta de MP sin intermediarios.",
             },
           ].map((step) => (
             <div key={step.n} className="flex items-start gap-3">
@@ -133,8 +133,8 @@ export default async function MpConnectPage() {
       <div className={`${adminCard} bg-slate-50/80 dark:bg-slate-800/50`}>
         <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
           💡 Al conectar tu cuenta autorizás a Padelibre a procesar pagos en tu nombre mediante la
-          API de Mercado Pago. Podés desconectar en cualquier momento desde tu panel de MP. La
-          comisión de Padelibre es del 5% por reserva confirmada.
+          API de Mercado Pago. Podés desconectar en cualquier momento desde tu panel de MP.
+          PadeLibre no cobra comisión por reserva — el 100% de la seña va a tu cuenta.
         </p>
       </div>
     </div>

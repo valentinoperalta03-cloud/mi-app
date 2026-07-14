@@ -41,7 +41,7 @@ function ReservationCard({
       : "—";
   const hora = (row.scheduled_time ?? "").toString().trim().slice(0, 5);
   const dur = row.duration_minutes ?? 90;
-  const precio = row.total_price != null ? `$${Math.round(Number(row.total_price) * 1.05).toLocaleString("es-AR")}` : "—";
+  const precio = row.total_price != null ? `$${Math.round(Number(row.total_price)).toLocaleString("es-AR")}` : "—";
   const status = row.match_status ?? "";
   const badgeReserved = status === "reserved";
   const badgePending = status === "pending";

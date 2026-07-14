@@ -347,7 +347,6 @@ export async function addPlayerToFixedSlot(formData: FormData): Promise<void> {
       user_id: playerId,
       status: "invited",
       amount: 0,
-      marketplace_fee: 0,
     });
   }
 

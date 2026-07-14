@@ -11,19 +11,19 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "como_pago",
     category: "Pagos",
     label: "¿Cómo se realiza el pago?",
-    answer: `Los pagos se procesan de forma segura a través de **Mercado Pago**.\n\nCuando reservás una cancha o te unís a un partido, pagás únicamente tu parte (1/4 del turno total) más una pequeña comisión de servicio.\n\nAceptamos:\n💳 Tarjeta de crédito y débito\n💰 Dinero en cuenta de Mercado Pago\n🏪 Efectivo (Rapipago / Pago Fácil)`,
+    answer: `Los pagos se procesan de forma segura a través de **Mercado Pago**.\n\nSolo paga quien organiza el partido o hace la reserva. El club puede requerir una seña para confirmar la reserva — el monto lo define cada club. Unirte a un partido ya creado no tiene costo en la app.\n\nAceptamos:\n💳 Tarjeta de crédito y débito\n💰 Dinero en cuenta de Mercado Pago\n🏪 Efectivo (Rapipago / Pago Fácil)`,
   },
   {
     id: "cuanto_pago",
     category: "Pagos",
-    label: "¿Cuánto paga cada jugador?",
-    answer: `Cada jugador paga **su parte proporcional** del turno:\n\n💰 Precio del turno ÷ 4 jugadores + comisión de servicio\n\nEjemplo: Si el turno vale $12.000\n→ Cada jugador paga $3.000 + comisión\n\nEl precio de cada cancha lo define el club.`,
+    label: "¿Cuánto se paga por un turno?",
+    answer: `Lo paga quien organiza el partido o hace la reserva, no cada jugador por separado.\n\nEl club puede requerir una seña para confirmar la reserva. El monto lo define cada club — puede ser un porcentaje del turno o un monto fijo. El resto se abona directamente en el club.\n\nEl precio de cada cancha también lo define el club.`,
   },
   {
     id: "cuando_cobran",
     category: "Pagos",
-    label: "¿Cuándo se me cobra?",
-    answer: `El cobro se realiza **inmediatamente** al confirmar la reserva o al unirte a un partido.\n\nEl turno queda confirmado cuando los 4 jugadores hayan pagado su parte.\n\nHasta que no estén los 4 pagos, el turno figura como "pendiente de confirmación".`,
+    label: "¿Cuándo se cobra la reserva?",
+    answer: `El cobro (si el club requiere seña) se realiza **inmediatamente** al confirmar la reserva o crear el partido.\n\nSi el club no requiere seña, la reserva queda confirmada al instante y el pago se coordina directamente con el club.`,
   },
   // DEVOLUCIONES
   {
@@ -49,13 +49,13 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "crear_partido",
     category: "Partidos",
     label: "¿Cómo creo un partido?",
-    answer: `Para crear un partido:\n\n1. Tocá **Crear Partido** en el inicio\n2. Elegí club, cancha, fecha y horario\n3. Seleccioná tipo: Amistoso o Competitivo\n4. Elegí visibilidad: Público o Privado\n5. Seleccioná categoría: Masculino, Femenino o Mixto\n6. Confirmá y pagá tu parte\n\nSi el partido es **público**, aparece en Buscar Partido para que otros jugadores se sumen.`,
+    answer: `Para crear un partido:\n\n1. Tocá **Crear Partido** en el inicio\n2. Elegí club, cancha, fecha y horario\n3. Seleccioná tipo: Amistoso o Competitivo\n4. Elegí visibilidad: Público o Privado\n5. Seleccioná categoría: Masculino, Femenino o Mixto\n6. Confirmá (y pagá la seña si el club la requiere)\n\nSi el partido es **público**, aparece en Buscar Partido para que otros jugadores se sumen gratis.`,
   },
   {
     id: "unirse_partido",
     category: "Partidos",
     label: "¿Cómo me uno a un partido?",
-    answer: `Para unirte a un partido:\n\n1. Andá a **Buscar Partido**\n2. Encontrá un partido disponible\n3. Tocá **Unirse**\n4. Pagá tu parte del turno\n5. ¡Listo! Quedás confirmado\n\n⚠️ Si el partido tiene restricción de nivel, necesitás estar dentro del rango del creador (±1 nivel). Si no, podés enviar una solicitud que los jugadores votarán.`,
+    answer: `Para unirte a un partido:\n\n1. Andá a **Buscar Partido**\n2. Encontrá un partido disponible\n3. Tocá **Unirse**\n4. ¡Listo! Quedás confirmado al instante, sin pagar nada en la app\n\nEl pago de la cancha lo coordinás directamente con el organizador o el club.\n\n⚠️ Si el partido tiene restricción de nivel, necesitás estar dentro del rango del creador (±1 nivel). Si no, podés enviar una solicitud que los jugadores votarán.`,
   },
   {
     id: "partido_privado",
@@ -67,7 +67,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "cancelar_partido",
     category: "Partidos",
     label: "¿Qué pasa si cancelo un partido?",
-    answer: `Si cancelás tu participación en un partido:\n\n✅ Con más de 60 min de anticipación → reembolso automático\n❌ Con menos de 60 min → sin reembolso\n\nSi sos el **creador** del partido y lo cancelás:\n- Todos los jugadores reciben el reembolso automáticamente\n- El turno queda liberado en la cancha`,
+    answer: `Si sos el **organizador** y cancelás el partido o la reserva:\n\n✅ Con más de 60 min de anticipación → reembolso automático de la seña (si pagaste una)\n❌ Con menos de 60 min → sin reembolso\n\nEl turno queda liberado en la cancha apenas se cancela.\n\nSi solo salís del partido sin ser el organizador, no hay ningún pago que reembolsar — no pagaste nada al unirte.`,
   },
   // INCONVENIENTES
   {
@@ -86,7 +86,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "reserva_no_aparece",
     category: "Inconvenientes",
     label: "Mi reserva no aparece confirmada",
-    answer: `Si tu reserva no aparece:\n\n1. Verificá en **Mis Reservas** que el estado sea "Confirmada"\n2. Revisá si el pago fue aprobado en **Mis Pagos**\n3. Si el pago fue aprobado pero la reserva no aparece, esperá unos minutos y recargá\n4. Si pagaste pero dice "Pendiente", significa que falta que los demás jugadores paguen su parte\n\nSi el pago fue descontado y no aparece la reserva, contactanos urgente.`,
+    answer: `Si tu reserva no aparece:\n\n1. Verificá en **Mis Reservas** que el estado sea "Confirmada"\n2. Revisá si el pago de la seña fue aprobado en **Mis Pagos**\n3. Si el pago fue aprobado pero la reserva no aparece, esperá unos minutos y recargá\n\nSi el pago fue descontado y no aparece la reserva, contactanos urgente.`,
   },
   {
     id: "jugador_no_viene",
@@ -110,19 +110,19 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "pago_efectivo_transferencia",
     category: "Pagos",
     label: "¿Puedo pagar en efectivo o transferencia?",
-    answer: `Sí, algunos clubes aceptan **efectivo** y/o **transferencia bancaria**.\n\nCuando te unís a un partido, el sistema te muestra los métodos de pago disponibles para ese club:\n\n💳 **Mercado Pago** → Pagás online al instante\n🏦 **Transferencia** → Transferís antes de ir y guardás el comprobante para mostrarlo al ingresar\n💵 **Efectivo** → Abonás directamente en el club el día del partido\n\nSi el club no tiene Mercado Pago configurado, solo verás las opciones offline disponibles.`,
+    answer: `Sí. Al crear un partido o hacer una reserva, si el club requiere seña podés elegir cómo pagarla:\n\n💳 **Mercado Pago** → Pagás online al instante\n🏦 **Transferencia** → Transferís antes de ir y guardás el comprobante para mostrarlo al ingresar\n💵 **Efectivo** → Abonás directamente en el club\n\nSi el club no tiene Mercado Pago configurado, solo verás las opciones offline disponibles. Unirte a un partido ya creado no requiere ningún pago.`,
   },
   {
     id: "confirmar_transferencia",
     category: "Pagos",
-    label: "Pagué por transferencia, ¿cómo confirmo mi lugar?",
-    answer: `Después de unirte al partido eligiendo transferencia:\n\n1. Tu lugar queda **reservado** automáticamente\n2. En la pantalla del partido aparece el botón **"Confirmar transferencia al club"**\n3. Tocá ese botón → se abre WhatsApp con un mensaje pre-armado al club\n4. El club verifica la transferencia y confirma tu lugar en su panel\n\n⚠️ Si no podés transferir antes, podés abonar en efectivo en el mostrador del club el día del partido. Guardá el comprobante si transferís.`,
+    label: "Pagué por transferencia, ¿cómo confirmo mi reserva?",
+    answer: `Si organizaste el partido o hiciste la reserva eligiendo transferencia:\n\n1. Tu turno queda **reservado**\n2. En la pantalla de la reserva/partido aparece un botón para confirmar la transferencia al club\n3. Tocá ese botón → se abre WhatsApp con un mensaje pre-armado al club\n4. El club verifica la transferencia y confirma tu turno en su panel\n\n⚠️ Si no podés transferir antes, podés abonar en efectivo en el mostrador del club.`,
   },
   {
     id: "comision_servicio",
     category: "Pagos",
-    label: "¿Qué es la comisión de servicio?",
-    answer: `PadeLibre cobra una **comisión del 5%** sobre el precio de cada turno.\n\nEsta comisión:\n✅ Ya está incluida en el precio que ves al unirte o crear un partido\n✅ No hay sorpresas — el precio que ves es el que pagás\n✅ Para los clubes es completamente gratis\n\nEjemplo: si el turno vale $50.000\n→ Cada jugador paga $13.125 (incluye el 5%)`,
+    label: "¿PadeLibre cobra comisión por cada reserva?",
+    answer: `No. El club puede requerir una seña para confirmar la reserva. El monto lo define cada club.\n\nPadeLibre no cobra ninguna comisión por reserva ni por turno — el 100% de lo que se paga en la app va directo a la cuenta del club.`,
   },
   {
     id: "chat_grupo_partido",

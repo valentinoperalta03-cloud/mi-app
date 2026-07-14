@@ -4,7 +4,6 @@ import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
-import { CreditCard } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -21,7 +20,6 @@ export type MatchCardData = {
   clubCity: string;
   playersCount: number;
   freeSlots: number;
-  joinShare: number;
   currentUserJoined: boolean;
   userCanJoinByGender: boolean;
   genderRestrictionMessage: string | null;
@@ -174,13 +172,6 @@ export default function MatchesFilterBoard({ matches, userId, userCity }: Props)
                     ) : null}
                   </span>
                 </p>
-                {match.joinShare > 0 ? (
-                  <p className="flex flex-wrap items-center gap-2">
-                    <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={1.75} aria-hidden />
-                    <span className="font-medium text-slate-800">Costo para unirse:</span>{" "}
-                    <span className="font-semibold text-[var(--color-brand)]">${match.joinShare}</span>
-                  </p>
-                ) : null}
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="font-medium text-slate-800">Cupos:</span>
                   <div
