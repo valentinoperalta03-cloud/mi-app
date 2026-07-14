@@ -303,13 +303,6 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Deudas PadeLibre</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
-              Cuando un jugador no paga con Mercado Pago y el club confirma el cobro igualmente, se registra internamente como una <strong>deuda con PadeLibre</strong> por la comisión de servicio correspondiente. Estas deudas se liquidan periódicamente según el acuerdo con PadeLibre.
-            </p>
-          </div>
-
-          <div>
             <p className="font-bold text-slate-900 dark:text-slate-100">Historial reciente</p>
             <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
               La sección <strong>Confirmados hoy</strong> muestra todos los cobros offline que ya procesaste en el día. Los últimos 20 cobros aprobados de reservas también son visibles en la lista de historial.

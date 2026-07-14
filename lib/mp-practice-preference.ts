@@ -32,9 +32,8 @@ function getPublicBaseUrl(): string {
 }
 
 /**
- * Preferencia MP para clase. `unit_price` es lo que paga el jugador
- * (practicePriceBreakdown); el 100% de ese monto va a la cuenta del club,
- * sin retención de plataforma.
+ * Preferencia MP para clase. `unit_price` es el precio base del club;
+ * el 100% va a la cuenta del club, sin retención de plataforma.
  */
 export async function createPracticeMercadoPagoPreference(params: {
   sessionId: string;
@@ -71,11 +70,11 @@ export async function createPracticeMercadoPagoPreference(params: {
   }
   const clubToken = String(clubTyped?.mp_access_token ?? "").trim();
 
-  const { clubPriceBase, playerTotal } = practicePriceBreakdown(
+  const { clubPriceBase } = practicePriceBreakdown(
     Number((practice as { price_base: number }).price_base)
   );
   if (!Number.isFinite(clubPriceBase) || clubPriceBase < 0) return { error: "Precio inválido." };
-  if (playerTotal <= 0) return { error: "Esta clase no tiene precio para cobrar con Mercado Pago." };
+  if (clubPriceBase <= 0) return { error: "Esta clase no tiene precio para cobrar con Mercado Pago." };
 
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
@@ -101,7 +100,7 @@ export async function createPracticeMercadoPagoPreference(params: {
             title,
             description: `Inscripción · ${clubName}${sessionDate ? ` · ${sessionDate}` : ""}`,
             quantity: 1,
-            unit_price: playerTotal,
+            unit_price: clubPriceBase,
             currency_id: "ARS",
             category_id: "others",
           },
@@ -131,12 +130,11 @@ export async function createPracticeMercadoPagoPreference(params: {
       event: "mp.practice.preference_created",
       sessionId: params.sessionId,
       clubPriceBase,
-      playerTotal,
     });
     return {
       prefId,
       initPoint,
-      total: playerTotal,
+      total: clubPriceBase,
     };
   } catch (e) {
     log.error({ event: "mp.practice.preference_failed", sessionId: params.sessionId, err: e });

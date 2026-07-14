@@ -1,5 +1,3 @@
-export const PRACTICE_PLATFORM_FEE_RATE = 0.05;
-
 export type PracticeRecurrenceKey = "once" | "weekly";
 export type PracticeModalityKey = "individual" | "group";
 export type PracticeStatusKey = "draft" | "open" | "finished" | "cancelled";

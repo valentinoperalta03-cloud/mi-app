@@ -91,9 +91,9 @@ export default async function AdminClasesPage() {
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Precios y comisión</p>
+            <p className="font-bold text-slate-900 dark:text-slate-100">Precios</p>
             <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
-              Configurás el precio base por sesión. PadeLibre agrega un 5% como comisión de servicio, que se suma al precio que ve el jugador. Vos recibís el precio base directamente. Por ejemplo, si ponés $2.000, el jugador paga $2.100.
+              Configurás el precio base por sesión. El jugador paga exactamente el precio que vos definís. El 100% va a tu cuenta.
             </p>
           </div>
 

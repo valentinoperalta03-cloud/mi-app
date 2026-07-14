@@ -129,8 +129,7 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
           {recurrenceLabel} · {modalityLabel} · {practice.max_spots} cupos
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Precio club ${price.clubPriceBase.toLocaleString("es-AR")} · Comisión 5% $
-          {price.platformFee.toLocaleString("es-AR")} · Jugador paga ${price.playerTotal.toLocaleString("es-AR")}
+          Precio ${price.clubPriceBase.toLocaleString("es-AR")}
         </p>
         {coachName ? <p className="mt-1 text-xs text-slate-500">Profesor: {coachName}</p> : null}
         {courtName ? <p className="mt-1 text-xs text-slate-500">Cancha: {courtName}</p> : null}

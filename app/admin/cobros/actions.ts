@@ -8,7 +8,6 @@ import { resolveOfflinePaymentConfirmation } from "@/lib/offline-payments";
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { assertMatchPaymentStatusTransition } from "@/lib/state-machines/payment-states";
 import { createNotification } from "@/lib/notifications";
-import { practiceClubPadelibreDebt } from "@/lib/practice-offline";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getMatchId(formData: FormData) {
@@ -213,7 +212,7 @@ export async function confirmPracticeOfflineCobro(formData: FormData) {
 
   const method = pay === "cash_pending" ? "cash" : "transfer";
   const priceBase = Number(practice?.price_base ?? 0);
-  const payAmount = Number(raw.amount ?? 0) || Math.round((priceBase * 1.05) * 100) / 100;
+  const payAmount = Number(raw.amount ?? 0) || Math.round(priceBase * 100) / 100;
   const playerId = String(raw.player_id);
   const now = new Date().toISOString();
   const svc = createServiceClient();
@@ -229,20 +228,6 @@ export async function confirmPracticeOfflineCobro(formData: FormData) {
     .eq("id", registrationId);
   if (upErr) {
     redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo confirmar el cobro."));
-  }
-
-  const debtAmount = practiceClubPadelibreDebt(priceBase);
-  const { error: debtErr } = await svc.from(DB_TABLES.clubDebts).insert({
-    club_id: clubId,
-    match_id: null,
-    practice_registration_id: registrationId,
-    amount: debtAmount,
-    payment_method: method,
-    status: "pending",
-    confirmed_at: now,
-  });
-  if (debtErr) {
-    console.error("[cobros] practice club_debts insert", debtErr);
   }
 
   const sessionDate = String((sessionRow as { session_date?: string } | null)?.session_date ?? "");

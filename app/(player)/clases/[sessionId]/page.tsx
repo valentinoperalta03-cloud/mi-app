@@ -165,14 +165,8 @@ export default async function ClaseDetallePage({
           <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{practice.description}</p>
         ) : null}
         <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">
-          ${price.playerTotal.toLocaleString("es-AR")}
+          ${price.clubPriceBase.toLocaleString("es-AR")}
         </p>
-        {price.platformFee > 0 ? (
-          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-            Clase ${price.clubPriceBase.toLocaleString("es-AR")} + servicio 5% $
-            {price.platformFee.toLocaleString("es-AR")}
-          </p>
-        ) : null}
       </header>
 
       {mpCheckoutPending ? (
@@ -201,7 +195,7 @@ export default async function ClaseDetallePage({
         <PracticeRegisterForm
           sessionId={sessionId}
           canRegister={canRegister}
-          priceLabel={`$${price.playerTotal.toLocaleString("es-AR")}`}
+          priceLabel={`$${price.clubPriceBase.toLocaleString("es-AR")}`}
           clubHasMp={clubHasMp}
           clubAcceptsCash={clubAcceptsCash}
           clubAcceptsTransfer={clubAcceptsTransfer}

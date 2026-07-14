@@ -127,7 +127,7 @@ export async function registerForPracticeAction(formData: FormData): Promise<Che
   const clubName = String(club?.name ?? "Club");
   const clubId = practice.club_id;
   const price = practicePriceBreakdown(Number(practice.price_base));
-  const payAmount = price.playerTotal;
+  const payAmount = price.clubPriceBase;
 
   if (paymentMethod === "mercadopago") {
     if (!isClubMercadoPagoConnected(club)) {
@@ -226,10 +226,4 @@ export async function registerForPracticeAction(formData: FormData): Promise<Che
   revalidatePath("/clases");
   revalidatePath(`/clases/${sessionId}`);
   return { ok: true, message: "Redirigiendo a Mercado Pago…", url: pref.initPoint };
-}
-
-/** @deprecated Usar registerForPracticeAction */
-export async function beginPracticeCheckoutAction(formData: FormData): Promise<CheckoutState> {
-  formData.set("payment_method", "mercadopago");
-  return registerForPracticeAction(formData);
 }

@@ -81,7 +81,7 @@ export default async function ClasesPage() {
           const approved = approvedMap.get(row.id) ?? 0;
           const full = (spotsMap.get(row.id) ?? 0) >= p.max_spots;
           const modality = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === p.modality)?.label ?? p.modality;
-          const total = practicePriceBreakdown(Number(p.price_base)).playerTotal;
+          const total = practicePriceBreakdown(Number(p.price_base)).clubPriceBase;
 
           return (
             <li key={row.id}>
