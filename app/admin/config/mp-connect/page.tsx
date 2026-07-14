@@ -66,7 +66,7 @@ export default async function MpConnectPage() {
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {isConnected
               ? `Tu club recibe pagos directamente. MP User ID: ${mpUserId ?? "—"}`
-              : "Los pagos van a la cuenta de Padelibre hasta que conectes la tuya."}
+              : "Sin conectar tu cuenta de Mercado Pago, los jugadores no van a poder pagar online. Solo vas a poder recibir pagos en efectivo o transferencia directamente en el club."}
           </p>
         </div>
       </div>

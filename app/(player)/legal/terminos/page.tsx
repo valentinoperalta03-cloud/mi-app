@@ -61,10 +61,14 @@ export default function TerminosPage() {
               de tarjetas de crédito o débito.
             </li>
             <li>
-              Comisión de servicio: El Jugador abona el precio base del turno más una comisión de servicio del 5%
-              correspondiente al uso de la Plataforma. El 100% del precio base se transfiere automáticamente al Club a
-              través de Mercado Pago. PadeLibre percibe únicamente la comisión del 5% como contraprestación por el
-              servicio tecnológico.
+              Seña: El Club puede requerir el pago de una seña para confirmar la reserva. El monto y el porcentaje de
+              la seña los define cada Club de forma independiente. El 100% de lo abonado se transfiere directamente
+              al Club a través de Mercado Pago.
+            </li>
+            <li>
+              Suscripción de los Clubes: Los Clubes acceden a la Plataforma mediante una suscripción mensual fija. El
+              Jugador no abona ninguna comisión adicional por el uso de la Plataforma — el precio que ve al reservar
+              es el precio que paga.
             </li>
             <li>
               Confirmación: La reserva solo se considerará efectiva una vez que el pago haya sido procesado
@@ -72,7 +76,7 @@ export default function TerminosPage() {
             </li>
             <li>
               Precio por jugador: Cada Jugador abona únicamente su parte proporcional del turno (1/4 del valor total),
-              más la comisión de servicio correspondiente.
+              sin cargos adicionales de la Plataforma.
             </li>
           </ul>
         </section>

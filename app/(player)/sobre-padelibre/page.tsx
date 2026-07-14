@@ -127,11 +127,10 @@ export default function SobrePadelibrePage() {
       <section className="space-y-3 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5">
         <h3 className="text-base font-semibold text-[var(--text-primary)]">Un modelo justo para todos</h3>
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-          Para los clubes es completamente gratis. Sin abono mensual, sin costo de alta. Ganamos solo cuando vos ganás —
-          una pequeña comisión del 5% sobre cada reserva pagada con Mercado Pago.
+          Los clubes acceden a PadeLibre con una suscripción mensual fija. Sin comisión por reserva, sin letra chica.
         </p>
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-          Para los jugadores, esa comisión se suma al precio del turno de forma transparente. Sin sorpresas.
+          Para los jugadores, no hay ninguna comisión adicional — el precio que ves al reservar es el precio que pagás.
         </p>
       </section>
 

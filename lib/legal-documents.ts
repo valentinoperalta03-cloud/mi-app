@@ -25,7 +25,8 @@ export const legalTermsSections: LegalSection[] = [
     paragraphs: [],
     bullets: [
       "Procesamiento: Los pagos realizados a través de la Plataforma son procesados por pasarelas de pago de terceros debidamente autorizadas en la República Argentina (ej. Mercado Pago).",
-      "Distribución (Split Payment): Al abonar una reserva, el Jugador comprende que el monto total se divide automáticamente: una parte corresponde a la tarifa del Club por el uso de la instalación, y otra parte corresponde a la comisión por el servicio de uso de la Plataforma.",
+      "Seña: El Club puede requerir el pago de una seña para confirmar la reserva. El monto lo define cada Club de forma independiente, y el 100% de lo abonado se transfiere directamente al Club.",
+      "Suscripción: Los Clubes acceden a la Plataforma mediante una suscripción mensual fija. El Jugador no abona ninguna comisión adicional por el uso de la Plataforma.",
       'Confirmación: La reserva solo se considerará efectiva una vez que el pago haya sido procesado exitosamente y la Plataforma emita la confirmación en la sección "Mis Reservas".',
     ],
   },
