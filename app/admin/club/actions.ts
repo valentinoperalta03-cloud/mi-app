@@ -20,7 +20,7 @@ async function ownerClubContext() {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/config?data_error=no_club");
+  if (!ctx.clubIds.length) redirect("/admin/config/informacion?data_error=no_club");
   return { supabase, ctx, clubId: ctx.clubIds[0]! };
 }
 
@@ -32,7 +32,7 @@ export async function saveClubLocation(formData: FormData) {
   const locationCity = getField(formData, "city") || getField(formData, "location");
 
   if (!locationCity) {
-    redirect("/admin/config?location_error=Seleccion%C3%A1%20una%20ciudad");
+    redirect("/admin/config/informacion?location_error=Seleccion%C3%A1%20una%20ciudad");
   }
 
   const payload = buildClubLocationPayload({
@@ -43,12 +43,12 @@ export async function saveClubLocation(formData: FormData) {
 
   const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
   if (error) {
-    redirect(`/admin/config?location_error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/config/informacion?location_error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath("/admin/config");
+  revalidatePath("/admin/config/informacion");
   revalidatePath("/clubes");
-  redirect("/admin/config?location_saved=1");
+  redirect("/admin/config/informacion?location_saved=1");
 }
 
 export async function saveClubData(formData: FormData) {
@@ -66,11 +66,11 @@ export async function saveClubData(formData: FormData) {
 
   const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
   if (error) {
-    redirect(`/admin/config?data_error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/config/informacion?data_error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath("/admin/config");
-  redirect("/admin/config?data_saved=1");
+  revalidatePath("/admin/config/informacion");
+  redirect("/admin/config/informacion?data_saved=1");
 }
 
 export async function saveClubPhotos(formData: FormData) {
@@ -87,11 +87,11 @@ export async function saveClubPhotos(formData: FormData) {
 
   const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
   if (error) {
-    redirect(`/admin/config?photos_error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/config/informacion?photos_error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath("/admin/config");
-  redirect("/admin/config?photos_saved=1");
+  revalidatePath("/admin/config/informacion");
+  redirect("/admin/config/informacion?photos_saved=1");
 }
 
 /** @deprecated Usar saveClubData / saveClubPhotos desde Config. */

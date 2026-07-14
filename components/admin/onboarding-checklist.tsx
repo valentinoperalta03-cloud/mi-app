@@ -21,19 +21,19 @@ const STEPS: Array<{
     key: "datos_club",
     title: "Datos del club",
     description: "Nombre, descripción, dirección y WhatsApp",
-    href: "/admin/config",
+    href: "/admin/config/informacion",
   },
   {
     key: "fotos",
     title: "Fotos del club",
     description: "Logo y foto de portada",
-    href: "/admin/config",
+    href: "/admin/config/informacion",
   },
   {
     key: "horarios",
     title: "Horarios de atención",
     description: "Hora de apertura y cierre del club (en Configuración)",
-    href: "/admin/config",
+    href: "/admin/config/informacion",
   },
   {
     key: "canchas",
@@ -51,13 +51,13 @@ const STEPS: Array<{
     key: "metodos_pago",
     title: "Métodos de pago",
     description: "Elegí cómo cobrar: efectivo, transferencia (alias CBU) o Mercado Pago",
-    href: "/admin/config",
+    href: "/admin/config/pagos",
   },
   {
     key: "politica_cancelacion",
     title: "Política de cancelación",
     description: "Definí con cuánta anticipación pueden cancelar los jugadores",
-    href: "/admin/config",
+    href: "/admin/config/informacion",
   },
   {
     key: "sena",

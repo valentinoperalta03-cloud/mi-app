@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const err = url.searchParams.get("error");
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  const configUrl = origin ? `${origin}/admin/config` : "/admin/config";
+  const configUrl = origin ? `${origin}/admin/config/pagos` : "/admin/config/pagos";
 
   if (err) {
     return NextResponse.redirect(`${configUrl}?mp=error`);
