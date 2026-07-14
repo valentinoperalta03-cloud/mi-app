@@ -58,12 +58,17 @@ export async function generateMatchForSlotOnDate(
     .maybeSingle();
   const clubName = String((clubRow as { name?: string | null } | null)?.name ?? "Club");
 
+  // Los turnos fijos se cobran por fuera de la app (efectivo/transferencia directa
+  // en el club) — no hay ningún flujo de cobro conectado todavía. total_price/
+  // amount_paid/amount_pending quedan sin setear a propósito; financial_status se
+  // deja explícito para ser consistente con el resto de los matches.
   const { data: matchInserted, error: matchErr } = await supabase
     .from(DB_TABLES.matches)
     .insert({
       match_type: "reservation",
       match_status: "scheduled",
       payment_status: "pending",
+      financial_status: "unpaid",
       scheduled_date: targetDate,
       scheduled_time: slotTime,
       duration_minutes: slot.duration_minutes || 90,

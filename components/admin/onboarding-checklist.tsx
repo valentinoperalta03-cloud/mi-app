@@ -59,6 +59,12 @@ const STEPS: Array<{
     description: "Definí con cuánta anticipación pueden cancelar los jugadores",
     href: "/admin/config",
   },
+  {
+    key: "sena",
+    title: "Configurar seña de reserva",
+    description: "Definí el monto que el jugador paga para confirmar la reserva",
+    href: "/admin/canchas",
+  },
 ];
 
 export default function OnboardingChecklist({

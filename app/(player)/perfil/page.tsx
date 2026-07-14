@@ -256,7 +256,7 @@ export default async function PerfilPage() {
               Ir a vista Jugador
             </Link>
             <Link
-              href="/admin/gestion"
+              href="/admin/dashboard"
               className="rounded-2xl border border-[var(--border-subtle)] bg-transparent px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
             >
               Ir a Admin

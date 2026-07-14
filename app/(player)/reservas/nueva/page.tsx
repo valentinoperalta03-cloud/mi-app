@@ -534,6 +534,11 @@ function NuevaReservaContent() {
                 </div>
               </>
             ) : null}
+            {payMethod === "mercadopago" && !depositInfo.requiresDeposit ? (
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Este club cobra el precio completo al confirmar la reserva. No se requiere pago adicional en el club.
+              </p>
+            ) : null}
           </div>
 
           {clubPay === null ? (

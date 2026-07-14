@@ -9,6 +9,7 @@ export type OnboardingItems = {
   precios: boolean;
   metodos_pago: boolean;
   politica_cancelacion: boolean;
+  sena: boolean;
 };
 
 function hasValidBusinessHours(raw: string | null | undefined): boolean {
@@ -40,6 +41,7 @@ type ClubOnboardingRow = {
   bank_alias: string | null;
   mp_access_token: string | null;
   onboarding_completed: boolean | null;
+  deposit_value: number | null;
 };
 
 /**
@@ -50,7 +52,7 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
   const { data: club, error: clubErr } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "name, description, address, whatsapp, logo_url, cover_image_url, business_hours, open_time, close_time, cancellation_policy, accepts_cash, accepts_transfer, bank_alias, mp_access_token, onboarding_completed"
+      "name, description, address, whatsapp, logo_url, cover_image_url, business_hours, open_time, close_time, cancellation_policy, accepts_cash, accepts_transfer, bank_alias, mp_access_token, onboarding_completed, deposit_value"
     )
     .eq("id", clubId)
     .maybeSingle();
@@ -64,11 +66,12 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
       precios: false,
       metodos_pago: false,
       politica_cancelacion: false,
+      sena: false,
     };
     return {
       items: emptyItems,
       completedCount: 0,
-      totalCount: 7,
+      totalCount: 8,
       allCompleted: false,
       canReceiveReservations: false,
       club: null,
@@ -101,10 +104,11 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
         Boolean(String(c.mp_access_token ?? "").trim())
     ),
     politica_cancelacion: Boolean(String(c.cancellation_policy ?? "").trim()),
+    sena: Number(c.deposit_value ?? 0) > 0,
   };
 
   const completedCount = Object.values(items).filter(Boolean).length;
-  const totalCount = 7;
+  const totalCount = 8;
   const allCompleted = completedCount === totalCount;
 
   const canReceiveReservations = Boolean(
