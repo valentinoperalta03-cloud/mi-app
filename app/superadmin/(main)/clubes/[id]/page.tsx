@@ -62,7 +62,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
     courtIds.length > 0
       ? await svc
           .from(DB_TABLES.matches)
-          .select("id,scheduled_date,scheduled_time,total_price,payment_status,match_status,court_id,courts(name)")
+          .select("id,scheduled_date,scheduled_time,amount_paid,payment_status,match_status,court_id,courts(name)")
           .eq("match_type", "reservation")
           .in("court_id", courtIds)
           .order("scheduled_date", { ascending: false })
@@ -227,7 +227,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
                 id: string;
                 scheduled_date: string | null;
                 scheduled_time: string | null;
-                total_price: number | null;
+                amount_paid: number | null;
                 payment_status: string | null;
                 match_status: string | null;
                 courts: { name: string | null } | { name: string | null }[] | null;
@@ -243,7 +243,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
                     <span className="text-slate-500">· {courtRel?.name ?? "Cancha"}</span>
                   </span>
                   <span className="text-slate-400">
-                    {money(Number(row.total_price ?? 0))} · {row.payment_status ?? "—"} · {row.match_status ?? "—"}
+                    {money(Number(row.amount_paid ?? 0))} · {row.payment_status ?? "—"} · {row.match_status ?? "—"}
                   </span>
                 </li>
               );
