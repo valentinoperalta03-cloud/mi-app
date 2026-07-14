@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { calculateDepositAmount } from "@/lib/deposit-utils";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createMPPreference } from "@/lib/mp-preference";
 import {
@@ -130,15 +130,12 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const { data: courtClub } = await supabase
     .from(DB_TABLES.courts)
     .select(
-      "club_id, requires_deposit, deposit_type, deposit_value, clubs!inner(mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu)"
+      "club_id, clubs!inner(mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
     )
     .eq("id", courtId)
     .maybeSingle();
   const courtClubTyped = courtClub as {
     club_id?: string | null;
-    requires_deposit?: boolean | null;
-    deposit_type?: "percentage" | "fixed" | null;
-    deposit_value?: number | null;
     clubs?: {
       mp_access_token?: string | null;
       mp_user_id?: string | null;
@@ -146,6 +143,8 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       accepts_transfer?: boolean | null;
       bank_alias?: string | null;
       bank_cbu?: string | null;
+      deposit_type?: "percentage" | "fixed" | null;
+      deposit_value?: number | null;
     } | null;
   } | null;
   const clubId = String(courtClubTyped?.club_id ?? "").trim();
@@ -160,9 +159,8 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       return { error: "Este club no puede recibir reservas en este momento." };
     }
   }
-  const requiresDeposit = Boolean(courtClubTyped?.requires_deposit);
-  const depositType = courtClubTyped?.deposit_type ?? null;
-  const depositValue = Number(courtClubTyped?.deposit_value ?? 0);
+  const clubDepositType = courtClubTyped?.clubs?.deposit_type ?? null;
+  const clubDepositValue = Number(courtClubTyped?.clubs?.deposit_value ?? 0);
   const clubAccessToken = courtClubTyped?.clubs?.mp_access_token ?? null;
   const acceptsCash = Boolean(courtClubTyped?.clubs?.accepts_cash);
   const acceptsTransfer = Boolean(courtClubTyped?.clubs?.accepts_transfer);
@@ -285,26 +283,15 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "Precio del turno inválido." };
   }
 
-  const requiresDepositEffective = paymentMethod === "mercadopago" && requiresDeposit && depositValue > 0;
-  if (requiresDepositEffective && depositType !== "percentage" && depositType !== "fixed") {
-    return { error: "La cancha tiene una seña mal configurada. Contactá al club." };
-  }
-  const depositAmount = requiresDepositEffective
-    ? calculateDepositAmount(baseAmount, depositType as "percentage" | "fixed", depositValue)
-    : 0;
-  const fullyPaidNow = paymentMethod === "mercadopago" && !requiresDepositEffective;
+  const depositAmount =
+    paymentMethod === "mercadopago" ? resolveDepositCharge(baseAmount, clubDepositType, clubDepositValue) : 0;
+  const isPartialDeposit = paymentMethod === "mercadopago" && depositAmount < baseAmount;
 
   const payStatus =
-    paymentMethod === "cash"
-      ? "cash_pending"
-      : paymentMethod === "transfer"
-        ? "transfer_pending"
-        : fullyPaidNow
-          ? "paid"
-          : "pending";
-  const financialStatus = fullyPaidNow ? "fully_paid" : "unpaid";
-  const amountPaid = fullyPaidNow ? baseAmount : 0;
-  const amountPending = baseAmount - amountPaid;
+    paymentMethod === "cash" ? "cash_pending" : paymentMethod === "transfer" ? "transfer_pending" : "pending";
+  const financialStatus = "unpaid";
+  const amountPaid = 0;
+  const amountPending = baseAmount;
 
   const { data, error } = await supabase
     .from(DB_TABLES.matches)
@@ -384,22 +371,13 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     redirect(`/reservas/confirmacion?id=${encodeURIComponent(data.id)}&method=${paymentMethod}`);
   }
 
-  if (fullyPaidNow) {
-    await createNotification(supabase, {
-      user_id: user.id,
-      type: "reservation_confirmed",
-      title: "¡Reserva confirmada!",
-      body: `Tu turno en ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm} quedó confirmado.`,
-      match_id: data.id,
-    });
-    redirect(`/reservas/confirmacion?id=${encodeURIComponent(data.id)}&method=${paymentMethod}`);
-  }
-
   await createNotification(supabase, {
     user_id: user.id,
     type: "reservation_confirmed",
     title: "Reserva pendiente de pago",
-    body: `Tu turno en ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm} quedó pendiente hasta acreditar la seña.`,
+    body: isPartialDeposit
+      ? `Tu turno en ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm} quedó pendiente hasta acreditar la seña.`
+      : `Tu turno en ${courtName || "Cancha"} para el ${scheduledDate} a las ${timeNorm} quedó pendiente hasta acreditar el pago.`,
     match_id: data.id,
   });
 

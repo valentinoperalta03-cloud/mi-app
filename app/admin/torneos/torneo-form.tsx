@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { MAX_PAIRS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
+import TournamentDepositFields from "@/components/admin/tournament-deposit-fields";
 import { createTournamentAction, type CreateTournamentState } from "./actions";
 
 const initial: CreateTournamentState = { ok: false, message: "" };
@@ -111,6 +112,8 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
           entero a tu cuenta de Mercado Pago.
         </p>
       </div>
+
+      <TournamentDepositFields pricePerPair={clubPrice} />
 
       <label className="block">
         <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Premio (opcional)</span>

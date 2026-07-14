@@ -9,7 +9,7 @@ import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
-import { calculateDepositAmount } from "@/lib/deposit-utils";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -44,6 +44,8 @@ export type ClubOption = {
   bankCbu?: string | null;
   mpConnected?: boolean;
   openTime?: string;
+  depositType?: "percentage" | "fixed" | null;
+  depositValue?: number;
 };
 
 export type CourtOption = {
@@ -51,9 +53,6 @@ export type CourtOption = {
   clubId: string;
   name: string;
   price: number;
-  requiresDeposit?: boolean;
-  depositType?: "percentage" | "fixed" | null;
-  depositValue?: number;
 };
 export type SlotPriceOption = {
   courtId: string;
@@ -321,12 +320,9 @@ export default function CrearPartidoForm({
   const resumenPago = useMemo(() => {
     if (!selectedCourt || !selectedSlot) return { total: 0, requiresDeposit: false, deposit: 0, saldo: 0 };
     const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
-    const requiresDeposit = Boolean(selectedCourt.requiresDeposit) && Boolean(selectedCourt.depositValue);
-    const deposit = requiresDeposit
-      ? calculateDepositAmount(turnPrice, selectedCourt.depositType ?? "fixed", selectedCourt.depositValue ?? 0)
-      : 0;
-    return { total: turnPrice, requiresDeposit, deposit, saldo: turnPrice - deposit };
-  }, [getTurnPrice, selectedCourt, selectedSlot]);
+    const deposit = resolveDepositCharge(turnPrice, selectedClub?.depositType ?? null, selectedClub?.depositValue ?? 0);
+    return { total: turnPrice, requiresDeposit: deposit < turnPrice, deposit, saldo: turnPrice - deposit };
+  }, [getTurnPrice, selectedClub, selectedCourt, selectedSlot]);
 
   useEffect(() => {
     if (currentStep !== "payment" || !selectedClub) return;

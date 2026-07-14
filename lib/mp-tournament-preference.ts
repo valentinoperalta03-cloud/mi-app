@@ -30,8 +30,9 @@ function getPublicBaseUrl(): string {
 }
 
 /**
- * Preferencia MP para inscripción a torneo: `unit_price` = price_per_pair del
- * torneo, sin fee de plataforma. El 100% va a la cuenta del club.
+ * Preferencia MP para inscripción a torneo: `unit_price` = monto a cobrar
+ * ahora (seña del torneo si está configurada, o price_per_pair completo),
+ * sin fee de plataforma. El 100% va a la cuenta del club.
  */
 export async function createTournamentMercadoPagoPreference(params: {
   tournamentId: string;
@@ -39,7 +40,7 @@ export async function createTournamentMercadoPagoPreference(params: {
   payerUserId: string;
   clubName: string;
   tournamentName: string;
-  /** Precio que recibe el club por la pareja. */
+  /** Monto a cobrar ahora: seña o precio completo, ya calculado por el caller. */
   clubPricePerPair: number;
   payerEmail?: string;
   payerFirstName?: string;

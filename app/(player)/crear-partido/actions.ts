@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { calculateDepositAmount } from "@/lib/deposit-utils";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createMPPreference } from "@/lib/mp-preference";
@@ -145,7 +145,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select(
-        "club_id, price, name, requires_deposit, deposit_type, deposit_value, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu)"
+        "club_id, price, name, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
       )
       .eq("id", courtId)
       .maybeSingle();
@@ -192,9 +192,11 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const totalPrice = Number(
       matchedSlotPrice?.price_override ?? (courtData as { price: number | null }).price ?? 0
     );
-    const requiresDeposit = Boolean((courtData as { requires_deposit?: boolean | null }).requires_deposit);
-    const depositType = (courtData as { deposit_type?: "percentage" | "fixed" | null }).deposit_type;
-    const depositValue = Number((courtData as { deposit_value?: number | null }).deposit_value ?? 0);
+    const clubDepositType =
+      (courtData as { clubs?: { deposit_type?: "percentage" | "fixed" | null } | null }).clubs?.deposit_type ?? null;
+    const clubDepositValue = Number(
+      (courtData as { clubs?: { deposit_value?: number | null } | null }).clubs?.deposit_value ?? 0
+    );
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
@@ -281,26 +283,14 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       }
     }
 
-    const requiresDepositEffective = paymentMethod === "mercadopago" && requiresDeposit && depositValue > 0;
-    if (requiresDepositEffective && depositType !== "percentage" && depositType !== "fixed") {
-      return { error: "La cancha tiene una seña mal configurada. Contactá al club." };
-    }
-    const depositAmount = requiresDepositEffective
-      ? calculateDepositAmount(totalPrice, depositType as "percentage" | "fixed", depositValue)
-      : 0;
-    const fullyPaidNow = paymentMethod === "mercadopago" && !requiresDepositEffective;
+    const depositAmount =
+      paymentMethod === "mercadopago" ? resolveDepositCharge(totalPrice, clubDepositType, clubDepositValue) : 0;
 
     const matchPayStatus =
-      paymentMethod === "cash"
-        ? "cash_pending"
-        : paymentMethod === "transfer"
-          ? "transfer_pending"
-          : fullyPaidNow
-            ? "paid"
-            : "pending";
-    const financialStatus = fullyPaidNow ? "fully_paid" : "unpaid";
-    const amountPaid = fullyPaidNow ? totalPrice : 0;
-    const amountPending = totalPrice - amountPaid;
+      paymentMethod === "cash" ? "cash_pending" : paymentMethod === "transfer" ? "transfer_pending" : "pending";
+    const financialStatus = "unpaid";
+    const amountPaid = 0;
+    const amountPending = totalPrice;
 
     const { data, error } = await supabase
       .from(DB_TABLES.matches)
@@ -391,7 +381,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
       );
     }
 
-    if (paymentMethod === "cash" || paymentMethod === "transfer" || fullyPaidNow) {
+    if (paymentMethod === "cash" || paymentMethod === "transfer") {
       redirect(`/partidos/${data.id}`);
     }
 

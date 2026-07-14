@@ -35,6 +35,11 @@ export async function createTournamentAction(
   const cancellationHours = Number(formData.get("cancellation_hours") ?? 24);
   const categoryMinRaw = String(formData.get("category_min") ?? "").trim();
   const categoryMaxRaw = String(formData.get("category_max") ?? "").trim();
+  const requiresDeposit = formData.get("requires_deposit") === "true";
+  const depositTypeRaw = String(formData.get("deposit_type") ?? "").trim();
+  const depositType = depositTypeRaw === "percentage" || depositTypeRaw === "fixed" ? depositTypeRaw : null;
+  const depositValueRaw = String(formData.get("deposit_value") ?? "").trim();
+  const depositValue = depositValueRaw ? Number(depositValueRaw) : 0;
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
   if (!["americano", "eliminacion", "grupos_eliminacion", "mixing"].includes(tournamentType)) {
@@ -53,6 +58,19 @@ export async function createTournamentAction(
   if (category_min != null && !Number.isFinite(category_min)) return { ok: false, message: "Categoría mínima inválida." };
   if (category_max != null && !Number.isFinite(category_max)) return { ok: false, message: "Categoría máxima inválida." };
 
+  if (requiresDeposit) {
+    if (depositType !== "percentage" && depositType !== "fixed") {
+      return { ok: false, message: "Elegí el tipo de seña." };
+    }
+    if (!Number.isFinite(depositValue)) return { ok: false, message: "Monto de seña inválido." };
+    if (depositType === "percentage" && (depositValue < 1 || depositValue > 100)) {
+      return { ok: false, message: "El porcentaje de seña debe estar entre 1 y 100." };
+    }
+    if (depositType === "fixed" && depositValue <= 0) {
+      return { ok: false, message: "El monto fijo de seña debe ser mayor a 0." };
+    }
+  }
+
   const { data: inserted, error } = await supabase
     .from(DB_TABLES.tournaments)
     .insert({
@@ -64,6 +82,9 @@ export async function createTournamentAction(
       category_max,
       max_pairs: Math.floor(maxPairs),
       price_per_pair: pricePerPair,
+      requires_deposit: requiresDeposit,
+      deposit_type: requiresDeposit ? depositType : null,
+      deposit_value: requiresDeposit ? depositValue : 0,
       prize,
       start_date: startDate,
       end_date: endDate,

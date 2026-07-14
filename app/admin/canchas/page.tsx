@@ -2,11 +2,11 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
-import CourtDepositFields from "@/components/admin/court-deposit-fields";
+import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { createCourt, deleteCourt, updateCourt } from "./actions";
+import { createCourt, deleteCourt, updateClubDeposit, updateCourt } from "./actions";
 import CourtImageUploader from "./court-image-uploader";
 
 type CourtRow = {
@@ -17,9 +17,6 @@ type CourtRow = {
   surface?: string | null;
   indoor?: boolean | null;
   image_url?: string | null;
-  requires_deposit?: boolean | null;
-  deposit_type?: "percentage" | "fixed" | null;
-  deposit_value?: number | null;
 };
 
 export default async function AdminCanchasPage({
@@ -37,10 +34,18 @@ export default async function AdminCanchasPage({
     ctx.courtIds.length > 0
       ? await supabase
           .from(DB_TABLES.courts)
-          .select("id,name,price,club_id,surface,indoor,image_url,requires_deposit,deposit_type,deposit_value")
+          .select("id,name,price,club_id,surface,indoor,image_url")
           .in("id", ctx.courtIds)
           .order("name")
       : { data: [], error: null };
+
+  const mainClubId = ctx.clubIds[0] ?? "";
+  const { data: clubDepositRow } = mainClubId
+    ? await supabase.from(DB_TABLES.clubs).select("deposit_type,deposit_value").eq("id", mainClubId).maybeSingle()
+    : { data: null };
+  const clubDepositType =
+    (clubDepositRow as { deposit_type?: "percentage" | "fixed" | null } | null)?.deposit_type ?? null;
+  const clubDepositValue = Number((clubDepositRow as { deposit_value?: number | null } | null)?.deposit_value ?? 0);
 
   const courts = (courtsRaw ?? []) as CourtRow[];
   const today = new Date().toISOString().slice(0, 10);
@@ -96,6 +101,33 @@ export default async function AdminCanchasPage({
         </div>
       ) : null}
       {errorParam ? <div className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800`}>{errorParam}</div> : null}
+
+      {mainClubId ? (
+        <details className={`${adminCard} group`} open={clubDepositValue === 0}>
+          <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-2 group-open:border-[#0585FC]/30">
+              Configuración de seña {clubDepositValue > 0 ? "✓" : "⚠️ Sin configurar"}
+            </span>
+          </summary>
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {clubDepositValue > 0
+                ? "Esta seña aplica a todas las canchas de tu club."
+                : "Todavía no configuraste la seña de tu club. Hasta que la configures, se cobra el 100% del turno por Mercado Pago al confirmar."}
+            </p>
+            <form action={updateClubDeposit} className="space-y-3">
+              <input type="hidden" name="club_id" value={mainClubId} />
+              <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
+              <button
+                type="submit"
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Guardar
+              </button>
+            </form>
+          </div>
+        </details>
+      ) : null}
 
       {ctx.clubs.length > 0 ? (
         <details className={`${adminCard} group`}>
@@ -255,11 +287,6 @@ export default async function AdminCanchasPage({
                     Techada
                   </label>
                   <CourtImageUploader courtId={c.id} initialUrl={c.image_url ?? ""} label="Imagen de cancha" />
-                  <CourtDepositFields
-                    defaultRequiresDeposit={Boolean(c.requires_deposit)}
-                    defaultDepositType={c.deposit_type ?? null}
-                    defaultDepositValue={Number(c.deposit_value ?? 0)}
-                  />
                   <div className="flex flex-wrap gap-2">
                     <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
                       Guardar cambios

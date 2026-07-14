@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { MessageCircle } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
+import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { formatCategoryRange, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
@@ -26,7 +27,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, name, description, tournament_type, status, max_pairs, price_per_pair, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, clubs(name, logo_url)"
+      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, clubs(name, logo_url)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -45,6 +46,9 @@ export default async function TorneoDetallePage({ params }: PageProps) {
     status: string;
     max_pairs: number;
     price_per_pair: number;
+    requires_deposit: boolean;
+    deposit_type: "percentage" | "fixed" | null;
+    deposit_value: number;
     prize: string | null;
     start_date: string;
     end_date: string;
@@ -118,6 +122,10 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const dateLabel = format(dt, "EEEE d 'de' MMMM", { locale: es });
   const timeLabel = format(dt, "HH:mm");
   const priceDisplay = Math.round(Number(tour.price_per_pair));
+  const depositAmount = tour.requires_deposit
+    ? calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value))
+    : priceDisplay;
+  const saldoAmount = priceDisplay - depositAmount;
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
@@ -137,10 +145,22 @@ export default async function TorneoDetallePage({ params }: PageProps) {
           {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved}/{tour.max_pairs} parejas ·{" "}
           {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
-        <div className="mt-2">
+        <div className="mt-2 space-y-1.5">
           <p className="text-sm font-bold text-[var(--text-primary)]">
             ${priceDisplay.toLocaleString("es-AR")} por pareja
           </p>
+          {tour.requires_deposit ? (
+            <div className="rounded-xl bg-[#0585FC]/10 px-3 py-2 text-xs">
+              <p className="flex items-center justify-between font-semibold text-[#0461C4] dark:text-sky-300">
+                <span>Seña a pagar ahora</span>
+                <span>${depositAmount.toLocaleString("es-AR")}</span>
+              </p>
+              <p className="mt-1 flex items-center justify-between text-[var(--text-secondary)]">
+                <span>Saldo en el club (el día del torneo)</span>
+                <span className="font-semibold">${saldoAmount.toLocaleString("es-AR")}</span>
+              </p>
+            </div>
+          ) : null}
         </div>
         {tour.prize ? <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">🏅 Premio: {tour.prize}</p> : null}
         {tour.description ? (

@@ -87,7 +87,7 @@ export default function TournamentRegisterForm({ tournamentId, isMixing, canRegi
           <p className="text-xs text-[var(--text-tertiary)]">Mixing: inscripción individual. Te asignamos pareja por sorteo.</p>
         )}
         <p className="text-[11px] text-[var(--text-tertiary)]">
-          El pago se procesa con Mercado Pago. Incluye el servicio de la plataforma sin mostrarse por separado en el resumen del club.
+          El pago se procesa con Mercado Pago. El 100% va directo a la cuenta del club, sin comisión de PadeLibre.
         </p>
         <button
           type="submit"

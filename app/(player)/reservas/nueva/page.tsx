@@ -13,7 +13,7 @@ import {
   type ScheduleInput,
 } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
-import { calculateDepositAmount } from "@/lib/deposit-utils";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { createClient } from "@/utils/supabase/client";
@@ -54,7 +54,6 @@ type ClubPayLoad = {
   accepts_transfer: boolean;
   bank_alias: string | null;
   bank_cbu: string | null;
-  requires_deposit: boolean;
   deposit_type: "percentage" | "fixed" | null;
   deposit_value: number;
 };
@@ -97,11 +96,9 @@ function NuevaReservaContent() {
   const totalPagar = precioTurno;
 
   const depositInfo = useMemo(() => {
-    if (!clubPay?.requires_deposit || !clubPay.deposit_value) {
-      return { requiresDeposit: false, deposit: 0, saldo: 0 };
-    }
-    const deposit = calculateDepositAmount(precioTurno, clubPay.deposit_type ?? "fixed", clubPay.deposit_value);
-    return { requiresDeposit: true, deposit, saldo: precioTurno - deposit };
+    if (!clubPay) return { requiresDeposit: false, deposit: 0, saldo: 0 };
+    const deposit = resolveDepositCharge(precioTurno, clubPay.deposit_type, clubPay.deposit_value);
+    return { requiresDeposit: deposit < precioTurno, deposit, saldo: precioTurno - deposit };
   }, [clubPay, precioTurno]);
 
   const dateChips = useMemo(() => {
@@ -299,7 +296,7 @@ function NuevaReservaContent() {
       const { data, error: err } = await supabase
         .from(DB_TABLES.courts)
         .select(
-          "requires_deposit, deposit_type, deposit_value, clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token)"
+          "clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, deposit_type, deposit_value)"
         )
         .eq("id", courtId)
         .maybeSingle();
@@ -311,16 +308,12 @@ function NuevaReservaContent() {
           accepts_transfer: false,
           bank_alias: null,
           bank_cbu: null,
-          requires_deposit: false,
           deposit_type: null,
           deposit_value: 0,
         });
         return;
       }
       const row = data as {
-        requires_deposit?: boolean | null;
-        deposit_type?: "percentage" | "fixed" | null;
-        deposit_value?: number | null;
         clubs?:
           | {
               accepts_cash?: boolean | null;
@@ -328,6 +321,8 @@ function NuevaReservaContent() {
               bank_alias?: string | null;
               bank_cbu?: string | null;
               mp_access_token?: string | null;
+              deposit_type?: "percentage" | "fixed" | null;
+              deposit_value?: number | null;
             }
           | Array<{
               accepts_cash?: boolean | null;
@@ -335,6 +330,8 @@ function NuevaReservaContent() {
               bank_alias?: string | null;
               bank_cbu?: string | null;
               mp_access_token?: string | null;
+              deposit_type?: "percentage" | "fixed" | null;
+              deposit_value?: number | null;
             }>
           | null;
       };
@@ -346,9 +343,8 @@ function NuevaReservaContent() {
         accepts_transfer: Boolean(c?.accepts_transfer),
         bank_alias: c?.bank_alias?.trim() ? c.bank_alias.trim() : null,
         bank_cbu: c?.bank_cbu?.trim() ? c.bank_cbu.trim() : null,
-        requires_deposit: Boolean(row.requires_deposit),
-        deposit_type: row.deposit_type ?? null,
-        deposit_value: Number(row.deposit_value ?? 0),
+        deposit_type: c?.deposit_type ?? null,
+        deposit_value: Number(c?.deposit_value ?? 0),
       };
       setClubPay(next);
       if (accepts_mp) setPayMethod("mercadopago");

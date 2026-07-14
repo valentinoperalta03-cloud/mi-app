@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { calculateDepositAmount } from "@/lib/deposit-utils";
 
-const EXAMPLE_TOTAL = 10000;
-
-export default function CourtDepositFields({
-  defaultRequiresDeposit,
-  defaultDepositType,
-  defaultDepositValue,
+export default function TournamentDepositFields({
+  pricePerPair,
+  defaultRequiresDeposit = false,
+  defaultDepositType = null,
+  defaultDepositValue = 0,
 }: {
-  defaultRequiresDeposit: boolean;
-  defaultDepositType: "percentage" | "fixed" | null;
-  defaultDepositValue: number;
+  pricePerPair: number;
+  defaultRequiresDeposit?: boolean;
+  defaultDepositType?: "percentage" | "fixed" | null;
+  defaultDepositValue?: number;
 }) {
   const [enabled, setEnabled] = useState(defaultRequiresDeposit);
-  const [type, setType] = useState<"percentage" | "fixed">(defaultDepositType ?? "percentage");
+  const [type, setType] = useState<"percentage" | "fixed">(defaultDepositType ?? "fixed");
   const [value, setValue] = useState(defaultDepositValue > 0 ? String(defaultDepositValue) : "");
 
   const numericValue = Number(value);
@@ -24,27 +24,24 @@ export default function CourtDepositFields({
     Number.isFinite(numericValue) &&
     (type === "percentage" ? numericValue >= 1 && numericValue <= 100 : numericValue > 0);
 
-  const depositAmount = validValue ? calculateDepositAmount(EXAMPLE_TOTAL, type, numericValue) : 0;
-  const remaining = EXAMPLE_TOTAL - depositAmount;
+  const price = pricePerPair || 0;
+  const depositAmount = validValue ? calculateDepositAmount(price, type, numericValue) : 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        Configuración de seña
-      </p>
-      <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+    <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
         <input
           type="checkbox"
           name="requires_deposit"
+          value="true"
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300"
         />
-        Requerir seña para confirmar reserva
+        Cobrar seña al inscribirse (en vez del precio completo)
       </label>
 
       {enabled ? (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-700 dark:text-slate-200">
             <label className="flex items-center gap-1.5">
               <input
@@ -72,7 +69,7 @@ export default function CourtDepositFields({
             type="number"
             min={1}
             max={type === "percentage" ? 100 : undefined}
-            required
+            required={enabled}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={type === "percentage" ? "Ej. 30" : "Ej. 3000"}
@@ -80,13 +77,17 @@ export default function CourtDepositFields({
           />
           <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300">
             {validValue
-              ? `Con esta configuración, para un turno de $${EXAMPLE_TOTAL.toLocaleString("es-AR")} el jugador pagaría $${depositAmount.toLocaleString("es-AR")} de seña ahora y $${remaining.toLocaleString("es-AR")} en el club.`
+              ? `La pareja paga $${depositAmount.toLocaleString("es-AR")} de seña al inscribirse y $${(price - depositAmount).toLocaleString("es-AR")} de saldo en el club el día del torneo.`
               : type === "percentage"
                 ? "Ingresá un porcentaje entre 1 y 100."
                 : "Ingresá un monto mayor a 0."}
           </p>
         </div>
-      ) : null}
+      ) : (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Sin seña: la pareja paga el precio completo por Mercado Pago al inscribirse.
+        </p>
+      )}
     </div>
   );
 }

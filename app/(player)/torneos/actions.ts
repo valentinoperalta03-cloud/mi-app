@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createTournamentMercadoPagoPreference } from "@/lib/mp-tournament-preference";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
@@ -22,7 +23,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max"
+      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max, requires_deposit, deposit_type, deposit_value"
     )
     .eq("id", tournamentId)
     .maybeSingle();
@@ -37,6 +38,9 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     category_min: number | null;
     category_max: number | null;
     club_id: string;
+    requires_deposit: boolean;
+    deposit_type: "percentage" | "fixed" | null;
+    deposit_value: number;
   };
 
   if (await isClubSubscriptionBlocked(tour.club_id)) {
@@ -76,6 +80,10 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
 
   const n = (approvedCount ?? 0) as number;
   if (n >= tour.max_pairs) return { ok: false, message: "Torneo completo." };
+
+  const chargeAmount = tour.requires_deposit
+    ? calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value))
+    : Number(tour.price_per_pair);
 
   const { data: existing } = await supabase
     .from(DB_TABLES.tournamentRegistrations)
@@ -118,7 +126,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     payerUserId: user.id,
     clubName,
     tournamentName: tour.name,
-    clubPricePerPair: Number(tour.price_per_pair),
+    clubPricePerPair: chargeAmount,
     payerEmail: user.email ?? undefined,
     backUrls: {
       success: `${base}/torneos/${tournamentId}?pay=ok`,

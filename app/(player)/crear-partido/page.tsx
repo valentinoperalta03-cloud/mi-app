@@ -47,13 +47,13 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time"
+        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time, deposit_type, deposit_value"
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
     supabase
       .from(DB_TABLES.courts)
-      .select("id, club_id, name, price, requires_deposit, deposit_type, deposit_value")
+      .select("id, club_id, name, price")
       .order("name", { ascending: true }),
     supabase
       .from(DB_TABLES.courtSchedules)
@@ -91,6 +91,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bank_cbu?: string | null;
     mp_access_token?: string | null;
     open_time?: string | null;
+    deposit_type?: "percentage" | "fixed" | null;
+    deposit_value?: number | null;
   }>).map((club) => ({
     id: club.id,
     name: club.name ?? "Club sin nombre",
@@ -105,6 +107,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bankCbu: club.bank_cbu?.trim() || null,
     mpConnected: Boolean(club.mp_access_token),
     openTime: String(club.open_time ?? "09:00").trim().slice(0, 5) || "09:00",
+    depositType: club.deposit_type ?? null,
+    depositValue: Number(club.deposit_value ?? 0),
   }));
   const courtsDeduped = Array.from(
     new Map(
@@ -114,9 +118,6 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
           club_id: string;
           name: string | null;
           price: number | null;
-          requires_deposit: boolean | null;
-          deposit_type: "percentage" | "fixed" | null;
-          deposit_value: number | null;
         }>
       ).map((row) => [row.id, row])
     ).values()
@@ -126,9 +127,6 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     clubId: court.club_id,
     name: court.name ?? "Cancha",
     price: court.price ?? 0,
-    requiresDeposit: Boolean(court.requires_deposit),
-    depositType: court.deposit_type ?? null,
-    depositValue: Number(court.deposit_value ?? 0),
   }));
   const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
     court_id: string;
