@@ -32,10 +32,9 @@ function getPublicBaseUrl(): string {
 }
 
 /**
- * Preferencia MP para clase:
- * - `unit_price` = precio base del club + 5% de ese base (lo que paga el jugador).
- * - `marketplace_fee` = 5% del precio base del club (PadeLibre), NO del total.
- * Ej.: base $25.000 → fee $1.250 → jugador paga $26.250 → club recibe $25.000.
+ * Preferencia MP para clase. `unit_price` es lo que paga el jugador
+ * (practicePriceBreakdown); el 100% de ese monto va a la cuenta del club,
+ * sin retención de plataforma.
  */
 export async function createPracticeMercadoPagoPreference(params: {
   sessionId: string;
@@ -45,10 +44,7 @@ export async function createPracticeMercadoPagoPreference(params: {
   practiceTitle: string;
   payerEmail?: string;
   backUrls?: { success: string; failure: string; pending: string };
-}): Promise<
-  | { error: string }
-  | { prefId: string; initPoint: string; total: number; marketplaceFee: number; clubPriceBase: number }
-> {
+}): Promise<{ error: string } | { prefId: string; initPoint: string; total: number }> {
   const service = createServiceClient();
   const { data: session } = await service
     .from(DB_TABLES.practiceSessions)
@@ -75,14 +71,11 @@ export async function createPracticeMercadoPagoPreference(params: {
   }
   const clubToken = String(clubTyped?.mp_access_token ?? "").trim();
 
-  const { clubPriceBase, platformFee, playerTotal } = practicePriceBreakdown(
+  const { clubPriceBase, playerTotal } = practicePriceBreakdown(
     Number((practice as { price_base: number }).price_base)
   );
   if (!Number.isFinite(clubPriceBase) || clubPriceBase < 0) return { error: "Precio inválido." };
   if (playerTotal <= 0) return { error: "Esta clase no tiene precio para cobrar con Mercado Pago." };
-  if (platformFee >= playerTotal) {
-    return { error: "Error en el cálculo de comisión." };
-  }
 
   const successUrl = params.backUrls?.success ?? process.env.MP_SUCCESS_URL;
   const failureUrl = params.backUrls?.failure ?? process.env.MP_FAILURE_URL;
@@ -117,7 +110,6 @@ export async function createPracticeMercadoPagoPreference(params: {
           email: params.payerEmail,
         },
         statement_descriptor: "PADELIBRE",
-        marketplace_fee: platformFee,
         back_urls: {
           success: successUrl,
           failure: failureUrl,
@@ -139,15 +131,12 @@ export async function createPracticeMercadoPagoPreference(params: {
       event: "mp.practice.preference_created",
       sessionId: params.sessionId,
       clubPriceBase,
-      platformFee,
       playerTotal,
     });
     return {
       prefId,
       initPoint,
       total: playerTotal,
-      marketplaceFee: platformFee,
-      clubPriceBase,
     };
   } catch (e) {
     log.error({ event: "mp.practice.preference_failed", sessionId: params.sessionId, err: e });

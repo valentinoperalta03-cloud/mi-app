@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         reason: `Suscripción mensual PadeLibre - ${clubRow.name ?? "Club"}`,
         external_reference: clubId,
         payer_email: payerEmail,
-        ...(base ? { back_url: `${base}/admin/dashboard?subscription=pending` } : {}),
+        ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
         auto_recurring: {
           frequency: 1,
           frequency_type: "months",

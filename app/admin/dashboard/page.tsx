@@ -74,11 +74,18 @@ function timeToMinutes(value: string | null): number {
   return h * 60 + m;
 }
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ subscription?: string }>;
+}) {
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
   if (ctx.clubIds.length === 0) redirect("/admin/club");
+
+  const sp = (await searchParams) ?? {};
+  const subscriptionActivated = sp.subscription === "activated";
 
   const today = getTodayYmdInArgentina();
   const arNow = getArgentinaNow();
@@ -343,6 +350,11 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {subscriptionActivated ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-100 p-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+          ¡Suscripción activada! Bienvenido a PadeLibre.
+        </div>
+      ) : null}
       {showOnboardingChecklist && onboardingStatus ? (
         <OnboardingChecklist
           items={onboardingStatus.items}

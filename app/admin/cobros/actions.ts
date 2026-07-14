@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import {
-  clubPadelibreDebtFromTurn,
-  playerShareWithMarketplaceFee,
-} from "@/lib/offline-payments";
+import { resolveOfflinePaymentConfirmation } from "@/lib/offline-payments";
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
 import { assertMatchPaymentStatusTransition } from "@/lib/state-machines/payment-states";
 import { createNotification } from "@/lib/notifications";
@@ -52,7 +49,7 @@ export async function confirmOfflineCobro(formData: FormData) {
 
   const method = pay === "cash_pending" ? "cash" : "transfer";
   const totalPrice = Number((match as { total_price: number | null }).total_price ?? 0);
-  const { total: payAmount, marketplaceFee } = playerShareWithMarketplaceFee(totalPrice);
+  const { amountPaid, amountPending, financialStatus } = resolveOfflinePaymentConfirmation(totalPrice);
   const ownerId = String((match as { owner_id: string }).owner_id);
   const matchType = String((match as { match_type?: string | null }).match_type ?? "");
   const prevMs = String((match as { match_status: string | null }).match_status ?? "").toLowerCase();
@@ -68,21 +65,17 @@ export async function confirmOfflineCobro(formData: FormData) {
     redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo actualizar el estado del turno."));
   }
 
-  const { data: courtRow } = await supabase
-    .from(DB_TABLES.courts)
-    .select("club_id")
-    .eq("id", courtId)
-    .maybeSingle();
-  const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
-  if (!clubId) {
-    redirect("/admin/cobros?error=" + encodeURIComponent("Cancha inválida."));
-  }
-
   const svc = createServiceClient();
 
   const { error: upMatchErr } = await svc
     .from(DB_TABLES.matches)
-    .update({ payment_status: "paid", match_status: nextMatchStatus })
+    .update({
+      payment_status: "paid",
+      match_status: nextMatchStatus,
+      amount_paid: amountPaid,
+      amount_pending: amountPending,
+      financial_status: financialStatus,
+    })
     .eq("id", matchId);
   if (upMatchErr) {
     redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo confirmar el cobro."));
@@ -92,8 +85,7 @@ export async function confirmOfflineCobro(formData: FormData) {
     match_id: matchId,
     user_id: ownerId,
     status: "approved",
-    amount: payAmount,
-    marketplace_fee: marketplaceFee,
+    amount: amountPaid,
     payment_method: method,
     mp_preference_id: null,
     mp_payment_id: "club_counter",
@@ -102,18 +94,6 @@ export async function confirmOfflineCobro(formData: FormData) {
   if (payInsErr) {
     console.error("[cobros] payment insert", payInsErr);
     redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo registrar el pago."));
-  }
-
-  const debtAmount = clubPadelibreDebtFromTurn(totalPrice);
-  const { error: debtErr } = await svc.from(DB_TABLES.clubDebts).insert({
-    club_id: clubId,
-    match_id: matchId,
-    amount: debtAmount,
-    payment_method: method,
-    status: "pending",
-  });
-  if (debtErr) {
-    console.error("[cobros] club_debts insert", debtErr);
   }
 
   await createNotification(svc, {
