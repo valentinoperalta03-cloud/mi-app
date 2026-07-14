@@ -165,26 +165,3 @@ export async function deleteClubAction(formData: FormData) {
   revalidatePath("/superadmin/finanzas");
   redirect("/superadmin/clubes?deleted=1");
 }
-
-export async function sendDebtReminderAction(formData: FormData) {
-  const clubId = String(formData.get("club_id") ?? "").trim();
-  if (!clubId) redirect("/superadmin/finanzas");
-  const s = await svc();
-  const { data: row } = await s.from(DB_TABLES.clubs).select("owner_id,name").eq("id", clubId).maybeSingle();
-  const ownerId = String((row as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-  const name = String((row as { name?: string | null } | null)?.name ?? "Club").trim();
-  if (ownerId) {
-    try {
-      await createNotification(s, {
-        user_id: ownerId,
-        type: "club_agenda",
-        title: "Recordatorio de deuda PadeLibre",
-        body: `Hola ${name}: tenés deuda pendiente con PadeLibre por comisiones de reservas en efectivo/transferencia. Revisá Finanzas en tu panel.`,
-      });
-    } catch {
-      /* */
-    }
-  }
-  revalidatePath("/superadmin/finanzas");
-  redirect("/superadmin/finanzas?reminder=1");
-}
