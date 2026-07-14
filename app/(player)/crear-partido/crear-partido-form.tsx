@@ -9,8 +9,9 @@ import { ChevronRight, MapPin, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
+import { calculateDepositAmount } from "@/lib/deposit-utils";
+import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { DB_TABLES } from "@/lib/db-tables";
-import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,9 @@ export type CourtOption = {
   clubId: string;
   name: string;
   price: number;
+  requiresDeposit?: boolean;
+  depositType?: "percentage" | "fixed" | null;
+  depositValue?: number;
 };
 export type SlotPriceOption = {
   courtId: string;
@@ -315,10 +319,13 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt || !selectedSlot) return { total: 0 };
+    if (!selectedCourt || !selectedSlot) return { total: 0, requiresDeposit: false, deposit: 0, saldo: 0 };
     const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
-    const { total } = playerShareWithMarketplaceFee(turnPrice);
-    return { total };
+    const requiresDeposit = Boolean(selectedCourt.requiresDeposit) && Boolean(selectedCourt.depositValue);
+    const deposit = requiresDeposit
+      ? calculateDepositAmount(turnPrice, selectedCourt.depositType ?? "fixed", selectedCourt.depositValue ?? 0)
+      : 0;
+    return { total: turnPrice, requiresDeposit, deposit, saldo: turnPrice - deposit };
   }, [getTurnPrice, selectedCourt, selectedSlot]);
 
   useEffect(() => {
@@ -564,7 +571,7 @@ export default function CrearPartidoForm({
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
                       <p className="text-sm font-semibold text-[#0585FC]">
-                        Desde ${new Intl.NumberFormat("es-AR").format(playerShareWithMarketplaceFee(minPriceByCourt.get(court.id) ?? court.price).total * 4)}/turno
+                        Desde ${new Intl.NumberFormat("es-AR").format(minPriceByCourt.get(court.id) ?? court.price)}/turno
                       </p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">
@@ -887,11 +894,23 @@ export default function CrearPartidoForm({
                 </div>
               ))}
 
-              <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
-                <p className="text-base font-bold text-slate-900 dark:text-white">
-                  Total a pagar:{" "}
-                  <span className="text-base font-semibold text-[#0585FC]">${fmtAr(resumenPago.total)}</span>
-                </p>
+              <div className="space-y-1.5 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Precio total del turno</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.total)}</span>
+                </div>
+                {resumenPago.requiresDeposit ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-xl bg-[#0585FC]/10 px-3 py-2">
+                      <span className="text-sm font-semibold text-[#0461C4] dark:text-sky-300">Seña a pagar ahora</span>
+                      <span className="text-base font-bold text-[#0461C4] dark:text-sky-300">${fmtAr(resumenPago.deposit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400">Saldo en el club</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">${fmtAr(resumenPago.saldo)}</span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -982,29 +1001,35 @@ export default function CrearPartidoForm({
             </div>
           ) : null}
 
-          <p className="text-center text-xs text-slate-400 dark:text-slate-500">💳 Los otros jugadores pagarán su parte al unirse</p>
-
           {error ? (
             <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{error}</p>
           ) : null}
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={
-              isSubmitting ||
-              !canSubmit ||
-              !payAvailable ||
-              (payMethod === "transfer" && !selectedClub?.bankAlias)
-            }
-          >
-            {isSubmitting
-              ? "Procesando..."
-              : payMethod === "mercadopago"
-                ? "Confirmar y pagar 🎾"
-                : "Confirmar partido"}
-          </Button>
+          {isSubmitting && payMethod === "mercadopago" ? (
+            <MpLoadingNotice />
+          ) : (
+            <div className="sticky bottom-0 left-0 right-0 -mx-4 border-t border-slate-100 bg-white/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={
+                  isSubmitting ||
+                  !canSubmit ||
+                  !payAvailable ||
+                  (payMethod === "transfer" && !selectedClub?.bankAlias)
+                }
+              >
+                {isSubmitting
+                  ? "Procesando..."
+                  : payMethod === "mercadopago"
+                    ? resumenPago.requiresDeposit
+                      ? `Confirmar y pagar seña de $${fmtAr(resumenPago.deposit)}`
+                      : "Confirmar y pagar 🎾"
+                    : "Confirmar partido"}
+              </Button>
+            </div>
+          )}
         </div>
       ) : null}
 

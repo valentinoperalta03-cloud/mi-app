@@ -1128,7 +1128,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       {hasInvitedPayment && !isParticipant ? (
         <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
-          <p className="text-sm text-slate-700">Confirmá tu lugar pagando tu parte del turno.</p>
+          <p className="text-sm text-slate-700">Sumate cuando quieras. El pago lo coordinás con el organizador.</p>
           <form action={requestToJoin}>
             <input type="hidden" name="match_id" value={id} />
             <button
@@ -1136,7 +1136,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               className="w-full rounded-2xl py-3 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
               style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
             >
-              Confirmar y pagar
+              Unirme al partido
             </button>
           </form>
         </section>

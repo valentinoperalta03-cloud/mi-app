@@ -7,7 +7,6 @@ import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import type { ClubRow, CourtRow } from "@/lib/database.types";
-import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
 import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
@@ -234,7 +233,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
               <ul className="space-y-3">
                 {courts.map((court) => {
                   const price = court.price ?? 0;
-                  const displayPrice = playerShareWithMarketplaceFee(price).total * 4;
+                  const displayPrice = price;
                   const courtName = court.name ?? "Cancha";
                   const indoorLabel = court.indoor ? "Techada" : "Descubierta";
                   const surfaceLabel = formatSurface(court.surface ?? null);

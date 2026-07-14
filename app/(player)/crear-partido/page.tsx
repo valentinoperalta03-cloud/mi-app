@@ -51,7 +51,10 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
-    supabase.from(DB_TABLES.courts).select("id, club_id, name, price").order("name", { ascending: true }),
+    supabase
+      .from(DB_TABLES.courts)
+      .select("id, club_id, name, price, requires_deposit, deposit_type, deposit_value")
+      .order("name", { ascending: true }),
     supabase
       .from(DB_TABLES.courtSchedules)
       .select("court_id,start_time,price_override")
@@ -105,9 +108,17 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   }));
   const courtsDeduped = Array.from(
     new Map(
-      ((courtsRaw ?? []) as Array<{ id: string; club_id: string; name: string | null; price: number | null }>).map(
-        (row) => [row.id, row]
-      )
+      (
+        (courtsRaw ?? []) as Array<{
+          id: string;
+          club_id: string;
+          name: string | null;
+          price: number | null;
+          requires_deposit: boolean | null;
+          deposit_type: "percentage" | "fixed" | null;
+          deposit_value: number | null;
+        }>
+      ).map((row) => [row.id, row])
     ).values()
   );
   const courts: CourtOption[] = courtsDeduped.map((court) => ({
@@ -115,6 +126,9 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     clubId: court.club_id,
     name: court.name ?? "Cancha",
     price: court.price ?? 0,
+    requiresDeposit: Boolean(court.requires_deposit),
+    depositType: court.deposit_type ?? null,
+    depositValue: Number(court.deposit_value ?? 0),
   }));
   const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
     court_id: string;

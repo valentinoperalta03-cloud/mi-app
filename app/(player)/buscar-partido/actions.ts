@@ -310,5 +310,5 @@ export async function toggleMatchParticipationAction(
   revalidatePath("/comunidad/para-ti");
   revalidatePath("/partidos");
   revalidatePath("/home");
-  return { success: true, message: "Te uniste al partido con exito." };
+  return { success: true, message: "Te uniste al partido. El pago lo coordinás con el organizador." };
 }

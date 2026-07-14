@@ -13,8 +13,9 @@ import {
   type ScheduleInput,
 } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
-import { playerShareWithMarketplaceFee } from "@/lib/offline-payments";
+import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
+import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { createClient } from "@/utils/supabase/client";
 import { createReservation, type CreateReservationResult } from "./actions";
 
@@ -53,6 +54,9 @@ type ClubPayLoad = {
   accepts_transfer: boolean;
   bank_alias: string | null;
   bank_cbu: string | null;
+  requires_deposit: boolean;
+  deposit_type: "percentage" | "fixed" | null;
+  deposit_value: number;
 };
 type BlockRowModern = {
   blocked_time: string | null;
@@ -90,10 +94,15 @@ function NuevaReservaContent() {
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
 
   /** Total mostrado al jugador; coincide con el monto cobrado en el flujo de pago. */
-  const totalPagar = useMemo(() => {
-    const { total } = playerShareWithMarketplaceFee(precioTurno);
-    return total;
-  }, [precioTurno]);
+  const totalPagar = precioTurno;
+
+  const depositInfo = useMemo(() => {
+    if (!clubPay?.requires_deposit || !clubPay.deposit_value) {
+      return { requiresDeposit: false, deposit: 0, saldo: 0 };
+    }
+    const deposit = calculateDepositAmount(precioTurno, clubPay.deposit_type ?? "fixed", clubPay.deposit_value);
+    return { requiresDeposit: true, deposit, saldo: precioTurno - deposit };
+  }, [clubPay, precioTurno]);
 
   const dateChips = useMemo(() => {
     const start = new Date();
@@ -289,7 +298,9 @@ function NuevaReservaContent() {
       const supabase = createClient();
       const { data, error: err } = await supabase
         .from(DB_TABLES.courts)
-        .select("clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token)")
+        .select(
+          "requires_deposit, deposit_type, deposit_value, clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token)"
+        )
         .eq("id", courtId)
         .maybeSingle();
       if (cancelled) return;
@@ -300,10 +311,16 @@ function NuevaReservaContent() {
           accepts_transfer: false,
           bank_alias: null,
           bank_cbu: null,
+          requires_deposit: false,
+          deposit_type: null,
+          deposit_value: 0,
         });
         return;
       }
       const row = data as {
+        requires_deposit?: boolean | null;
+        deposit_type?: "percentage" | "fixed" | null;
+        deposit_value?: number | null;
         clubs?:
           | {
               accepts_cash?: boolean | null;
@@ -329,6 +346,9 @@ function NuevaReservaContent() {
         accepts_transfer: Boolean(c?.accepts_transfer),
         bank_alias: c?.bank_alias?.trim() ? c.bank_alias.trim() : null,
         bank_cbu: c?.bank_cbu?.trim() ? c.bank_cbu.trim() : null,
+        requires_deposit: Boolean(row.requires_deposit),
+        deposit_type: row.deposit_type ?? null,
+        deposit_value: Number(row.deposit_value ?? 0),
       };
       setClubPay(next);
       if (accepts_mp) setPayMethod("mercadopago");
@@ -501,11 +521,23 @@ function NuevaReservaContent() {
             </dl>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700">
-            <p className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Total a pagar:{" "}
-              <span className="text-base font-semibold text-[#0585FC] dark:text-sky-400">${fmtAr(totalPagar)}</span>
-            </p>
+          <div className="space-y-2 rounded-2xl bg-white p-6 shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700">
+            <div className="flex justify-between text-sm">
+              <span className="font-medium text-slate-500 dark:text-slate-400">Precio total del turno</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">${fmtAr(totalPagar)}</span>
+            </div>
+            {payMethod === "mercadopago" && depositInfo.requiresDeposit ? (
+              <>
+                <div className="flex items-center justify-between rounded-xl bg-[#0585FC]/10 px-3 py-2">
+                  <span className="text-sm font-semibold text-[#0461C4] dark:text-sky-300">Seña a pagar ahora</span>
+                  <span className="text-base font-bold text-[#0461C4] dark:text-sky-300">${fmtAr(depositInfo.deposit)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium text-slate-500 dark:text-slate-400">Saldo en el club</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">${fmtAr(depositInfo.saldo)}</span>
+                </div>
+              </>
+            ) : null}
           </div>
 
           {clubPay === null ? (
@@ -626,22 +658,30 @@ function NuevaReservaContent() {
             <input type="hidden" name="court_name" value={courtName} />
             <input type="hidden" name="payment_method" value={payMethod} />
 
-            <button
-              type="submit"
-              disabled={
-                pendingConfirm ||
-                !clubPay ||
-                (!clubPay.accepts_mp && !clubPay.accepts_cash && !clubPay.accepts_transfer) ||
-                (payMethod === "transfer" && !clubPay.bank_alias)
-              }
-              className={`w-full ${PLAYER_PRIMARY_BUTTON} py-3.5 text-base disabled:opacity-60`}
-            >
-              {pendingConfirm
-                ? "Reservando…"
-                : payMethod === "mercadopago"
-                  ? "Pagar con Mercado Pago"
-                  : "Confirmar reserva"}
-            </button>
+            {pendingConfirm && payMethod === "mercadopago" ? (
+              <MpLoadingNotice />
+            ) : (
+              <div className="sticky bottom-0 left-0 right-0 -mx-4 border-t border-slate-100 bg-white/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+                <button
+                  type="submit"
+                  disabled={
+                    pendingConfirm ||
+                    !clubPay ||
+                    (!clubPay.accepts_mp && !clubPay.accepts_cash && !clubPay.accepts_transfer) ||
+                    (payMethod === "transfer" && !clubPay.bank_alias)
+                  }
+                  className={`w-full ${PLAYER_PRIMARY_BUTTON} py-3.5 text-base disabled:opacity-60`}
+                >
+                  {pendingConfirm
+                    ? "Reservando…"
+                    : payMethod === "mercadopago"
+                      ? depositInfo.requiresDeposit
+                        ? `Confirmar y pagar seña de $${fmtAr(depositInfo.deposit)}`
+                        : "Pagar con Mercado Pago"
+                      : "Confirmar reserva"}
+                </button>
+              </div>
+            )}
           </form>
 
           <button
