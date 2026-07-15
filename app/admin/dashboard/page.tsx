@@ -15,7 +15,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminBadgeLima, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import OnboardingChecklist from "@/components/admin/onboarding-checklist";
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
@@ -364,29 +364,33 @@ export default async function AdminDashboardPage({
           allCompleted={onboardingStatus.allCompleted}
         />
       ) : null}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#031733] to-[#0461C4] p-5 shadow-[0_10px_30px_rgba(3,23,51,0.35)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+      <section className="overflow-hidden rounded-2xl bg-brand-gradient p-4 shadow-[0_10px_30px_rgba(3,23,51,0.35)] md:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             {club?.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-              <img src={club.logo_url} alt={clubName} className="h-16 w-16 rounded-2xl border border-white/20 object-cover" />
+              <img
+                src={club.logo_url}
+                alt={clubName}
+                className="h-12 w-12 rounded-full border border-white/20 object-cover md:h-16 md:w-16 md:rounded-2xl"
+              />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0585FC] text-xl font-bold text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0585FC] text-base font-bold text-white md:h-16 md:w-16 md:rounded-2xl md:text-xl">
                 {clubInitials || "CL"}
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white">{clubName}</h1>
-              <p className="text-sm text-white/70">{todayDateLabel}</p>
-              <CurrentArTime className="text-xs text-white/50" />
+              <h1 className="text-lg font-bold text-white md:text-2xl">{clubName}</h1>
+              <p className="text-xs text-white/70 md:text-sm">{todayDateLabel}</p>
+              <CurrentArTime className="text-[11px] text-white/50 md:text-xs" />
             </div>
           </div>
           <div
-            className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+            className={
               totalAlerts > 0
-                ? "bg-rose-500/20 text-rose-100 ring-1 ring-rose-300/40"
-                : "bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/40"
-            }`}
+                ? "inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold bg-rose-500/20 text-rose-100 ring-1 ring-rose-300/40"
+                : `inline-flex w-fit items-center ${adminBadgeLima}`
+            }
           >
             {totalAlerts > 0 ? `🔴 ${totalAlerts} alertas pendientes` : "🟢 Todo en orden"}
           </div>
@@ -396,24 +400,24 @@ export default async function AdminDashboardPage({
       <section className="grid gap-3 md:grid-cols-3">
         <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
           <p className={adminKicker}>Canchas ocupadas ahora</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-            {occupiedNowCount} <span className="text-base font-semibold text-slate-500">de {totalCourts}</span>
+          <p className="text-3xl font-bold text-[var(--text-primary)]">
+            {occupiedNowCount} <span className="text-base font-semibold text-[var(--text-secondary)]">de {totalCourts}</span>
           </p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
             <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
           </div>
         </Link>
         <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
           <p className={adminKicker}>Reservas hoy</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{reservasHoy}</p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-3xl font-bold text-[var(--text-primary)]">{reservasHoy}</p>
+          <p className="text-sm text-[var(--text-tertiary)]">
             {reservasPagadas} pagadas · {reservasPendientes} pendientes
           </p>
         </Link>
         <Link href="/admin/turnos-fijos" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
           <p className={adminKicker}>Turnos fijos hoy</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-3xl font-bold text-[var(--text-primary)]">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
+          <p className="text-sm text-[var(--text-tertiary)]">
             {turnosFijosConfirmados} confirmados · {turnosFijosSinConfirmar} sin confirmar
           </p>
         </Link>
@@ -487,25 +491,27 @@ export default async function AdminDashboardPage({
 
       <section className="space-y-3">
         <SuperadminEntryLink variant="admin" />
-        <div className="flex items-center gap-2">
-          <LayoutGrid size={16} className="text-[#0585FC]" />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Accesos rápidos</h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${adminCard} group transition hover:-translate-y-0.5 hover:shadow-md`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <item.icon size={22} className="text-[#0585FC]" />
-                <ChevronRight size={16} className="text-slate-400 transition group-hover:text-[#0585FC]" />
-              </div>
-              <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">{item.label}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
-            </Link>
-          ))}
+        <div className="hidden md:block">
+          <div className="flex items-center gap-2">
+            <LayoutGrid size={16} className="text-[#0585FC]" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Accesos rápidos</h2>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {quickActions.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${adminCard} group transition hover:-translate-y-0.5 hover:shadow-md`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <item.icon size={22} className="text-[#0585FC]" />
+                  <ChevronRight size={16} className="text-slate-400 transition group-hover:text-[#0585FC]" />
+                </div>
+                <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">{item.label}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
     </div>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, ChevronRight, ClipboardList, CreditCard, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminPressable, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -17,7 +17,7 @@ const GROUPS: Array<{
   {
     href: "/admin/config/informacion",
     title: "Información del club",
-    description: "Datos, horarios, ubicación, fotos, cuenta y cancelación",
+    description: "Datos, horarios, ubicación, fotos y política de cancelación",
     icon: Building2,
   },
   {
@@ -59,22 +59,22 @@ export default async function AdminConfigPage() {
         <p className={adminSubtitle}>Elegí qué querés configurar.</p>
       </header>
 
-      <div className={`${adminCard} divide-y divide-[var(--border-default)] p-0`}>
+      <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] divide-y divide-[var(--border-subtle)]">
         {GROUPS.map((g) => (
           <Link
             key={g.href}
             href={g.href}
             prefetch
-            className={`flex items-center gap-4 p-5 transition hover:bg-slate-50 dark:hover:bg-slate-900/40 ${adminPressable}`}
+            className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--bg-card-hover)] active:bg-[var(--bg-card-hover)]"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0585FC]/10 text-[#0585FC] dark:bg-sky-500/10 dark:text-sky-400">
-              <g.icon size={22} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0585FC]/10 text-[#0585FC] dark:bg-sky-500/10 dark:text-sky-400">
+              <g.icon size={20} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-base font-bold text-slate-900 dark:text-slate-100">{g.title}</p>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{g.description}</p>
+              <p className="text-base font-bold text-[var(--text-primary)]">{g.title}</p>
+              <p className="mt-0.5 text-sm text-[var(--text-secondary)]">{g.description}</p>
             </div>
-            <ChevronRight size={18} className="shrink-0 text-slate-400" />
+            <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" />
           </Link>
         ))}
       </div>

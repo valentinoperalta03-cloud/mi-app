@@ -28,8 +28,8 @@ export default function TournamentDepositFields({
   const depositAmount = validValue ? calculateDepositAmount(price, type, numericValue) : 0;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+    <div className="space-y-3 rounded-2xl border border-[var(--border-subtle)] p-4">
+      <label className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
         <input
           type="checkbox"
           name="requires_deposit"
@@ -42,7 +42,7 @@ export default function TournamentDepositFields({
 
       {enabled ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <div className="flex flex-wrap gap-4 text-sm font-medium text-[var(--text-secondary)]">
             <label className="flex items-center gap-1.5">
               <input
                 type="radio"
@@ -73,9 +73,9 @@ export default function TournamentDepositFields({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={type === "percentage" ? "Ej. 30" : "Ej. 3000"}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
           />
-          <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
             {validValue
               ? `La pareja paga $${depositAmount.toLocaleString("es-AR")} de seña al inscribirse y $${(price - depositAmount).toLocaleString("es-AR")} de saldo en el club el día del torneo.`
               : type === "percentage"
@@ -84,7 +84,7 @@ export default function TournamentDepositFields({
           </p>
         </div>
       ) : (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-[var(--text-tertiary)]">
           Sin seña: la pareja paga el precio completo por Mercado Pago al inscribirse.
         </p>
       )}

@@ -2,7 +2,20 @@
 
 import { useState } from "react";
 
-export default function ActivateSubscriptionButton({ clubId }: { clubId: string }) {
+const VARIANT_CLASSES: Record<"primary" | "danger", string> = {
+  primary: "bg-[#0585FC] hover:brightness-105",
+  danger: "bg-rose-600 hover:bg-rose-700",
+};
+
+export default function ActivateSubscriptionButton({
+  clubId,
+  label = "Activar suscripción con débito automático",
+  variant = "primary",
+}: {
+  clubId: string;
+  label?: string;
+  variant?: "primary" | "danger";
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,9 +47,9 @@ export default function ActivateSubscriptionButton({ clubId }: { clubId: string 
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="w-full rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900"
+        className={`w-full rounded-2xl py-3.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60 ${VARIANT_CLASSES[variant]}`}
       >
-        {loading ? "Generando link…" : "Activar suscripción con débito automático"}
+        {loading ? "Generando link…" : label}
       </button>
       {error ? <p className="mt-3 text-sm font-medium text-rose-600">{error}</p> : null}
     </div>

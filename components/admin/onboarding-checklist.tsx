@@ -78,11 +78,11 @@ export default function OnboardingChecklist({
 
   return (
     <section
-      className={`${adminCard} space-y-5 border-[#0585FC]/20 bg-gradient-to-br from-slate-50 via-white to-sky-50/40 ring-1 ring-[#0585FC]/10 dark:border-sky-900/30 dark:from-slate-950 dark:via-slate-900 dark:to-sky-950/20 dark:ring-sky-500/10`}
+      className={`${adminCard} space-y-5 border-[#0585FC]/20 bg-gradient-to-br from-[var(--bg-subtle)] via-[var(--bg-card)] to-sky-50/40 ring-1 ring-[#0585FC]/10 dark:border-sky-900/30 dark:from-[var(--bg-app)] dark:via-[var(--bg-subtle)] dark:to-sky-950/20 dark:ring-sky-500/10`}
     >
       <header className="space-y-1">
-        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">👋 Bienvenido a PadeLibre</p>
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        <p className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">👋 Bienvenido a PadeLibre</p>
+        <p className="text-sm font-medium text-[var(--text-secondary)]">
           Completá estos pasos para empezar a recibir reservas
         </p>
       </header>
@@ -101,15 +101,15 @@ export default function OnboardingChecklist({
       ) : null}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
           <span>Progreso</span>
-          <span className="text-[#0585FC] dark:text-sky-400">
+          <span className="text-[var(--admin-brand-primary)]">
             {completedCount}/{totalCount} completados
           </span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/90 dark:bg-slate-800">
+        <div className="h-2.5 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#0585FC] to-cyan-500 transition-[width] duration-500 ease-out"
+            className="h-full rounded-full bg-brand-gradient transition-[width] duration-500 ease-out"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -124,23 +124,23 @@ export default function OnboardingChecklist({
               className={`flex gap-3 rounded-2xl border px-4 py-3.5 transition ${
                 done
                   ? "border-emerald-200/80 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/25"
-                  : "border-slate-200/90 bg-white/90 dark:border-slate-700 dark:bg-slate-900/60"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-card)]/90"
               }`}
             >
               <div className="flex shrink-0 flex-col items-center pt-0.5">
                 {done ? (
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm dark:bg-emerald-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--admin-accent-lima)] text-black shadow-sm">
                     <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
                   </span>
                 ) : (
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-xs font-bold text-[var(--text-secondary)]">
                     {index + 1}
                   </span>
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{step.title}</p>
-                <p className="text-xs font-medium leading-snug text-slate-600 dark:text-slate-400">{step.description}</p>
+                <p className="text-sm font-bold text-[var(--text-primary)]">{step.title}</p>
+                <p className="text-xs font-medium leading-snug text-[var(--text-secondary)]">{step.description}</p>
                 <Link
                   href={step.href}
                   prefetch

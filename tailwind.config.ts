@@ -27,6 +27,17 @@ const config: Config = {
           900: "#0c4a6e",
           950: "#082f49",
         },
+        brand: {
+          primary: "#0585FC",
+          secondary: "#0461C4",
+          lima: "#CCFF00",
+          "lima-subtle": "rgba(204,255,0,0.12)",
+          navy: "#031733",
+        },
+      },
+      backgroundImage: {
+        "brand-gradient": "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+        "brand-gradient-dark": "linear-gradient(135deg, #031733 0%, #0461C4 100%)",
       },
     },
   },

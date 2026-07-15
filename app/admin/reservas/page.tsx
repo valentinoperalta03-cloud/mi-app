@@ -18,6 +18,7 @@ import {
   requestReservationRefundAction,
 } from "./actions";
 import { confirmOfflineCobro } from "../cobros/actions";
+import AdminReservasMobileView, { type MobileCourtData, type MobileSlot } from "./reservas-mobile-view";
 
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
@@ -228,6 +229,42 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
   const closedErr = sp.closed_error ? decodeURIComponent(sp.closed_error.replace(/\+/g, " ")) : "";
 
+  const mobileCourts: MobileCourtData[] = ctx.courts.map((court) => ({
+    id: court.id,
+    name: court.name ?? "Cancha",
+    slots: slots.map((slot): MobileSlot => {
+      const slotKey = `${court.id}__${slot}`;
+      const reservation = slotMap.get(slotKey);
+      const blocked = blockMap.get(slotKey);
+      if (!reservation) {
+        if (blocked) {
+          return { time: slot, kind: "blocked", blockedReason: blocked.reason ?? null };
+        }
+        return { time: slot, kind: "available" };
+      }
+      const player = reservation.owner_id ? nameByUser.get(reservation.owner_id) ?? "Jugador" : "Sin asignar";
+      const isReservation = String(reservation.match_type ?? "").toLowerCase() === "reservation";
+      const payNorm = String(reservation.payment_status ?? "").toLowerCase();
+      const paidReservation = isReservation && payNorm === "paid";
+      const pendingReservation = isReservation && payNorm === "pending";
+      const statusText = paidReservation
+        ? "✓ Pagado"
+        : pendingReservation
+          ? "⚠ Pendiente"
+          : isReservation
+            ? "Reserva"
+            : "Partido abierto";
+      return {
+        time: slot,
+        kind: reservation.es_turno_fijo ? "fixed" : "reservation",
+        player,
+        statusText,
+        financialStatus: String(reservation.financial_status ?? "").toLowerCase() || null,
+        href: `/admin/reservas?date=${selectedDate}&selected=${reservation.id}`,
+      };
+    }),
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
@@ -358,135 +395,167 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           Error al cargar reservas: {matchesError.message}.
         </div>
       ) : (
-        <section className={`${adminCard} overflow-hidden p-0`}>
-          <div className="overflow-x-auto">
-            <div className="min-w-[1100px]">
-              <div
-                className="grid border-b border-slate-200/80 bg-transparent dark:border-slate-700"
-                style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
-              >
-                <div className="sticky left-0 z-20 border-r border-slate-200/80 bg-white px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700">
-                  Hora
-                </div>
-                {ctx.courts.map((court) => (
-                  <div
-                    key={court.id}
-                    className="border-r border-slate-200/70 px-3 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"
-                  >
-                    {court.name ?? "Cancha"}
-                  </div>
-                ))}
-              </div>
-
-              {slots.map((slot) => (
+        <>
+          <section className={`${adminCard} hidden overflow-hidden p-0 md:block`}>
+            <div className="overflow-x-auto">
+              <div className="min-w-[1100px]">
                 <div
-                  key={slot}
-                  className="grid border-b border-slate-100/90 dark:border-slate-800"
+                  className="grid"
                   style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
                 >
-                  <div className="sticky left-0 z-10 border-r border-slate-200/70 bg-white px-3 py-4 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-950">
-                    {slot}
+                  <div className="sticky left-0 z-20 flex items-center justify-end border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                    Hora
                   </div>
-                  {ctx.courts.map((court) => {
-                    const slotKey = `${court.id}__${slot}`;
-                    const reservation = slotMap.get(slotKey);
-                    const blocked = blockMap.get(slotKey);
-                    if (!reservation) {
-                      return (
-                        <div
-                          key={slotKey}
-                          className="min-h-16 border-r border-slate-200/60 bg-transparent px-2 py-2 dark:border-slate-800"
-                        >
-                          {blocked ? (
-                            <form action={blockCourtSlotAction} className="h-full rounded-xl border border-rose-600 bg-rose-500 p-2 text-white dark:border-rose-500 dark:bg-rose-600">
-                              <input type="hidden" name="court_id" value={court.id} />
-                              <input type="hidden" name="date" value={selectedDate} />
-                              <input type="hidden" name="time" value={slot} />
-                              <button type="submit" className="w-full rounded-lg bg-rose-700 px-2 py-2 text-xs font-semibold text-white dark:bg-rose-800">
-                                Bloqueado
-                              </button>
-                              <p className="mt-1 text-[11px] text-white/90">
-                                {blocked.reason ? blocked.reason : "Toque para desbloquear"}
-                              </p>
-                            </form>
-                          ) : (
-                            <details className="h-full rounded-xl border border-dashed border-slate-200/80 bg-slate-100/60 p-2 dark:border-slate-700 dark:bg-slate-900/40">
-                              <summary className="cursor-pointer list-none text-center text-[11px] font-semibold text-slate-600 [&::-webkit-details-marker]:hidden dark:text-slate-300">
-                                Bloquear horario
-                              </summary>
-                              <form action={blockCourtSlotAction} className="mt-2 space-y-2">
+                  {ctx.courts.map((court) => (
+                    <div
+                      key={court.id}
+                      className="border-r border-white/15 px-3 py-3 text-sm font-semibold text-white"
+                      style={{ background: "var(--admin-header-bg)" }}
+                    >
+                      {court.name ?? "Cancha"}
+                    </div>
+                  ))}
+                </div>
+
+                {slots.map((slot) => (
+                  <div
+                    key={slot}
+                    className="grid border-b border-[var(--border-subtle)]"
+                    style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
+                  >
+                    <div className="sticky left-0 z-10 border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-4 text-right text-xs font-medium text-[var(--text-secondary)]">
+                      {slot}
+                    </div>
+                    {ctx.courts.map((court) => {
+                      const slotKey = `${court.id}__${slot}`;
+                      const reservation = slotMap.get(slotKey);
+                      const blocked = blockMap.get(slotKey);
+                      if (!reservation) {
+                        return (
+                          <div key={slotKey} className="min-h-16 border-r border-[var(--border-subtle)] p-2">
+                            {blocked ? (
+                              <form
+                                action={blockCourtSlotAction}
+                                className="h-full rounded-lg border border-[var(--border-subtle)] p-2 text-center"
+                                style={{
+                                  backgroundColor: "var(--bg-app)",
+                                  backgroundImage:
+                                    "repeating-linear-gradient(45deg, var(--border-subtle) 0, var(--border-subtle) 1px, transparent 1px, transparent 8px)",
+                                }}
+                              >
                                 <input type="hidden" name="court_id" value={court.id} />
                                 <input type="hidden" name="date" value={selectedDate} />
                                 <input type="hidden" name="time" value={slot} />
-                                <input
-                                  type="text"
-                                  name="reason"
-                                  placeholder="Motivo (opcional)"
-                                  className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-                                />
-                                <button
-                                  type="submit"
-                                  className="w-full rounded-lg bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white"
-                                >
-                                  Confirmar
+                                <button type="submit" className="w-full text-xs font-semibold text-[var(--text-tertiary)]">
+                                  Bloqueado
                                 </button>
+                                <p className="mt-1 text-[10px] text-[var(--text-tertiary)]">
+                                  {blocked.reason ? blocked.reason : "Toque para desbloquear"}
+                                </p>
                               </form>
-                            </details>
-                          )}
-                        </div>
-                      );
-                    }
-                    const player = reservation.owner_id ? nameByUser.get(reservation.owner_id) ?? "Jugador" : "Sin asignar";
-                    const isReservation = String(reservation.match_type ?? "").toLowerCase() === "reservation";
-                    const payNorm = String(reservation.payment_status ?? "").toLowerCase();
-                    const paidReservation = isReservation && payNorm === "paid";
-                    const pendingReservation = isReservation && payNorm === "pending";
-                    const cardClass = paidReservation
-                      ? "border-emerald-600 bg-emerald-500"
-                      : pendingReservation
-                        ? "border-amber-500 bg-amber-400"
-                        : "border-[#0585FC]/20 bg-[#0585FC]";
-                    const statusText = paidReservation
-                      ? "✓ Pagado"
-                      : pendingReservation
-                        ? "⚠ Pendiente"
-                        : isReservation
-                          ? "Reserva"
-                          : "Partido abierto";
-                    const finStatus = String(reservation.financial_status ?? "").toLowerCase();
-                    const finIndicator =
-                      finStatus === "fully_paid" ? (
-                        <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Abonado
-                        </p>
-                      ) : finStatus === "partially_paid" ? (
-                        <p
-                          className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90"
-                          title={`Pagó $${Number(reservation.amount_paid ?? 0).toLocaleString("es-AR")} · Saldo $${Number(reservation.amount_pending ?? 0).toLocaleString("es-AR")} en club`}
+                            ) : (
+                              <details className="h-full rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] p-2 transition-colors hover:border-[var(--admin-brand-primary)] hover:bg-[#0585FC]/[0.04] open:border-[var(--admin-brand-primary)] open:bg-[#0585FC]/[0.04]">
+                                <summary className="cursor-pointer list-none text-center text-[11px] font-medium text-[var(--text-tertiary)] [&::-webkit-details-marker]:hidden">
+                                  Disponible
+                                </summary>
+                                <form action={blockCourtSlotAction} className="mt-2 space-y-2">
+                                  <input type="hidden" name="court_id" value={court.id} />
+                                  <input type="hidden" name="date" value={selectedDate} />
+                                  <input type="hidden" name="time" value={slot} />
+                                  <input
+                                    type="text"
+                                    name="reason"
+                                    placeholder="Motivo (opcional)"
+                                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="w-full rounded-lg bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white"
+                                  >
+                                    Bloquear
+                                  </button>
+                                </form>
+                              </details>
+                            )}
+                          </div>
+                        );
+                      }
+                      const player = reservation.owner_id ? nameByUser.get(reservation.owner_id) ?? "Jugador" : "Sin asignar";
+                      const isReservation = String(reservation.match_type ?? "").toLowerCase() === "reservation";
+                      const payNorm = String(reservation.payment_status ?? "").toLowerCase();
+                      const paidReservation = isReservation && payNorm === "paid";
+                      const pendingReservation = isReservation && payNorm === "pending";
+                      const statusText = paidReservation
+                        ? "✓ Pagado"
+                        : pendingReservation
+                          ? "⚠ Pendiente"
+                          : isReservation
+                            ? "Reserva"
+                            : "Partido abierto";
+                      const finStatus = String(reservation.financial_status ?? "").toLowerCase();
+                      const finIndicator =
+                        finStatus === "fully_paid" ? (
+                          <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Abonado
+                          </p>
+                        ) : finStatus === "partially_paid" ? (
+                          <p
+                            className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold opacity-90"
+                            title={`Pagó $${Number(reservation.amount_paid ?? 0).toLocaleString("es-AR")} · Saldo $${Number(reservation.amount_pending ?? 0).toLocaleString("es-AR")} en club`}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--admin-accent-lima)]" /> Seña abonada
+                          </p>
+                        ) : null;
+                      const isFixed = Boolean(reservation.es_turno_fijo);
+                      const finAccentClass =
+                        finStatus === "partially_paid"
+                          ? "border-l-[3px] border-l-[var(--admin-accent-lima)]"
+                          : finStatus === "fully_paid"
+                            ? "border-l-[3px] border-l-emerald-500"
+                            : "";
+                      return (
+                        <Link
+                          key={slotKey}
+                          href={`/admin/reservas?date=${selectedDate}&selected=${reservation.id}`}
+                          className="block min-h-16 border-r border-[var(--border-subtle)] p-2"
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-300" /> Seña abonada
-                        </p>
-                      ) : null;
-                    return (
-                      <Link
-                        key={slotKey}
-                        href={`/admin/reservas?date=${selectedDate}&selected=${reservation.id}`}
-                        className="block min-h-16 border-r border-slate-100/90 px-2 py-2 transition-all duration-200 hover:bg-slate-100/70 dark:border-slate-800 dark:hover:bg-slate-900/30"
-                      >
-                        <div className={`rounded-xl border px-3 py-2 text-white shadow-sm ${cardClass}`}>
-                          <p className="truncate text-sm font-semibold">{player}</p>
-                          <p className="text-xs opacity-90">{getTimeFromMatch(reservation)}</p>
-                          <p className="text-xs font-semibold">{statusText}</p>
-                          {finIndicator}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
+                          {isFixed ? (
+                            <div
+                              className="h-full rounded-lg border px-3 py-2"
+                              style={{
+                                background: "var(--admin-accent-lima-subtle)",
+                                borderColor: "var(--admin-accent-lima-border)",
+                              }}
+                            >
+                              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{player}</p>
+                              <span
+                                className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold text-[#031733]"
+                                style={{ backgroundColor: "var(--admin-accent-lima)" }}
+                              >
+                                Turno fijo
+                              </span>
+                            </div>
+                          ) : (
+                            <div
+                              className={`h-full rounded-lg px-3 py-2 text-white shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md ${finAccentClass}`}
+                              style={{ background: "var(--admin-brand-gradient)" }}
+                            >
+                              <p className="truncate text-sm font-semibold">{player}</p>
+                              <p className="text-xs opacity-90">{statusText}</p>
+                              {finIndicator}
+                            </div>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+
+          <AdminReservasMobileView courts={mobileCourts} selectedDate={selectedDate} blockAction={blockCourtSlotAction} />
+        </>
       )}
 
       {selectedMatch ? (

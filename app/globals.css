@@ -44,6 +44,29 @@
   --player-top-chrome-offset: calc(
     var(--cap-safe-top) + var(--player-top-chrome-height)
   );
+  /* AdminMobileTopBar: barra compacta de 52px + safe area (solo mobile) */
+  --admin-top-chrome-height: 52px;
+  --admin-top-chrome-offset: calc(
+    var(--cap-safe-top) + var(--admin-top-chrome-height)
+  );
+
+  /* Admin — colores de marca */
+  --admin-brand-gradient: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  --admin-brand-primary: #0585FC;
+  --admin-brand-secondary: #0461C4;
+  --admin-accent-lima: #CCFF00;
+  --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
+  --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
+
+  /* Admin — header */
+  --admin-header-bg: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  --admin-header-text: #ffffff;
+  --admin-header-text-muted: rgba(255, 255, 255, 0.7);
+
+  /* Admin — estados positivos con lima */
+  --admin-status-active-bg: rgba(204, 255, 0, 0.12);
+  --admin-status-active-border: rgba(204, 255, 0, 0.4);
+  --admin-status-active-text: #5a7a00;
 }
 
 .dark {
@@ -65,6 +88,17 @@
   --border-subtle: rgba(255,255,255,0.08);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
   --glass-bg: rgba(28,28,30,0.85);
+
+  /* Admin — colores de marca (dark) */
+  --admin-brand-primary: #38bdf8;
+  --admin-brand-secondary: #7dd3fc;
+  --admin-accent-lima-subtle: rgba(204, 255, 0, 0.16);
+  --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
+
+  /* Admin — estados positivos con lima (dark) */
+  --admin-status-active-bg: rgba(204, 255, 0, 0.16);
+  --admin-status-active-border: rgba(204, 255, 0, 0.5);
+  --admin-status-active-text: #d4e600;
 }
 
 /* Base */
@@ -188,6 +222,11 @@ html.capacitor-native svg {
 /* TopNav edge-to-edge: un solo bloque azul (status bar + barra) sin capas duplicadas */
 .player-top-chrome {
   background-color: #0585fc;
+  padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
+}
+
+/* AdminMobileTopBar edge-to-edge: mismo fondo del header desktop, sin gap con la status bar */
+.admin-top-chrome {
   padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
 }
 

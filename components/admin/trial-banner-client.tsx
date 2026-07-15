@@ -28,7 +28,7 @@ export default function TrialBannerClient({
       className={`mb-4 flex flex-col gap-3 rounded-2xl border p-4 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between ${
         isCritical
           ? "border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
-          : "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+          : "border-[var(--admin-accent-lima-border)] bg-[var(--admin-accent-lima-subtle)] text-[var(--admin-status-active-text)]"
       }`}
     >
       <span>

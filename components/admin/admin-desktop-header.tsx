@@ -32,14 +32,14 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
   if (isFacturacionPath(pathname)) return null;
 
   return (
-    <header className="sticky top-0 z-40 hidden border-b border-slate-800 bg-slate-950 md:block">
+    <header className="sticky top-0 z-40 hidden border-b border-white/10 bg-brand-gradient md:block">
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-2 md:px-6">
         <div className="min-w-0 shrink-0">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-            <img src={logoUrl} alt={clubName ?? "Club"} className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-700" />
+            <img src={logoUrl} alt={clubName ?? "Club"} className="h-9 w-9 rounded-xl object-cover ring-1 ring-white/20" />
           ) : (
-            <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-xs font-bold text-slate-200 ring-1 ring-slate-700">
+            <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 text-xs font-bold text-white ring-1 ring-white/20">
               {(clubName ?? "Club").slice(0, 1).toUpperCase()}
             </div>
           )}
@@ -57,17 +57,17 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
                 href={item.href}
                 prefetch
                 className={`relative inline-flex items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-semibold touch-manipulation transition-colors ${
-                  active ? "bg-[#0585FC]/15 text-[#0585FC]" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  active ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 {active ? (
                   <motion.span
                     layoutId="admin-desktop-nav-pill"
-                    className="absolute inset-0 -z-10 rounded-xl bg-[#0585FC]/15"
+                    className="absolute inset-0 -z-10 rounded-xl bg-white/15"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 ) : null}
-                <Icon size={14} strokeWidth={2} className={active ? "text-[#0585FC]" : "text-slate-500"} />
+                <Icon size={14} strokeWidth={2} className={active ? "text-white" : "text-white/70"} />
                 {item.label}
               </Link>
             );

@@ -25,7 +25,7 @@ export default function ClubDepositFields({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-700 dark:text-slate-200">
+      <div className="flex flex-wrap gap-4 text-sm font-medium text-[var(--text-secondary)]">
         <label className="flex items-center gap-1.5">
           <input
             type="radio"
@@ -56,9 +56,9 @@ export default function ClubDepositFields({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={type === "percentage" ? "Ej. 30" : "Ej. 3000"}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
       />
-      <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+      <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
         {validValue
           ? `Para una cancha de $${EXAMPLE_TOTAL.toLocaleString("es-AR")}, la seña sería $${depositAmount.toLocaleString("es-AR")}.`
           : type === "percentage"
