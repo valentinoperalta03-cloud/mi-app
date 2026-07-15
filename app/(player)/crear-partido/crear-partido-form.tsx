@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
+import { normalizeCity } from "@/lib/locations";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -34,6 +35,8 @@ export type ClubOption = {
   id: string;
   name: string;
   location: string;
+  city?: string | null;
+  province?: string | null;
   description?: string | null;
   imageUrl?: string | null;
   coverImageUrl?: string | null;
@@ -79,6 +82,7 @@ type TurnSlot = {
   duration: number;
 };
 type Step = "clubs" | "club-detail" | "options" | "payment";
+type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
 
 function buildClubSlots(openTime: string): TurnSlot[] {
   const parseT = (hhmm: string) => {
@@ -129,6 +133,8 @@ export default function CrearPartidoForm({
   defaultGender,
   friends,
   defaultClubId,
+  userCity,
+  userProvince,
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
@@ -136,6 +142,8 @@ export default function CrearPartidoForm({
   defaultGender: GenderCategory;
   friends: FriendOption[];
   defaultClubId?: string;
+  userCity: string;
+  userProvince: string;
 }) {
   const initialClubId = resolveInitialClubId(clubs, defaultClubId);
   const [currentStep, setCurrentStep] = useState<Step>("clubs");
@@ -143,6 +151,7 @@ export default function CrearPartidoForm({
     () => clubs.find((c) => c.id === initialClubId) ?? clubs[0] ?? null
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>("mi_ciudad");
   const [selectedClubId, setSelectedClubId] = useState<string>(initialClubId);
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -180,10 +189,16 @@ export default function CrearPartidoForm({
     const list = courts.filter((court) => court.clubId === selectedClubId);
     return Array.from(new Map(list.map((c) => [c.id, c])).values());
   }, [courts, selectedClubId]);
-  const filteredClubs = useMemo(
-    () => clubs.filter((club) => club.name.toLowerCase().includes(searchQuery.toLowerCase())),
-    [clubs, searchQuery]
-  );
+  const filteredClubs = useMemo(() => {
+    return clubs.filter((club) => {
+      if (!club.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (locationFilter === "mi_ciudad") return normalizeCity(club.city ?? "") === userCity;
+      if (locationFilter === "mi_provincia") {
+        return (club.province ?? "").trim().toLowerCase() === userProvince.trim().toLowerCase();
+      }
+      return true;
+    });
+  }, [clubs, searchQuery, locationFilter, userCity, userProvince]);
   const slotPriceMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of slotPrices) {
@@ -384,6 +399,42 @@ export default function CrearPartidoForm({
             />
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setLocationFilter("mi_ciudad")}
+              className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
+                locationFilter === "mi_ciudad"
+                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              }`}
+            >
+              Mi ciudad
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocationFilter("mi_provincia")}
+              className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
+                locationFilter === "mi_provincia"
+                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              }`}
+            >
+              Mi provincia
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocationFilter("todos")}
+              className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
+                locationFilter === "todos"
+                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              }`}
+            >
+              Todos los clubes
+            </button>
+          </div>
+
           <div className="space-y-3">
             {filteredClubs.map((club) => {
               const cover = club.coverImageUrl?.trim() || null;
@@ -456,7 +507,13 @@ export default function CrearPartidoForm({
             })}
             {filteredClubs.length === 0 ? (
               <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                No encontramos clubes con ese nombre.
+                {searchQuery.trim()
+                  ? "No encontramos clubes con ese nombre."
+                  : locationFilter === "mi_ciudad"
+                    ? 'No hay clubes en tu ciudad todavía. Probá con "Mi provincia" o "Todos los clubes".'
+                    : locationFilter === "mi_provincia"
+                      ? 'No hay clubes en tu provincia todavía. Probá con "Todos los clubes".'
+                      : "No hay clubes disponibles todavía."}
               </p>
             ) : null}
           </div>

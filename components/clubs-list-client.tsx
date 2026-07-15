@@ -2,21 +2,33 @@
 
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PlayerStackHeader } from "@/components/player-back-button";
-import { formatCityLabel } from "@/lib/locations";
+import { formatCityLabel, normalizeCity } from "@/lib/locations";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 
 export type ClubRow = {
   id: string | number;
   name: string | null;
   location?: string | null;
+  city?: string | null;
+  province?: string | null;
   cover_image_url?: string | null;
   logo_url?: string | null;
   description?: string | null;
   business_hours?: string | null;
 };
+
+type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
+
+const segmentButton = (active: boolean) =>
+  `rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
+    active
+      ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+      : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+  }`;
 
 function clubThumbUrl(club: ClubRow): string | null {
   const cover = club.cover_image_url?.trim();
@@ -53,33 +65,66 @@ const itemVariants = {
 export default function ClubsListClient({
   clubs,
   userCity,
+  userProvince,
   errorMessage,
   errorDebug,
 }: {
   clubs: ClubRow[];
   userCity?: string | null;
+  userProvince?: string | null;
   errorMessage: string | null;
   /** Detalle técnico (p. ej. mensaje PostgREST) para depuración */
   errorDebug?: string | null;
 }) {
   const router = useRouter();
-  const cityLabel = formatCityLabel(userCity);
+  const hasCity = Boolean(userCity?.trim());
+  const cityLabel = hasCity ? formatCityLabel(userCity) : "tu ciudad";
+  const provinceLabel = userProvince?.trim() || "tu provincia";
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>(hasCity ? "mi_ciudad" : "todos");
+
+  const filteredClubs = useMemo(() => {
+    if (locationFilter === "mi_ciudad") {
+      return clubs.filter((club) => normalizeCity(club.city ?? "") === normalizeCity(userCity ?? ""));
+    }
+    if (locationFilter === "mi_provincia") {
+      const province = (userProvince ?? "").trim().toLowerCase();
+      return clubs.filter((club) => (club.province ?? "").trim().toLowerCase() === province);
+    }
+    return clubs;
+  }, [clubs, locationFilter, userCity, userProvince]);
+
+  const infoText =
+    locationFilter === "mi_ciudad"
+      ? `Mostrando clubes en ${cityLabel}`
+      : locationFilter === "mi_provincia"
+        ? `Mostrando clubes en ${provinceLabel}`
+        : "Mostrando todos los clubes de PadeLibre";
 
   return (
     <>
       <PlayerStackHeader
         backHref="/home"
         backLabel="Volver al inicio"
-        title={`Clubes en ${cityLabel}`}
-        subtitle="Explorá clubes de tu ciudad"
+        title="Explorar clubes"
+        subtitle="Encontrá canchas y armá tu próximo partido"
         className="mb-1"
       />
 
+      <div className="grid grid-cols-3 gap-2">
+        <button type="button" onClick={() => setLocationFilter("mi_ciudad")} className={segmentButton(locationFilter === "mi_ciudad")}>
+          Mi ciudad
+        </button>
+        <button type="button" onClick={() => setLocationFilter("mi_provincia")} className={segmentButton(locationFilter === "mi_provincia")}>
+          Mi provincia
+        </button>
+        <button type="button" onClick={() => setLocationFilter("todos")} className={segmentButton(locationFilter === "todos")}>
+          Todos los clubes
+        </button>
+      </div>
+
       <div className="flex items-center gap-2 rounded-2xl border border-sky-200/80 bg-sky-50/80 px-3 py-2 text-sm text-sky-900 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-100">
         <MapPin className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
-        <span>
-          Mostrando clubes en <span className="font-semibold">{cityLabel}</span>
-        </span>
+        <span>{infoText}</span>
       </div>
 
       {errorMessage ? (
@@ -99,17 +144,25 @@ export default function ClubsListClient({
         </div>
       ) : null}
 
-      {!errorMessage && clubs.length === 0 ? (
+      {!errorMessage && filteredClubs.length === 0 ? (
         <div className="rounded-2xl border border-slate-200/80 bg-white p-6 text-center dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">No hay clubes en {cityLabel}</p>
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {locationFilter === "mi_ciudad"
+              ? `No hay clubes en ${cityLabel}`
+              : locationFilter === "mi_provincia"
+                ? `No hay clubes en ${provinceLabel}`
+                : "No hay clubes disponibles todavía"}
+          </p>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Todavía no hay clubes registrados en tu ciudad. Probá cambiar tu ubicación en Ajustes.
+            {locationFilter === "todos"
+              ? "Todavía no hay clubes registrados en PadeLibre."
+              : 'Probá con "Mi provincia" o "Todos los clubes" para ver más opciones.'}
           </p>
         </div>
       ) : null}
 
       <motion.section variants={listVariants} initial="hidden" animate="show" className="space-y-3">
-        {clubs.map((club) => {
+        {filteredClubs.map((club) => {
           const thumb = clubThumbUrl(club);
           const descShort = shortDescription(club.description);
           return (

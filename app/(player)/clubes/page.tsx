@@ -4,22 +4,9 @@ export const dynamic = "force-dynamic";
 import MotionPage from "@/components/motion-page";
 import ClubsListClient, { type ClubRow } from "@/components/clubs-list-client";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatCityLabel } from "@/lib/locations";
-import { getUserCityServer } from "@/lib/locations-server";
+import { normalizeCity } from "@/lib/locations";
 import { PLAYER_CARD } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
-
-type RpcClubRow = {
-  id: string;
-  name: string | null;
-  location: string | null;
-  city: string | null;
-  address: string | null;
-  image_url: string | null;
-  logo_url: string | null;
-  description: string | null;
-  business_hours: string | null;
-};
 
 function ClubesLoading() {
   return (
@@ -40,49 +27,41 @@ function ClubesLoading() {
   );
 }
 
-function mapRpcClub(row: RpcClubRow): ClubRow {
-  return {
-    id: row.id,
-    name: row.name,
-    location: row.location ?? formatCityLabel(row.city),
-    cover_image_url: row.image_url,
-    logo_url: row.logo_url,
-    description: row.description,
-    business_hours: row.business_hours,
-  };
-}
-
 async function ClubesContent() {
   let clubs: ClubRow[] = [];
   let errorMessage: string | null = null;
   let errorDebug: string | null = null;
-  let userCity = "rosario";
+  let userCity = "";
+  let userProvince = "";
 
   try {
     const supabase = await createClient();
-    userCity = await getUserCityServer();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase.rpc("get_clubs_by_city", { user_city: userCity });
+    if (user) {
+      const { data: profile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("city, province")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const typedProfile = profile as { city?: string | null; province?: string | null } | null;
+      userCity = typedProfile?.city?.trim() ? normalizeCity(typedProfile.city) : "";
+      userProvince = typedProfile?.province?.trim() ?? "";
+    }
+
+    const { data, error } = await supabase
+      .from(DB_TABLES.clubs)
+      .select("id,name,location,cover_image_url,logo_url,description,business_hours,city,province")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
 
     if (error) {
-      const { data: fallback, error: fallbackError } = await supabase
-        .from(DB_TABLES.clubs)
-        .select("id,name,location,cover_image_url,logo_url,description,business_hours,city")
-        .eq("is_active", true)
-        .ilike("city", userCity);
-
-      if (fallbackError) {
-        errorMessage = "No se pudieron cargar los clubes. Intentá nuevamente.";
-        errorDebug =
-          [error.message, fallbackError.message].filter(Boolean).join(" — ") || JSON.stringify(error);
-      } else {
-        clubs = ((fallback ?? []) as ClubRow[]).map((club) => ({
-          ...club,
-          location: club.location ?? formatCityLabel(userCity),
-        }));
-      }
+      errorMessage = "No se pudieron cargar los clubes. Intentá nuevamente.";
+      errorDebug = error.message;
     } else {
-      clubs = ((data ?? []) as RpcClubRow[]).map(mapRpcClub);
+      clubs = (data ?? []) as ClubRow[];
     }
   } catch (e) {
     console.error("[clubes] ClubesContent exception", e);
@@ -94,6 +73,7 @@ async function ClubesContent() {
     <ClubsListClient
       clubs={clubs}
       userCity={userCity}
+      userProvince={userProvince}
       errorMessage={errorMessage}
       errorDebug={errorDebug}
     />

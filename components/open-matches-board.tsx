@@ -8,7 +8,7 @@ import { formatLevel } from "@/lib/level-quiz-logic";
 import { isMatchPrivate } from "@/lib/match-visibility";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { formatCityLabel, normalizeCity } from "@/lib/locations";
-import { getUserCityServer } from "@/lib/locations-server";
+import { getUserLocationServer } from "@/lib/locations-server";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchFeedRow = {
@@ -27,6 +27,7 @@ type MatchFeedRow = {
               name: string | null;
               location: string | null;
               city?: string | null;
+              province?: string | null;
             }
           | null;
       }
@@ -101,7 +102,7 @@ export default async function OpenMatchesBoard({
   backLabel = "Volver al inicio",
 }: OpenMatchesBoardProps) {
   const supabase = await createClient();
-  const userCity = await getUserCityServer();
+  const { city: userCity, province: userProvince } = await getUserLocationServer();
   const userCityLabel = formatCityLabel(userCity);
   const nowIso = new Date().toISOString();
   const params = searchParams ? await searchParams : undefined;
@@ -138,7 +139,8 @@ export default async function OpenMatchesBoard({
         clubs (
           name,
           location,
-          city
+          city,
+          province
         )
       ),
       match_participants (
@@ -204,6 +206,7 @@ export default async function OpenMatchesBoard({
       clubName: club?.name ?? "Club sin nombre",
       clubLocation: club?.location ?? "Ubicación pendiente",
       clubCity: normalizeCity(rawCity),
+      clubProvince: club?.province?.trim() ?? "",
       playersCount,
       freeSlots,
       currentUserJoined,
@@ -275,7 +278,7 @@ export default async function OpenMatchesBoard({
       ) : null}
 
       {matches.length > 0 ? (
-        <MatchesFilterBoard matches={cardData} userId={user?.id ?? null} userCity={userCity} />
+        <MatchesFilterBoard matches={cardData} userId={user?.id ?? null} userCity={userCity} userProvince={userProvince} />
       ) : null}
     </MotionPage>
   );

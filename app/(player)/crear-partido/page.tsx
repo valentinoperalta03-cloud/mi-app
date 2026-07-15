@@ -3,6 +3,7 @@ import { CrearPartidoInfoButton } from "@/components/crear-partido-info-button";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getUserLocationServer } from "@/lib/locations-server";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { createClient } from "@/utils/supabase/server";
 import CrearPartidoForm, {
@@ -39,6 +40,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   const defaultGender: GenderCategory =
     profileGender === "femenino" ? "femenino" : profileGender === "masculino" ? "masculino" : "mixto";
 
+  const userLocation = await getUserLocationServer();
+
   const [
     { data: clubsRaw, error: clubsError },
     { data: courtsRaw, error: courtsError },
@@ -47,7 +50,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "id, name, location, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time, deposit_type, deposit_value"
+        "id, name, location, city, province, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time, deposit_type, deposit_value"
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -81,6 +84,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     id: string;
     name: string | null;
     location: string | null;
+    city?: string | null;
+    province?: string | null;
     description?: string | null;
     image_url?: string | null;
     cover_image_url?: string | null;
@@ -97,6 +102,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     id: club.id,
     name: club.name ?? "Club sin nombre",
     location: club.location ?? "",
+    city: club.city ?? null,
+    province: club.province ?? null,
     description: club.description ?? null,
     imageUrl: club.image_url ?? null,
     coverImageUrl: club.cover_image_url ?? null,
@@ -182,6 +189,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
           defaultGender={defaultGender}
           friends={friends}
           defaultClubId={defaultClubId}
+          userCity={userLocation.city}
+          userProvince={userLocation.province}
         />
       )}
     </MotionPage>
