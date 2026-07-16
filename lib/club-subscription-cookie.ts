@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SUBSCRIPTION_COOKIE_NAME = "pl_sub_gate";
-export const SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS = 5 * 60;
+export const SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS = 30;
 
 function hmacSecret(): string {
   return (
@@ -25,7 +25,7 @@ function decodeField(v: string): string | null {
   return v === "-" ? null : decodeURIComponent(v);
 }
 
-/** Token: `${exp}.${clubId}.${status}.${trialEndDate}.${sig}`, TTL fijo de 5 min. */
+/** Token: `${exp}.${clubId}.${status}.${trialEndDate}.${sig}`, TTL fijo de 30s. */
 export function signSubscriptionCookie(data: CachedClubSubscription): string {
   const exp = Math.floor(Date.now() / 1000) + SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS;
   const payload = `${exp}.${encodeField(data.clubId)}.${encodeField(data.status)}.${encodeField(data.trialEndDate)}`;

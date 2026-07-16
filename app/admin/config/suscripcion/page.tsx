@@ -77,7 +77,18 @@ export default async function AdminConfigSuscripcionPage() {
         <p className={adminSubtitle}>Plan, estado y facturación.</p>
       </header>
 
-      {status === "active" ? (
+      {status === "pending" ? (
+        <section
+          className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
+        >
+          <p className="text-base font-bold text-[#0461C4] dark:text-sky-300">Activá tu suscripción</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            Para empezar a usar PadeLibre necesitás cargar una tarjeta con débito automático. No se te cobra nada
+            durante los primeros 15 días.
+          </p>
+          <ActivateSubscriptionButton clubId={clubId} />
+        </section>
+      ) : status === "active" ? (
         <section
           className={`${adminCard} border-emerald-200 bg-emerald-50/60 p-6 dark:border-emerald-800 dark:bg-emerald-950/20`}
         >
