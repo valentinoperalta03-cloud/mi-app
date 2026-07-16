@@ -257,7 +257,13 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
         <input
           type="hidden"
           name="location"
-          value={clubLocation?.city ? formatCityLabel(clubLocation.city) : initial.location}
+          value={
+            clubLocation?.city
+              ? clubLocation.province
+                ? `${formatCityLabel(clubLocation.city)}, ${clubLocation.province}`
+                : formatCityLabel(clubLocation.city)
+              : ""
+          }
         />
       </div>
       <label className="block space-y-1">
