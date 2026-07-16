@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 import TorneoForm from "../torneo-form";
@@ -22,7 +23,7 @@ export default async function AdminTorneoNuevoPage() {
         <ChevronLeft size={18} />
         Volver
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Crear torneo</h1>
+      <h1 className={`mt-4 ${adminTitle}`}>Crear torneo</h1>
       <TorneoForm clubId={ctx.clubIds[0]!} />
     </div>
   );

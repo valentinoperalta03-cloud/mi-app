@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 
 const VARIANT_CLASSES: Record<"primary" | "danger", string> = {
-  primary: "bg-[#0585FC] hover:brightness-105",
-  danger: "bg-rose-600 hover:bg-rose-700",
+  primary: adminCTAPrimary,
+  danger: "rounded-2xl py-3.5 text-white shadow-sm bg-rose-600 hover:bg-rose-700",
 };
 
 export default function ActivateSubscriptionButton({
@@ -47,7 +48,7 @@ export default function ActivateSubscriptionButton({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={`w-full rounded-2xl py-3.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60 ${VARIANT_CLASSES[variant]}`}
+        className={`w-full text-sm font-semibold transition disabled:opacity-60 ${VARIANT_CLASSES[variant]}`}
       >
         {loading ? "Generando link…" : label}
       </button>

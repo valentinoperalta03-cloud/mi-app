@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import { publishPracticeAction, cancelPracticeAction } from "./[id]/actions";
 
 export function PublishPracticeButton({ practiceId }: { practiceId: string }) {
@@ -9,7 +10,7 @@ export function PublishPracticeButton({ practiceId }: { practiceId: string }) {
 
   return (
     <div>
-      {msg ? <p className="mb-2 text-sm text-slate-600 dark:text-slate-300">{msg}</p> : null}
+      {msg ? <p className="mb-2 text-sm text-[var(--text-secondary)]">{msg}</p> : null}
       <button
         type="button"
         disabled={pending}
@@ -19,7 +20,7 @@ export function PublishPracticeButton({ practiceId }: { practiceId: string }) {
             setMsg(res.message);
           })
         }
-        className="rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        className={`${adminCTAPrimary} disabled:opacity-60`}
       >
         {pending ? "Publicando…" : "Publicar clase"}
       </button>

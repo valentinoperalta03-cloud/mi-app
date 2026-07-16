@@ -2,7 +2,7 @@ import Link from "next/link";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminBadgeError, adminCard, adminCTAPrimary, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -78,26 +78,26 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
 
       <form className={`${adminCard} flex items-end gap-3`}>
         <label className="flex-1 space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mes</span>
-          <input type="month" name="month" defaultValue={monthParam} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" />
+          <span className={adminKicker}>Mes</span>
+          <input type="month" name="month" defaultValue={monthParam} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]" />
         </label>
-        <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+        <button type="submit" className={adminCTAPrimary}>
           Filtrar
         </button>
       </form>
 
-      <section className={adminCard}>
+      <section className={`${adminCard} ${adminAccentBar}`}>
         {rows.length === 0 ? (
-          <p className="text-sm font-medium text-slate-500">No hay reembolsos para este mes.</p>
+          <p className="text-sm font-medium text-[var(--text-tertiary)]">No hay reembolsos para este mes.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((row) => (
-              <li key={row.id} className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/40">
+              <li key={row.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/70 px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800 dark:text-slate-100">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
-                  <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">{row.status ?? "—"}</span>
+                  <span className="font-semibold text-[var(--text-secondary)]">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
+                  <span className={adminBadgeError}>{row.status ?? "—"}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
                   {courtNameById.get(row.matches?.[0]?.court_id ?? "") ?? "Cancha"} · {row.matches?.[0]?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
                 </p>
               </li>

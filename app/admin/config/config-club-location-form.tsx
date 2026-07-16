@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import { saveClubLocation } from "../club/actions";
 import { LocationSelector } from "@/components/location-selector";
 import { inferLocationFromCity, type LocationSelection } from "@/lib/location-data";
@@ -38,10 +39,7 @@ export default function ConfigClubLocationForm({ initial }: Props) {
         name="location"
         value={clubLocation?.city ? formatCityLabel(clubLocation.city) : initial.location ?? ""}
       />
-      <button
-        type="submit"
-        className="rounded-xl bg-[#0585FC] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
-      >
+      <button type="submit" className={adminCTAPrimary}>
         Guardar ubicación
       </button>
     </form>

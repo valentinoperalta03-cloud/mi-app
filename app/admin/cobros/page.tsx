@@ -2,7 +2,15 @@
 import { redirect } from "next/navigation";
 import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeError,
+  adminBadgeNeutral,
+  adminCard,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -38,7 +46,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     return (
       <div className="flex flex-col gap-4 px-4 pb-28 pt-6 md:px-8">
         <AdminBackLink />
-        <p className="text-sm text-slate-600 dark:text-slate-300">No hay canchas asignadas a tu club.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No hay canchas asignadas a tu club.</p>
       </div>
     );
   }
@@ -276,18 +284,18 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
           <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
         </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-slate-800 dark:border-sky-800/40 dark:text-slate-200">
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)]">
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">¿Qué aparece acá?</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">¿Qué aparece acá?</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Sólo los pagos que el jugador eligió hacer en persona: <strong>efectivo</strong> o <strong>transferencia bancaria</strong>. Los pagos con Mercado Pago se confirman automáticamente y no aparecen aquí.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Flujo de un pago offline</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Flujo de un pago offline</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
               <li>El jugador reserva una cancha o se anota a una clase y elige pagar en persona.</li>
               <li>El sistema registra el cobro como <strong>pendiente</strong> y aparece en esta pantalla.</li>
               <li>Cuando el jugador te entrega el dinero o te hace la transferencia, hacé clic en <strong>Confirmar cobro</strong>. El pago queda registrado y el lugar confirmado.</li>
@@ -296,15 +304,15 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Resumen del día</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Resumen del día</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Las tarjetas del encabezado muestran cuántos cobros están pendientes, cuántos se confirmaron hoy y el total cobrado separado por efectivo y transferencia. Estos números se resetean con cada día nuevo.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Historial reciente</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Historial reciente</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               La sección <strong>Confirmados hoy</strong> muestra todos los cobros offline que ya procesaste en el día. Los últimos 20 cobros aprobados de reservas también son visibles en la lista de historial.
             </p>
           </div>
@@ -317,36 +325,36 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={adminCard}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pendientes</p>
+          <p className={adminKicker}>Pendientes</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
             {pending.length + practicePending.length}
           </p>
-          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">de cobro hoy</p>
+          <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">de cobro hoy</p>
         </div>
         <div className={adminCard}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Confirmados</p>
+          <p className={adminKicker}>Confirmados</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{confirmadosHoy}</p>
-          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">efectivo y transferencia</p>
+          <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">efectivo y transferencia</p>
         </div>
-        <div className={adminCard}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Total cobrado</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+        <div className={`${adminCard} ${adminAccentBar}`}>
+          <p className={adminKicker}>Total cobrado</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-[var(--text-primary)]">
             ${totalCobradoHoy.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </p>
-          <p className="mt-2 space-y-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <p className="mt-2 space-y-0.5 text-[11px] font-medium text-[var(--text-tertiary)]">
             <span className="block">💵 Efectivo: ${totalEfectivo.toLocaleString("es-AR")}</span>
             <span className="block">🏦 Transferencia: ${totalTransferencia.toLocaleString("es-AR")}</span>
           </p>
           {debtsTodayCount > 0 ? (
-            <p className="mt-2 text-[10px] font-medium text-slate-400">{debtsTodayCount} deuda(s) PadeLibre registradas</p>
+            <p className="mt-2 text-[10px] font-medium text-[var(--text-tertiary)]">{debtsTodayCount} deuda(s) PadeLibre registradas</p>
           ) : null}
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Pendientes ({todayAr})</h2>
+        <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Pendientes ({todayAr})</h2>
         {pending.length === 0 && practicePending.length === 0 ? (
-          <p className={`${adminCard} text-sm text-slate-500 dark:text-slate-400`}>No hay cobros pendientes para hoy.</p>
+          <p className={`${adminCard} text-sm text-[var(--text-tertiary)]`}>No hay cobros pendientes para hoy.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {practicePending.map((pr) => {
@@ -362,18 +370,18 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">{name}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
+                      <p className="text-sm text-[var(--text-tertiary)]">
                         Clase · {pr.title} · {time}
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    <p className="text-lg font-bold text-[var(--text-primary)]">
                       ${amount.toLocaleString("es-AR")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Método:</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span className="text-xs font-medium text-[var(--text-tertiary)]">Método:</span>
+                    <span className={adminBadgeNeutral}>
                       {methodLabel}
                     </span>
                   </div>
@@ -391,7 +399,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       <input type="hidden" name="registration_id" value={pr.id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)] active:scale-[0.99]"
                       >
                         No se presentó
                       </button>
@@ -411,23 +419,23 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
               return (
                 <li
                   key={m.id}
-                  className={`${adminCard} flex flex-col gap-3 border-slate-200/90 dark:border-slate-700`}
+                  className={`${adminCard} flex flex-col gap-3 border-[var(--border-subtle)]`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">{name}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
+                      <p className="text-sm text-[var(--text-tertiary)]">
                         {court} · {time} ·{" "}
                         {String(m.match_type ?? "").toLowerCase() === "reservation" ? "Reserva" : "Partido"}
                       </p>
                     </div>
-                    <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    <p className="text-lg font-bold text-[var(--text-primary)]">
                       ${amount.toLocaleString("es-AR")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Método:</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span className="text-xs font-medium text-[var(--text-tertiary)]">Método:</span>
+                    <span className={adminBadgeNeutral}>
                       {methodLabel}
                     </span>
                   </div>
@@ -445,7 +453,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       <input type="hidden" name="match_id" value={m.id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)] active:scale-[0.99]"
                       >
                         No se presentó
                       </button>
@@ -460,7 +468,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
       {paymentsToday.length > 0 || practiceApprovedToday.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmados hoy ({todayAr})</h2>
+          <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Confirmados hoy ({todayAr})</h2>
           <ul className="flex flex-col gap-2">
             {practiceApprovedToday.map((pr) => {
               const methodLabel =
@@ -478,11 +486,11 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                   className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">
                       Clase · {pr.title} · {time || "—"}
                     </p>
-                    <span className="mt-1.5 inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span className={`mt-1.5 inline-block ${adminBadgeNeutral}`}>
                       {methodLabel}
                     </span>
                   </div>
@@ -511,11 +519,11 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                   className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">
                       {court} · {time || "—"}
                     </p>
-                    <span className="mt-1.5 inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span className={`mt-1.5 inline-block ${adminBadgeNeutral}`}>
                       {methodLabel}
                     </span>
                   </div>
@@ -531,7 +539,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
       {noShows.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">No se presentaron hoy ({todayAr})</h2>
+          <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">No se presentaron hoy ({todayAr})</h2>
           <ul className="flex flex-col gap-2">
             {noShows.map((m) => {
               const name = playerName.get(m.owner_id) ?? "Jugador";
@@ -543,12 +551,12 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                   className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-rose-200/60 dark:border-rose-900/40`}
                 >
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">
                       {court} · {time || "—"}
                     </p>
                   </div>
-                  <span className="rounded-full border border-rose-200 bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+                  <span className={adminBadgeError}>
                     No show
                   </span>
                 </li>
@@ -558,7 +566,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
-      <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+      <p className="text-center text-xs text-[var(--text-tertiary)]">
         ¿Problemas con un cobro?{" "}
         <Link href="/admin/config" className="font-semibold text-[#0585FC] hover:underline">
           Configuración

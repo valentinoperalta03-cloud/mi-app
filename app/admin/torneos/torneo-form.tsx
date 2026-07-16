@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useActionState, useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import { MAX_PAIRS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
@@ -23,20 +24,20 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       ) : null}
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Nombre</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Nombre</span>
         <input
           name="name"
           required
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         />
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Tipo</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Tipo</span>
         <select
           name="tournament_type"
           required
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         >
           {TOURNAMENT_TYPE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value} disabled={o.value === "grupos_eliminacion"}>
@@ -47,43 +48,43 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Descripción (opcional)</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Descripción (opcional)</span>
         <textarea
           name="description"
           rows={2}
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Inicio (fecha)</span>
-          <input type="date" name="start_date" required className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">Inicio (fecha)</span>
+          <input type="date" name="start_date" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Fin (fecha)</span>
-          <input type="date" name="end_date" required className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">Fin (fecha)</span>
+          <input type="date" name="end_date" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
         </label>
       </div>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Hora de inicio</span>
-        <input type="time" name="start_time" required className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Hora de inicio</span>
+        <input type="time" name="start_time" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Cierre de inscripción</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Cierre de inscripción</span>
         <input
           type="datetime-local"
           name="registration_deadline"
           required
-          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         />
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Máx. parejas</span>
-        <select name="max_pairs" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Máx. parejas</span>
+        <select name="max_pairs" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
           {MAX_PAIRS_OPTIONS.map((n) => (
             <option key={n} value={n}>
               {n}
@@ -93,7 +94,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       </label>
 
       <div className="block">
-        <label htmlFor="price_per_pair" className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+        <label htmlFor="price_per_pair" className="text-xs font-semibold text-[var(--text-secondary)]">
           Precio por pareja (ARS, para el club)
         </label>
         <input
@@ -104,7 +105,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
           step="100"
           defaultValue={0}
           onChange={(e) => setClubPrice(Number(e.target.value) || 0)}
-          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         />
         <p className="mt-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           Los jugadores verán{" "}
@@ -116,18 +117,18 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       <TournamentDepositFields pricePerPair={clubPrice} />
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Premio (opcional)</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Premio (opcional)</span>
         <input
           name="prize"
           placeholder="Recomendamos agregar un premio visible para los jugadores"
-          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Categoría mínima (ELO)</span>
-          <select name="category_min" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">Categoría mínima (ELO)</span>
+          <select name="category_min" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
             <option value="">Libre (sin piso)</option>
             {LEVEL_HIERARCHY.map((label, idx) => (
               <option key={label} value={eloBandMin(idx)}>
@@ -137,8 +138,8 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Categoría máxima (ELO)</span>
-          <select name="category_max" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+          <span className="text-xs font-semibold text-[var(--text-secondary)]">Categoría máxima (ELO)</span>
+          <select name="category_max" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
             <option value="">Libre (sin techo)</option>
             {LEVEL_HIERARCHY.map((label, idx) => (
               <option key={`m-${label}`} value={eloBandMax(idx)}>
@@ -150,8 +151,8 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       </div>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Horas de cancelación</span>
-        <select name="cancellation_hours" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">Horas de cancelación</span>
+        <select name="cancellation_hours" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
           <option value={24}>24</option>
           <option value={48}>48</option>
           <option value={72}>72</option>
@@ -161,7 +162,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-2xl bg-[#0461C4] py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+        className={`w-full text-center ${adminCTAPrimary} disabled:opacity-50`}
       >
         {pending ? "Guardando…" : "Crear torneo"}
       </button>

@@ -1,7 +1,16 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeError,
+  adminBadgeLima,
+  adminCTAPrimary,
+  adminCard,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -109,8 +118,8 @@ export default async function AdminCanchasPage({
               Configuración de seña {clubDepositValue > 0 ? "✓" : "⚠️ Sin configurar"}
             </span>
           </summary>
-          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-4 space-y-3 border-t border-[var(--border-subtle)] pt-4">
+            <p className="text-sm text-[var(--text-tertiary)]">
               {clubDepositValue > 0
                 ? "Esta seña aplica a todas las canchas de tu club."
                 : "Todavía no configuraste la seña de tu club. Hasta que la configures, se cobra el 100% del turno por Mercado Pago al confirmar."}
@@ -118,10 +127,7 @@ export default async function AdminCanchasPage({
             <form action={updateClubDeposit} className="space-y-3">
               <input type="hidden" name="club_id" value={mainClubId} />
               <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
-              <button
-                type="submit"
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
+              <button type="submit" className={adminCTAPrimary}>
                 Guardar
               </button>
             </form>
@@ -130,19 +136,19 @@ export default async function AdminCanchasPage({
       ) : null}
 
       {ctx.clubs.length > 0 ? (
-        <details className={`${adminCard} group`}>
+        <details className={`${adminCard} ${adminAccentBar} group`}>
           <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
             <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-2 group-open:border-[#0585FC]/30">
               Nueva cancha +
             </span>
           </summary>
-          <form action={createCourt} className="mt-4 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <form action={createCourt} className="mt-4 space-y-4 border-t border-[var(--border-subtle)] pt-4">
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Club</span>
+              <span className={adminKicker}>Club</span>
               <select
                 name="club_id"
                 required
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                 defaultValue={ctx.clubs[0]?.id ?? ""}
               >
                 {ctx.clubs.map((c) => (
@@ -153,17 +159,17 @@ export default async function AdminCanchasPage({
               </select>
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nombre</span>
+              <span className={adminKicker}>Nombre</span>
               <input
                 name="name"
                 type="text"
                 required
                 placeholder="Ej. Cancha 1"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span className={adminKicker}>
                 Precio del turno (90 min)
               </span>
               <input
@@ -172,15 +178,15 @@ export default async function AdminCanchasPage({
                 min={0}
                 required
                 placeholder="0"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Superficie</span>
+              <span className={adminKicker}>Superficie</span>
               <select
                 name="surface"
                 required
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                 defaultValue="cemento"
               >
                 <option value="cemento">Cemento</option>
@@ -189,15 +195,12 @@ export default async function AdminCanchasPage({
                 <option value="moqueta">Moqueta</option>
               </select>
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200">
-              <input type="checkbox" name="indoor" className="h-4 w-4 rounded border-slate-300" />
+            <label className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)]">
+              <input type="checkbox" name="indoor" className="h-4 w-4 rounded border-[var(--border-subtle)]" />
               Techada
             </label>
             <CourtImageUploader courtId={`new-${ctx.userId}`} label="Imagen de cancha" />
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
+            <button type="submit" className={`w-full ${adminCTAPrimary}`}>
               Crear cancha
             </button>
           </form>
@@ -209,7 +212,7 @@ export default async function AdminCanchasPage({
       )}
 
       {courts.length === 0 ? (
-        <p className={`${adminCard} text-center text-sm font-medium text-slate-500`}>
+        <p className={`${adminCard} text-center text-sm font-medium text-[var(--text-tertiary)]`}>
           Todavía no tenés canchas. Creá la primera con el formulario de arriba.
         </p>
       ) : (
@@ -220,22 +223,26 @@ export default async function AdminCanchasPage({
                 <div className="flex items-start gap-3">
                   {c.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element -- URL pública storage
-                    <img src={c.image_url} alt={c.name ?? "Cancha"} className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+                    <img src={c.image_url} alt={c.name ?? "Cancha"} className="h-20 w-20 rounded-xl object-cover ring-1 ring-[var(--border-subtle)]" />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-200 text-lg font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-secondary)]">
                       {(c.name ?? "C").slice(0, 2).toUpperCase()}
                     </div>
                   )}
                   <div>
-                    <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{c.name ?? "Cancha"}</p>
+                    <p className="text-xl font-bold text-[var(--text-primary)]">{c.name ?? "Cancha"}</p>
                     <p className="text-base font-semibold text-[#0461C4]">${c.price ?? 0}/turno</p>
-                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                      {blockedCourtIds.has(c.id) ? "🔴 Bloqueada hoy" : "🟢 Disponible"}
+                    <p className="mt-1">
+                      {blockedCourtIds.has(c.id) ? (
+                        <span className={adminBadgeError}>🔴 Bloqueada hoy</span>
+                      ) : (
+                        <span className={adminBadgeLima}>🟢 Disponible</span>
+                      )}
                     </p>
-                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">
                       {getPriceSummary(c.id)}
                     </p>
-                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">
                     {c.surface ? c.surface : "Superficie no definida"} · {c.indoor ? "Techada" : "Descubierta"}
                     </p>
                   </div>
@@ -243,15 +250,15 @@ export default async function AdminCanchasPage({
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Link
                     href={`/admin/canchas/${c.id}/horarios`}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:text-slate-200"
+                    className="rounded-2xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5"
                   >
                     Precios
                   </Link>
                 </div>
               </div>
-              <details className="mt-4 rounded-2xl border border-slate-200 bg-transparent p-4 dark:border-slate-700">
+              <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-transparent p-4">
                 <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  <span className="inline-flex rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5">
                     Editar
                   </span>
                 </summary>
@@ -262,7 +269,7 @@ export default async function AdminCanchasPage({
                     type="text"
                     required
                     defaultValue={c.name ?? ""}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
                   />
                   <input
                     name="price"
@@ -270,25 +277,25 @@ export default async function AdminCanchasPage({
                     min={0}
                     required
                     defaultValue={c.price ?? 0}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
                   />
                   <select
                     name="surface"
                     defaultValue={c.surface ?? "cemento"}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
                   >
                     <option value="cemento">Cemento</option>
                     <option value="cristal">Cristal</option>
                     <option value="cesped sintetico">Césped sintético</option>
                     <option value="moqueta">Moqueta</option>
                   </select>
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <input type="checkbox" name="indoor" defaultChecked={Boolean(c.indoor)} className="h-4 w-4 rounded border-slate-300" />
+                  <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)]">
+                    <input type="checkbox" name="indoor" defaultChecked={Boolean(c.indoor)} className="h-4 w-4 rounded border-[var(--border-subtle)]" />
                     Techada
                   </label>
                   <CourtImageUploader courtId={c.id} initialUrl={c.image_url ?? ""} label="Imagen de cancha" />
                   <div className="flex flex-wrap gap-2">
-                    <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+                    <button type="submit" className={adminCTAPrimary}>
                       Guardar cambios
                     </button>
                     <button

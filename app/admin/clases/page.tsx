@@ -3,6 +3,15 @@ import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { GraduationCap, Info, Plus } from "lucide-react";
+import {
+  adminAccentBar,
+  adminBadgeNeutral,
+  adminCard,
+  adminCTAPrimary,
+  adminSectionLabel,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
@@ -35,12 +44,12 @@ export default async function AdminClasesPage() {
     <div className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Clases</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Prácticas y entrenamientos de tu club.</p>
+          <h1 className={adminTitle}>Clases</h1>
+          <p className={`mt-1 ${adminSubtitle}`}>Prácticas y entrenamientos de tu club.</p>
         </div>
         <Link
           href="/admin/clases/nuevo"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#0461C4] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+          className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
         >
           <Plus size={18} />
           Crear
@@ -54,26 +63,26 @@ export default async function AdminClasesPage() {
           <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
           <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
         </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-slate-800 dark:border-sky-800/40 dark:text-slate-200">
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)] dark:border-sky-800/40">
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">¿Qué es una clase en PadeLibre?</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">¿Qué es una clase en PadeLibre?</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Las clases son sesiones de entrenamiento o práctica que tu club ofrece a los jugadores. Pueden ser únicas (un solo día) o recurrentes (todas las semanas en el mismo día y hora). Los jugadores las ven en la app, se inscriben y pagan directamente.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Tipos de recurrencia</p>
-            <ul className="mt-1.5 space-y-1.5 text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Tipos de recurrencia</p>
+            <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
               <li><span className="font-semibold">Clase única:</span> Se dicta una sola vez en la fecha que indiques. Ideal para clínicas o eventos especiales.</li>
               <li><span className="font-semibold">Semanal:</span> Se repite cada semana entre la fecha de inicio y la de fin. PadeLibre genera automáticamente una sesión por cada semana.</li>
             </ul>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Paso a paso para crear una clase</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Paso a paso para crear una clase</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
               <li>Hacé clic en <strong>Crear</strong> y completá los datos: título, tipo, fechas, hora, precio, cupos y cancha.</li>
               <li>Asigná un coach desde el detalle de la clase (opcional).</li>
               <li>Publicá la clase con el botón <strong>Publicar</strong>. A partir de ahí los jugadores la pueden ver y anotarse.</li>
@@ -82,8 +91,8 @@ export default async function AdminClasesPage() {
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Estados de una clase</p>
-            <ul className="mt-1.5 space-y-1.5 text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Estados de una clase</p>
+            <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
               <li><span className="font-semibold">Borrador:</span> Sólo la ves vos. Podés editarla antes de publicar.</li>
               <li><span className="font-semibold">Publicada:</span> Visible para todos los jugadores en la app.</li>
               <li><span className="font-semibold">Finalizada:</span> Terminó el período de clases. Ya no acepta nuevas inscripciones.</li>
@@ -91,15 +100,15 @@ export default async function AdminClasesPage() {
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Precios</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Precios</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Configurás el precio base por sesión. El jugador paga exactamente el precio que vos definís. El 100% va a tu cuenta.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Cobros offline (efectivo / transferencia)</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Cobros offline (efectivo / transferencia)</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Si un jugador elige pagar en persona, aparece en la sección <strong>Cobros</strong> del panel admin. Confirmás el pago ahí cuando recibís el dinero.
             </p>
           </div>
@@ -111,7 +120,7 @@ export default async function AdminClasesPage() {
       </details>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <h2 className={`mb-3 ${adminSectionLabel}`}>
           Registro de clases
         </h2>
         <ul className="space-y-2">
@@ -125,7 +134,7 @@ export default async function AdminClasesPage() {
             max_spots: number;
             price_base: number;
           }>).length === 0 ? (
-            <li className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <li className="rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-8 text-center text-sm text-[var(--text-tertiary)]">
               <GraduationCap className="mx-auto mb-2 h-8 w-8 opacity-40" />
               Todavía no hay clases.
             </li>
@@ -149,10 +158,10 @@ export default async function AdminClasesPage() {
               <li key={p.id}>
                 <Link
                   href={`/admin/clases/${p.id}`}
-                  className="block rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-[#0461C4]/40 dark:border-slate-800 dark:bg-slate-950"
+                  className={`block ${adminCard} hover:-translate-y-0.5 ${p.status === "open" ? adminAccentBar : ""}`}
                 >
-                  <p className="font-semibold text-slate-900 dark:text-white">{p.title}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="font-semibold text-[var(--text-primary)]">{p.title}</p>
+                  <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                     {PRACTICE_STATUS_LABELS[p.status] ?? p.status} · {dateLabel}
                     {nSessions > 0 ? ` · ${nSessions} fecha(s)` : ""} · {p.max_spots} cupos · $
                     {Number(p.price_base).toLocaleString("es-AR")}

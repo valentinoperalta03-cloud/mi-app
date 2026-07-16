@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 
 export type MobileSlotKind = "available" | "blocked" | "fixed" | "reservation";
 
@@ -118,12 +119,9 @@ function SlotCard({
             type="text"
             name="reason"
             placeholder="Motivo (opcional)"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
           />
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
-          >
+          <button type="submit" className={`w-full ${adminCTAPrimary}`}>
             Bloquear horario
           </button>
         </form>

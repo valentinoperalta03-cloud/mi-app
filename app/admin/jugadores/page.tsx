@@ -4,7 +4,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminBadgeBrand, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { AdminPressableSurface } from "@/components/admin/admin-pressable";
 import { PlayerAvatar, PlayerSegmentPill } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -279,46 +279,46 @@ export default async function AdminJugadoresPage() {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className={adminCard}>
           <p className={adminKicker}>Total jugadores únicos (mes)</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{totalUniqueMonth}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{newThisMonth} jugadores nuevos este mes</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{totalUniqueMonth}</p>
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]">{newThisMonth} jugadores nuevos este mes</p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Nuevos vs recurrentes</p>
-          <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{nuevos} / {recurrentes}</p>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <p className="mt-2 text-lg font-bold text-[var(--text-primary)]">{nuevos} / {recurrentes}</p>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
             <div
               className="h-full rounded-full bg-[#0585FC]"
               style={{ width: `${Math.max(0, Math.min(100, nuevosRatio))}%` }}
             />
           </div>
         </div>
-        <div className={adminCard}>
+        <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Jugador más activo</p>
           {topPlayer ? (
             <div className="mt-2 flex items-center gap-2">
               {topPlayer.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-                <img src={topPlayer.avatarUrl} alt={topPlayer.name} className="h-8 w-8 rounded-full border border-slate-200 object-cover" />
+                <img src={topPlayer.avatarUrl} alt={topPlayer.name} className="h-8 w-8 rounded-full border border-[var(--border-subtle)] object-cover" />
               ) : (
                 <PlayerAvatar name={topPlayer.name} />
               )}
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <p className="text-sm font-bold text-[var(--text-primary)]">
                 {topPlayer.name} ({topPlayer.totalPlayed})
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">Sin datos</p>
+            <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">Sin datos</p>
           )}
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Tasa de retención</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{retentionRate}%</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Jugadores que volvieron más de una vez</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{retentionRate}%</p>
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]">Jugadores que volvieron más de una vez</p>
         </div>
       </section>
 
       {list.length === 0 ? (
-        <p className={`${adminCard} text-center text-sm font-medium text-slate-500`}>
+        <p className={`${adminCard} text-center text-sm font-medium text-[var(--text-tertiary)]`}>
           Todavía no hay creadores de partidos en tus canchas.
         </p>
       ) : (
@@ -329,34 +329,34 @@ export default async function AdminJugadoresPage() {
                 <div className="flex gap-4">
                   {row.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-                    <img src={row.avatarUrl} alt={row.name} className="h-12 w-12 rounded-full border border-slate-200 object-cover" />
+                    <img src={row.avatarUrl} alt={row.name} className="h-12 w-12 rounded-full border border-[var(--border-subtle)] object-cover" />
                   ) : (
                     <PlayerAvatar name={row.name} />
                   )}
                   <div className="min-w-0 flex-1 space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{row.name}</p>
-                        <p className="mt-0.5 text-xs font-medium text-slate-400">
+                        <p className="truncate text-lg font-bold text-[var(--text-primary)]">{row.name}</p>
+                        <p className="mt-0.5 text-xs font-medium text-[var(--text-tertiary)]">
                           ID: {row.uid.slice(0, 8)}…
                         </p>
                       </div>
                       <PlayerSegmentPill segment={row.segment} />
                     </div>
-                    <dl className="grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2 dark:border-slate-800">
+                    <dl className="grid grid-cols-1 gap-4 border-t border-[var(--border-subtle)] pt-4 text-sm sm:grid-cols-2">
                       <div>
                         <dt className={adminKicker}>Reservas creadas</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{row.reservationsCreated}</dd>
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.reservationsCreated}</dd>
                       </div>
                       <div>
                         <dt className={adminKicker}>Última reserva</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                           {format(parseISO(row.last), "d MMM yyyy HH:mm", { locale: es })}
                         </dd>
                       </div>
                       <div>
                         <dt className={adminKicker}>Estado</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                           {blockedSet.has(row.uid) ? "Bloqueado" : "Activo"}
                         </dd>
                       </div>
@@ -364,9 +364,9 @@ export default async function AdminJugadoresPage() {
                         <dt className={adminKicker}>Nivel ELO y categoría</dt>
                         <dd className="mt-1">
                           {row.levelBadge === "Sin nivelar" ? (
-                            <span className="font-semibold text-slate-600 dark:text-slate-300">Sin nivelar</span>
+                            <span className="font-semibold text-[var(--text-secondary)]">Sin nivelar</span>
                           ) : (
-                            <span className="inline-flex rounded-full border border-[#0585FC]/25 bg-[#0585FC]/10 px-2 py-0.5 font-semibold text-[#0461C4] dark:text-sky-300">
+                            <span className={adminBadgeBrand}>
                               {row.levelBadge}
                             </span>
                           )}
@@ -374,7 +374,7 @@ export default async function AdminJugadoresPage() {
                       </div>
                       <div>
                         <dt className={adminKicker}>Partidos totales en este club</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{row.totalPlayed} partidos jugados</dd>
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.totalPlayed} partidos jugados</dd>
                       </div>
                       <div>
                         <dt className={adminKicker}>Tasa de cancelación</dt>
@@ -382,7 +382,7 @@ export default async function AdminJugadoresPage() {
                           className={`mt-1 font-semibold ${
                             row.cancellationRate > 30
                               ? "text-rose-700 dark:text-rose-400"
-                              : "text-slate-800 dark:text-slate-200"
+                              : "text-[var(--text-secondary)]"
                           }`}
                         >
                           {row.cancellationRate > 30 ? "⚠️ " : ""}
@@ -391,13 +391,13 @@ export default async function AdminJugadoresPage() {
                       </div>
                       <div>
                         <dt className={adminKicker}>Horario favorito</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                           {row.favoriteSlot === "Sin historial" ? "Sin historial" : `Juega más a las ${row.favoriteSlot}hs`}
                         </dd>
                       </div>
                       <div>
                         <dt className={adminKicker}>Posición en cancha</dt>
-                        <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{row.courtPosition}</dd>
+                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.courtPosition}</dd>
                       </div>
                     </dl>
                     <div className="flex flex-wrap items-center gap-2">
@@ -407,7 +407,7 @@ export default async function AdminJugadoresPage() {
                           <input
                             name="reason"
                             placeholder="Motivo (opcional)"
-                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+                            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
                           />
                           <button
                             type="submit"
@@ -429,7 +429,7 @@ export default async function AdminJugadoresPage() {
                       )}
                       <Link
                         href={`/admin/reservas?selected=&date=${format(parseISO(row.last), "yyyy-MM-dd")}`}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]"
                       >
                         Ver reservas
                       </Link>

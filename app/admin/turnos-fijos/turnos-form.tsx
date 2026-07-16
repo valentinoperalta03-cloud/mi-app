@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import { createFixedSlot } from "./actions";
 
 type Court = { id: string; name: string | null };
@@ -62,12 +63,12 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
         const res = await createFixedSlot(formData);
         if (res?.error) setError(res.error);
       }}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+      className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="text-sm font-semibold text-[var(--text-secondary)]">
           Cancha
-          <select name="court_id" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <select name="court_id" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]">
             <option value="">Seleccionar</option>
             {courts.map((court) => (
               <option key={court.id} value={court.id}>
@@ -76,9 +77,9 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
             ))}
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="text-sm font-semibold text-[var(--text-secondary)]">
           Dia
-          <select name="day_of_week" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <select name="day_of_week" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]">
             {DAY_OPTIONS.map((d) => (
               <option key={d.value} value={d.value}>
                 {d.label}
@@ -89,9 +90,9 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="text-sm font-semibold text-[var(--text-secondary)]">
           Horario
-          <select name="start_time" required className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <select name="start_time" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]">
             {SLOT_OPTIONS.map((slot) => (
               <option key={slot} value={slot}>
                 {slot}
@@ -99,31 +100,31 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
             ))}
           </select>
         </label>
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="text-sm font-semibold text-[var(--text-secondary)]">
           Duracion
           <input
             name="duration_minutes"
             defaultValue="90"
             required
-            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
           />
         </label>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">Buscar jugadores</label>
+        <label className="text-sm font-semibold text-[var(--text-secondary)]">Buscar jugadores</label>
         <input
           value={query}
           onChange={(e) => void searchPlayers(e.target.value)}
           placeholder="Nombre del jugador"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+          className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
         />
-        {loading ? <p className="text-xs text-slate-500">Buscando...</p> : null}
+        {loading ? <p className="text-xs text-[var(--text-tertiary)]">Buscando...</p> : null}
         {results.length > 0 ? (
-          <ul className="space-y-1 rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+          <ul className="space-y-1 rounded-xl border border-[var(--border-subtle)] p-2">
             {results.map((r) => (
               <li key={r.user_id} className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-700 dark:text-slate-200">{r.name ?? "Jugador"}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{r.name ?? "Jugador"}</span>
                 <button
                   type="button"
                   onClick={() => addPlayer(r)}
@@ -140,8 +141,8 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
       {selected.length > 0 ? (
         <ul className="space-y-2">
           {selected.map((p) => (
-            <li key={p.playerId} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-              <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">{p.name}</span>
+            <li key={p.playerId} className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2">
+              <span className="flex-1 text-sm font-medium text-[var(--text-secondary)]">{p.name}</span>
               <button
                 type="button"
                 onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
@@ -153,17 +154,14 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-slate-500">Seleccioná hasta 4 jugadores.</p>
+        <p className="text-xs text-[var(--text-tertiary)]">Seleccioná hasta 4 jugadores.</p>
       )}
 
       <input type="hidden" name="players_payload" value={playersPayload} />
 
       {error ? <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
 
-      <button
-        type="submit"
-        className="w-full rounded-2xl bg-gradient-to-r from-[#0585FC] to-[#0461C4] py-3 text-sm font-semibold text-white"
-      >
+      <button type="submit" className={`w-full ${adminCTAPrimary}`}>
         Crear turno fijo
       </button>
     </form>

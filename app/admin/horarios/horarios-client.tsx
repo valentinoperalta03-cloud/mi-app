@@ -144,8 +144,8 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
               onClick={() => setSelectedDay(idx)}
               className={`relative flex shrink-0 flex-col items-center gap-0.5 rounded-2xl px-3.5 py-2 text-xs font-semibold transition-all ${
                 selectedDay === idx
-                  ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                  ? "bg-[var(--text-primary)] text-[var(--bg-card)]"
+                  : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:brightness-95"
               }`}
             >
               {label}
@@ -154,7 +154,7 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
                   {dayBlockCount} bloq.
                 </span>
               ) : (
-                <span className={`text-[10px] ${selectedDay === idx ? "text-slate-300" : "text-slate-400"}`}>
+                <span className={`text-[10px] ${selectedDay === idx ? "opacity-60" : "text-[var(--text-tertiary)]"}`}>
                   libre
                 </span>
               )}
@@ -166,8 +166,8 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
       {/* Header del día */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-bold text-slate-900 dark:text-slate-100">{DAY_LABELS[selectedDay]}</p>
-          <p className="text-xs text-slate-500">
+          <p className="font-bold text-[var(--text-primary)]">{DAY_LABELS[selectedDay]}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">
             {blockedCount === 0
               ? "Todos los turnos disponibles"
               : `${blockedCount} turno${blockedCount !== 1 ? "s" : ""} bloqueado${blockedCount !== 1 ? "s" : ""}`}
@@ -217,7 +217,7 @@ export default function HorariosClient({ clubId, openTime, initialBlocks }: Prop
       </div>
 
       {pending ? (
-        <p className="text-center text-xs text-slate-400">Guardando…</p>
+        <p className="text-center text-xs text-[var(--text-tertiary)]">Guardando…</p>
       ) : null}
     </div>
   );

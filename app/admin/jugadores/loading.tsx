@@ -22,7 +22,7 @@ export default function JugadoresLoading() {
                   </div>
                   <SkeletonBlock className="h-7 w-28 shrink-0 rounded-full" />
                 </div>
-                <div className="grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                <div className="grid gap-3 border-t border-[var(--border-subtle)] pt-4 sm:grid-cols-2">
                   <SkeletonBlock className="h-14 w-full rounded-xl" />
                   <SkeletonBlock className="h-14 w-full rounded-xl" />
                 </div>

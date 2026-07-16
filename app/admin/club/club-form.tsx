@@ -3,6 +3,7 @@
 import { Camera, Loader2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { LocationSelector } from "@/components/location-selector";
+import { adminCard, adminCTAPrimary, adminKicker } from "@/components/admin/admin-premium";
 import { inferLocationFromCity, type LocationSelection } from "@/lib/location-data";
 import { formatCityLabel } from "@/lib/locations";
 import { updateClubInfo } from "./actions";
@@ -185,42 +186,42 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
       pathBase: "logo",
       state: logoUrl,
       setState: setLogoUrl,
-      previewClass: "h-16 w-16 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-16 w-16 rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto principal / portada",
       pathBase: "cover",
       state: coverUrl,
       setState: setCoverUrl,
-      previewClass: "h-32 w-full max-w-md rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-32 w-full max-w-md rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto adicional 1",
       pathBase: "gallery-1",
       state: g1,
       setState: setG1,
-      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto adicional 2",
       pathBase: "gallery-2",
       state: g2,
       setState: setG2,
-      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto adicional 3",
       pathBase: "gallery-3",
       state: g3,
       setState: setG3,
-      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto adicional 4",
       pathBase: "gallery-4",
       state: g4,
       setState: setG4,
-      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-24 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
   ];
 
@@ -229,7 +230,7 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
   return (
     <form
       action={updateClubInfo}
-      className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+      className={`${adminCard} space-y-4`}
       onSubmit={(e) => {
         if (uploading) e.preventDefault();
       }}
@@ -244,11 +245,11 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
       <input type="hidden" name="gallery_image_4" value={g4} />
 
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nombre del club</span>
-        <input name="name" defaultValue={initial.name} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Nombre del club</span>
+        <input name="name" defaultValue={initial.name} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
       <div className="space-y-2">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Ciudad del club</span>
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Ciudad del club</span>
         <LocationSelector initial={initialLocation} onLocationSelect={setClubLocation} />
         <input type="hidden" name="country" value={clubLocation?.country ?? ""} />
         <input type="hidden" name="province" value={clubLocation?.province ?? ""} />
@@ -260,35 +261,35 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
         />
       </div>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Descripción</span>
-        <textarea name="description" defaultValue={initial.description} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Descripción</span>
+        <textarea name="description" defaultValue={initial.description} rows={4} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dirección completa</span>
-        <input name="address" defaultValue={initial.address} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Dirección completa</span>
+        <input name="address" defaultValue={initial.address} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Teléfono de contacto</span>
-        <input name="contact_phone" defaultValue={initial.contact_phone} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Teléfono de contacto</span>
+        <input name="contact_phone" defaultValue={initial.contact_phone} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">WhatsApp (número)</span>
-        <input name="whatsapp" defaultValue={initial.whatsapp} placeholder="Ej. 549341..." className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">WhatsApp (número)</span>
+        <input name="whatsapp" defaultValue={initial.whatsapp} placeholder="Ej. 549341..." className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Instagram (usuario, sin @)</span>
-        <input name="instagram" defaultValue={initial.instagram} placeholder="padelibre" className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Instagram (usuario, sin @)</span>
+        <input name="instagram" defaultValue={initial.instagram} placeholder="padelibre" className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
 
       <div className="space-y-2">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Horario de atención general</span>
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Horario de atención general</span>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-secondary)]">
             Apertura
             <select
               value={hoursOpen}
               onChange={(e) => setHoursOpen(e.target.value)}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
             >
               {TIME_SLOTS.map((t) => (
                 <option key={`o-${t}`} value={t}>
@@ -297,13 +298,13 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
               ))}
             </select>
           </label>
-          <span className="pt-5 text-slate-500">—</span>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+          <span className="pt-5 text-[var(--text-tertiary)]">—</span>
+          <label className="flex flex-col gap-1 text-xs font-medium text-[var(--text-secondary)]">
             Cierre
             <select
               value={hoursClose}
               onChange={(e) => setHoursClose(e.target.value)}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
             >
               {TIME_SLOTS.map((t) => (
                 <option key={`c-${t}`} value={t}>
@@ -313,22 +314,22 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
             </select>
           </label>
         </div>
-        <p className="text-xs text-slate-500">Se guarda como: {hoursOpen} - {hoursClose}</p>
+        <p className="text-xs text-[var(--text-tertiary)]">Se guarda como: {hoursOpen} - {hoursClose}</p>
       </div>
 
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Imágenes (subida directa)</p>
+      <p className={adminKicker}>Imágenes (subida directa)</p>
       {uploadError ? <p className="text-sm text-rose-600">{uploadError}</p> : null}
 
       {slots.map((slot, idx) => (
-        <div key={slot.pathBase} className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
+        <div key={slot.pathBase} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/80 p-4">
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">{slot.label}</p>
           <div className="mt-3 flex flex-wrap items-start gap-4">
             <div className="relative">
               {slot.state ? (
                 // eslint-disable-next-line @next/next/no-img-element -- preview URL pública o existente
                 <img src={slot.state} alt="" className={slot.previewClass} />
               ) : (
-                <div className={`flex items-center justify-center bg-slate-200/80 text-xs text-slate-500 dark:bg-slate-800 ${slot.previewClass}`}>
+                <div className={`flex items-center justify-center bg-[var(--bg-subtle)]/80 text-xs text-[var(--text-tertiary)] ${slot.previewClass}`}>
                   Sin imagen
                 </div>
               )}
@@ -336,7 +337,7 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
                 type="button"
                 onClick={() => fileRefs[idx]?.current?.click()}
                 disabled={uploading !== null}
-                className="absolute -bottom-1 -right-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-slate-900 text-white shadow disabled:opacity-50 dark:border-slate-600"
+                className="absolute -bottom-1 -right-1 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#0A0A0A] text-white shadow disabled:opacity-50"
                 aria-label={`Subir ${slot.label}`}
               >
                 {uploading === slot.pathBase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera size={16} />}
@@ -358,55 +359,55 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
                 }}
               />
             </div>
-            <p className="max-w-sm text-xs text-slate-500">JPEG, PNG o WebP. Máx. 5MB. Se guarda en Storage y la URL en el club.</p>
+            <p className="max-w-sm text-xs text-[var(--text-tertiary)]">JPEG, PNG o WebP. Máx. 5MB. Se guarda en Storage y la URL en el club.</p>
           </div>
         </div>
       ))}
 
       <label className="block space-y-1">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Política de cancelación (opcional)</span>
-        <textarea name="cancellation_policy" defaultValue={initial.cancellation_policy} rows={3} className="w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" />
+        <span className="text-sm font-semibold text-[var(--text-secondary)]">Política de cancelación (opcional)</span>
+        <textarea name="cancellation_policy" defaultValue={initial.cancellation_policy} rows={3} className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2" />
       </label>
 
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Métodos de pago aceptados</p>
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Mercado Pago</span>
+      <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/80 p-4">
+        <p className="text-sm font-bold text-[var(--text-secondary)]">Métodos de pago aceptados</p>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2.5">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Mercado Pago</span>
           <span
-            className={`text-xs font-semibold ${isMpConnected ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}
+            className={`text-xs font-semibold ${isMpConnected ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-tertiary)]"}`}
           >
             {isMpConnected ? "Conectado" : "No conectado"}
           </span>
         </div>
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
-          <input type="checkbox" name="accepts_cash" defaultChecked={initial.accepts_cash} className="h-4 w-4 rounded border-slate-300" />
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Efectivo en el club</span>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2.5">
+          <input type="checkbox" name="accepts_cash" defaultChecked={initial.accepts_cash} className="h-4 w-4 rounded border-[var(--border-subtle)]" />
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Efectivo en el club</span>
         </label>
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950">
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2.5">
           <input
             type="checkbox"
             name="accepts_transfer"
             defaultChecked={initial.accepts_transfer}
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded border-[var(--border-subtle)]"
           />
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Transferencia bancaria</span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Transferencia bancaria</span>
         </label>
         <div className="space-y-2">
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Alias CBU</span>
+            <span className="text-xs font-semibold text-[var(--text-tertiary)]">Alias CBU</span>
             <input
               name="bank_alias"
               defaultValue={initial.bank_alias}
               placeholder="Ej. mi.alias.mp"
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">CBU (opcional)</span>
+            <span className="text-xs font-semibold text-[var(--text-tertiary)]">CBU (opcional)</span>
             <input
               name="bank_cbu"
               defaultValue={initial.bank_cbu}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             />
           </label>
         </div>
@@ -415,7 +416,7 @@ export default function ClubForm({ clubId, isMpConnected, initial }: Props) {
       <button
         type="submit"
         disabled={uploading !== null}
-        className="rounded-xl bg-[#0585FC] px-4 py-2 font-semibold text-white disabled:opacity-60"
+        className={`${adminCTAPrimary} disabled:opacity-60`}
       >
         Guardar cambios
       </button>

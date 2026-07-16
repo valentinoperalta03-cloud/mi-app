@@ -58,15 +58,23 @@
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
-  /* Admin — header */
-  --admin-header-bg: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
-  --admin-header-text: #ffffff;
-  --admin-header-text-muted: rgba(255, 255, 255, 0.7);
+  /* Admin — header/topbar: negro con acento lima en modo claro */
+  --admin-header-bg: #0A0A0A;
+  --admin-header-text: #CCFF00;
+  --admin-header-text-muted: rgba(204, 255, 0, 0.7);
+  --admin-header-active-bg: rgba(204, 255, 0, 0.15);
+  --admin-header-logo-border: #CCFF00;
 
   /* Admin — estados positivos con lima */
   --admin-status-active-bg: rgba(204, 255, 0, 0.12);
   --admin-status-active-border: rgba(204, 255, 0, 0.4);
   --admin-status-active-text: #5a7a00;
+
+  /* Admin — cards con borde/sombra con tinte azul */
+  --admin-card-border: rgba(5, 133, 252, 0.12);
+  --admin-card-border-hover: rgba(5, 133, 252, 0.25);
+  --admin-card-shadow: 0 1px 3px rgba(5, 133, 252, 0.06), 0 8px 24px rgba(5, 133, 252, 0.08);
+  --admin-card-shadow-hover: 0 4px 20px rgba(5, 133, 252, 0.12);
 }
 
 .dark {
@@ -95,10 +103,23 @@
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.16);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
 
+  /* Admin — header/topbar: gradiente azul con texto negro en modo oscuro */
+  --admin-header-bg: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  --admin-header-text: #0A0A0A;
+  --admin-header-text-muted: rgba(10, 10, 10, 0.7);
+  --admin-header-active-bg: rgba(255, 255, 255, 0.25);
+  --admin-header-logo-border: rgba(10, 10, 10, 0.2);
+
   /* Admin — estados positivos con lima (dark) */
   --admin-status-active-bg: rgba(204, 255, 0, 0.16);
   --admin-status-active-border: rgba(204, 255, 0, 0.5);
-  --admin-status-active-text: #d4e600;
+  --admin-status-active-text: #e4ff66;
+
+  /* Admin — cards con borde/sombra (dark) */
+  --admin-card-border: rgba(255, 255, 255, 0.06);
+  --admin-card-border-hover: rgba(255, 255, 255, 0.14);
+  --admin-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+  --admin-card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Base */

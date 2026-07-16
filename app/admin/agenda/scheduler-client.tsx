@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { adminAccentBar, adminCTAPrimary, adminCard, adminKicker } from "@/components/admin/admin-premium";
 
 type Court = { id: string; name: string };
 type Match = {
@@ -38,19 +39,19 @@ export default function AgendaScheduler({
 
   return (
     <>
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300">
+      <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-sm">
+        <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)]">
           Fecha: {date}
         </div>
         <div className="overflow-auto">
           <div className="min-w-[920px]">
             <div
-              className="grid border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/40"
+              className="grid border-b border-[var(--border-subtle)] bg-[var(--bg-app)]"
               style={{ gridTemplateColumns: `88px repeat(${courts.length}, minmax(160px, 1fr))` }}
             >
-              <div className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Hora</div>
+              <div className={`px-3 py-3 ${adminKicker}`}>Hora</div>
               {courts.map((court) => (
-                <div key={court.id} className="border-l border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                <div key={court.id} className="border-l border-[var(--border-subtle)] px-3 py-3 text-sm font-semibold text-[var(--text-secondary)]">
                   {court.name}
                 </div>
               ))}
@@ -59,10 +60,10 @@ export default function AgendaScheduler({
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="grid border-b border-slate-100 dark:border-slate-800/70"
+                className="grid border-b border-[var(--border-subtle)]"
                 style={{ gridTemplateColumns: `88px repeat(${courts.length}, minmax(160px, 1fr))` }}
               >
-                <div className="px-3 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{hour}</div>
+                <div className="px-3 py-3 text-xs font-semibold text-[var(--text-tertiary)]">{hour}</div>
                 {courts.map((court) => {
                   const key = `${court.id}__${hour}`;
                   const match = matchKey.get(key) ?? null;
@@ -97,7 +98,7 @@ export default function AgendaScheduler({
                   return (
                     <div
                       key={key}
-                      className="m-1 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-400"
+                      className="m-1 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-app)] px-3 py-2 text-xs font-medium text-[var(--text-tertiary)]"
                     >
                       Disponible
                     </div>
@@ -111,31 +112,27 @@ export default function AgendaScheduler({
 
       {selected ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Detalle de reserva</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{selected.scheduled_time}</p>
+          <div className={`w-full max-w-md ${adminCard} ${adminAccentBar}`}>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Detalle de reserva</h3>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">{selected.scheduled_time}</p>
             <div className="mt-3">
               <Badge variant={String(selected.payment_status).toLowerCase() === "paid" ? "success" : "warning"}>
                 {String(selected.payment_status).toLowerCase() === "paid" ? "Pago confirmado" : "Pago pendiente"}
               </Badge>
             </div>
-            <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Jugadores</p>
+            <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">Jugadores</p>
             <ul className="mt-2 space-y-2">
               {selected.players.length === 0 ? (
-                <li className="text-sm text-slate-500 dark:text-slate-400">Sin jugadores cargados.</li>
+                <li className="text-sm text-[var(--text-tertiary)]">Sin jugadores cargados.</li>
               ) : (
                 selected.players.map((p) => (
-                  <li key={p.player_id} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                  <li key={p.player_id} className="rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)]">
                     {p.name}
                   </li>
                 ))
               )}
             </ul>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="mt-4 w-full rounded-2xl bg-slate-900 py-2.5 text-sm font-semibold text-white dark:bg-slate-700"
-            >
+            <button type="button" onClick={() => setSelected(null)} className={`mt-4 w-full ${adminCTAPrimary}`}>
               Cerrar
             </button>
           </div>

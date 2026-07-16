@@ -13,45 +13,45 @@ export function AmericanoLeaderboard({ matches, pairNames }: Props) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Tabla de posiciones</h2>
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+      <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Tabla de posiciones</h2>
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-[var(--border-subtle)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Pareja</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">J</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">G</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">P</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Sets</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Pts</th>
+            <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">#</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pareja</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">J</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">G</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">P</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Sets</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pts</th>
             </tr>
           </thead>
           <tbody>
             {ranking.map((row, i) => (
               <tr
                 key={row.pairId}
-                className={`border-b border-slate-100 last:border-0 dark:border-slate-800 ${
-                  i === 0 ? "bg-emerald-50/60 dark:bg-emerald-950/20" : "bg-white dark:bg-slate-950"
+                className={`border-b border-[var(--border-subtle)] last:border-0 ${
+                  i === 0 ? "bg-emerald-50/60 dark:bg-emerald-950/20" : "bg-[var(--bg-card)]"
                 }`}
               >
-                <td className="px-3 py-2 font-mono text-xs text-slate-400">{i + 1}</td>
-                <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">
+                <td className="px-3 py-2 font-mono text-xs text-[var(--text-tertiary)]">{i + 1}</td>
+                <td className="px-3 py-2 font-medium text-[var(--text-secondary)]">
                   {pairNames[row.pairId] ?? "—"}
                 </td>
-                <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-slate-600 dark:text-slate-300">{row.played}</td>
+                <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-[var(--text-secondary)]">{row.played}</td>
                 <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-300">{row.won}</td>
                 <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-rose-600 dark:text-rose-400">{row.lost}</td>
-                <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                <td className="px-3 py-2 text-center font-mono text-xs tabular-nums text-[var(--text-secondary)]">
                   {row.setsFor}/{row.setsAgainst}
                 </td>
-                <td className="px-3 py-2 text-center font-mono text-xs font-bold tabular-nums text-slate-900 dark:text-white">{row.points}</td>
+                <td className="px-3 py-2 text-center font-mono text-xs font-bold tabular-nums text-[var(--text-primary)]">{row.points}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-1 text-[11px] text-slate-400">J=Jugados G=Ganados P=Perdidos Sets=GF/GC Pts=Puntos</p>
+      <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">J=Jugados G=Ganados P=Perdidos Sets=GF/GC Pts=Puntos</p>
     </section>
   );
 }

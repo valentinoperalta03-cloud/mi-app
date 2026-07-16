@@ -2,6 +2,7 @@
 
 import { Camera, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import { saveClubPhotos } from "../club/actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -100,42 +101,42 @@ export default function ConfigClubPhotosForm({ clubId, initial }: Props) {
       pathBase: "logo",
       state: logoUrl,
       setState: setLogoUrl,
-      previewClass: "h-20 w-20 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-20 w-20 rounded-2xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Foto de portada",
       pathBase: "cover",
       state: coverUrl,
       setState: setCoverUrl,
-      previewClass: "h-36 w-full max-w-lg rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-36 w-full max-w-lg rounded-2xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Galería 1",
       pathBase: "gallery-1",
       state: g1,
       setState: setG1,
-      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Galería 2",
       pathBase: "gallery-2",
       state: g2,
       setState: setG2,
-      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Galería 3",
       pathBase: "gallery-3",
       state: g3,
       setState: setG3,
-      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
     {
       label: "Galería 4",
       pathBase: "gallery-4",
       state: g4,
       setState: setG4,
-      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700",
+      previewClass: "h-28 w-full max-w-xs rounded-xl object-cover ring-1 ring-[var(--border-subtle)]",
     },
   ];
 
@@ -162,16 +163,16 @@ export default function ConfigClubPhotosForm({ clubId, initial }: Props) {
         {slots.map((slot, idx) => (
           <div
             key={slot.pathBase}
-            className="rounded-2xl border border-slate-200 bg-transparent p-4 dark:border-slate-700"
+            className="rounded-2xl border border-[var(--border-subtle)] bg-transparent p-4"
           >
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
+            <p className="text-sm font-semibold text-[var(--text-secondary)]">{slot.label}</p>
             <div className="relative mt-3 inline-block">
               {slot.state ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={slot.state} alt="" className={slot.previewClass} />
               ) : (
                 <div
-                  className={`flex items-center justify-center bg-slate-200/80 text-xs text-slate-500 dark:bg-slate-800 ${slot.previewClass}`}
+                  className={`flex items-center justify-center bg-[var(--bg-subtle)] text-xs text-[var(--text-tertiary)] ${slot.previewClass}`}
                 >
                   Sin imagen
                 </div>
@@ -180,7 +181,7 @@ export default function ConfigClubPhotosForm({ clubId, initial }: Props) {
                 type="button"
                 onClick={() => fileRefs[idx]?.current?.click()}
                 disabled={uploading !== null}
-                className="absolute -bottom-1 -right-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-slate-900 text-white shadow disabled:opacity-50 dark:border-slate-600"
+                className="absolute -bottom-1 -right-1 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#0A0A0A] text-white shadow disabled:opacity-50"
                 aria-label={`Subir ${slot.label}`}
               >
                 {uploading === slot.pathBase ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera size={16} />}
@@ -202,16 +203,12 @@ export default function ConfigClubPhotosForm({ clubId, initial }: Props) {
                 }}
               />
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">JPEG, PNG o WebP · máx. 5MB</p>
+            <p className="mt-2 text-xs text-[var(--text-tertiary)]">JPEG, PNG o WebP · máx. 5MB</p>
           </div>
         ))}
       </div>
 
-      <button
-        type="submit"
-        disabled={uploading !== null}
-        className="rounded-xl bg-[#0585FC] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 disabled:opacity-60"
-      >
+      <button type="submit" disabled={uploading !== null} className={`${adminCTAPrimary} disabled:opacity-60`}>
         Guardar fotos
       </button>
     </form>

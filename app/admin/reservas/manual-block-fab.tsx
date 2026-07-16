@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { adminCard, adminCTAPrimary } from "@/components/admin/admin-premium";
 import { createManualCourtBlockAction, type ManualBlockState } from "./actions";
 
 const initial: ManualBlockState = { success: false, message: "" };
@@ -33,21 +34,21 @@ function ManualBlockDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <h2 id="block-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+      <div className={`${adminCard} w-full max-w-md`}>
+        <h2 id="block-title" className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">
           Bloqueo manual
         </h2>
-        <p className="mt-1 text-sm font-medium text-slate-500">
-          Inserta un registro en <code className="text-xs">court_blocks</code>.
+        <p className="mt-1 text-sm font-medium text-[var(--text-tertiary)]">
+          Bloqueá una cancha en un horario puntual para que no quede disponible para reservar.
         </p>
 
         <form action={formAction} className="mt-4 space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Cancha</span>
+            <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Cancha</span>
             <select
               name="court_id"
               required
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-[var(--text-tertiary)] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             >
               {courts.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -57,20 +58,20 @@ function ManualBlockDialog({
             </select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Fecha</span>
+            <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Fecha</span>
             <input
               name="date"
               type="date"
               required
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-[var(--text-tertiary)] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Hora inicio</span>
+            <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Hora inicio</span>
             <select
               name="start_time"
               required
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-[var(--text-tertiary)] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             >
               {slotTimes.map((t) => (
                 <option key={t} value={t}>
@@ -96,15 +97,11 @@ function ManualBlockDialog({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              className="flex-1 rounded-2xl border border-[var(--border-subtle)] py-3 text-sm font-semibold text-[var(--text-secondary)]"
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="flex-1 rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white disabled:opacity-60"
-            >
+            <button type="submit" disabled={pending} className={`flex-1 ${adminCTAPrimary} disabled:opacity-60`}>
               {pending ? "Guardando..." : "Bloquear"}
             </button>
           </div>
@@ -129,7 +126,7 @@ export default function ManualBlockFab({ courts, slotTimes }: { courts: CourtOpt
           setDialogKey((k) => k + 1);
           setOpen(true);
         }}
-        className="fixed bottom-[5.75rem] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_8px_24px_-6px_rgba(15,23,42,0.45)] transition-all hover:scale-[1.05] hover:bg-slate-800 active:scale-[0.92] md:bottom-8"
+        className="fixed bottom-[5.75rem] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-[0_8px_24px_-6px_rgba(15,23,42,0.45)] transition-all hover:scale-[1.05] hover:brightness-105 active:scale-[0.92] md:bottom-8"
         aria-label="Bloqueo manual"
       >
         <Plus size={26} strokeWidth={2.5} />

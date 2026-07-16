@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -30,7 +31,7 @@ export default async function AdminClaseNuevoPage() {
         <ChevronLeft size={18} />
         Volver
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Nueva clase</h1>
+      <h1 className={`mt-4 ${adminTitle}`}>Nueva clase</h1>
       <AddCoachForm clubId={clubId} />
       <ClaseForm
         clubId={clubId}

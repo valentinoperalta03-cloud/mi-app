@@ -1,6 +1,15 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeError,
+  adminBadgeLima,
+  adminBadgeNeutral,
+  adminCard,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -72,7 +81,10 @@ export default async function AdminConfigSuscripcionPage() {
         <section
           className={`${adminCard} border-emerald-200 bg-emerald-50/60 p-6 dark:border-emerald-800 dark:bg-emerald-950/20`}
         >
-          <p className="text-base font-bold text-emerald-800 dark:text-emerald-300">Suscripción activa ✓</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-base font-bold text-emerald-800 dark:text-emerald-300">Suscripción activa</p>
+            <span className={adminBadgeLima}>Activa</span>
+          </div>
           <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
             Próximo cobro: {formatDateAr(row?.next_billing_date ?? null)} · {SUBSCRIPTION_PRICE_LABEL}
           </p>
@@ -82,7 +94,7 @@ export default async function AdminConfigSuscripcionPage() {
           className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
         >
           <p className="text-base font-bold text-[#0461C4] dark:text-sky-300">Período de prueba</p>
-          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             {daysLeft != null
               ? `Te ${daysLeft === 1 ? "queda" : "quedan"} ${daysLeft} día${daysLeft === 1 ? "" : "s"} de prueba gratuita.`
               : "Estás en período de prueba gratuita."}{" "}
@@ -92,23 +104,32 @@ export default async function AdminConfigSuscripcionPage() {
         </section>
       ) : status === "past_due" ? (
         <section className={`${adminCard} border-rose-200 bg-rose-50/60 p-6 dark:border-rose-800 dark:bg-rose-950/20`}>
-          <p className="text-base font-bold text-rose-800 dark:text-rose-300">Pago fallido</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-base font-bold text-rose-800 dark:text-rose-300">Pago fallido</p>
+            <span className={adminBadgeError}>Atención</span>
+          </div>
           <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">
             Tu pago mensual no pudo procesarse. Actualizá tu método de pago para seguir usando PadeLibre.
           </p>
           <ActivateSubscriptionButton clubId={clubId} label="Reintentar pago" variant="danger" />
         </section>
       ) : status === "paused" ? (
-        <section className={`${adminCard} border-slate-200 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-900/40`}>
-          <p className="text-base font-bold text-slate-800 dark:text-slate-200">Suscripción pausada</p>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        <section className={`${adminCard} p-6`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-base font-bold text-[var(--text-primary)]">Suscripción pausada</p>
+            <span className={adminBadgeNeutral}>Pausada</span>
+          </div>
+          <p className="mt-2 text-sm text-[var(--text-tertiary)]">
             Reactivá tu suscripción para volver a usar el panel de PadeLibre.
           </p>
           <ActivateSubscriptionButton clubId={clubId} label="Reactivar suscripción" />
         </section>
       ) : (
         <section className={`${adminCard} border-rose-200 bg-rose-50/60 p-6 dark:border-rose-800 dark:bg-rose-950/20`}>
-          <p className="text-base font-bold text-rose-800 dark:text-rose-300">Necesitás activar tu suscripción</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-base font-bold text-rose-800 dark:text-rose-300">Necesitás activar tu suscripción</p>
+            <span className={adminBadgeError}>Sin activar</span>
+          </div>
           <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">
             Activá tu suscripción para seguir usando el panel de PadeLibre.
           </p>
@@ -116,23 +137,23 @@ export default async function AdminConfigSuscripcionPage() {
         </section>
       )}
 
-      <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Detalles del plan</h2>
+      <section className={`${adminCard} ${adminAccentBar} p-6`}>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Detalles del plan</h2>
         <dl className="mt-4 space-y-3 text-sm">
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500 dark:text-slate-400">Plan</dt>
-            <dd className="font-semibold text-slate-900 dark:text-slate-100">PadeLibre Club</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Plan</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">PadeLibre Club</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500 dark:text-slate-400">Precio</dt>
-            <dd className="font-semibold text-slate-900 dark:text-slate-100">{SUBSCRIPTION_PRICE_LABEL} / mes</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Precio</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">{SUBSCRIPTION_PRICE_LABEL} / mes</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="font-medium text-slate-500 dark:text-slate-400">Facturación</dt>
-            <dd className="font-semibold text-slate-900 dark:text-slate-100">Automática vía débito en Mercado Pago</dd>
+            <dt className="font-medium text-[var(--text-tertiary)]">Facturación</dt>
+            <dd className="font-semibold text-[var(--text-primary)]">Automática vía débito en Mercado Pago</dd>
           </div>
         </dl>
-        <ul className="mt-4 space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
+        <ul className="mt-4 space-y-1.5 text-sm text-[var(--text-secondary)]">
           <li>✓ Sin comisiones por reservas, partidos ni torneos</li>
           <li>✓ Soporte incluido</li>
         </ul>
@@ -140,16 +161,16 @@ export default async function AdminConfigSuscripcionPage() {
 
       {status === "active" ? (
         <section className={`${adminCard} p-6`}>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Gestionar suscripción</h2>
+          <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Gestionar suscripción</h2>
           <a
             href="https://www.mercadopago.com.ar/subscriptions"
             target="_blank"
             rel="noreferrer"
-            className="mt-3 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-[#0585FC] hover:underline dark:text-sky-400"
+            className="mt-3 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-brand-primary hover:underline"
           >
             Gestionar en Mercado Pago →
           </a>
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-sm text-[var(--text-tertiary)]">
             Para cancelar tu suscripción, gestionala directamente desde tu cuenta de Mercado Pago. Tu acceso a
             PadeLibre se mantiene hasta el fin del período pagado.
           </p>
@@ -157,7 +178,7 @@ export default async function AdminConfigSuscripcionPage() {
       ) : null}
 
       {mpSubscriptionId ? (
-        <p className="text-xs text-slate-400 dark:text-slate-500">ID de suscripción: {mpSubscriptionId}</p>
+        <p className="text-xs text-[var(--text-tertiary)]">ID de suscripción: {mpSubscriptionId}</p>
       ) : null}
     </div>
   );

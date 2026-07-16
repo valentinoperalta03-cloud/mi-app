@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { adminCard, adminCTAPrimary } from "@/components/admin/admin-premium";
 import { saveMatchScheduleAction } from "./actions";
 
 type Court = { id: string; name: string };
@@ -89,25 +90,25 @@ export function TournamentScheduler({ tournamentId, matches, courts }: Props) {
   if (playableMatches.length === 0) {
     return (
       <section>
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Canchas y horarios</h2>
-        <p className="mt-2 text-sm text-slate-500">No hay partidos con parejas asignadas aun.</p>
+        <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Canchas y horarios</h2>
+        <p className="mt-2 text-sm text-[var(--text-tertiary)]">No hay partidos con parejas asignadas aun.</p>
       </section>
     );
   }
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Canchas y horarios</h2>
+      <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Canchas y horarios</h2>
       <ul className="mt-3 space-y-3">
         {playableMatches.map((m) => {
           const saved = Boolean(schedules[m.id]);
           return (
             <li
               key={m.id}
-              className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950"
+              className={adminCard}
             >
-              <p className="text-xs font-semibold text-slate-500">{m.round_name ?? "Partido"}</p>
-              <p className="mt-0.5 text-sm font-medium text-slate-800 dark:text-slate-100">
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">{m.round_name ?? "Partido"}</p>
+              <p className="mt-0.5 text-sm font-medium text-[var(--text-secondary)]">
                 {m.pair1_name} vs {m.pair2_name}
               </p>
               <form onSubmit={(e) => handleSubmit(e, m.id)} className="mt-2 grid gap-2 sm:grid-cols-4">
@@ -117,7 +118,7 @@ export function TournamentScheduler({ tournamentId, matches, courts }: Props) {
                 <select
                   name="court_id"
                   defaultValue={m.court_id ?? ""}
-                  className="rounded-lg border px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-sm text-[var(--text-primary)]"
                 >
                   <option value="">Sin cancha</option>
                   {courts.map((c) => (
@@ -129,20 +130,20 @@ export function TournamentScheduler({ tournamentId, matches, courts }: Props) {
                   type="date"
                   name="scheduled_date"
                   defaultValue={m.scheduled_date ?? ""}
-                  className="rounded-lg border px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-sm text-[var(--text-primary)]"
                 />
 
                 <input
                   type="time"
                   name="scheduled_time"
                   defaultValue={m.scheduled_time ?? ""}
-                  className="rounded-lg border px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-sm text-[var(--text-primary)]"
                 />
 
                 <button
                   type="submit"
                   disabled={saving === m.id}
-                  className="rounded-lg bg-slate-800 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700"
+                  className={`${adminCTAPrimary} disabled:opacity-50`}
                 >
                   {saving === m.id ? "..." : saved ? "Guardado" : "Guardar"}
                 </button>

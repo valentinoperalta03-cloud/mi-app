@@ -9,7 +9,21 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import {
+  adminBadgeBrand,
+  adminBadgeError,
+  adminBadgeLima,
+  adminBadgeNeutral,
+  adminBadgePending,
+} from "@/components/admin/admin-premium";
+
+const pillVariantClasses = {
+  brand: adminBadgeBrand,
+  success: adminBadgeLima,
+  warning: adminBadgePending,
+  error: adminBadgeError,
+  neutral: adminBadgeNeutral,
+} as const;
 
 function Pill({
   Icon,
@@ -19,14 +33,14 @@ function Pill({
 }: {
   Icon: LucideIcon;
   label: string;
-  variant: "brand" | "success" | "warning" | "neutral";
+  variant: keyof typeof pillVariantClasses;
   className: string;
 }) {
   return (
-    <Badge variant={variant} className={`gap-1 ${className}`}>
+    <span className={`gap-1 ${pillVariantClasses[variant]} ${className}`}>
       <Icon size={12} strokeWidth={2.25} className="shrink-0 opacity-90" aria-hidden />
       {label}
-    </Badge>
+    </span>
   );
 }
 
@@ -77,7 +91,7 @@ export function PaymentStatusPill({ status }: { status: string }) {
         <Pill
           Icon={Ban}
           label={label}
-          variant="neutral"
+          variant="error"
           className=""
         />
       );
@@ -125,7 +139,7 @@ export function FinancialStatusPill({
       </span>
     );
   }
-  return <Pill Icon={Clock} label="Pendiente" variant="neutral" className="" />;
+  return <Pill Icon={Clock} label="Pendiente" variant="warning" className="" />;
 }
 
 export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null }) {
@@ -167,7 +181,7 @@ export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente"
     <Pill
       Icon={UserPlus}
       label="Nuevo"
-      variant="warning"
+      variant="success"
       className=""
     />
   );
@@ -177,7 +191,7 @@ export function PlayerAvatar({ name }: { name: string }) {
   const initial = (name.trim().charAt(0) || "?").toUpperCase();
   return (
     <div
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-indigo-100 text-base font-bold text-[#0585FC] ring-1 ring-[#0585FC]/20/50"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-indigo-100 text-base font-bold text-[#0585FC] ring-1 ring-[#0585FC]/20"
       aria-hidden
     >
       {initial}

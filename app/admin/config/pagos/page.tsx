@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -97,7 +97,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
         <p className={adminSubtitle}>Mercado Pago, efectivo y transferencia bancaria.</p>
       </header>
 
-      <section className={`${adminCard} p-6`}>
+      <section className={`${adminCard} ${adminAccentBar} p-6`}>
         {flash(paymentsOk, paymentsErr)}
         <div className="mt-4">
           <ConfigPaymentMethodsForm

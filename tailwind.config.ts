@@ -39,6 +39,10 @@ const config: Config = {
         "brand-gradient": "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
         "brand-gradient-dark": "linear-gradient(135deg, #031733 0%, #0461C4 100%)",
       },
+      fontFamily: {
+        "admin-display": ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
+        "admin-mono": ["var(--font-ibm-plex-mono)", "ui-monospace", "monospace"],
+      },
     },
   },
   plugins: [],

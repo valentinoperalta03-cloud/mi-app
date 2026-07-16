@@ -2,6 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { FinancialStatusPill } from "@/components/admin/admin-status-pills";
+import {
+  adminAccentBar,
+  adminBadgeLima,
+  adminBadgeNeutral,
+  adminBadgePending,
+  adminCard,
+  adminCTAPrimary,
+  adminKicker,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -135,21 +145,21 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         Torneos
       </Link>
 
-      <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{typeBadge}</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{tour.name}</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+      <header className={`${adminCard} ${tour.status === "in_progress" ? adminAccentBar : ""}`}>
+        <p className={adminKicker}>{typeBadge}</p>
+        <h1 className={`mt-1 ${adminTitle}`}>{tour.name}</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
           {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved.length}/{tour.max_pairs} parejas pagadas
         </p>
-        {tour.description ? <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{tour.description}</p> : null}
-        <p className="mt-2 text-xs text-slate-500">
+        {tour.description ? <p className="mt-2 text-sm text-[var(--text-secondary)]">{tour.description}</p> : null}
+        <p className="mt-2 text-xs text-[var(--text-tertiary)]">
           Categoría: {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
         <div className="mt-2">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">
             Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} por pareja
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
             {tour.requires_deposit
               ? `Con seña: $${calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value)).toLocaleString("es-AR")} al inscribirse, saldo en el club.`
               : "Sin seña: se cobra el precio completo al inscribirse."}
@@ -180,7 +190,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         {tour.status === "in_progress" ? (
           <form action={finishTournamentFormAction}>
             <input type="hidden" name="tournament_id" value={id} />
-            <button type="submit" className="rounded-2xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-700">
+            <button type="submit" className={adminCTAPrimary}>
               Finalizar torneo
             </button>
           </form>
@@ -188,12 +198,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Inscriptos</h2>
+        <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Inscriptos</h2>
         <ul className="mt-2 space-y-2">
           {approved.map((r) => (
             <li
               key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
+              className={`${adminCard} flex flex-wrap items-center justify-between gap-2 text-sm`}
             >
               <span>
                 {profileMap.get(r.player1_id)?.name ?? "Jugador"}
@@ -224,8 +234,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
 
       {waitlist.length > 0 ? (
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Lista de espera</h2>
-          <ul className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Lista de espera</h2>
+          <ul className="mt-2 text-sm text-[var(--text-secondary)]">
             {waitlist.map((r) => (
               <li key={r.id}>
                 {profileMap.get(r.player1_id)?.name}
@@ -262,25 +272,25 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Fixture</h2>
-        <p className="text-xs text-slate-500">~{courtHours} h de cancha estimadas · {matchRows.length} partidos</p>
+        <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Fixture</h2>
+        <p className="text-xs text-[var(--text-tertiary)]">~{courtHours} h de cancha estimadas · {matchRows.length} partidos</p>
         <ul className="mt-3 space-y-3">
           {matchRows.map((m) => (
-            <li key={m.id} className="rounded-2xl border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
-              <p className="text-xs font-semibold text-slate-500">
+            <li key={m.id} className={`${adminCard} text-sm`}>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">
                 Ronda {m.round} · {m.round_name ?? "—"}
               </p>
-              <p className="mt-1 text-slate-800 dark:text-slate-100">
+              <p className="mt-1 text-[var(--text-secondary)]">
                 {m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "Pareja 1" : "—"} vs{" "}
                 {m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "Pareja 2" : "—"}
               </p>
               <span
-                className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                className={`mt-1 inline-flex ${
                   m.status === "finished"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    ? adminBadgeLima
                     : m.status === "in_progress"
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      ? adminBadgePending
+                      : adminBadgeNeutral
                 }`}
               >
                 {m.status === "finished"
@@ -302,7 +312,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                     required
                     defaultValue={m.pair1_score ?? ""}
                     placeholder="Sets P1"
-                    className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
                   />
                   <input
                     type="number"
@@ -312,7 +322,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                     required
                     defaultValue={m.pair2_score ?? ""}
                     placeholder="Sets P2"
-                    className="rounded-lg border px-2 py-1 dark:border-slate-700 dark:bg-slate-900"
+                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
                   />
                   <button type="submit" className="rounded-lg bg-[#0461C4] px-2 py-1 text-xs font-semibold text-white">
                     {m.status === "finished" ? "Editar" : "Guardar"}

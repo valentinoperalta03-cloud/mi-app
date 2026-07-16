@@ -380,7 +380,7 @@ export default async function AdminDashboardPage({
               </div>
             )}
             <div>
-              <h1 className="text-lg font-bold text-white md:text-2xl">{clubName}</h1>
+              <h1 className="font-admin-display text-lg font-bold text-white md:text-2xl">{clubName}</h1>
               <p className="text-xs text-white/70 md:text-sm">{todayDateLabel}</p>
               <CurrentArTime className="text-[11px] text-white/50 md:text-xs" />
             </div>
@@ -426,11 +426,11 @@ export default async function AdminDashboardPage({
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <ShieldAlert size={17} className="text-rose-500" />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Alertas urgentes</h2>
+          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Alertas urgentes</h2>
         </div>
 
         {totalAlerts === 0 ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-100 p-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <div className="rounded-2xl border-l-2 border-[var(--admin-accent-lima)] bg-[var(--admin-accent-lima-subtle)] p-4 text-sm font-semibold text-[var(--admin-status-active-text)]">
             ✅ Sin alertas pendientes. Todo en orden.
           </div>
         ) : (
@@ -473,19 +473,19 @@ export default async function AdminDashboardPage({
         <p className={adminKicker}>Próximo turno</p>
         {nextMatch ? (
           <div className="mt-3 space-y-1">
-            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{String(nextMatch.scheduled_time ?? "").slice(0, 5)} hs</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Cancha: {nextCourtRel?.name ?? "Cancha"}</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Jugador: {nextOwnerName}</p>
+            <p className="font-admin-display text-2xl font-bold text-[var(--text-primary)]">{String(nextMatch.scheduled_time ?? "").slice(0, 5)} hs</p>
+            <p className="text-sm text-[var(--text-secondary)]">Cancha: {nextCourtRel?.name ?? "Cancha"}</p>
+            <p className="text-sm text-[var(--text-secondary)]">Jugador: {nextOwnerName}</p>
             <p
               className={`text-sm font-semibold ${
-                nextPayLabel === "Pagado" ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
+                nextPayLabel === "Pagado" ? "text-[var(--admin-status-active-text)]" : "text-amber-700 dark:text-amber-400"
               }`}
             >
               Estado de pago: {nextPayLabel}
             </p>
           </div>
         ) : (
-          <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">No hay más turnos por hoy 🎾</p>
+          <p className="mt-2 text-sm font-semibold text-[var(--text-tertiary)]">No hay más turnos por hoy 🎾</p>
         )}
       </section>
 
@@ -494,21 +494,21 @@ export default async function AdminDashboardPage({
         <div className="hidden md:block">
           <div className="flex items-center gap-2">
             <LayoutGrid size={16} className="text-[#0585FC]" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Accesos rápidos</h2>
+            <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Accesos rápidos</h2>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {quickActions.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`${adminCard} group transition hover:-translate-y-0.5 hover:shadow-md`}
+                className={`${adminCard} group`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <item.icon size={22} className="text-[#0585FC]" />
-                  <ChevronRight size={16} className="text-slate-400 transition group-hover:text-[#0585FC]" />
+                  <ChevronRight size={16} className="text-[var(--text-tertiary)] transition group-hover:text-[#0585FC]" />
                 </div>
-                <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">{item.label}</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+                <p className="mt-3 text-base font-bold text-[var(--text-primary)]">{item.label}</p>
+                <p className="mt-1 text-sm text-[var(--text-tertiary)]">{item.description}</p>
               </Link>
             ))}
           </div>

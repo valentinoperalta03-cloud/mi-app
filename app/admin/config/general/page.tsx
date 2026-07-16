@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Mail, MessageCircle } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import ThemeToggleButton from "@/components/theme-toggle-button";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -22,22 +22,22 @@ export default async function AdminConfigGeneralPage() {
         <p className={adminSubtitle}>Apariencia y soporte.</p>
       </header>
 
-      <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Apariencia</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Elegí modo claro u oscuro para el panel.</p>
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+      <section className={`${adminCard} ${adminAccentBar} p-6`}>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Apariencia</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Elegí modo claro u oscuro para el panel.</p>
+        <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-app)] p-4">
           <ThemeToggleButton />
         </div>
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Soporte</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">¿Necesitás ayuda con PadeLibre?</p>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Soporte</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">¿Necesitás ayuda con PadeLibre?</p>
         <div className="mt-4 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           <div className="flex flex-wrap gap-2">
             <a
               href="mailto:soporte.padelibre@gmail.com"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)]"
             >
               <Mail size={16} />
               soporte.padelibre@gmail.com
@@ -46,7 +46,7 @@ export default async function AdminConfigGeneralPage() {
               href="https://wa.me/5493412571953"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-800 dark:bg-slate-900 dark:text-slate-100"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)]"
             >
               <MessageCircle size={16} />
               +54 9 341 257-1953

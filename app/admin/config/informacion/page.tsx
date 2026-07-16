@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -181,22 +181,22 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
         <p className={adminSubtitle}>Datos, horarios, ubicación, fotos, cuenta y cancelación.</p>
       </header>
 
-      <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Cuenta</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Datos principales de tu club y sesión.</p>
+      <section className={`${adminCard} ${adminAccentBar} p-6`}>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Cuenta</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Datos principales de tu club y sesión.</p>
         <div className="mt-4 flex items-center gap-4 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           {club.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={club.logo_url} alt={clubName} className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+            <img src={club.logo_url} alt={clubName} className="h-14 w-14 rounded-2xl object-cover ring-1 ring-[var(--border-subtle)]" />
           ) : (
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0585FC]/20 text-lg font-bold text-[#0461C4] dark:text-sky-300">
               {clubName.slice(0, 2).toUpperCase()}
             </span>
           )}
           <div className="min-w-0">
-            <p className="truncate text-xl font-bold text-slate-900 dark:text-slate-100">{clubName}</p>
-            <p className="truncate text-sm text-slate-600 dark:text-slate-300">{userEmail}</p>
-            <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">ID del club: {clubShortId}</p>
+            <p className="truncate text-xl font-bold text-[var(--text-primary)]">{clubName}</p>
+            <p className="truncate text-sm text-[var(--text-secondary)]">{userEmail}</p>
+            <p className="mt-1 text-xs font-semibold text-[var(--text-tertiary)]">ID del club: {clubShortId}</p>
           </div>
         </div>
         <form action={signOutAction} className="mt-4">
@@ -211,16 +211,16 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Horarios del club</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Horarios del club</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Seleccioná la apertura y el cierre del club. Todos los turnos son de 90 minutos y se aplican a todas las canchas automáticamente.
         </p>
         {flash(hoursOk, hoursErr)}
         <ClubHoursForm defaultOpen={clubOpenDefault} />
-        <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
           <a
             href="/admin/horarios"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-subtle)]"
           >
             Gestionar horarios bloqueados →
           </a>
@@ -228,8 +228,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Datos del club</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Nombre, descripción, dirección y contacto.</p>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Datos del club</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Nombre, descripción, dirección y contacto.</p>
         {flash(dataOk, dataErr)}
         <div className="mt-4">
           <ConfigClubDataForm
@@ -247,8 +247,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Ubicación del club</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ubicación del club</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Ciudad donde opera el club. Los jugadores solo verán tu club si están en la misma ciudad.
         </p>
         {flash(locationOk, locationErr)}
@@ -265,8 +265,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Fotos</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Logo, portada y galería visible para jugadores.</p>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Fotos</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Logo, portada y galería visible para jugadores.</p>
         {flash(photosOk, photosErr)}
         <div className="mt-4">
           <ConfigClubPhotosForm
@@ -284,8 +284,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Política de cancelación</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Definí hasta cuándo los jugadores pueden cancelar con reembolso.</p>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Política de cancelación</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Definí hasta cuándo los jugadores pueden cancelar con reembolso.</p>
         {flash(policyOk, policyErr)}
         <div className="mt-4">
           <ConfigCancellationForm

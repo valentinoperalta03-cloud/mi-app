@@ -153,14 +153,14 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
                           onClick={onClose}
                           className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
                             active
-                              ? "border-l-2 border-brand-primary bg-brand-primary/10 text-brand-primary"
+                              ? "border-l-2 border-[var(--admin-accent-lima)] bg-[rgba(204,255,0,0.08)] text-[var(--text-primary)]"
                               : "text-[var(--text-secondary)] hover:bg-[var(--bg-app)]"
                           }`}
                         >
                           <span
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
                               active
-                                ? "bg-brand-primary/15 text-brand-primary"
+                                ? "bg-[rgba(204,255,0,0.08)] text-[var(--text-primary)]"
                                 : "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
                             }`}
                           >

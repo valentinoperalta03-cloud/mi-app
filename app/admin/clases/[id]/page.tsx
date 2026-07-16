@@ -3,6 +3,13 @@ import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft } from "lucide-react";
+import {
+  adminAccentBar,
+  adminCard,
+  adminKicker,
+  adminSectionLabel,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
@@ -117,22 +124,22 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
         Clases
       </Link>
 
-      <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <header className={`${adminCard} ${practice.status === "open" ? adminAccentBar : ""}`}>
+        <p className={adminKicker}>
           {PRACTICE_STATUS_LABELS[practice.status] ?? practice.status}
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{practice.title}</h1>
+        <h1 className={`mt-1 ${adminTitle}`}>{practice.title}</h1>
         {practice.description ? (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{practice.description}</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">{practice.description}</p>
         ) : null}
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
           {recurrenceLabel} · {modalityLabel} · {practice.max_spots} cupos
         </p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
           Precio ${price.clubPriceBase.toLocaleString("es-AR")}
         </p>
-        {coachName ? <p className="mt-1 text-xs text-slate-500">Profesor: {coachName}</p> : null}
-        {courtName ? <p className="mt-1 text-xs text-slate-500">Cancha: {courtName}</p> : null}
+        {coachName ? <p className="mt-1 text-xs text-[var(--text-tertiary)]">Profesor: {coachName}</p> : null}
+        {courtName ? <p className="mt-1 text-xs text-[var(--text-tertiary)]">Cancha: {courtName}</p> : null}
 
         {practice.status === "draft" ? (
           <div className="mt-4 flex flex-wrap gap-2">
@@ -147,11 +154,11 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
       </header>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <h2 className={`mb-3 ${adminSectionLabel}`}>
           Fechas e inscriptos
         </h2>
         {sessionList.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700">
+          <p className="rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">
             {practice.status === "draft"
               ? "Publicá la clase para generar las fechas."
               : "Sin fechas generadas."}
@@ -165,24 +172,24 @@ export default async function AdminClaseDetailPage({ params }: PageProps) {
               return (
                 <li
                   key={s.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+                  className={adminCard}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="font-semibold capitalize text-slate-900 dark:text-white">
+                    <p className="font-semibold capitalize text-[var(--text-primary)]">
                       {format(dt, "EEEE d MMM yyyy · HH:mm", { locale: es })}
                     </p>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-[var(--text-tertiary)]">
                       {PRACTICE_SESSION_STATUS_LABELS[s.status] ?? s.status} · {approved}/{practice.max_spots} pagos
                     </span>
                   </div>
                   {sessionRegs.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-500">Sin inscriptos.</p>
+                    <p className="mt-2 text-xs text-[var(--text-tertiary)]">Sin inscriptos.</p>
                   ) : (
                     <ul className="mt-2 space-y-1 text-sm">
                       {sessionRegs.map((r) => (
-                        <li key={r.id} className="flex justify-between gap-2 text-slate-700 dark:text-slate-300">
+                        <li key={r.id} className="flex justify-between gap-2 text-[var(--text-secondary)]">
                           <span>{profileMap.get(r.player_id)}</span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-[var(--text-tertiary)]">
                             {practicePaymentStatusLabel(r.payment_status)}
                             {r.payment_method && r.payment_status === "approved"
                               ? ` · ${r.payment_method === "cash" ? "Efectivo" : r.payment_method === "transfer" ? "Transferencia" : "MP"}`

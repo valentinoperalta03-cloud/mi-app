@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminTitle, adminSubtitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminTitle, adminSubtitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -52,10 +52,10 @@ export default async function AdminHorariosPage() {
         </Link>
       </div>
 
-      <section className={`${adminCard} space-y-5`}>
+      <section className={`${adminCard} ${adminAccentBar} space-y-5`}>
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Turnos por día</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Turnos por día</h2>
+          <p className="text-sm text-[var(--text-tertiary)]">
             Tocá un turno para bloquearlo (rojo) o desbloquearlo (verde). Los cambios se guardan al instante.
           </p>
         </div>

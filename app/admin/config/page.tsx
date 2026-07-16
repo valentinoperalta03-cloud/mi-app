@@ -2,7 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, ChevronRight, ClipboardList, CreditCard, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminCard,
+  adminKicker,
+  adminPressable,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -51,7 +58,7 @@ export default async function AdminConfigPage() {
       <header className="space-y-2">
         <p className={adminKicker}>Configuración</p>
         <h1 className={`${adminTitle} flex items-center gap-3`}>
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200/60 dark:bg-slate-800 dark:ring-slate-700">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--bg-subtle)] text-[var(--text-tertiary)] ring-1 ring-[var(--border-subtle)]">
             <Settings2 size={24} />
           </span>
           Configuración del club
@@ -59,15 +66,15 @@ export default async function AdminConfigPage() {
         <p className={adminSubtitle}>Elegí qué querés configurar.</p>
       </header>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] divide-y divide-[var(--border-subtle)]">
-        {GROUPS.map((g) => (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {GROUPS.map((g, i) => (
           <Link
             key={g.href}
             href={g.href}
             prefetch
-            className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--bg-card-hover)] active:bg-[var(--bg-card-hover)]"
+            className={`${adminCard} ${adminPressable} flex items-center gap-4 ${i === GROUPS.length - 1 ? adminAccentBar : ""}`}
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0585FC]/10 text-[#0585FC] dark:bg-sky-500/10 dark:text-sky-400">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
               <g.icon size={20} />
             </span>
             <div className="min-w-0 flex-1">

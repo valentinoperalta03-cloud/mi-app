@@ -2,7 +2,19 @@ import { format, parseISO, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeBrand,
+  adminBadgeError,
+  adminBadgeLima,
+  adminBadgeNeutral,
+  adminBadgePending,
+  adminCard,
+  adminCTAPrimary,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -25,30 +37,31 @@ function statusUi(status: string) {
   if (s === "approved" || s === "paid") {
     return {
       label: "✅ Pagado",
-      className: "bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+      className: adminBadgeLima,
     };
   }
   if (s === "pending") {
     return {
       label: "⚠️ Pendiente",
-      className: "bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+      className: adminBadgePending,
     };
   }
   if (s === "cancelled") {
     return {
       label: "❌ Cancelado",
-      className: "bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
+      className: adminBadgeError,
     };
   }
   if (s === "refund_requested") {
     return {
       label: "🔄 Reembolso solicitado",
-      className: "bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+      className:
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
     };
   }
   return {
     label: status || "—",
-    className: "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700",
+    className: adminBadgeNeutral,
   };
 }
 
@@ -163,9 +176,9 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
       <section className="grid gap-3 sm:grid-cols-3">
         <div className={adminCard}>
           <p className={adminKicker}>Total pagos</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{totalPagos}</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{totalPagos}</p>
         </div>
-        <div className={adminCard}>
+        <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Pagados</p>
           <p className="mt-2 text-2xl font-bold text-emerald-600">{totalPagados}</p>
         </div>
@@ -177,12 +190,12 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
 
       <section className={adminCard}>
         <form className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <label className="text-sm font-semibold text-[var(--text-secondary)]">
             Cancha
             <select
               name="court"
               defaultValue={selectedCourt}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             >
               <option value="all">Todas las canchas</option>
               {ctx.courts.map((court) => (
@@ -193,12 +206,12 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
             </select>
           </label>
 
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <label className="text-sm font-semibold text-[var(--text-secondary)]">
             Estado
             <select
               name="status"
               defaultValue={selectedStatus}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -208,10 +221,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
             </select>
           </label>
 
-          <button
-            type="submit"
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
+          <button type="submit" className={adminCTAPrimary}>
             Filtrar
           </button>
         </form>
@@ -219,7 +229,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
 
       {rows.length === 0 ? (
         <section className={adminCard}>
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+          <p className="text-sm font-medium text-[var(--text-secondary)]">
             No hay pagos para los filtros seleccionados
           </p>
         </section>
@@ -234,7 +244,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
                   })
                 : "Sin fecha";
             return (
-              <article key={row.id} className={`${adminCard} border border-slate-200/80 dark:border-slate-700`}>
+              <article key={row.id} className={`${adminCard} border border-[var(--border-subtle)]`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     {row.avatarUrl ? (
@@ -244,22 +254,22 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
                       <PlayerAvatar name={row.name} />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">{row.name}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="truncate text-lg font-bold text-[var(--text-primary)]">{row.name}</p>
+                      <p className="text-sm text-[var(--text-tertiary)]">
                         {row.courtName} · {when}
                       </p>
                     </div>
                   </div>
-                  <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>
+                  <span className={`shrink-0 ${status.className}`}>
                     {status.label}
                   </span>
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-1 font-semibold text-[var(--text-secondary)]">
                     ${row.amount.toFixed(2)}
                   </span>
-                  <span className="rounded-full bg-[#0585FC]/10 px-2 py-1 font-semibold text-[#0461C4] dark:text-sky-300">
+                  <span className={adminBadgeBrand}>
                     {row.typeLabel}
                   </span>
                 </div>

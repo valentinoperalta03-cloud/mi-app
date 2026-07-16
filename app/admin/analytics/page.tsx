@@ -1,7 +1,7 @@
 ﻿import { format, subDays } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -216,53 +216,53 @@ export default async function AdminAnalyticsPage() {
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className={adminCard}>
+        <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Tasa de ocupación global</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{globalOccupancy}%</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{globalOccupancy}%</p>
+          <p className="text-xs text-[var(--text-tertiary)]">
             {totalReservations} reservas / {totalAvailableSlots} slots
           </p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
             <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, globalOccupancy)}%` }} />
           </div>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Partido promedio</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{avgPlayers.toFixed(1)}/4</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">jugadores promedio</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{avgPlayers.toFixed(1)}/4</p>
+          <p className="text-xs text-[var(--text-tertiary)]">jugadores promedio</p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Horario más demandado</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{busiestSlot[0]}hs</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{busiestSlot[1]} reservas</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{busiestSlot[0]}hs</p>
+          <p className="text-xs text-[var(--text-tertiary)]">{busiestSlot[1]} reservas</p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Día más ocupado</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
             {busiestDayIdx >= 0 ? WEEKDAY_LABELS[busiestDayIdx] : "Sin datos"}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[var(--text-tertiary)]">
             {busiestDayIdx >= 0 ? `${dayCounts[busiestDayIdx]} reservas` : "Sin reservas"}
           </p>
         </div>
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Ocupación por hora (30 días)</h2>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ocupación por hora (30 días)</h2>
         <div className="mt-4 space-y-2">
           {SLOT_LABELS.map((slot) => {
             const count = slotCounts.get(slot) ?? 0;
             const isTop = slot === busiestSlot[0];
             return (
               <div key={slot} className="grid grid-cols-[56px_1fr_40px] items-center gap-2 text-xs">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">{slot}</span>
-                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <span className="font-semibold text-[var(--text-secondary)]">{slot}</span>
+                <div className="h-3 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                   <div
                     className={`h-full rounded-full ${isTop ? "bg-[#0461C4]" : "bg-[#7CC0FF]"}`}
                     style={{ width: `${Math.max(3, (count / maxSlotCount) * 100)}%` }}
                   />
                 </div>
-                <span className="text-right font-bold text-slate-700 dark:text-slate-200">{count}</span>
+                <span className="text-right font-bold text-[var(--text-secondary)]">{count}</span>
               </div>
             );
           })}
@@ -270,7 +270,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Ocupación por día de semana</h2>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ocupación por día de semana</h2>
         <div className="mt-4 space-y-2">
           {WEEKDAY_LABELS.map((day, idx) => {
             const count = dayCounts[idx];
@@ -278,8 +278,8 @@ export default async function AdminAnalyticsPage() {
             const isMin = idx === quietestDayIdx;
             return (
               <div key={day} className="grid grid-cols-[70px_1fr_36px] items-center gap-2 text-xs">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">{day.slice(0, 3)}</span>
-                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <span className="font-semibold text-[var(--text-secondary)]">{day.slice(0, 3)}</span>
+                <div className="h-3 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                   <div
                     className={`h-full rounded-full ${
                       isMax ? "bg-[#0585FC]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
@@ -287,7 +287,7 @@ export default async function AdminAnalyticsPage() {
                     style={{ width: `${Math.max(3, (count / maxDayCount) * 100)}%` }}
                   />
                 </div>
-                <span className="text-right font-bold text-slate-700 dark:text-slate-200">{count}</span>
+                <span className="text-right font-bold text-[var(--text-secondary)]">{count}</span>
               </div>
             );
           })}
@@ -295,7 +295,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Tasa de ocupación por cancha</h2>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Tasa de ocupación por cancha</h2>
         <ul className="mt-4 flex flex-col gap-2">
           {ctx.courts.map((court) => {
             const reservations = reservationsByCourt.get(court.id) ?? 0;
@@ -304,18 +304,18 @@ export default async function AdminAnalyticsPage() {
             const completos = completeByCourt.get(court.id) ?? 0;
             const incompletos = incompleteByCourt.get(court.id) ?? 0;
             return (
-              <li key={court.id} className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm dark:border-slate-700">
+              <li key={court.id} className="rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{court.name ?? "Cancha"}</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{ratio}%</span>
+                  <span className="font-semibold text-[var(--text-secondary)]">{court.name ?? "Cancha"}</span>
+                  <span className="font-bold text-[var(--text-primary)]">{ratio}%</span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                   <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, ratio)}%` }} />
                 </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   {reservations} reservas / {slots} slots disponibles
                 </p>
-                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                <p className="text-xs font-medium text-[var(--text-secondary)]">
                   {completos} partidos completos · {incompletos} incompletos
                 </p>
               </li>
@@ -325,24 +325,24 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Tendencia semanal (últimas 4 semanas)</h2>
+        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Tendencia semanal (últimas 4 semanas)</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {weekBuckets.map((value, idx) => (
-            <div key={idx} className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Semana {idx + 1}</p>
+            <div key={idx} className="rounded-xl border border-[var(--border-subtle)] p-3 text-center">
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">Semana {idx + 1}</p>
               <div className="mt-2 flex h-24 items-end justify-center">
                 <div
                   className="w-10 rounded-t-md bg-[#0585FC]"
                   style={{ height: `${Math.max(8, (value / maxWeek) * 100)}%` }}
                 />
               </div>
-              <p className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">{value} reservas</p>
+              <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">{value} reservas</p>
             </div>
           ))}
         </div>
         <p
           className={`mt-3 text-sm font-semibold ${
-            weekDelta > 0 ? "text-emerald-600" : weekDelta < 0 ? "text-rose-600" : "text-slate-500"
+            weekDelta > 0 ? "text-emerald-600" : weekDelta < 0 ? "text-rose-600" : "text-[var(--text-tertiary)]"
           }`}
         >
           {weekDelta > 0 ? `↑ Esta semana va +${weekDelta} vs la anterior` : null}
@@ -353,21 +353,21 @@ export default async function AdminAnalyticsPage() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className={adminCard}>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Jugadores únicos vs recurrentes</h2>
+          <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Jugadores únicos vs recurrentes</h2>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">1 sola vez</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-100">{oneTimePlayers}</p>
+            <div className="rounded-xl border border-[var(--border-subtle)] p-3 text-center">
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">1 sola vez</p>
+              <p className="mt-1 text-3xl font-bold text-[var(--text-primary)]">{oneTimePlayers}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">2+ veces</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-100">{recurrentPlayers}</p>
+            <div className="rounded-xl border border-[var(--border-subtle)] p-3 text-center">
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">2+ veces</p>
+              <p className="mt-1 text-3xl font-bold text-[var(--text-primary)]">{recurrentPlayers}</p>
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl border border-amber-200 bg-amber-100 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-          <h2 className="text-base font-bold text-amber-900 dark:text-amber-300">
+          <h2 className="font-admin-display text-base font-bold text-amber-900 dark:text-amber-300">
             💡 Horarios con baja ocupación — considerá promociones
           </h2>
           <ul className="mt-3 space-y-1 text-sm font-medium text-amber-800 dark:text-amber-200">

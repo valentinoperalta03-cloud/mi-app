@@ -1,6 +1,6 @@
 import Link from "next/link";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminCard, adminCTAPrimary, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 
 export default function Page() {
   return (
@@ -13,7 +13,7 @@ export default function Page() {
         </p>
         <Link
           href="/admin/reservas"
-          className="mt-4 inline-flex w-fit items-center rounded-2xl bg-[#0585FC] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0461C4]"
+          className={`mt-4 inline-flex w-fit items-center text-sm ${adminCTAPrimary}`}
         >
           Ir a Reservas
         </Link>

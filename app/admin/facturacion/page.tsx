@@ -1,5 +1,13 @@
 import { redirect } from "next/navigation";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeLima,
+  adminCard,
+  adminCTAPrimary,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -56,7 +64,7 @@ export default async function FacturacionPage({
     const nextBillingDate = row?.next_billing_date ?? null;
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
-        <div className={`${adminCard} w-full max-w-lg`}>
+        <div className={`${adminCard} ${adminAccentBar} w-full max-w-lg`}>
           <p className={`${adminKicker} text-emerald-600`}>Suscripción PadeLibre</p>
           <h1 className={`${adminTitle} mt-2`}>Tu suscripción está activa</h1>
           <p className={`${adminSubtitle} mt-3`}>
@@ -65,18 +73,18 @@ export default async function FacturacionPage({
               : "Todavía no tenemos la fecha de tu próximo cobro."}
           </p>
 
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <div className={`mt-6 ${adminBadgeLima}`}>
             ✓ Activa
           </div>
 
-          <p className="mt-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+          <p className="mt-6 text-sm font-medium text-[var(--text-secondary)]">
             Para actualizar tu medio de pago o cancelar la suscripción, gestionala directamente desde Mercado Pago.
           </p>
           <a
             href="https://www.mercadopago.com.ar/subscriptions"
             target="_blank"
             rel="noreferrer"
-            className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+            className={`mt-4 inline-flex w-full items-center justify-center text-sm ${adminCTAPrimary}`}
           >
             Gestionar en Mercado Pago
           </a>
@@ -91,7 +99,7 @@ export default async function FacturacionPage({
       : null;
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
-        <div className={`${adminCard} w-full max-w-lg`}>
+        <div className={`${adminCard} ${adminAccentBar} w-full max-w-lg`}>
           <p className={`${adminKicker} text-[#0585FC]`}>Suscripción PadeLibre</p>
           <h1 className={`${adminTitle} mt-2`}>Estás en período de prueba</h1>
           <p className={`${adminSubtitle} mt-3`}>
@@ -101,10 +109,10 @@ export default async function FacturacionPage({
           </p>
 
           <div className="mt-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-5">
-            <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-              $50.000 <span className="text-base font-medium text-slate-500 dark:text-slate-400">ARS/mes</span>
+            <p className="text-3xl font-bold text-[var(--text-primary)]">
+              $50.000 <span className="text-base font-medium text-[var(--text-tertiary)]">ARS/mes</span>
             </p>
-            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+            <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
               Sin comisiones por uso. Sin letra chica.
             </p>
           </div>
@@ -122,16 +130,16 @@ export default async function FacturacionPage({
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
-      <div className={`${adminCard} w-full max-w-lg`}>
+      <div className={`${adminCard} ${adminAccentBar} w-full max-w-lg`}>
         <p className={`${adminKicker} text-[#0585FC]`}>Suscripción PadeLibre</p>
         <h1 className={`${adminTitle} mt-2`}>Activá tu suscripción</h1>
         <p className={`${adminSubtitle} mt-3`}>{message}</p>
 
         <div className="mt-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-5">
-          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-            $50.000 <span className="text-base font-medium text-slate-500 dark:text-slate-400">ARS/mes</span>
+          <p className="text-3xl font-bold text-[var(--text-primary)]">
+            $50.000 <span className="text-base font-medium text-[var(--text-tertiary)]">ARS/mes</span>
           </p>
-          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
             Sin comisiones por uso. Sin letra chica.
           </p>
         </div>

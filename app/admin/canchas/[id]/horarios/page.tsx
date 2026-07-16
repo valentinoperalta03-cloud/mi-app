@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCTAPrimary, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { minutesToClock, parseClockToMinutes } from "@/lib/court-slots";
@@ -96,10 +96,10 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
         </div>
       )}
 
-      <section className={`${adminCard} space-y-5`}>
+      <section className={`${adminCard} ${adminAccentBar} space-y-5`}>
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Precios por turno</h2>
-          <p className="text-sm text-slate-500">Configurá el precio de cada turno de la cancha.</p>
+          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Precios por turno</h2>
+          <p className="text-sm text-[var(--text-tertiary)]">Configurá el precio de cada turno de la cancha.</p>
         </div>
         {preciosSaved ? (
           <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800">
@@ -113,7 +113,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
         ) : null}
 
         {turns.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[var(--text-tertiary)]">
             No hay turnos disponibles con el horario actual del club. Revisá la configuración de horarios.
           </p>
         ) : (
@@ -121,8 +121,8 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
             <input type="hidden" name="court_id" value={courtId} />
             <input type="hidden" name="slot_duration_minutes" value={SLOT_DURATION} />
             {turns.map((turn) => (
-              <label key={`${turn.start}-${turn.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3">
-                <span className="text-sm font-semibold text-slate-700">
+              <label key={`${turn.start}-${turn.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/70 px-4 py-3">
+                <span className="text-sm font-semibold text-[var(--text-secondary)]">
                   {turn.start} - {turn.end}
                 </span>
                 <input
@@ -131,14 +131,11 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                   step="1"
                   name={`price_${turn.start}`}
                   defaultValue={byTurnStart.get(turn.start) ?? basePrice}
-                  className="w-36 rounded-xl border border-slate-300 px-3 py-2 text-right text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                  className="w-36 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-right text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
                 />
               </label>
             ))}
-            <button
-              type="submit"
-              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
+            <button type="submit" className={`w-full ${adminCTAPrimary}`}>
               Guardar precios
             </button>
           </form>

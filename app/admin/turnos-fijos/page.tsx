@@ -3,7 +3,15 @@ import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeBrand,
+  adminCTAPrimary,
+  adminCard,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -188,18 +196,18 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
           <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
           <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
         </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-slate-800 dark:border-sky-800/40 dark:text-slate-200">
+        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)] dark:border-sky-800/40">
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">¿Qué es un turno fijo?</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">¿Qué es un turno fijo?</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Un turno fijo es un horario recurrente que se repite todas las semanas en el mismo día y hora. Podés asignar hasta 4 jugadores a cada turno. Sirve para grupos habituales que tienen su slot reservado permanentemente.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Cómo crear un turno fijo</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Cómo crear un turno fijo</p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
               <li>Seleccioná la cancha, el día de la semana, la hora de inicio y la duración.</li>
               <li>Hacé clic en <strong>Agregar turno</strong>. El turno aparece en la lista de turnos activos.</li>
               <li>Usá el botón <strong>Agregar jugador</strong> dentro de cada turno para asignar hasta 4 personas por el nombre o email.</li>
@@ -207,22 +215,22 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Confirmación de asistencia</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Confirmación de asistencia</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Los jugadores reciben una notificación con X horas de anticipación (según lo que configurés) para confirmar si van o no. Podés ver el estado de cada jugador en la tarjeta del turno: ✅ Confirmado, ❌ No va, ⏳ Sin confirmar. Si todos confirman, la cancha queda reservada automáticamente.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Excepciones (cancelar una fecha puntual)</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Excepciones (cancelar una fecha puntual)</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Si un día específico no se puede jugar (feriado, mantenimiento, etc.), agregá una excepción con la fecha exacta y un motivo opcional. Esa semana el turno no se genera, sin afectar los demás. Podés ver y eliminar todas las excepciones futuras desde la tarjeta de cada turno.
             </p>
           </div>
 
           <div>
-            <p className="font-bold text-slate-900 dark:text-slate-100">Desactivar un turno</p>
-            <p className="mt-1 leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="font-bold text-[var(--text-primary)]">Desactivar un turno</p>
+            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
               Si el grupo deja de jugar permanentemente, hacé clic en <strong>Desactivar</strong>. El turno deja de generarse hacia adelante. No afecta partidos pasados ni reservas ya confirmadas.
             </p>
           </div>
@@ -234,8 +242,8 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
       </details>
 
       <section className={`${adminCard} p-5`}>
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Confirmación de asistencia</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Confirmación de asistencia</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Con cuántas horas de anticipación los jugadores deben confirmar asistencia. Aplica a todos los turnos del club.
         </p>
         {fixedOk ? (
@@ -248,7 +256,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
           </p>
         ) : null}
         <form action={saveFixedSlotSettings} className="mt-4 flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <label className="flex flex-col gap-1 text-sm font-medium text-[var(--text-secondary)]">
             Horas de anticipación
             <input
               name="fixed_slot_confirmation_hours"
@@ -257,27 +265,24 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
               max="168"
               required
               defaultValue={confirmationHours}
-              className="w-28 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              className="w-28 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <button
-            type="submit"
-            className="rounded-xl bg-[#0585FC] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
-          >
+          <button type="submit" className={adminCTAPrimary}>
             Guardar
           </button>
         </form>
       </section>
 
       <section className={adminCard}>
-        <h2 className="mb-3 text-base font-bold text-slate-900 dark:text-slate-100">Agregar turno fijo</h2>
+        <h2 className="mb-3 font-admin-display text-base font-bold text-[var(--text-primary)]">Agregar turno fijo</h2>
         <TurnosFijosForm courts={ctx.courts.map((c) => ({ id: c.id, name: c.name }))} />
       </section>
 
       <section className={adminCard}>
-        <h2 className="mb-4 text-base font-bold text-slate-900 dark:text-slate-100">Turnos activos</h2>
+        <h2 className="mb-4 font-admin-display text-base font-bold text-[var(--text-primary)]">Turnos activos</h2>
         {slots.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay turnos fijos configurados.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Todavía no hay turnos fijos configurados.</p>
         ) : (
           <ul className="space-y-4">
             {slots.map((slot) => {
@@ -290,21 +295,27 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
               })}`;
               const nextMatch = matchBySlotAndDate.get(`${slot.id}__${nextDateYmd}`) ?? null;
               const slotExceptions = exceptionsBySlot.get(slot.id) ?? [];
+              const allConfirmed =
+                nextMatch !== null &&
+                players.length > 0 &&
+                players.every(
+                  (player) => attendanceByMatchPlayer.get(`${nextMatch.id}__${player.playerId}`) === "confirmed"
+                );
 
               return (
                 <li
                   key={slot.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/60"
+                  className={`${adminCard} ${allConfirmed ? adminAccentBar : ""}`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-lg font-bold text-[var(--text-primary)]">
                         {DAY_LABELS[slot.day_of_week] ?? "Día"} · {String(slot.start_time).slice(0, 5)} · {slot.duration_minutes} min
                       </p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{courtName}</p>
+                      <p className="text-sm text-[var(--text-secondary)]">{courtName}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4] dark:text-sky-300">
+                      <span className={adminBadgeBrand}>
                         Próximo: {nextDateLabel} · {String(slot.start_time).slice(0, 5)}hs
                       </span>
                       <form action={deleteFixedSlot}>
@@ -327,7 +338,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                           return (
                             <div
                               key={`${slot.id}-left-empty-${i}`}
-                              className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400"
+                              className="rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-tertiary)]"
                             >
                               Libre
                             </div>
@@ -336,21 +347,21 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         return (
                           <div
                             key={`${slot.id}-${player.playerId}`}
-                            className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"
+                            className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm"
                           >
                             {player.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
                               <img src={player.avatarUrl} alt={player.name} className="h-7 w-7 rounded-full object-cover" />
                             ) : (
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-xs font-bold text-[var(--text-secondary)]">
                                 {player.name.slice(0, 1).toUpperCase()}
                               </span>
                             )}
-                            <span className="flex-1 font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <span className="flex-1 font-semibold text-[var(--text-secondary)]">{player.name}</span>
                             <form action={removePlayerFromFixedSlot}>
                               <input type="hidden" name="fixed_slot_id" value={slot.id} />
                               <input type="hidden" name="player_id" value={player.playerId} />
-                              <button type="submit" className="text-slate-400 hover:text-rose-500 transition" title="Quitar jugador">
+                              <button type="submit" className="text-[var(--text-tertiary)] hover:text-rose-500 transition" title="Quitar jugador">
                                 ✕
                               </button>
                             </form>
@@ -359,7 +370,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                       })}
                     </div>
                     <div className="flex h-full items-center justify-center pt-4">
-                      <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-1 text-[10px] font-bold tracking-wide text-[var(--text-tertiary)]">
                         VS
                       </span>
                     </div>
@@ -370,7 +381,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                           return (
                             <div
                               key={`${slot.id}-right-empty-${i}`}
-                              className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400"
+                              className="rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-tertiary)]"
                             >
                               Libre
                             </div>
@@ -379,21 +390,21 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         return (
                           <div
                             key={`${slot.id}-${player.playerId}`}
-                            className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"
+                            className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm"
                           >
                             {player.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
                               <img src={player.avatarUrl} alt={player.name} className="h-7 w-7 rounded-full object-cover" />
                             ) : (
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-xs font-bold text-[var(--text-secondary)]">
                                 {player.name.slice(0, 1).toUpperCase()}
                               </span>
                             )}
-                            <span className="flex-1 font-semibold text-slate-800 dark:text-slate-200">{player.name}</span>
+                            <span className="flex-1 font-semibold text-[var(--text-secondary)]">{player.name}</span>
                             <form action={removePlayerFromFixedSlot}>
                               <input type="hidden" name="fixed_slot_id" value={slot.id} />
                               <input type="hidden" name="player_id" value={player.playerId} />
-                              <button type="submit" className="text-slate-400 hover:text-rose-500 transition" title="Quitar jugador">
+                              <button type="submit" className="text-[var(--text-tertiary)] hover:text-rose-500 transition" title="Quitar jugador">
                                 ✕
                               </button>
                             </form>
@@ -403,21 +414,21 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)] p-3">
+                    <p className={adminKicker}>
                       Estado de confirmación semanal
                     </p>
                     {!nextMatch ? (
-                      <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">Reserva aún no generada</p>
+                      <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">Reserva aún no generada</p>
                     ) : players.length === 0 ? (
-                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Sin jugadores asignados.</p>
+                      <p className="mt-2 text-sm text-[var(--text-tertiary)]">Sin jugadores asignados.</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {players.map((player) => {
                           const attendance = attendanceByMatchPlayer.get(`${nextMatch.id}__${player.playerId}`);
                           return (
                             <li key={`${slot.id}-status-${player.playerId}`} className="flex items-center justify-between text-sm">
-                              <span className="text-slate-700 dark:text-slate-200">{player.name}</span>
+                              <span className="text-[var(--text-secondary)]">{player.name}</span>
                               <span className="font-semibold">{attendanceLabel(attendance)}</span>
                             </li>
                           );
@@ -428,21 +439,21 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
 
                   {players.length < 4 ? <AddPlayerInline fixedSlotId={slot.id} /> : null}
 
-                  <details className="mt-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                    <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <details className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)]">
                       Excepciones activas ({slotExceptions.length})
                     </summary>
                     <div className="mt-3 space-y-2">
                       {slotExceptions.length === 0 ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">No hay excepciones futuras.</p>
+                        <p className="text-sm text-[var(--text-tertiary)]">No hay excepciones futuras.</p>
                       ) : (
                         <ul className="space-y-2">
                           {slotExceptions.map((ex) => (
                             <li
                               key={ex.id}
-                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm"
                             >
-                              <span className="text-slate-700 dark:text-slate-200">
+                              <span className="text-[var(--text-secondary)]">
                                 📅 Sin turno el {format(parseISO(`${ex.exception_date}T12:00:00`), "dd/MM", { locale: es })}
                                 {ex.reason ? ` — ${ex.reason}` : ""}
                               </span>
@@ -461,21 +472,21 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                       )}
                       <form action={addExceptionToFixedSlot} className="mt-3 flex flex-wrap items-end gap-2">
                         <input type="hidden" name="fixed_slot_id" value={slot.id} />
-                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <label className="text-xs font-semibold text-[var(--text-secondary)]">
                           Fecha excepción
                           <input
                             name="exception_date"
                             type="date"
                             required
-                            className="mt-1 rounded-lg border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                            className="mt-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
                           />
                         </label>
-                        <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <label className="text-xs font-semibold text-[var(--text-secondary)]">
                           Motivo
                           <input
                             name="reason"
                             placeholder="Opcional"
-                            className="mt-1 rounded-lg border border-slate-300 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                            className="mt-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
                           />
                         </label>
                         <button

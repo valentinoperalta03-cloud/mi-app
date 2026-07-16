@@ -14,7 +14,10 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
 
   return (
     <>
-      <header className="admin-top-chrome fixed inset-x-0 top-0 z-40 bg-brand-gradient md:hidden">
+      <header
+        className="admin-top-chrome fixed inset-x-0 top-0 z-40 md:hidden"
+        style={{ background: "var(--admin-header-bg)" }}
+      >
         <div className="flex h-[52px] items-center justify-between px-4">
           <Link href="/admin/dashboard" aria-label="Ir al inicio" className="shrink-0">
             {logoUrl ? (
@@ -22,10 +25,14 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
               <img
                 src={logoUrl}
                 alt="Logo del club"
-                className="h-9 w-9 rounded-full border-2 border-[var(--admin-accent-lima)] object-cover"
+                className="h-9 w-9 rounded-full border-2 object-cover"
+                style={{ borderColor: "var(--admin-header-logo-border)" }}
               />
             ) : (
-              <div className="h-9 w-9 rounded-full border-2 border-[var(--admin-accent-lima)] bg-[#0585FC]" />
+              <div
+                className="h-9 w-9 rounded-full border-2 bg-[#0585FC]"
+                style={{ borderColor: "var(--admin-header-logo-border)" }}
+              />
             )}
           </Link>
           <button
@@ -33,7 +40,8 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
             aria-expanded={open}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-white transition hover:bg-white/10 active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10 active:scale-95"
+            style={{ color: "var(--admin-header-text)" }}
           >
             <Menu size={22} aria-hidden />
           </button>

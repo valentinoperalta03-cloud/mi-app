@@ -30,20 +30,20 @@ export default function AddPlayerInline({ fixedSlotId }: { fixedSlotId: string }
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Agregar jugador al turno</p>
+    <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+      <p className="text-xs font-semibold text-[var(--text-secondary)]">Agregar jugador al turno</p>
       <input
         value={query}
         onChange={(e) => void searchPlayers(e.target.value)}
         placeholder="Buscar por nombre"
-        className="mt-2 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        className="mt-2 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
       />
-      {loading ? <p className="mt-2 text-[11px] text-slate-500">Buscando...</p> : null}
+      {loading ? <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">Buscando...</p> : null}
       {results.length > 0 ? (
         <ul className="mt-2 space-y-1">
           {results.map((r) => (
             <li key={r.user_id} className="flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-700 dark:text-slate-200">{r.name ?? "Jugador"}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{r.name ?? "Jugador"}</span>
               <form action={addPlayerToFixedSlot}>
                 <input type="hidden" name="fixed_slot_id" value={fixedSlotId} />
                 <input type="hidden" name="player_id" value={r.user_id} />

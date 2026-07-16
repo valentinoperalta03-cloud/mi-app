@@ -3,7 +3,15 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import {
+  adminAccentBar,
+  adminBadgeBrand,
+  adminCard,
+  adminCTAPrimary,
+  adminKicker,
+  adminSubtitle,
+  adminTitle,
+} from "@/components/admin/admin-premium";
 import { PaymentStatusPill, PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
@@ -91,7 +99,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     return (
       <div className={`${adminCard} border-amber-200/80 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-950/40`}>
         <AdminBackLink />
-        <p className="mt-4 text-sm font-semibold text-slate-800 dark:text-slate-200">Sin club asignado.</p>
+        <p className="mt-4 text-sm font-semibold text-[var(--text-secondary)]">Sin club asignado.</p>
       </div>
     );
   }
@@ -284,19 +292,16 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className={adminKicker}>Fecha seleccionada</p>
-            <p className="mt-1 text-lg font-semibold capitalize text-slate-900 dark:text-slate-100">{titleDate}</p>
+            <p className="mt-1 text-lg font-semibold capitalize text-[var(--text-primary)]">{titleDate}</p>
           </div>
           <form className="flex items-center gap-2">
             <input
               type="date"
               name="date"
               defaultValue={selectedDate}
-              className="w-full rounded-xl border border-slate-300 bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
+              className="w-full rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm transition-colors placeholder:text-[var(--text-tertiary)] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 dark:focus:ring-blue-400/20"
             />
-            <button
-              type="submit"
-              className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
+            <button type="submit" className={adminCTAPrimary}>
               Ver día
             </button>
           </form>
@@ -306,7 +311,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       <section className={`${adminCard} flex flex-col gap-4`}>
         <div>
           <p className={adminKicker}>Días cerrados</p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             El club no ofrecerá turnos en esas fechas (jugadores verán el día cerrado al reservar).
           </p>
         </div>
@@ -317,43 +322,40 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         ) : null}
         <form action={addClubClosedDayAction} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="return_date" value={selectedDate} />
-          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <label className={`flex flex-col gap-1 ${adminKicker}`}>
             Fecha
             <input
               type="date"
               name="closed_date"
               required
               min={getTodayYmdInArgentina()}
-              className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <label className={`flex min-w-[200px] flex-1 flex-col gap-1 ${adminKicker}`}>
             Motivo (opcional)
             <input
               name="reason"
               type="text"
               placeholder="Ej: feriado, torneo interno"
-              className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
             />
           </label>
-          <button
-            type="submit"
-            className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
-          >
+          <button type="submit" className={adminCTAPrimary}>
             Marcar como cerrado
           </button>
         </form>
         {closedDays.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">No hay días cerrados futuros cargados.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">No hay días cerrados futuros cargados.</p>
         ) : (
-          <ul className="divide-y divide-slate-200/80 rounded-xl border border-slate-200/80 dark:divide-slate-700 dark:border-slate-700">
+          <ul className="divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)]">
             {closedDays.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                 <div>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="font-semibold text-[var(--text-primary)]">
                     {format(parseISO(`${row.closed_date}T12:00:00`), "EEEE d MMM yyyy", { locale: es })}
                   </p>
-                  {row.reason ? <p className="text-slate-500 dark:text-slate-400">{row.reason}</p> : null}
+                  {row.reason ? <p className="text-[var(--text-tertiary)]">{row.reason}</p> : null}
                 </div>
                 <form action={removeClubClosedDayAction}>
                   <input type="hidden" name="closed_day_id" value={row.id} />
@@ -372,9 +374,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className={adminCard}>
+        <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Total reservas del día</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{totalReservas}</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{totalReservas}</p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Abonado</p>
@@ -386,12 +388,14 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Pendiente</p>
-          <p className="mt-2 text-2xl font-bold text-slate-500">{unpaidReservas}</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--text-tertiary)]">{unpaidReservas}</p>
         </div>
       </section>
 
       {matchesError ? (
-        <div className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-6 text-sm font-medium text-rose-800">
+        <div
+          className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200`}
+        >
           Error al cargar reservas: {matchesError.message}.
         </div>
       ) : (
@@ -466,12 +470,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                                     type="text"
                                     name="reason"
                                     placeholder="Motivo (opcional)"
-                                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                                    className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1.5 text-xs text-[var(--text-secondary)]"
                                   />
-                                  <button
-                                    type="submit"
-                                    className="w-full rounded-lg bg-slate-900 px-2 py-1.5 text-xs font-semibold text-white"
-                                  >
+                                  <button type="submit" className={`w-full ${adminCTAPrimary} px-2 py-1.5 text-xs`}>
                                     Bloquear
                                   </button>
                                 </form>
@@ -559,7 +560,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       )}
 
       {selectedMatch ? (
-        <section className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-slate-900/40`}>
+        <section className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               {ownerProfile?.avatar_url ? (
@@ -574,73 +575,71 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               )}
               <div>
                 <p className={adminKicker}>{selectedIsReservation ? "Detalle de reserva" : "Detalle del turno"}</p>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{ownerDisplayName}</h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">{ownerDisplayName}</h2>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   Contacto en perfil: el jugador puede completar datos desde la app.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {selectedMatch.es_turno_fijo ? (
-                <span className="inline-flex rounded-full border border-[#0585FC]/30 bg-[#0585FC]/10 px-2 py-1 text-xs font-semibold text-[#0461C4] dark:text-sky-300">
-                  🔄 Turno fijo
-                </span>
+                <span className={adminBadgeBrand}>🔄 Turno fijo</span>
               ) : null}
               <PaymentStatusPill status={String(selectedMatch.payment_status ?? "—")} />
             </div>
           </div>
 
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Cancha</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 {selectedMatch.courts?.name ?? ctx.courts.find((c) => c.id === selectedMatch.court_id)?.name ?? "Cancha"}
               </dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Horario</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{getTimeFromMatch(selectedMatch)}</dd>
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{getTimeFromMatch(selectedMatch)}</dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Duración</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">{durationMin(selectedMatch)} min</dd>
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{durationMin(selectedMatch)} min</dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Método de pago (reserva)</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 {selectedIsReservation ? reservationMethodLabel(selectedMatch.payment_status) : "—"}
               </dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Estado del pago</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 {String(selectedMatch.payment_status ?? "—")}
               </dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Precio total del turno</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 {selectedMatch.total_price != null ? `$${Number(selectedMatch.total_price).toLocaleString("es-AR")}` : "—"}
               </dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Pagado (seña o total)</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 ${Number(selectedMatch.amount_paid ?? 0).toLocaleString("es-AR")}
               </dd>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
               <dt className={adminKicker}>Saldo pendiente en club</dt>
-              <dd className="mt-1 font-semibold text-slate-800 dark:text-slate-200">
+              <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
                 ${Number(selectedMatch.amount_pending ?? 0).toLocaleString("es-AR")}
               </dd>
             </div>
           </dl>
 
           {selectedPayments.length > 0 ? (
-            <div className="mt-4 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+            <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
               <p className={adminKicker}>Pagos registrados</p>
-              <ul className="mt-2 space-y-1 text-sm text-slate-700 dark:text-slate-200">
+              <ul className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
                 {selectedPayments.map((p, i) => (
                   <li key={`${p.user_id}-${i}`} className="flex flex-wrap justify-between gap-2">
                     <span className="font-medium">{p.payment_method ?? "—"}</span>
@@ -653,10 +652,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             </div>
           ) : null}
 
-          <div className="mt-4 rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
             <p className={adminKicker}>Jugadores</p>
             {selectedMatchParticipants.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Sin jugadores asignados aún.</p>
+              <p className="mt-2 text-sm text-[var(--text-tertiary)]">Sin jugadores asignados aún.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {selectedMatchParticipants.map((player) => (
@@ -667,7 +666,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     ) : (
                       <PlayerAvatar name={player.name} />
                     )}
-                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{player.name}</span>
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">{player.name}</span>
                   </li>
                 ))}
               </ul>
@@ -713,7 +712,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               ) : null}
               <Link
                 href={`/admin/reservas?date=${selectedDate}`}
-                className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)]"
               >
                 Cerrar detalle
               </Link>

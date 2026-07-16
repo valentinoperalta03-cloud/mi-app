@@ -3,6 +3,7 @@
 import { Camera, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { adminKicker } from "@/components/admin/admin-premium";
 
 const BUCKET = "courts";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -74,15 +75,15 @@ export default function CourtImageUploader({
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</span>
+      <span className={adminKicker}>{label}</span>
       <input type="hidden" name={inputName} value={imageUrl} />
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex items-start gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/80 p-3">
         <div className="relative">
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- preview URL pública
-            <img src={imageUrl} alt={label} className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+            <img src={imageUrl} alt={label} className="h-20 w-20 rounded-xl object-cover ring-1 ring-[var(--border-subtle)]" />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-200 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[var(--bg-subtle)] text-xs text-[var(--text-tertiary)]">
               Sin imagen
             </div>
           )}
@@ -90,7 +91,7 @@ export default function CourtImageUploader({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-slate-900 text-white shadow disabled:opacity-50 dark:border-slate-600"
+            className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--bg-card)] bg-[#0A0A0A] text-white shadow disabled:opacity-50"
             aria-label="Subir imagen"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera size={15} />}
@@ -108,7 +109,7 @@ export default function CourtImageUploader({
             }}
           />
         </div>
-        <p className="pt-1 text-xs text-slate-500 dark:text-slate-400">JPEG/PNG/WebP, máx. 5MB. Se guarda en Storage `courts`.</p>
+        <p className="pt-1 text-xs text-[var(--text-tertiary)]">JPEG/PNG/WebP, máx. 5MB. Se guarda en Storage `courts`.</p>
       </div>
       {error ? <p className="text-xs font-medium text-rose-600">{error}</p> : null}
     </div>
