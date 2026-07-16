@@ -49,21 +49,50 @@ export default async function FacturacionCallbackPage({
     const nextBillingDate = preapproval.next_payment_date ?? preapproval.auto_recurring?.start_date ?? null;
 
     const service = createServiceClient();
-    const patch = {
-      subscription_status: "active",
-      mp_subscription_id: preapprovalId,
-      next_billing_date: nextBillingDate,
-    };
-    const { error } = clubId
-      ? await service.from(DB_TABLES.clubs).update(patch).eq("id", clubId)
-      : await service.from(DB_TABLES.clubs).update(patch).eq("mp_subscription_id", preapprovalId);
+
+    // Necesitamos el subscription_status previo para distinguir "tarjeta
+    // recien confirmada tras 'pending'" (arranca el trial de 15 dias) de una
+    // reactivacion (past_due/paused -> active), igual que en el webhook.
+    const { data: existingClub, error: findError } = clubId
+      ? await service.from(DB_TABLES.clubs).select("id, subscription_status").eq("id", clubId).maybeSingle()
+      : await service
+          .from(DB_TABLES.clubs)
+          .select("id, subscription_status")
+          .eq("mp_subscription_id", preapprovalId)
+          .maybeSingle();
+
+    if (findError || !existingClub) {
+      log.error({ event: "mp.subscription.callback.club_not_found", preapprovalId, clubId, err: findError });
+      redirect("/admin/facturacion?reason=past_due");
+    }
+
+    const clubRow = existingClub as { id: string; subscription_status: string | null };
+    const isPendingActivation = clubRow.subscription_status === "pending";
+    const now = new Date();
+
+    const patch = isPendingActivation
+      ? {
+          subscription_status: "trial",
+          trial_start_date: now.toISOString(),
+          trial_end_date: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+          mp_subscription_id: preapprovalId,
+        }
+      : {
+          subscription_status: "active",
+          mp_subscription_id: preapprovalId,
+          next_billing_date: nextBillingDate,
+        };
+
+    const { error } = await service.from(DB_TABLES.clubs).update(patch).eq("id", clubRow.id);
 
     if (error) {
       log.error({ event: "mp.subscription.callback.update_failed", preapprovalId, err: error });
       redirect("/admin/facturacion?reason=past_due");
     }
 
-    redirect("/admin/dashboard?subscription=activated");
+    redirect(
+      isPendingActivation ? "/admin/dashboard?activation=trial_started" : "/admin/dashboard?subscription=activated"
+    );
   }
 
   return (

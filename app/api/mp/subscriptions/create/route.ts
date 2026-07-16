@@ -86,21 +86,38 @@ export async function POST(req: Request) {
   }
 
   try {
-    const preApproval = await getPreApprovalClient().create({
-      body: {
-        reason: `Suscripción mensual PadeLibre - ${clubRow.name ?? "Club"}`,
-        external_reference: clubId,
-        payer_email: payerEmail,
-        ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
-        auto_recurring: {
-          frequency: 1,
-          frequency_type: "months",
-          transaction_amount: SUBSCRIPTION_PRICE_ARS,
-          currency_id: "ARS",
-        },
-        status: "pending",
+    // El SDK oficial (mercadopago) no tipa `free_trial` en el request de
+    // PreApproval.create pese a que la API de MP si lo acepta; se tipa acá
+    // localmente en vez de castear a `any`.
+    const preApprovalBody: {
+      reason: string;
+      external_reference: string;
+      payer_email: string;
+      back_url?: string;
+      auto_recurring: {
+        frequency: number;
+        frequency_type: string;
+        transaction_amount: number;
+        currency_id: string;
+        free_trial: { frequency: number; frequency_type: string };
+      };
+      status: string;
+    } = {
+      reason: `Suscripción mensual PadeLibre - ${clubRow.name ?? "Club"}`,
+      external_reference: clubId,
+      payer_email: payerEmail,
+      ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        transaction_amount: SUBSCRIPTION_PRICE_ARS,
+        currency_id: "ARS",
+        free_trial: { frequency: 15, frequency_type: "days" },
       },
-    });
+      status: "pending",
+    };
+
+    const preApproval = await getPreApprovalClient().create({ body: preApprovalBody });
 
     if (!preApproval.init_point || !preApproval.id) {
       return NextResponse.json(

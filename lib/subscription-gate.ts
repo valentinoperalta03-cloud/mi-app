@@ -5,7 +5,7 @@ import {
 } from "@/lib/club-subscription-cookie";
 import { createServiceClient } from "@/utils/supabase/server";
 
-export type SubscriptionBlockReason = "trial_expired" | "past_due" | "paused";
+export type SubscriptionBlockReason = "pending" | "trial_expired" | "past_due" | "paused";
 
 export type SubscriptionGateResult = {
   blockReason: SubscriptionBlockReason | null;
@@ -52,7 +52,9 @@ export async function evaluateClubSubscriptionGate(
   }
 
   let blockReason: SubscriptionBlockReason | null = null;
-  if (status === "trial") {
+  if (status === "pending") {
+    blockReason = "pending";
+  } else if (status === "trial") {
     if (trialEndDate && Date.now() > new Date(trialEndDate).getTime()) {
       blockReason = "trial_expired";
     }

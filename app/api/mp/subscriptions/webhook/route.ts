@@ -6,6 +6,8 @@ import { verifyMpWebhookSignature } from "@/lib/mp-webhook-signature";
 import { createServiceClient } from "@/utils/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
+
 function extractDataId(url: URL, body: unknown): { id: string | null; topic: string | null } {
   const topic = url.searchParams.get("topic") ?? url.searchParams.get("type");
   const qId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
@@ -18,16 +20,40 @@ function extractDataId(url: URL, body: unknown): { id: string | null; topic: str
   return { id: null, topic };
 }
 
+type ClubRefs = { clubId: string; preapprovalId: string };
+
+function logIfClubNotFound(requestId: string, refs: ClubRefs, found: unknown) {
+  if (found) return;
+  const lookupField = refs.clubId ? `id=${refs.clubId}` : `mp_subscription_id=${refs.preapprovalId}`;
+  log.warn({
+    event: "mp.subscription.webhook.club_not_found",
+    requestId,
+    msg: `webhook: no se encontró club con ${lookupField} — evento ignorado`,
+  });
+}
+
 async function updateClubSubscription(
   admin: SupabaseClient,
-  refs: { clubId: string; preapprovalId: string },
-  patch: Record<string, unknown>
+  refs: ClubRefs,
+  patch: Record<string, unknown>,
+  requestId: string
 ) {
   const query = admin.from(DB_TABLES.clubs).update(patch);
-  if (refs.clubId) {
-    return query.eq("id", refs.clubId).select("owner_id").maybeSingle();
+  const result = refs.clubId
+    ? await query.eq("id", refs.clubId).select("owner_id").maybeSingle()
+    : await query.eq("mp_subscription_id", refs.preapprovalId).select("owner_id").maybeSingle();
+
+  if (!result.error) {
+    logIfClubNotFound(requestId, refs, result.data);
   }
-  return query.eq("mp_subscription_id", refs.preapprovalId).select("owner_id").maybeSingle();
+  return result;
+}
+
+async function findClubByRefs(admin: SupabaseClient, refs: ClubRefs) {
+  const query = admin.from(DB_TABLES.clubs).select("id, owner_id, subscription_status");
+  return refs.clubId
+    ? await query.eq("id", refs.clubId).maybeSingle()
+    : await query.eq("mp_subscription_id", refs.preapprovalId).maybeSingle();
 }
 
 export async function POST(req: Request) {
@@ -84,13 +110,15 @@ async function handleNotification(req: Request) {
     }
     const payment = (await res.json()) as { status?: string; preapproval_id?: string };
     const preapprovalId = String(payment.preapproval_id ?? "").trim();
+    const paymentStatus = String(payment.status ?? "").toLowerCase();
     if (!preapprovalId) return NextResponse.json({ ok: true });
 
-    if (String(payment.status ?? "").toLowerCase() === "rejected") {
+    if (paymentStatus === "rejected") {
       const { data: updated, error } = await updateClubSubscription(
         admin,
         { clubId: "", preapprovalId },
-        { subscription_status: "past_due" }
+        { subscription_status: "past_due" },
+        requestId
       );
       if (error) {
         log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
@@ -106,6 +134,48 @@ async function handleNotification(req: Request) {
         });
       }
       log.info({ event: "mp.subscription.payment_failed", requestId, preapprovalId });
+    } else if (paymentStatus === "approved") {
+      // Cobro (inicial post-trial o recurrente mensual) aprobado: reactiva un
+      // club que hubiera quedado en past_due y refresca next_billing_date.
+      // Antes de este fix no se manejaba este status y el club quedaba
+      // en past_due indefinidamente pese a que MP siguiera cobrando bien.
+      const preRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!preRes.ok) {
+        log.error({
+          event: "mp.subscription.webhook.preapproval_fetch_failed",
+          requestId,
+          status: preRes.status,
+        });
+        return NextResponse.json({ ok: true });
+      }
+      const prePayload = (await preRes.json()) as { external_reference?: string; next_payment_date?: string };
+
+      const { data: updated, error } = await updateClubSubscription(
+        admin,
+        { clubId: String(prePayload.external_reference ?? "").trim(), preapprovalId },
+        {
+          subscription_status: "active",
+          next_billing_date: prePayload.next_payment_date ?? null,
+          mp_subscription_id: preapprovalId,
+        },
+        requestId
+      );
+      if (error) {
+        log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
+        return NextResponse.json({ ok: false }, { status: 500 });
+      }
+      const ownerId = String((updated as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+      if (ownerId) {
+        await createNotification(admin, {
+          user_id: ownerId,
+          type: "payment_approved",
+          title: "Pago aprobado",
+          body: "Tu pago mensual de PadeLibre fue procesado correctamente.",
+        });
+      }
+      log.info({ event: "mp.subscription.payment_approved", requestId, preapprovalId });
     }
     return NextResponse.json({ ok: true });
   }
@@ -127,32 +197,67 @@ async function handleNotification(req: Request) {
   const clubId = String(preapproval.external_reference ?? "").trim();
   const preapprovalId = String(preapproval.id ?? dataId).trim();
   const status = String(preapproval.status ?? "").toLowerCase();
-  const refs = { clubId, preapprovalId };
+  const refs: ClubRefs = { clubId, preapprovalId };
 
   if (status === "authorized") {
-    const { data: updated, error } = await updateClubSubscription(admin, refs, {
-      subscription_status: "active",
-      next_billing_date: preapproval.next_payment_date ?? null,
-      mp_subscription_id: preapprovalId,
-    });
+    // Necesitamos el subscription_status previo para distinguir "tarjeta
+    // recien confirmada tras 'pending'" (arranca el trial de 15 dias) de
+    // "reactivacion" (past_due/paused -> active), asi que se busca el club
+    // antes de decidir el patch en vez de usar updateClubSubscription a ciegas.
+    const { data: existingClub, error: findError } = await findClubByRefs(admin, refs);
+    if (findError) {
+      log.error({ event: "mp.subscription.webhook.lookup_failed", requestId, err: findError });
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
+    if (!existingClub) {
+      logIfClubNotFound(requestId, refs, existingClub);
+      return NextResponse.json({ ok: true });
+    }
+    const clubRow = existingClub as { id: string; owner_id: string | null; subscription_status: string | null };
+    const isPendingActivation = clubRow.subscription_status === "pending";
+    const now = new Date();
+    const patch = isPendingActivation
+      ? {
+          subscription_status: "trial",
+          trial_start_date: now.toISOString(),
+          trial_end_date: new Date(now.getTime() + TRIAL_DURATION_MS).toISOString(),
+          mp_subscription_id: preapprovalId,
+        }
+      : {
+          subscription_status: "active",
+          next_billing_date: preapproval.next_payment_date ?? null,
+          mp_subscription_id: preapprovalId,
+        };
+
+    const { error } = await admin.from(DB_TABLES.clubs).update(patch).eq("id", clubRow.id);
     if (error) {
       log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
-    const ownerId = String((updated as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    const ownerId = String(clubRow.owner_id ?? "").trim();
     if (ownerId) {
       await createNotification(admin, {
         user_id: ownerId,
         type: "payment_approved",
-        title: "¡Suscripción activada!",
-        body: "Tu suscripción mensual a PadeLibre quedó activa.",
+        title: isPendingActivation ? "¡Tarjeta confirmada!" : "¡Suscripción activada!",
+        body: isPendingActivation
+          ? "Tu período de prueba de 15 días empezó. No se te cobra nada hasta que termine."
+          : "Tu suscripción mensual a PadeLibre quedó activa.",
       });
     }
-    log.info({ event: "mp.subscription.authorized", requestId, clubId, preapprovalId });
-  } else if (status === "cancelled" || status === "paused") {
-    const { data: updated, error } = await updateClubSubscription(admin, refs, {
-      subscription_status: "paused",
+    log.info({
+      event: isPendingActivation ? "mp.subscription.trial_started" : "mp.subscription.authorized",
+      requestId,
+      clubId: clubRow.id,
+      preapprovalId,
     });
+  } else if (status === "cancelled" || status === "paused") {
+    const { data: updated, error } = await updateClubSubscription(
+      admin,
+      refs,
+      { subscription_status: "paused" },
+      requestId
+    );
     if (error) {
       log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
       return NextResponse.json({ ok: false }, { status: 500 });

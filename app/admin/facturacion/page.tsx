@@ -14,6 +14,8 @@ import { createClient, createServiceClient } from "@/utils/supabase/server";
 import ActivateSubscriptionButton from "./activate-subscription-button";
 
 const REASON_MESSAGES: Record<string, string> = {
+  pending:
+    "Para empezar a usar PadeLibre necesitás cargar una tarjeta con débito automático. No se te cobra nada durante los primeros 15 días.",
   trial_expired:
     "Tu período de prueba de 15 días finalizó. Para seguir usando PadeLibre, activá tu suscripción.",
   past_due: "Tu pago mensual no pudo procesarse. Actualizá tu método de pago para continuar.",
