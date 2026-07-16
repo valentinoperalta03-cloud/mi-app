@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, ChevronRight, ClipboardList, CreditCard, Settings2 } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import { AdminSignOutLink } from "@/components/admin/admin-sign-out-link";
 import {
   adminAccentBar,
   adminCard,
@@ -84,6 +85,10 @@ export default async function AdminConfigPage() {
             <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" />
           </Link>
         ))}
+      </div>
+
+      <div className="mt-8 flex justify-center">
+        <AdminSignOutLink />
       </div>
     </div>
   );

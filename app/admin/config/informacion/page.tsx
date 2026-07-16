@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { LogOut } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -18,13 +17,6 @@ const CLUB_ADMIN_COLUMNS =
   "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id" as const;
-
-async function signOutAction() {
-  "use server";
-  const supabase = await createClient({ allowCookieWrites: true });
-  await supabase.auth.signOut();
-  redirect("/login");
-}
 
 function flash(ok: boolean, err: string) {
   if (ok) {
@@ -199,15 +191,6 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
             <p className="mt-1 text-xs font-semibold text-[var(--text-tertiary)]">ID del club: {clubShortId}</p>
           </div>
         </div>
-        <form action={signOutAction} className="mt-4">
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
-          >
-            <LogOut size={16} />
-            Cerrar sesión
-          </button>
-        </form>
       </section>
 
       <section className={`${adminCard} p-6`}>

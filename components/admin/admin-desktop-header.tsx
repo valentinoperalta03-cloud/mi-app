@@ -33,8 +33,8 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
 
   return (
     <header
-      className="sticky top-0 z-40 hidden border-b border-white/10 md:block"
-      style={{ background: "var(--admin-header-bg)" }}
+      className="sticky top-0 z-40 hidden md:block"
+      style={{ background: "var(--admin-header-bg)", borderBottom: "2px solid var(--admin-header-lima-line)" }}
     >
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-4 py-2 md:px-6">
         <div className="min-w-0 shrink-0">
@@ -68,7 +68,7 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
                 href={item.href}
                 prefetch
                 className="relative inline-flex items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-semibold touch-manipulation transition-colors"
-                style={{ color: active ? "var(--admin-header-text)" : "var(--admin-header-text-muted)" }}
+                style={{ color: active ? "var(--admin-header-active-text)" : "var(--admin-header-text)" }}
               >
                 {active ? (
                   <motion.span

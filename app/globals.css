@@ -58,12 +58,13 @@
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
-  /* Admin — header/topbar: negro con acento lima en modo claro */
-  --admin-header-bg: #0A0A0A;
-  --admin-header-text: #CCFF00;
-  --admin-header-text-muted: rgba(204, 255, 0, 0.7);
-  --admin-header-active-bg: rgba(204, 255, 0, 0.15);
-  --admin-header-logo-border: #CCFF00;
+  /* Admin — header/topbar: fondo sigue el tema, contenido siempre azul de marca, linea lima fija */
+  --admin-header-bg: #FFFFFF;
+  --admin-header-text: #0585FC;
+  --admin-header-active-bg: rgba(5, 133, 252, 0.12);
+  --admin-header-active-text: #0461C4;
+  --admin-header-logo-border: #0585FC;
+  --admin-header-lima-line: #CCFF00;
 
   /* Admin — estados positivos con lima */
   --admin-status-active-bg: rgba(204, 255, 0, 0.12);
@@ -103,12 +104,8 @@
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.16);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
 
-  /* Admin — header/topbar: gradiente azul con texto negro en modo oscuro */
-  --admin-header-bg: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
-  --admin-header-text: #0A0A0A;
-  --admin-header-text-muted: rgba(10, 10, 10, 0.7);
-  --admin-header-active-bg: rgba(255, 255, 255, 0.25);
-  --admin-header-logo-border: rgba(10, 10, 10, 0.2);
+  /* Admin — header/topbar: fondo negro en modo oscuro (contenido y linea lima se heredan de :root) */
+  --admin-header-bg: #0A0A0A;
 
   /* Admin — estados positivos con lima (dark) */
   --admin-status-active-bg: rgba(204, 255, 0, 0.16);

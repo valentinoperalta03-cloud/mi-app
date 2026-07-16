@@ -16,7 +16,7 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
     <>
       <header
         className="admin-top-chrome fixed inset-x-0 top-0 z-40 md:hidden"
-        style={{ background: "var(--admin-header-bg)" }}
+        style={{ background: "var(--admin-header-bg)", borderBottom: "2px solid var(--admin-header-lima-line)" }}
       >
         <div className="flex h-[52px] items-center justify-between px-4">
           <Link href="/admin/dashboard" aria-label="Ir al inicio" className="shrink-0">
@@ -40,7 +40,7 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
             aria-expanded={open}
-            className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10 active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10 active:scale-95"
             style={{ color: "var(--admin-header-text)" }}
           >
             <Menu size={22} aria-hidden />

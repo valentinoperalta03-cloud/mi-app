@@ -414,7 +414,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     <div
                       key={court.id}
                       className="border-r border-white/15 px-3 py-3 text-sm font-semibold text-white"
-                      style={{ background: "var(--admin-header-bg)" }}
+                      style={{ background: "var(--admin-brand-gradient)" }}
                     >
                       {court.name ?? "Cancha"}
                     </div>
