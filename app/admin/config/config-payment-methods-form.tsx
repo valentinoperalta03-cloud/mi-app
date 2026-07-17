@@ -72,11 +72,11 @@ export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, init
         <span className="text-sm font-medium text-[var(--text-secondary)]">Transferencia bancaria</span>
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Alias</span>
+        <span className="font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Alias</span>
         <input name="bank_alias" defaultValue={initial.bank_alias} placeholder="Ej. mi.alias.mp" className={inputClass} />
       </label>
       <label className="block space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">CBU (opcional)</span>
+        <span className="font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">CBU (opcional)</span>
         <input name="bank_cbu" defaultValue={initial.bank_cbu} className={inputClass} />
       </label>
       <button type="submit" className={adminCTAPrimary}>

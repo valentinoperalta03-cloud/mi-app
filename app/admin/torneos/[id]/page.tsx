@@ -171,10 +171,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         {tour.status === "open" ? (
           <form action={startTournamentFormAction}>
             <input type="hidden" name="tournament_id" value={id} />
-            <button
-              type="submit"
-              className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
+            <button type="submit" className={adminCTAPrimary}>
               Iniciar torneo
             </button>
           </form>
@@ -182,7 +179,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         {tour.status === "in_progress" && tour.tournament_type === "mixing" ? (
           <form action={advanceMixingRoundFormAction}>
             <input type="hidden" name="tournament_id" value={id} />
-            <button type="submit" className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500">
+            <button type="submit" className={adminCTAPrimary}>
               Generar siguiente ronda
             </button>
           </form>
@@ -324,7 +321,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                     placeholder="Sets P2"
                     className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
                   />
-                  <button type="submit" className="rounded-lg bg-[#0461C4] px-2 py-1 text-xs font-semibold text-white">
+                  <button type="submit" className={`${adminCTAPrimary} px-2 py-1 text-xs`}>
                     {m.status === "finished" ? "Editar" : "Guardar"}
                   </button>
                 </form>

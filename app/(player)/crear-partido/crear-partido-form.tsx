@@ -49,6 +49,7 @@ export type ClubOption = {
   openTime?: string;
   depositType?: "percentage" | "fixed" | null;
   depositValue?: number;
+  isAvailable?: boolean;
 };
 
 export type CourtOption = {
@@ -440,21 +441,33 @@ export default function CrearPartidoForm({
               const cover = club.coverImageUrl?.trim() || null;
               const logo = club.logoUrl?.trim() || null;
               const thumbFallback = club.imageUrl?.trim() || null;
+              const isAvailable = club.isAvailable ?? true;
               return (
                 <button
                   key={club.id}
                   type="button"
+                  disabled={!isAvailable}
                   onClick={() => {
+                    if (!isAvailable) return;
                     setSelectedClub(club);
                     setSelectedClubId(club.id);
                     setCurrentStep("club-detail");
                   }}
-                  className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] ${
+                  className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all ${
+                    isAvailable
+                      ? "hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+                      : "cursor-not-allowed opacity-60"
+                  } ${
                     cover
                       ? "border-black/[0.06] dark:border-white/[0.06]"
                       : "border-black/[0.06] bg-white dark:border-white/[0.06]"
                   }`}
                 >
+                  {!isAvailable ? (
+                    <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                      No disponible
+                    </span>
+                  ) : null}
                   {cover ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element -- URL de Supabase storage */}

@@ -7,8 +7,11 @@ import {
   adminBadgeError,
   adminBadgeNeutral,
   adminCard,
+  adminCTAPrimary,
+  adminEmptyState,
   adminKicker,
   adminSubtitle,
+  adminTip,
   adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -317,7 +320,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-100 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Si activás los métodos de pago en <strong>Configuración → Métodos de pago</strong>, podés habilitar o deshabilitar efectivo y transferencia para controlar qué opciones ven los jugadores al reservar.
           </div>
         </div>
@@ -354,7 +357,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       <section className="space-y-3">
         <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Pendientes ({todayAr})</h2>
         {pending.length === 0 && practicePending.length === 0 ? (
-          <p className={`${adminCard} text-sm text-[var(--text-tertiary)]`}>No hay cobros pendientes para hoy.</p>
+          <p className={adminEmptyState}>No hay cobros pendientes para hoy.</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {practicePending.map((pr) => {
@@ -390,7 +393,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       <input type="hidden" name="registration_id" value={pr.id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                        className={`w-full ${adminCTAPrimary}`}
                       >
                         Confirmar cobro
                       </button>
@@ -444,7 +447,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       <input type="hidden" name="match_id" value={m.id} />
                       <button
                         type="submit"
-                        className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                        className={`w-full ${adminCTAPrimary}`}
                       >
                         Confirmar cobro
                       </button>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminBadgeError, adminCard, adminCTAPrimary, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminBadgeError, adminCard, adminCTAPrimary, adminEmptyState, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -88,7 +88,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
 
       <section className={`${adminCard} ${adminAccentBar}`}>
         {rows.length === 0 ? (
-          <p className="text-sm font-medium text-[var(--text-tertiary)]">No hay reembolsos para este mes.</p>
+          <p className={adminEmptyState}>No hay reembolsos para este mes.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {rows.map((row) => (

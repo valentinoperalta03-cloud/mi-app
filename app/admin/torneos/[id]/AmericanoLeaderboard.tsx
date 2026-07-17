@@ -18,13 +18,13 @@ export function AmericanoLeaderboard({ matches, pairNames }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">#</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pareja</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">J</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">G</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">P</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Sets</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pts</th>
+              <th className="px-3 py-2 text-left font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">#</th>
+              <th className="px-3 py-2 text-left font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pareja</th>
+              <th className="px-3 py-2 text-center font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">J</th>
+              <th className="px-3 py-2 text-center font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">G</th>
+              <th className="px-3 py-2 text-center font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">P</th>
+              <th className="px-3 py-2 text-center font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Sets</th>
+              <th className="px-3 py-2 text-center font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pts</th>
             </tr>
           </thead>
           <tbody>

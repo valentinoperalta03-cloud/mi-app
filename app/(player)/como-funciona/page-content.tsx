@@ -39,7 +39,7 @@ const faqs = [
   {
     question: "¿Padelibre tiene costo para el club?",
     answer:
-      "No. Para clubes no hay costo de alta ni abono mensual. Es 100% gratis para empezar y operar. Ganamos cuando vos ganás.",
+      "Los clubes acceden a PadeLibre con una suscripción mensual fija. Vos como jugador no pagás ninguna comisión adicional: el precio que ves al reservar es el precio que pagás.",
   },
   {
     question: "¿Cómo se confirma una reserva?",

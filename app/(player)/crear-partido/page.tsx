@@ -46,6 +46,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     { data: clubsRaw, error: clubsError },
     { data: courtsRaw, error: courtsError },
     { data: slotPricesRaw },
+    { data: availabilityRaw },
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.clubs)
@@ -64,7 +65,15 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .is("day_of_week", null)
       .not("start_time", "is", null)
       .not("price_override", "is", null),
+    supabase.rpc("get_clubs_availability"),
   ]);
+
+  const availabilityMap = Object.fromEntries(
+    ((availabilityRaw ?? []) as Array<{ club_id: string; is_available: boolean }>).map((a) => [
+      a.club_id,
+      a.is_available,
+    ])
+  );
 
   const { data: favoritesRaw } = user
     ? await supabase
@@ -116,6 +125,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     openTime: String(club.open_time ?? "09:00").trim().slice(0, 5) || "09:00",
     depositType: club.deposit_type ?? null,
     depositValue: Number(club.deposit_value ?? 0),
+    isAvailable: availabilityMap[club.id] ?? true,
   }));
   const courtsDeduped = Array.from(
     new Map(

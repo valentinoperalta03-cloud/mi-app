@@ -8,6 +8,7 @@ import {
   adminCTAPrimary,
   adminSectionLabel,
   adminSubtitle,
+  adminTip,
   adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -120,7 +121,7 @@ export default async function AdminTorneosPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-100 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Para eliminación directa, asegurate de tener exactamente 4, 8, 16 o 32 parejas pagadas antes de iniciar. Si tenés más inscriptos esperando, podés pedirles que completen el pago.
           </div>
         </div>

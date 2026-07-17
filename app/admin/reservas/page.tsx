@@ -6,8 +6,11 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import {
   adminAccentBar,
   adminBadgeBrand,
+  adminBadgeDanger,
+  adminBadgeWarning,
   adminCard,
   adminCTAPrimary,
+  adminEmptyState,
   adminKicker,
   adminSubtitle,
   adminTitle,
@@ -346,7 +349,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           </button>
         </form>
         {closedDays.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No hay días cerrados futuros cargados.</p>
+          <p className={adminEmptyState}>No hay días cerrados futuros cargados.</p>
         ) : (
           <ul className="divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)]">
             {closedDays.map((row) => (
@@ -407,7 +410,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   className="grid"
                   style={{ gridTemplateColumns: `84px repeat(${ctx.courts.length}, minmax(180px, 1fr))` }}
                 >
-                  <div className="sticky left-0 z-20 flex items-center justify-end border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                  <div className="sticky left-0 z-20 flex items-center justify-end border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 font-admin-mono text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
                     Hora
                   </div>
                   {ctx.courts.map((court) => (
@@ -530,7 +533,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                             >
                               <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{player}</p>
                               <span
-                                className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold text-[#031733]"
+                                className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold text-black"
                                 style={{ backgroundColor: "var(--admin-accent-lima)" }}
                               >
                                 Turno fijo
@@ -678,10 +681,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               {selectedIsReservation && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
                 <form action={confirmOfflineCobro}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                  >
+                  <button type="submit" className={adminCTAPrimary}>
                     {selectedPaySt === "cash_pending" ? "Confirmar cobro en efectivo" : "Confirmar transferencia recibida"}
                   </button>
                 </form>
@@ -690,10 +690,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                 <form action={requestReservationRefundAction}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
                   <input type="hidden" name="date" value={selectedDate} />
-                  <button
-                    type="submit"
-                    className="inline-flex rounded-full border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
-                  >
+                  <button type="submit" className={adminBadgeWarning}>
                     Reembolsar
                   </button>
                 </form>
@@ -702,10 +699,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                 <form action={cancelReservationAdmin}>
                   <input type="hidden" name="match_id" value={selectedMatch.id} />
                   <input type="hidden" name="date" value={selectedDate} />
-                  <button
-                    type="submit"
-                    className="inline-flex rounded-full border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100"
-                  >
+                  <button type="submit" className={adminBadgeDanger}>
                     Cancelar reserva
                   </button>
                 </form>

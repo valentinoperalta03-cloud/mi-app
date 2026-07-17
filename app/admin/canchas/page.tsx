@@ -7,6 +7,7 @@ import {
   adminBadgeLima,
   adminCTAPrimary,
   adminCard,
+  adminEmptyState,
   adminKicker,
   adminSubtitle,
   adminTitle,
@@ -212,7 +213,7 @@ export default async function AdminCanchasPage({
       )}
 
       {courts.length === 0 ? (
-        <p className={`${adminCard} text-center text-sm font-medium text-[var(--text-tertiary)]`}>
+        <p className={adminEmptyState}>
           Todavía no tenés canchas. Creá la primera con el formulario de arriba.
         </p>
       ) : (

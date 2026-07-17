@@ -19,6 +19,7 @@ export type ClubRow = {
   logo_url?: string | null;
   description?: string | null;
   business_hours?: string | null;
+  isAvailable?: boolean;
 };
 
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
@@ -81,6 +82,7 @@ export default function ClubsListClient({
   const cityLabel = hasCity ? formatCityLabel(userCity) : "tu ciudad";
   const provinceLabel = userProvince?.trim() || "tu provincia";
   const [locationFilter, setLocationFilter] = useState<LocationFilter>(hasCity ? "mi_ciudad" : "todos");
+  const [unavailableNotice, setUnavailableNotice] = useState<string | number | null>(null);
 
   const filteredClubs = useMemo(() => {
     if (locationFilter === "mi_ciudad") {
@@ -165,9 +167,23 @@ export default function ClubsListClient({
         {filteredClubs.map((club) => {
           const thumb = clubThumbUrl(club);
           const descShort = shortDescription(club.description);
+          const isAvailable = club.isAvailable ?? true;
           return (
             <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
-              <Link href={`/clubes/${club.id}`} className={`block p-5 ${PLAYER_CARD_INTERACTIVE}`}>
+              <Link
+                href={`/clubes/${club.id}`}
+                onClick={(e) => {
+                  if (isAvailable) return;
+                  e.preventDefault();
+                  setUnavailableNotice(club.id);
+                }}
+                className={`relative block p-5 ${PLAYER_CARD_INTERACTIVE} ${!isAvailable ? "opacity-60" : ""}`}
+              >
+                {!isAvailable ? (
+                  <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                    No disponible
+                  </span>
+                ) : null}
                 <div className="flex items-start gap-4">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -205,6 +221,11 @@ export default function ClubsListClient({
                   </div>
                 </div>
               </Link>
+              {unavailableNotice === club.id ? (
+                <p className="mt-1.5 px-1 text-xs font-medium text-rose-600 dark:text-rose-400">
+                  Este club no está tomando reservas en este momento.
+                </p>
+              ) : null}
             </motion.article>
           );
         })}

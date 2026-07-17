@@ -10,6 +10,7 @@ import {
   adminCTAPrimary,
   adminSectionLabel,
   adminSubtitle,
+  adminTip,
   adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -113,7 +114,7 @@ export default async function AdminClasesPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-100 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Publicá la clase con suficiente anticipación para que los jugadores puedan inscribirse. Para clases semanales, publicá al inicio de la semana o con una semana de adelanto.
           </div>
         </div>

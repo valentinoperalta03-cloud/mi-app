@@ -57,3 +57,27 @@ export const adminSectionLabel =
 
 /** Detalle lima mínimo: borde izquierdo de acento para cards/filas destacadas */
 export const adminAccentBar = "border-l-2 border-[var(--admin-accent-lima)]";
+
+/** Empty state unificado */
+export const adminEmptyState =
+  "rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-10 text-center text-sm text-[var(--text-tertiary)]";
+
+/** Badge/pill de acción destructiva */
+export const adminBadgeDanger =
+  "inline-flex items-center rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 " +
+  "dark:border-rose-800/40 dark:bg-rose-900/30 dark:text-rose-300";
+
+/** Badge/pill de acción de advertencia */
+export const adminBadgeWarning =
+  "inline-flex items-center rounded-lg border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 " +
+  "dark:border-amber-800/40 dark:bg-amber-900/30 dark:text-amber-200";
+
+/** Badge/pill de acción de éxito */
+export const adminBadgeSuccess =
+  "inline-flex items-center rounded-lg border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700 " +
+  "dark:border-emerald-800/40 dark:bg-emerald-900/30 dark:text-emerald-300";
+
+/** Bloque "Consejo": tip informativo con acento lima */
+export const adminTip =
+  "rounded-2xl border border-[var(--admin-accent-lima-border)] bg-[var(--admin-accent-lima-subtle)] " +
+  "px-4 py-3 text-xs text-[var(--admin-status-active-text)] dark:text-[#d4e600]";

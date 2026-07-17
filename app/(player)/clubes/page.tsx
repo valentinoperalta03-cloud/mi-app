@@ -51,17 +51,29 @@ async function ClubesContent() {
       userProvince = typedProfile?.province?.trim() ?? "";
     }
 
-    const { data, error } = await supabase
-      .from(DB_TABLES.clubs)
-      .select("id,name,location,cover_image_url,logo_url,description,business_hours,city,province")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
+    const [{ data, error }, { data: availability }] = await Promise.all([
+      supabase
+        .from(DB_TABLES.clubs)
+        .select("id,name,location,cover_image_url,logo_url,description,business_hours,city,province")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      supabase.rpc("get_clubs_availability"),
+    ]);
 
     if (error) {
       errorMessage = "No se pudieron cargar los clubes. Intentá nuevamente.";
       errorDebug = error.message;
     } else {
-      clubs = (data ?? []) as ClubRow[];
+      const availabilityMap = Object.fromEntries(
+        ((availability ?? []) as Array<{ club_id: string; is_available: boolean }>).map((a) => [
+          a.club_id,
+          a.is_available,
+        ])
+      );
+      clubs = ((data ?? []) as ClubRow[]).map((club) => ({
+        ...club,
+        isAvailable: availabilityMap[String(club.id)] ?? true,
+      }));
     }
   } catch (e) {
     console.error("[clubes] ClubesContent exception", e);

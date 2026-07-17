@@ -11,6 +11,7 @@ import {
   adminBadgePending,
   adminCard,
   adminCTAPrimary,
+  adminEmptyState,
   adminKicker,
   adminSubtitle,
   adminTitle,
@@ -228,11 +229,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
       </section>
 
       {rows.length === 0 ? (
-        <section className={adminCard}>
-          <p className="text-sm font-medium text-[var(--text-secondary)]">
-            No hay pagos para los filtros seleccionados
-          </p>
-        </section>
+        <p className={adminEmptyState}>No hay pagos para los filtros seleccionados</p>
       ) : (
         <section className="space-y-3">
           {rows.map((row) => {

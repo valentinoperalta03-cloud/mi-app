@@ -49,7 +49,7 @@ export default function AddPlayerInline({ fixedSlotId }: { fixedSlotId: string }
                 <input type="hidden" name="player_id" value={r.user_id} />
                 <button
                   type="submit"
-                  className="rounded-lg border border-[#0585FC]/30 bg-[#0585FC]/10 px-2 py-1 text-[11px] font-semibold text-[#0461C4] dark:text-sky-300"
+                  className="rounded-lg border border-[var(--admin-brand-primary)]/30 bg-[var(--admin-brand-primary)]/10 px-2 py-1 text-[11px] font-semibold text-[var(--admin-brand-primary)]"
                 >
                   Agregar
                 </button>

@@ -6,10 +6,14 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import {
   adminAccentBar,
   adminBadgeBrand,
+  adminBadgeDanger,
+  adminBadgeWarning,
   adminCTAPrimary,
   adminCard,
+  adminEmptyState,
   adminKicker,
   adminSubtitle,
+  adminTip,
   adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -235,7 +239,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
             </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-amber-100 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-100">
+          <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Configurá las horas de anticipación según tus horarios de apertura. Si el club abre a las 8hs y el turno es a las 10hs, con 48 horas de anticipación los jugadores reciben la notificación dos días antes.
           </div>
         </div>
@@ -282,7 +286,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
       <section className={adminCard}>
         <h2 className="mb-4 font-admin-display text-base font-bold text-[var(--text-primary)]">Turnos activos</h2>
         {slots.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">Todavía no hay turnos fijos configurados.</p>
+          <p className={adminEmptyState}>Todavía no hay turnos fijos configurados.</p>
         ) : (
           <ul className="space-y-4">
             {slots.map((slot) => {
@@ -322,7 +326,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         <input type="hidden" name="fixed_slot_id" value={slot.id} />
                         <button
                           type="submit"
-                          className="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                          className={adminBadgeDanger}
                         >
                           Desactivar
                         </button>
@@ -445,7 +449,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                     </summary>
                     <div className="mt-3 space-y-2">
                       {slotExceptions.length === 0 ? (
-                        <p className="text-sm text-[var(--text-tertiary)]">No hay excepciones futuras.</p>
+                        <p className={adminEmptyState}>No hay excepciones futuras.</p>
                       ) : (
                         <ul className="space-y-2">
                           {slotExceptions.map((ex) => (
@@ -461,7 +465,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                                 <input type="hidden" name="exception_id" value={ex.id} />
                                 <button
                                   type="submit"
-                                  className="rounded-lg border border-rose-300 bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700"
+                                  className={`${adminBadgeDanger} px-2 py-1`}
                                 >
                                   Eliminar
                                 </button>
@@ -491,7 +495,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
                         </label>
                         <button
                           type="submit"
-                          className="rounded-lg border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800"
+                          className={adminBadgeWarning}
                         >
                           Agregar excepción
                         </button>
