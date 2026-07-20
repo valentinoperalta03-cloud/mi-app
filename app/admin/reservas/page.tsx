@@ -59,7 +59,7 @@ type BlockRow = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ date?: string; selected?: string; closed_error?: string }>;
+  searchParams: Promise<{ date?: string; selected?: string; closed_error?: string; refund_error?: string }>;
 };
 
 function getTimeFromMatch(m: MatchRow): string {
@@ -239,6 +239,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const titleDate = format(parseISO(`${selectedDate}T12:00:00`), "EEEE d 'de' MMMM", { locale: es });
   const closedErr = sp.closed_error ? decodeURIComponent(sp.closed_error.replace(/\+/g, " ")) : "";
+  const refundErr = sp.refund_error ? decodeURIComponent(sp.refund_error.replace(/\+/g, " ")) : "";
 
   const mobileCourts: MobileCourtData[] = ctx.courts.map((court) => ({
     id: court.id,
@@ -677,6 +678,11 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           </div>
 
           <div className="mt-4">
+            {refundErr ? (
+              <p className="mb-2 rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+                {refundErr}
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               {selectedIsReservation && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
                 <form action={confirmOfflineCobro}>

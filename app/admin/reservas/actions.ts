@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { refundReservationPayment } from "@/lib/payment-refund";
 import { createClient } from "@/utils/supabase/server";
 
 export type ManualBlockState = { success: boolean; message: string };
@@ -150,15 +151,15 @@ export async function requestReservationRefundAction(formData: FormData): Promis
 
   const { data: row } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,court_id,match_type,payment_status,total_price")
+    .select("id,court_id,owner_id,match_type,payment_status")
     .eq("id", matchId)
     .maybeSingle();
   const typed = row as {
     id: string;
     court_id: string;
+    owner_id: string | null;
     match_type: string | null;
     payment_status: string | null;
-    total_price: number | null;
   } | null;
   if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
@@ -167,17 +168,27 @@ export async function requestReservationRefundAction(formData: FormData): Promis
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
-  await supabase
-    .from(DB_TABLES.matches)
-    .update({
-      match_status: "cancelled",
-      payment_status: "refund_requested",
-      financial_status: "unpaid",
-      amount_paid: 0,
-      amount_pending: Number(typed.total_price ?? 0),
-    })
-    .eq("id", matchId);
-  await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
+  const outcome = await refundReservationPayment(supabase, matchId);
+  if (outcome.kind === "failed") {
+    redirect(
+      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent(outcome.message)}`
+    );
+  }
+
+  await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+
+  if (typed.owner_id) {
+    await createNotification(supabase, {
+      user_id: typed.owner_id,
+      type: "reservation_cancelled",
+      title: "Reserva cancelada por el club",
+      body:
+        outcome.kind === "refunded"
+          ? "Tu reserva fue cancelada por el club. Ya procesamos el reembolso a tu medio de pago."
+          : "Tu reserva fue cancelada por el club.",
+      match_id: matchId,
+    });
+  }
 
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/finanzas/reembolsos");
@@ -196,7 +207,7 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
   const { data: row } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,court_id,owner_id,match_type,total_price")
+    .select("id,court_id,owner_id,match_type")
     .eq("id", matchId)
     .maybeSingle();
   const typed = row as {
@@ -204,30 +215,29 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
     court_id: string;
     owner_id: string | null;
     match_type: string | null;
-    total_price: number | null;
   } | null;
   if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
-  await supabase
-    .from(DB_TABLES.matches)
-    .update({
-      match_status: "cancelled",
-      payment_status: "refund_requested",
-      financial_status: "unpaid",
-      amount_paid: 0,
-      amount_pending: Number(typed.total_price ?? 0),
-    })
-    .eq("id", matchId);
-  await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("match_id", matchId);
+  const outcome = await refundReservationPayment(supabase, matchId);
+  if (outcome.kind === "failed") {
+    redirect(
+      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent(outcome.message)}`
+    );
+  }
+
+  await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
 
   if (typed.owner_id) {
     await createNotification(supabase, {
       user_id: typed.owner_id,
       type: "reservation_cancelled",
       title: "Reserva cancelada por el club",
-      body: "Tu reserva fue cancelada por el club. El reembolso se procesará en 48hs.",
+      body:
+        outcome.kind === "refunded"
+          ? "Tu reserva fue cancelada por el club. Ya procesamos el reembolso a tu medio de pago."
+          : "Tu reserva fue cancelada por el club.",
       match_id: matchId,
     });
   }

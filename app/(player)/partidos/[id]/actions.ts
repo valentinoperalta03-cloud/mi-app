@@ -9,6 +9,7 @@ import { log } from "@/lib/logger";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { refundApprovedPayment } from "@/lib/payment-refund";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -593,12 +594,21 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   const rpcCancelled = Boolean((resultRow as { cancelled?: boolean | null } | null)?.cancelled);
   let delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
 
-  await supabase
+  // Si este jugador tenía un pago de MP aprobado, se reembolsa de verdad (no solo se promete).
+  const { data: myPaymentRow } = await supabase
     .from(DB_TABLES.payments)
-    .update({ status: "refund_requested" })
+    .select("id")
     .eq("match_id", matchId)
     .eq("user_id", user.id)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .maybeSingle();
+  const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
+  if (myPaymentId) {
+    const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
+    if (refundOutcome.kind === "failed") {
+      log.error({ event: "cancelParticipation.refund_failed", matchId, userId: user.id });
+    }
+  }
 
   const { count: remainingCount } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -676,17 +686,25 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
       .from(DB_TABLES.payments)
       .select("id, user_id")
       .eq("match_id", matchId)
-      .eq("status", "approved");
+      .in("status", ["approved", "refund_requested"]);
 
     for (const payment of paidPayments ?? []) {
       const row = payment as { id: string; user_id: string };
-      await supabase.from(DB_TABLES.payments).update({ status: "refund_requested" }).eq("id", row.id);
+      const refundOutcome = await refundApprovedPayment(supabase, row.id);
+      if (refundOutcome.kind === "failed") {
+        log.error({ event: "cancelParticipation.refund_failed", matchId, userId: row.user_id });
+      }
 
       await createNotification(supabase, {
         user_id: row.user_id,
         type: "reservation_cancelled",
-        title: "Partido cancelado - Reembolso en proceso",
-        body: "El partido fue cancelado. Tu reembolso se procesará en 48hs.",
+        title: refundOutcome.kind === "refunded" ? "Partido cancelado - Reembolso procesado" : "Partido cancelado",
+        body:
+          refundOutcome.kind === "refunded"
+            ? "El partido fue cancelado y ya procesamos tu reembolso."
+            : refundOutcome.kind === "failed"
+              ? "El partido fue cancelado. No pudimos procesar tu reembolso automáticamente, contactá a soporte."
+              : "El partido fue cancelado.",
         match_id: matchId,
       });
     }
@@ -763,13 +781,21 @@ export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; 
   }
 
   await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).eq("player_id", user.id);
-  // Pagos aprobados → solicitar reembolso; pagos pendientes/invitados → cancelar
-  await supabase
+  // Pagos aprobados de MP → reembolso real; pagos pendientes/invitados → cancelar
+  const { data: myPaymentRow } = await supabase
     .from(DB_TABLES.payments)
-    .update({ status: "refund_requested" })
+    .select("id")
     .eq("match_id", matchId)
     .eq("user_id", user.id)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .maybeSingle();
+  const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
+  if (myPaymentId) {
+    const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
+    if (refundOutcome.kind === "failed") {
+      log.error({ event: "cancelFixedSlotDay.refund_failed", matchId, userId: user.id });
+    }
+  }
   await supabase
     .from(DB_TABLES.payments)
     .update({ status: "cancelled" })

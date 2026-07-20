@@ -6,9 +6,10 @@ import { adminAccentBar, adminBadgeError, adminCard, adminCTAPrimary, adminEmpty
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
+import { processRefundRequestAction } from "./actions";
 
 type PageProps = {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; refund_error?: string }>;
 };
 
 type MatchEmbed = { id: string; court_id: string; scheduled_date: string | null };
@@ -27,6 +28,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
+  const refundErr = sp.refund_error ? decodeURIComponent(sp.refund_error.replace(/\+/g, " ")) : "";
   const monthParam = /^\d{4}-\d{2}$/.test(String(sp.month ?? "")) ? String(sp.month) : format(new Date(), "yyyy-MM");
   const monthStart = startOfMonth(new Date(`${monthParam}-01T00:00:00`));
   const monthEnd = endOfMonth(monthStart);
@@ -37,7 +39,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
           .from(DB_TABLES.payments)
           .select("id,user_id,amount,status,matches!inner(id,court_id,scheduled_date)")
           .in("matches.court_id", ctx.courtIds)
-          .in("status", ["refunded", "cancelled"])
+          .in("status", ["refunded", "cancelled", "refund_requested"])
           .gte("matches.scheduled_date", format(monthStart, "yyyy-MM-dd"))
           .lte("matches.scheduled_date", format(monthEnd, "yyyy-MM-dd"))
           .order("created_at", { ascending: false })
@@ -86,22 +88,41 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
         </button>
       </form>
 
+      {refundErr ? (
+        <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
+          {refundErr}
+        </p>
+      ) : null}
+
       <section className={`${adminCard} ${adminAccentBar}`}>
         {rows.length === 0 ? (
           <p className={adminEmptyState}>No hay reembolsos para este mes.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {rows.map((row) => (
-              <li key={row.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/70 px-4 py-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-[var(--text-secondary)]">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
-                  <span className={adminBadgeError}>{row.status ?? "—"}</span>
-                </div>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  {courtNameById.get(row.matches?.[0]?.court_id ?? "") ?? "Cancha"} · {row.matches?.[0]?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
-                </p>
-              </li>
-            ))}
+            {rows.map((row) => {
+              const matchId = row.matches?.[0]?.id ?? "";
+              const pending = row.status === "refund_requested";
+              return (
+                <li key={row.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/70 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--text-secondary)]">{nameByUser.get(row.user_id) ?? "Jugador"}</span>
+                    <span className={adminBadgeError}>{row.status ?? "—"}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    {courtNameById.get(row.matches?.[0]?.court_id ?? "") ?? "Cancha"} · {row.matches?.[0]?.scheduled_date ?? "Sin fecha"} · ${Number(row.amount ?? 0).toFixed(2)}
+                  </p>
+                  {pending && matchId ? (
+                    <form action={processRefundRequestAction} className="mt-2">
+                      <input type="hidden" name="match_id" value={matchId} />
+                      <input type="hidden" name="month" value={monthParam} />
+                      <button type="submit" className={adminCTAPrimary}>
+                        Procesar reembolso ahora
+                      </button>
+                    </form>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

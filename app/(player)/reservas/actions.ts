@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
 import { notifyClubOwner } from "@/lib/club-notify";
-import { getPaymentRefundClient } from "@/lib/mercadopago";
+import { refundMercadoPagoPayment } from "@/lib/mercadopago";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { createClient } from "@/utils/supabase/server";
 
@@ -321,13 +321,9 @@ export async function cancelReservation(formData: FormData) {
         revalidatePath("/reservas");
         redirect("/reservas?info=sin_reembolso");
       }
-      if (mpId !== "dev_simulated") {
-        try {
-          await getPaymentRefundClient().total({ payment_id: mpId });
-        } catch (e) {
-          console.error("[mp] refund", e);
-          redirect("/reservas?error=mp_reembolso");
-        }
+      const refundResult = await refundMercadoPagoPayment(mpId);
+      if (!refundResult.ok) {
+        redirect("/reservas?error=mp_reembolso");
       }
       await supabase
         .from(DB_TABLES.payments)
