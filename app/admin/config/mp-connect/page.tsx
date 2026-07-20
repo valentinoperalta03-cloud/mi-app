@@ -14,7 +14,7 @@ import {
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export default async function MpConnectPage() {
   const supabase = await createClient();
@@ -24,7 +24,9 @@ export default async function MpConnectPage() {
 
   const club = ctx.clubs[0];
 
-  const { data: clubData } = await supabase
+  // mp_access_token/mp_user_id estan revocadas para anon/authenticated: se leen con service client.
+  // La pertenencia del club ya se validó vía getOwnerAdminContext(supabase).
+  const { data: clubData } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .select("mp_access_token, mp_user_id, name")
     .eq("id", club.id)

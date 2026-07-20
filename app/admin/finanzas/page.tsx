@@ -4,7 +4,7 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import FinanceModule from "./finance-module";
 import FinancePinModal from "./finance-pin-modal";
 
@@ -20,8 +20,9 @@ export default async function AdminFinanzasPage({ searchParams }: PageProps) {
   if (!ctx?.userId) redirect("/login");
 
   const clubId = ctx.clubIds[0];
+  // finance_pin esta revocada para anon/authenticated: se lee con service client.
   const { data: clubRow } = clubId
-    ? await supabase
+    ? await createServiceClient()
         .from(DB_TABLES.clubs)
         .select("finance_pin")
         .eq("id", clubId)

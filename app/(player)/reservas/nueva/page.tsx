@@ -296,7 +296,7 @@ function NuevaReservaContent() {
       const { data, error: err } = await supabase
         .from(DB_TABLES.courts)
         .select(
-          "clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, deposit_type, deposit_value)"
+          "club_id, clubs(accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
         )
         .eq("id", courtId)
         .maybeSingle();
@@ -314,13 +314,13 @@ function NuevaReservaContent() {
         return;
       }
       const row = data as {
+        club_id?: string | null;
         clubs?:
           | {
               accepts_cash?: boolean | null;
               accepts_transfer?: boolean | null;
               bank_alias?: string | null;
               bank_cbu?: string | null;
-              mp_access_token?: string | null;
               deposit_type?: "percentage" | "fixed" | null;
               deposit_value?: number | null;
             }
@@ -329,14 +329,22 @@ function NuevaReservaContent() {
               accepts_transfer?: boolean | null;
               bank_alias?: string | null;
               bank_cbu?: string | null;
-              mp_access_token?: string | null;
               deposit_type?: "percentage" | "fixed" | null;
               deposit_value?: number | null;
             }>
           | null;
       };
       const c = Array.isArray(row.clubs) ? row.clubs[0] ?? null : row.clubs;
-      const accepts_mp = Boolean(c?.mp_access_token);
+      // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
+      // que solo expone el booleano de conexion, nunca el token.
+      let accepts_mp = false;
+      if (row.club_id) {
+        const { data: mpRows } = await supabase.rpc("get_clubs_mp_connected");
+        accepts_mp = ((mpRows ?? []) as Array<{ club_id: string; mp_connected: boolean }>).some(
+          (r) => r.club_id === row.club_id && r.mp_connected
+        );
+      }
+      if (cancelled) return;
       const next: ClubPayLoad = {
         accepts_mp,
         accepts_cash: Boolean(c?.accepts_cash),

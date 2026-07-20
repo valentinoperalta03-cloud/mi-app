@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function enc(msg: string) {
   return encodeURIComponent(msg);
@@ -27,7 +27,10 @@ export async function updateFinancePin(formData: FormData) {
   }
 
   const clubId = ctx.clubIds[0];
-  const { data: clubRow } = await supabase
+  // finance_pin esta revocada para anon/authenticated: se lee/escribe con service client.
+  // La pertenencia ya se validó arriba vía getOwnerAdminContext(supabase).
+  const service = createServiceClient();
+  const { data: clubRow } = await service
     .from(DB_TABLES.clubs)
     .select("finance_pin")
     .eq("id", clubId)
@@ -44,7 +47,7 @@ export async function updateFinancePin(formData: FormData) {
     }
   }
 
-  const { error } = await supabase
+  const { error } = await service
     .from(DB_TABLES.clubs)
     .update({ finance_pin: newPin })
     .eq("id", clubId)

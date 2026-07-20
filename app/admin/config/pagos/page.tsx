@@ -3,7 +3,7 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import ConfigPaymentMethodsForm from "../config-payment-methods-form";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,8 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
   }
 
   const clubId = ctx.clubIds[0];
-  const { data: clubRaw, error: clubErr } = await supabase
+  // mp_access_token/mp_user_id estan revocadas para anon/authenticated: se leen con service client.
+  const { data: clubRaw, error: clubErr } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .select("mp_access_token,mp_user_id,accepts_cash,accepts_transfer,bank_alias,bank_cbu")
     .eq("id", clubId)

@@ -15,7 +15,7 @@ import { createNotification } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -130,15 +130,13 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const { data: courtClub } = await supabase
     .from(DB_TABLES.courts)
     .select(
-      "club_id, clubs!inner(mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
+      "club_id, clubs!inner(accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
     )
     .eq("id", courtId)
     .maybeSingle();
   const courtClubTyped = courtClub as {
     club_id?: string | null;
     clubs?: {
-      mp_access_token?: string | null;
-      mp_user_id?: string | null;
       accepts_cash?: boolean | null;
       accepts_transfer?: boolean | null;
       bank_alias?: string | null;
@@ -161,7 +159,11 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   }
   const clubDepositType = courtClubTyped?.clubs?.deposit_type ?? null;
   const clubDepositValue = Number(courtClubTyped?.clubs?.deposit_value ?? 0);
-  const clubAccessToken = courtClubTyped?.clubs?.mp_access_token ?? null;
+  // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+  const { data: clubMpRow } = clubId
+    ? await createServiceClient().from(DB_TABLES.clubs).select("mp_access_token").eq("id", clubId).maybeSingle()
+    : { data: null };
+  const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
   const acceptsCash = Boolean(courtClubTyped?.clubs?.accepts_cash);
   const acceptsTransfer = Boolean(courtClubTyped?.clubs?.accepts_transfer);
   const bankAlias = String(courtClubTyped?.clubs?.bank_alias ?? "").trim();

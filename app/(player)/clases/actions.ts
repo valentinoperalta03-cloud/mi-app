@@ -10,7 +10,7 @@ import { isClubMercadoPagoConnected } from "@/lib/club-mp";
 import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { practiceRegistrationBlocksRetry, practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { normalizePlayerPaymentMethod } from "@/lib/offline-payments";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type CheckoutState = { ok: boolean; message: string; url?: string };
 
@@ -20,7 +20,7 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
   const { data: session } = await supabase
     .from(DB_TABLES.practiceSessions)
     .select(
-      "id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, whatsapp))"
+      "id, session_date, status, practices(id, title, status, max_spots, price_base, level_min, level_max, club_id, clubs(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, whatsapp))"
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -40,8 +40,6 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
     clubs?:
       | {
           name: string | null;
-          mp_access_token?: string | null;
-          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -50,8 +48,6 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
         }
       | Array<{
           name: string | null;
-          mp_access_token?: string | null;
-          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -130,7 +126,13 @@ export async function registerForPracticeAction(formData: FormData): Promise<Che
   const payAmount = price.clubPriceBase;
 
   if (paymentMethod === "mercadopago") {
-    if (!isClubMercadoPagoConnected(club)) {
+    // mp_access_token esta revocada para anon/authenticated: se chequea aparte con service client.
+    const { data: clubMpRow } = await createServiceClient()
+      .from(DB_TABLES.clubs)
+      .select("mp_access_token, mp_user_id")
+      .eq("id", clubId)
+      .maybeSingle();
+    if (!isClubMercadoPagoConnected(clubMpRow as { mp_access_token?: string | null; mp_user_id?: string | null } | null)) {
       return {
         ok: false,
         message: "Este club no tiene Mercado Pago conectado. Elegí efectivo o transferencia.",

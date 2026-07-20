@@ -17,7 +17,7 @@ import { createNotification } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 type MatchType = "amistoso" | "competitivo";
 type GenderCategory = "masculino" | "femenino" | "mixto";
@@ -145,7 +145,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select(
-        "club_id, price, name, clubs!inner(name, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
+        "club_id, price, name, clubs!inner(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
       )
       .eq("id", courtId)
       .maybeSingle();
@@ -200,8 +200,16 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
+    // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+    const { data: clubMpRow } = clubIdStr
+      ? await createServiceClient()
+          .from(DB_TABLES.clubs)
+          .select("mp_access_token")
+          .eq("id", clubIdStr)
+          .maybeSingle()
+      : { data: null };
     const clubAccessToken =
-      (courtData as { clubs?: { mp_access_token?: string | null } | null }).clubs?.mp_access_token ?? null;
+      (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
     const acceptsCash = Boolean(
       (courtData as { clubs?: { accepts_cash?: boolean | null } | null }).clubs?.accepts_cash
     );

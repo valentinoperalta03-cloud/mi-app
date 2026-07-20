@@ -47,11 +47,12 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     { data: courtsRaw, error: courtsError },
     { data: slotPricesRaw },
     { data: availabilityRaw },
+    { data: mpConnectedRaw },
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "id, name, location, city, province, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, mp_access_token, open_time, deposit_type, deposit_value"
+        "id, name, location, city, province, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, open_time, deposit_type, deposit_value"
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -66,7 +67,17 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .not("start_time", "is", null)
       .not("price_override", "is", null),
     supabase.rpc("get_clubs_availability"),
+    // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
+    // que solo expone el booleano de conexion, nunca el token.
+    supabase.rpc("get_clubs_mp_connected"),
   ]);
+
+  const mpConnectedMap = Object.fromEntries(
+    ((mpConnectedRaw ?? []) as Array<{ club_id: string; mp_connected: boolean }>).map((m) => [
+      m.club_id,
+      m.mp_connected,
+    ])
+  );
 
   const availabilityMap = Object.fromEntries(
     ((availabilityRaw ?? []) as Array<{ club_id: string; is_available: boolean }>).map((a) => [
@@ -103,7 +114,6 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     accepts_transfer?: boolean | null;
     bank_alias?: string | null;
     bank_cbu?: string | null;
-    mp_access_token?: string | null;
     open_time?: string | null;
     deposit_type?: "percentage" | "fixed" | null;
     deposit_value?: number | null;
@@ -121,7 +131,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     acceptsTransfer: Boolean(club.accepts_transfer),
     bankAlias: club.bank_alias?.trim() || null,
     bankCbu: club.bank_cbu?.trim() || null,
-    mpConnected: Boolean(club.mp_access_token),
+    mpConnected: mpConnectedMap[club.id] ?? false,
     openTime: String(club.open_time ?? "09:00").trim().slice(0, 5) || "09:00",
     depositType: club.deposit_type ?? null,
     depositValue: Number(club.deposit_value ?? 0),

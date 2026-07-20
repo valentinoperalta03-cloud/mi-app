@@ -123,7 +123,8 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   const [unlocked, setUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
-  const [expectedPin, setExpectedPin] = useState("1234");
+  const [pinChecking, setPinChecking] = useState(false);
+  const [clubId, setClubId] = useState<string | null>(null);
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -199,9 +200,9 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
 
   useEffect(() => {
     let cancelled = false;
-    async function loadExpectedPin() {
+    async function loadClubId() {
       if (courtIds.length === 0) {
-        setExpectedPin("1234");
+        if (!cancelled) setClubId(null);
         return;
       }
       const supabase = createClient();
@@ -211,28 +212,31 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         .in("id", courtIds)
         .limit(1)
         .maybeSingle();
-      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
-      if (!clubId) {
-        setExpectedPin("1234");
-        return;
-      }
-      const { data: clubRow } = await supabase
-        .from(DB_TABLES.clubs)
-        .select("finance_pin")
-        .eq("id", clubId)
-        .maybeSingle();
-      const pin = String((clubRow as { finance_pin?: string | null } | null)?.finance_pin ?? "").trim();
-      if (!cancelled) setExpectedPin(pin || "1234");
+      const id = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
+      if (!cancelled) setClubId(id || null);
     }
-    void loadExpectedPin();
+    void loadClubId();
     return () => {
       cancelled = true;
     };
   }, [courtIds]);
 
-  function tryPin(e: FormEvent) {
+  async function tryPin(e: FormEvent) {
     e.preventDefault();
-    if (pinInput === expectedPin) {
+    if (!clubId) {
+      setPinError(pinInput !== "1234");
+      if (pinInput === "1234") {
+        setUnlocked(true);
+        setPinInput("");
+      }
+      return;
+    }
+    setPinChecking(true);
+    const supabase = createClient();
+    // finance_pin nunca se manda al browser: la verificacion corre en Postgres via RPC.
+    const { data: ok } = await supabase.rpc("verify_finance_pin", { p_club_id: clubId, p_pin: pinInput });
+    setPinChecking(false);
+    if (ok) {
       setUnlocked(true);
       setPinError(false);
       setPinInput("");
@@ -315,8 +319,8 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         {pinError ? (
           <p className="text-sm font-medium text-rose-600">PIN incorrecto.</p>
         ) : null}
-        <button type="submit" className={`w-full ${adminCTAPrimary}`}>
-          Desbloquear
+        <button type="submit" disabled={pinChecking} className={`w-full ${adminCTAPrimary}`}>
+          {pinChecking ? "Verificando..." : "Desbloquear"}
         </button>
       </form>
     );

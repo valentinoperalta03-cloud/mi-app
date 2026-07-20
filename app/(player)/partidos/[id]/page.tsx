@@ -274,15 +274,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: clubPaymentData } = clubIdForPayment
     ? await supabase
         .from(DB_TABLES.clubs)
-        .select("accepts_cash, accepts_transfer, mp_access_token, bank_alias, bank_cbu, whatsapp")
+        .select("bank_alias, bank_cbu, whatsapp")
         .eq("id", clubIdForPayment)
         .maybeSingle()
     : { data: null };
 
   const clubPayment = clubPaymentData as {
-    accepts_cash?: boolean | null;
-    accepts_transfer?: boolean | null;
-    mp_access_token?: string | null;
     bank_alias?: string | null;
     bank_cbu?: string | null;
     whatsapp?: string | null;

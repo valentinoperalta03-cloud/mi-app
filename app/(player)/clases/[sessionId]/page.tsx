@@ -6,7 +6,6 @@ import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PRACTICE_MODALITY_OPTIONS } from "@/lib/practice-constants";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
-import { isClubMercadoPagoConnected } from "@/lib/club-mp";
 import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { createClient } from "@/utils/supabase/server";
 import PracticeRegisterForm from "../practice-register-form";
@@ -30,7 +29,7 @@ export default async function ClaseDetallePage({
   const { data: session } = await supabase
     .from(DB_TABLES.practiceSessions)
     .select(
-      "id, session_date, start_time, status, practices(id, title, description, modality, max_spots, price_base, level_min, level_max, status, practice_coaches(name), clubs(name, logo_url, mp_access_token, mp_user_id, accepts_cash, accepts_transfer, bank_alias, bank_cbu))"
+      "id, session_date, start_time, status, practices(id, title, description, modality, max_spots, price_base, level_min, level_max, status, club_id, practice_coaches(name), clubs(name, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu))"
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -54,13 +53,12 @@ export default async function ClaseDetallePage({
     level_min: number | null;
     level_max: number | null;
     status: string;
+    club_id: string;
     practice_coaches?: { name: string } | { name: string }[] | null;
     clubs?:
       | {
           name: string | null;
           logo_url: string | null;
-          mp_access_token?: string | null;
-          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -69,8 +67,6 @@ export default async function ClaseDetallePage({
       | Array<{
           name: string | null;
           logo_url: string | null;
-          mp_access_token?: string | null;
-          mp_user_id?: string | null;
           accepts_cash?: boolean | null;
           accepts_transfer?: boolean | null;
           bank_alias?: string | null;
@@ -120,7 +116,12 @@ export default async function ClaseDetallePage({
   const price = practicePriceBreakdown(Number(practice.price_base));
   const modality = PRACTICE_MODALITY_OPTIONS.find((o) => o.value === practice.modality)?.label ?? practice.modality;
 
-  const clubHasMp = isClubMercadoPagoConnected(club);
+  // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
+  // que solo expone el booleano de conexion, nunca el token.
+  const { data: mpConnectedRows } = await supabase.rpc("get_clubs_mp_connected");
+  const clubHasMp = ((mpConnectedRows ?? []) as Array<{ club_id: string; mp_connected: boolean }>).some(
+    (r) => r.club_id === practice.club_id && r.mp_connected
+  );
   const clubAcceptsCash = Boolean(club?.accepts_cash);
   const clubAcceptsTransfer = Boolean(club?.accepts_transfer);
   const bankAlias = club?.bank_alias?.trim() || null;
