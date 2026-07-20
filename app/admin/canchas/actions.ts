@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -127,10 +127,14 @@ export async function updateClubDeposit(formData: FormData): Promise<void> {
     redirectCanchasError("Club no autorizado.");
   }
 
-  const { error } = await supabase
+  // deposit_type/deposit_value no tienen GRANT UPDATE para authenticated (mismo
+  // patron que finance_pin/mp_access_token): se escriben con service client.
+  // La pertenencia ya se validó arriba vía getOwnerAdminContext(supabase).
+  const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update({ deposit_type: depositType, deposit_value: depositValue })
-    .eq("id", clubId);
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
 
   if (error) {
     redirectCanchasError(error.message);
