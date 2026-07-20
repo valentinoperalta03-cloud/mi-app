@@ -83,8 +83,7 @@ export default async function AdminTorneosPage() {
             <p className="font-bold text-[var(--text-primary)]">Tipos de torneo</p>
             <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
               <li><span className="font-semibold">🏆 Americano:</span> Todas las parejas juegan entre sí. Gana quien más puntos acumule. Ideal para grupos pequeños (hasta 8 parejas).</li>
-              <li><span className="font-semibold">⚡ Eliminación directa:</span> El que pierde queda afuera. Requiere potencia de 2 de parejas (4, 8, 16…). Para muchos participantes.</li>
-              <li><span className="font-semibold">🎯 Grupos + eliminación:</span> Fase de grupos americano y luego eliminación. Lo mejor de ambos mundos.</li>
+              <li><span className="font-semibold">⚡ Eliminación directa:</span> El que pierde queda afuera. Requiere potencia de 2 de parejas (4, 8, 16…). Para muchos participantes. Opcionalmente podés activar la Copa de Plata 🥈, una llave paralela para los perdedores de primera ronda.</li>
               <li><span className="font-semibold">🔀 Mixing:</span> Las parejas se sortean al azar en cada ronda. Requiere número par de participantes.</li>
             </ul>
           </div>

@@ -1,9 +1,8 @@
-export type TournamentTypeKey = "americano" | "eliminacion" | "grupos_eliminacion" | "mixing";
+export type TournamentTypeKey = "americano" | "eliminacion" | "mixing";
 
 export const TOURNAMENT_TYPE_OPTIONS: { value: TournamentTypeKey; label: string; badge: string }[] = [
   { value: "americano", label: "Americano", badge: "🏆 Americano" },
   { value: "eliminacion", label: "Eliminación directa", badge: "⚡ Eliminación" },
-  { value: "grupos_eliminacion", label: "Grupos + eliminación", badge: "🎯 Grupos" },
   { value: "mixing", label: "Mixing", badge: "🔀 Mixing" },
 ];
 

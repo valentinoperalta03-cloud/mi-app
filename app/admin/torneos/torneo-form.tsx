@@ -13,6 +13,8 @@ const initial: CreateTournamentState = { ok: false, message: "" };
 export default function TorneoForm({ clubId }: { clubId: string }) {
   const [state, formAction, pending] = useActionState(createTournamentAction, initial);
   const [clubPrice, setClubPrice] = useState(0);
+  const [tournamentType, setTournamentType] = useState(TOURNAMENT_TYPE_OPTIONS[0]?.value ?? "americano");
+  const [consolationBracket, setConsolationBracket] = useState(false);
 
   return (
     <form action={formAction} className="mt-4 space-y-4 text-sm">
@@ -37,15 +39,36 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         <select
           name="tournament_type"
           required
+          value={tournamentType}
+          onChange={(e) => setTournamentType(e.target.value as typeof tournamentType)}
           className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         >
           {TOURNAMENT_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value} disabled={o.value === "grupos_eliminacion"}>
-              {o.value === "grupos_eliminacion" ? `${o.label} (Proximamente)` : o.label}
+            <option key={o.value} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>
       </label>
+
+      {tournamentType === "eliminacion" ? (
+        <label className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2.5">
+          <input
+            type="checkbox"
+            name="consolation_bracket"
+            value="true"
+            checked={consolationBracket}
+            onChange={(e) => setConsolationBracket(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-[var(--text-primary)]">Activar Copa de Plata 🥈</span>
+            <span className="mt-0.5 block text-xs text-[var(--text-tertiary)]">
+              Los perdedores de la primera ronda compiten en una llave paralela por la Copa de Plata.
+            </span>
+          </span>
+        </label>
+      ) : null}
 
       <label className="block">
         <span className="text-xs font-semibold text-[var(--text-secondary)]">Descripción (opcional)</span>

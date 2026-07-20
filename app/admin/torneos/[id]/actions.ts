@@ -9,8 +9,7 @@ import { createNotification } from "@/lib/notifications";
 import { propagateBracket, saveTournamentMatchResultAndElo } from "@/lib/tournament-elo-apply";
 import {
   buildAmericanoMatches,
-  buildEliminationFirstRound,
-  buildEliminationNextLayer,
+  buildEliminationFixture,
   buildMixingNextRound,
   buildMixingRound1,
 } from "@/lib/tournament/fixture";
@@ -23,7 +22,7 @@ async function assertTournamentOwner(supabase: SupabaseClient, tournamentId: str
   if (!ctx?.userId) return { ok: false as const, message: "Sesión requerida." };
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
-    .select("id, club_id, name, status, tournament_type, group_chat_id")
+    .select("id, club_id, name, status, tournament_type, group_chat_id, consolation_bracket")
     .eq("id", tournamentId)
     .maybeSingle();
   if (!t) return { ok: false as const, message: "Torneo no encontrado." };
@@ -48,6 +47,11 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
   const supabase = await createClient({ allowCookieWrites: true });
   const gate = await assertTournamentOwner(supabase, tournamentId);
   if (!gate.ok) return gate;
+
+  if ((gate.row as { status?: string }).status !== "open") {
+    return { ok: false, message: "El torneo ya fue iniciado." };
+  }
+
   const service = createServiceClient();
 
   const { data: regs } = await service
@@ -59,6 +63,7 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
 
   const pairIds = ((regs ?? []) as Array<{ id: string }>).map((r) => r.id);
   const ttype = String((gate.row as { tournament_type?: string }).tournament_type ?? "") as TournamentTypeKey;
+  const consolationBracket = Boolean((gate.row as { consolation_bracket?: boolean | null }).consolation_bracket);
 
   const validation = validatePairsForType(ttype, pairIds.length);
   if (!validation.ok) return validation;
@@ -78,20 +83,13 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
       if (error) return { ok: false, message: error.message };
     }
   } else if (ttype === "eliminacion") {
-    const firstRound = buildEliminationFirstRound(tournamentId, pairIds);
-    const { data: ins1, error: e1 } = await service.from(DB_TABLES.tournamentMatches).insert(firstRound).select("id");
-    if (e1) return { ok: false, message: e1.message };
-    let layerIds = ((ins1 ?? []) as { id: string }[]).map((x) => x.id);
-    let roundNum = 2;
-    while (layerIds.length > 1) {
-      const next = buildEliminationNextLayer(tournamentId, roundNum, layerIds);
-      const { data: insN, error: eN } = await service.from(DB_TABLES.tournamentMatches).insert(next).select("id");
-      if (eN) return { ok: false, message: eN.message };
-      layerIds = ((insN ?? []) as { id: string }[]).map((x) => x.id);
-      roundNum++;
+    const rows = buildEliminationFixture(tournamentId, pairIds, consolationBracket);
+    if (rows.length) {
+      const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
+      if (error) return { ok: false, message: error.message };
     }
   } else {
-    return { ok: false, message: `Tipo de torneo "${ttype}" no implementado.` };
+    return { ok: false, message: `Tipo de torneo "${ttype}" no soportado.` };
   }
 
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
@@ -107,10 +105,11 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     await service.from(DB_TABLES.tournaments).update({ group_chat_id: chat.groupId }).eq("id", tournamentId);
   }
 
-  await service
+  const { error: statusErr } = await service
     .from(DB_TABLES.tournaments)
     .update({ status: "in_progress", fixture_locked: true })
     .eq("id", tournamentId);
+  if (statusErr) return { ok: false, message: statusErr.message };
 
   for (const uid of memberIds) {
     await createNotification(service, {

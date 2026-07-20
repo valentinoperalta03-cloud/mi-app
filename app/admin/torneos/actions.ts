@@ -40,9 +40,10 @@ export async function createTournamentAction(
   const depositType = depositTypeRaw === "percentage" || depositTypeRaw === "fixed" ? depositTypeRaw : null;
   const depositValueRaw = String(formData.get("deposit_value") ?? "").trim();
   const depositValue = depositValueRaw ? Number(depositValueRaw) : 0;
+  const consolationBracket = tournamentType === "eliminacion" && formData.get("consolation_bracket") === "true";
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
-  if (!["americano", "eliminacion", "grupos_eliminacion", "mixing"].includes(tournamentType)) {
+  if (!["americano", "eliminacion", "mixing"].includes(tournamentType)) {
     return { ok: false, message: "Tipo de torneo inválido." };
   }
   if (!startDate || !endDate || !startTime || !registrationDeadline) {
@@ -85,6 +86,7 @@ export async function createTournamentAction(
       requires_deposit: requiresDeposit,
       deposit_type: requiresDeposit ? depositType : null,
       deposit_value: requiresDeposit ? depositValue : 0,
+      consolation_bracket: consolationBracket,
       prize,
       start_date: startDate,
       end_date: endDate,

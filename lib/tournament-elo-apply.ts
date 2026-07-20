@@ -33,22 +33,54 @@ async function countFinishedTournamentMatchesForPlayer(
   return n;
 }
 
+/**
+ * Propaga el resultado de un partido a los partidos que lo tienen como feeder.
+ *
+ * Regla general (vale para gold-only y para gold+silver por igual): si el
+ * partido hijo es del MISMO bracket que el partido terminado, recibe al
+ * GANADOR (avance normal de llave). Si el partido hijo es de un bracket
+ * DISTINTO (solo pasa con partidos de gold ronda 1 que alimentan la ronda 1
+ * de silver, la Copa de Plata), recibe al PERDEDOR. Un partido de ronda 2+
+ * nunca tiene un hijo en un bracket distinto (buildEliminationFixture solo
+ * crea ese cruce para gold ronda 1), asi que el perdedor de esas rondas
+ * queda automaticamente eliminado sin ninguna accion extra.
+ *
+ * Al editar un resultado ya finalizado y cambiar el ganador, se vuelve a
+ * llamar con el mismo finishedMatchId: como el ganador/perdedor se recalculan
+ * de nuevo contra las mismas dos parejas fijas del partido, esto corrige
+ * automaticamente tanto el hijo de gold como el de silver si corresponde.
+ */
 export async function propagateBracket(admin: SupabaseClient, finishedMatchId: string, winnerPairId: string | null) {
   if (!winnerPairId) return;
+
+  const { data: finishedRow } = await admin
+    .from(DB_TABLES.tournamentMatches)
+    .select("bracket, pair1_id, pair2_id")
+    .eq("id", finishedMatchId)
+    .maybeSingle();
+  const finished = finishedRow as { bracket: string | null; pair1_id: string | null; pair2_id: string | null } | null;
+  if (!finished) return;
+  const finishedBracket = finished.bracket ?? "gold";
+  const loserPairId = finished.pair1_id === winnerPairId ? finished.pair2_id : finished.pair1_id;
+
   const { data: children } = await admin
     .from(DB_TABLES.tournamentMatches)
-    .select("id, feeder_left_match_id, feeder_right_match_id")
+    .select("id, bracket, feeder_left_match_id, feeder_right_match_id")
     .or(`feeder_left_match_id.eq.${finishedMatchId},feeder_right_match_id.eq.${finishedMatchId}`);
   for (const row of (children ?? []) as Array<{
     id: string;
+    bracket: string | null;
     feeder_left_match_id: string | null;
     feeder_right_match_id: string | null;
   }>) {
+    const sameBracket = (row.bracket ?? "gold") === finishedBracket;
+    const advancingPairId = sameBracket ? winnerPairId : loserPairId;
+    if (!advancingPairId) continue;
     if (row.feeder_left_match_id === finishedMatchId) {
-      await admin.from(DB_TABLES.tournamentMatches).update({ pair1_id: winnerPairId }).eq("id", row.id);
+      await admin.from(DB_TABLES.tournamentMatches).update({ pair1_id: advancingPairId }).eq("id", row.id);
     }
     if (row.feeder_right_match_id === finishedMatchId) {
-      await admin.from(DB_TABLES.tournamentMatches).update({ pair2_id: winnerPairId }).eq("id", row.id);
+      await admin.from(DB_TABLES.tournamentMatches).update({ pair2_id: advancingPairId }).eq("id", row.id);
     }
   }
 }

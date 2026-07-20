@@ -106,7 +106,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.tournamentMatches)
-    .select("id, round, round_name, pair1_score, pair2_score, status, winner_pair_id, pair1_id, pair2_id, scheduled_date, scheduled_time, court_id, courts(name)")
+    .select("id, round, round_name, bracket, pair1_score, pair2_score, status, winner_pair_id, pair1_id, pair2_id, scheduled_date, scheduled_time, court_id, courts(name)")
     .eq("tournament_id", id)
     .order("round", { ascending: true });
 
@@ -116,6 +116,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const already = regList.some(
     (r) => (r.player1_id === user.id || r.player2_id === user.id) && r.payment_status === "approved"
   );
+  const myRegId = regList.find((r) => r.player1_id === user.id || r.player2_id === user.id)?.id ?? null;
 
   const badge = TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)?.badge ?? tour.tournament_type;
   const dt = parseISO(`${tour.start_date}T${String(tour.start_time).slice(0, 5)}:00`);
@@ -212,71 +213,111 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         </ul>
       </section>
 
-      {((matches ?? []) as Array<unknown>).length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Fixture</h2>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-            {((matches ?? []) as Array<{
-              id: string;
-              round: number;
-              round_name: string | null;
-              pair1_id: string | null;
-              pair2_id: string | null;
-              pair1_score: number | null;
-              pair2_score: number | null;
-              winner_pair_id: string | null;
-              status: string;
-              scheduled_date: string | null;
-              scheduled_time: string | null;
-              court_id: string | null;
-              courts: { name: string }[] | { name: string } | null;
-            }>).map((m) => {
-              const name1 = m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "Por definir";
-              const name2 = m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "Por definir";
-              const finished = m.status === "finished";
-              const winner = m.winner_pair_id;
-              const courtName = Array.isArray(m.courts) ? m.courts[0]?.name : m.courts?.name;
-              const scheduleLabel = [
-                m.scheduled_date ? format(parseISO(m.scheduled_date), "d MMM", { locale: es }) : null,
-                m.scheduled_time ? m.scheduled_time.slice(0, 5) + "hs" : null,
-                courtName ?? null,
-              ].filter(Boolean).join(" · ");
-              return (
-                <li key={m.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3">
-                  <span className="text-xs font-semibold text-[var(--text-tertiary)]">
-                    {m.round_name ?? `Ronda ${m.round}`}
+      {(() => {
+        const matchRows = (matches ?? []) as Array<{
+          id: string;
+          round: number;
+          round_name: string | null;
+          bracket: "gold" | "silver" | null;
+          pair1_id: string | null;
+          pair2_id: string | null;
+          pair1_score: number | null;
+          pair2_score: number | null;
+          winner_pair_id: string | null;
+          status: string;
+          scheduled_date: string | null;
+          scheduled_time: string | null;
+          court_id: string | null;
+          courts: { name: string }[] | { name: string } | null;
+        }>;
+        if (matchRows.length === 0) return null;
+
+        function matchCard(m: (typeof matchRows)[number]) {
+          const name1 = m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "Por definir";
+          const name2 = m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "Por definir";
+          const finished = m.status === "finished";
+          const winner = m.winner_pair_id;
+          const courtName = Array.isArray(m.courts) ? m.courts[0]?.name : m.courts?.name;
+          const isMine = myRegId != null && (m.pair1_id === myRegId || m.pair2_id === myRegId);
+          const scheduleLabel = [
+            m.scheduled_date ? format(parseISO(m.scheduled_date), "d MMM", { locale: es }) : null,
+            m.scheduled_time ? m.scheduled_time.slice(0, 5) + "hs" : null,
+            courtName ?? null,
+          ].filter(Boolean).join(" · ");
+          return (
+            <li
+              key={m.id}
+              className={`rounded-2xl border px-3 py-3 ${
+                isMine
+                  ? "border-[#0585FC] bg-[#0585FC]/5 dark:border-sky-500 dark:bg-sky-950/20"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-card)]"
+              }`}
+            >
+              <span className="text-xs font-semibold text-[var(--text-tertiary)]">
+                {m.round_name ?? `Ronda ${m.round}`}
+                {isMine ? " · Tu partido" : ""}
+              </span>
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <span className={`flex-1 truncate text-sm font-medium ${winner === m.pair1_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
+                  {name1}
+                </span>
+                <span className="shrink-0 text-base font-bold tabular-nums text-[var(--text-secondary)]">
+                  {finished ? `${m.pair1_score ?? 0} – ${m.pair2_score ?? 0}` : "vs"}
+                </span>
+                <span className={`flex-1 truncate text-right text-sm font-medium ${winner === m.pair2_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
+                  {name2}
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                {!finished ? (
+                  <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    Pendiente
                   </span>
-                  <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <span className={`flex-1 truncate text-sm font-medium ${winner === m.pair1_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
-                      {name1}
-                    </span>
-                    <span className="shrink-0 text-base font-bold tabular-nums text-[var(--text-secondary)]">
-                      {finished ? `${m.pair1_score ?? 0} – ${m.pair2_score ?? 0}` : "vs"}
-                    </span>
-                    <span className={`flex-1 truncate text-right text-sm font-medium ${winner === m.pair2_id ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--text-primary)]"}`}>
-                      {name2}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    {!finished ? (
-                      <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        Pendiente
-                      </span>
-                    ) : (
-                      <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                        Finalizado
-                      </span>
-                    )}
-                    {scheduleLabel ? (
-                      <span className="text-[10px] text-[var(--text-tertiary)]">{scheduleLabel}</span>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
+                ) : (
+                  <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    Finalizado
+                  </span>
+                )}
+                {scheduleLabel ? (
+                  <span className="text-[10px] text-[var(--text-tertiary)]">{scheduleLabel}</span>
+                ) : null}
+              </div>
+            </li>
+          );
+        }
+
+        if (tour.tournament_type === "eliminacion") {
+          const goldMatches = matchRows.filter((m) => (m.bracket ?? "gold") === "gold");
+          const silverMatches = matchRows.filter((m) => m.bracket === "silver");
+          return (
+            <>
+              <section className="mt-8">
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">🥇 Llave de Oro</h2>
+                <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+                  {goldMatches.map((m) => matchCard(m))}
+                </ul>
+              </section>
+              {silverMatches.length > 0 ? (
+                <section className="mt-8">
+                  <h2 className="text-base font-semibold text-[var(--text-primary)]">🥈 Llave de Plata</h2>
+                  <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+                    {silverMatches.map((m) => matchCard(m))}
+                  </ul>
+                </section>
+              ) : null}
+            </>
+          );
+        }
+
+        return (
+          <section className="mt-8">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Fixture</h2>
+            <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
+              {matchRows.map((m) => matchCard(m))}
+            </ul>
+          </section>
+        );
+      })()}
 
       {tour.group_chat_id ? (
         <Link

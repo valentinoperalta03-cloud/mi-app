@@ -36,7 +36,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id"
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket"
     )
     .eq("id", id)
     .maybeSingle();
@@ -61,6 +61,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     category_min: number | null;
     category_max: number | null;
     group_chat_id: string | null;
+    consolation_bracket: boolean;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
@@ -75,7 +76,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       .order("registered_at", { ascending: true }),
     service
       .from(DB_TABLES.tournamentMatches)
-      .select("id, round, round_name, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes")
+      .select("id, round, round_name, bracket, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes")
       .eq("tournament_id", id)
       .order("round", { ascending: true }),
     service
@@ -124,6 +125,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     id: string;
     round: number;
     round_name: string | null;
+    bracket: "gold" | "silver" | null;
     pair1_id: string | null;
     pair2_id: string | null;
     pair1_score: number | null;
@@ -134,6 +136,93 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     scheduled_time: string | null;
     notes: string | null;
   }>;
+  type MatchRow = (typeof matchRows)[number];
+  const goldMatches = matchRows.filter((m) => (m.bracket ?? "gold") === "gold");
+  const silverMatches = matchRows.filter((m) => m.bracket === "silver");
+
+  function matchCard(m: MatchRow) {
+    return (
+      <li key={m.id} className={`${adminCard} text-sm`}>
+        <p className="text-xs font-semibold text-[var(--text-tertiary)]">
+          Ronda {m.round} · {m.round_name ?? "—"}
+        </p>
+        <p className="mt-1 text-[var(--text-secondary)]">
+          {m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "Pareja 1" : "—"} vs{" "}
+          {m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "Pareja 2" : "—"}
+        </p>
+        <span
+          className={`mt-1 inline-flex ${
+            m.status === "finished"
+              ? adminBadgeLima
+              : m.status === "in_progress"
+                ? adminBadgePending
+                : adminBadgeNeutral
+          }`}
+        >
+          {m.status === "finished"
+            ? "✓ Finalizado"
+            : m.status === "in_progress"
+              ? "En curso"
+              : "Pendiente"}
+        </span>
+        {m.pair1_id && m.pair2_id ? (
+          <form action={saveTournamentMatchFormAction} className="mt-2 grid gap-2 sm:grid-cols-4">
+            <input type="hidden" name="tournament_id" value={id} />
+            <input type="hidden" name="match_id" value={m.id} />
+            <input type="hidden" name="sets_json" value="[]" />
+            <input
+              type="number"
+              name="pair1_score"
+              min={0}
+              max={3}
+              required
+              defaultValue={m.pair1_score ?? ""}
+              placeholder="Sets P1"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
+            />
+            <input
+              type="number"
+              name="pair2_score"
+              min={0}
+              max={3}
+              required
+              defaultValue={m.pair2_score ?? ""}
+              placeholder="Sets P2"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
+            />
+            <button type="submit" className={`${adminCTAPrimary} px-2 py-1 text-xs`}>
+              {m.status === "finished" ? "Editar" : "Guardar"}
+            </button>
+          </form>
+        ) : null}
+      </li>
+    );
+  }
+
+  function bracketSection(title: string, bracketMatches: MatchRow[]) {
+    return (
+      <section>
+        <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+        {courtList.length > 0 ? (
+          <TournamentScheduler
+            tournamentId={id}
+            courts={courtList}
+            matches={bracketMatches.map((m) => ({
+              id: m.id,
+              round_name: m.round_name,
+              pair1_name: m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "—" : "—",
+              pair2_name: m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "—" : "—",
+              court_id: m.court_id,
+              scheduled_date: m.scheduled_date,
+              scheduled_time: m.scheduled_time,
+              notes: m.notes,
+            }))}
+          />
+        ) : null}
+        <ul className="mt-3 space-y-3">{bracketMatches.map((m) => matchCard(m))}</ul>
+      </section>
+    );
+  }
 
   const courtHours = Math.round((matchRows.length * 90) / 60);
 
@@ -243,93 +332,44 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      {(tour.tournament_type === "americano" || tour.tournament_type === "grupos_eliminacion") &&
-        tour.status === "in_progress" && (
-          <AmericanoLeaderboard
-            matches={matchRows}
-            pairNames={Object.fromEntries(pairNameMap)}
-          />
-        )}
-
-      {tour.status === "in_progress" && courtList.length > 0 && (
-        <TournamentScheduler
-          tournamentId={id}
-          courts={courtList}
-          matches={matchRows.map((m) => ({
-            id: m.id,
-            round_name: m.round_name,
-            pair1_name: m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "—" : "—",
-            pair2_name: m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "—" : "—",
-            court_id: m.court_id,
-            scheduled_date: m.scheduled_date,
-            scheduled_time: m.scheduled_time,
-            notes: m.notes,
-          }))}
+      {tour.tournament_type === "americano" && tour.status === "in_progress" && (
+        <AmericanoLeaderboard
+          matches={matchRows}
+          pairNames={Object.fromEntries(pairNameMap)}
         />
       )}
 
-      <section>
-        <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Fixture</h2>
-        <p className="text-xs text-[var(--text-tertiary)]">~{courtHours} h de cancha estimadas · {matchRows.length} partidos</p>
-        <ul className="mt-3 space-y-3">
-          {matchRows.map((m) => (
-            <li key={m.id} className={`${adminCard} text-sm`}>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)]">
-                Ronda {m.round} · {m.round_name ?? "—"}
-              </p>
-              <p className="mt-1 text-[var(--text-secondary)]">
-                {m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "Pareja 1" : "—"} vs{" "}
-                {m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "Pareja 2" : "—"}
-              </p>
-              <span
-                className={`mt-1 inline-flex ${
-                  m.status === "finished"
-                    ? adminBadgeLima
-                    : m.status === "in_progress"
-                      ? adminBadgePending
-                      : adminBadgeNeutral
-                }`}
-              >
-                {m.status === "finished"
-                  ? "✓ Finalizado"
-                  : m.status === "in_progress"
-                    ? "En curso"
-                    : "Pendiente"}
-              </span>
-              {m.pair1_id && m.pair2_id ? (
-                <form action={saveTournamentMatchFormAction} className="mt-2 grid gap-2 sm:grid-cols-4">
-                  <input type="hidden" name="tournament_id" value={id} />
-                  <input type="hidden" name="match_id" value={m.id} />
-                  <input type="hidden" name="sets_json" value="[]" />
-                  <input
-                    type="number"
-                    name="pair1_score"
-                    min={0}
-                    max={3}
-                    required
-                    defaultValue={m.pair1_score ?? ""}
-                    placeholder="Sets P1"
-                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
-                  />
-                  <input
-                    type="number"
-                    name="pair2_score"
-                    min={0}
-                    max={3}
-                    required
-                    defaultValue={m.pair2_score ?? ""}
-                    placeholder="Sets P2"
-                    className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
-                  />
-                  <button type="submit" className={`${adminCTAPrimary} px-2 py-1 text-xs`}>
-                    {m.status === "finished" ? "Editar" : "Guardar"}
-                  </button>
-                </form>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </section>
+      {tour.status === "in_progress" && tour.tournament_type === "eliminacion" ? (
+        <>
+          {bracketSection("🥇 Llave de Oro", goldMatches)}
+          {tour.consolation_bracket ? bracketSection("🥈 Llave de Plata", silverMatches) : null}
+        </>
+      ) : (
+        <>
+          {tour.status === "in_progress" && courtList.length > 0 && (
+            <TournamentScheduler
+              tournamentId={id}
+              courts={courtList}
+              matches={matchRows.map((m) => ({
+                id: m.id,
+                round_name: m.round_name,
+                pair1_name: m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "—" : "—",
+                pair2_name: m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "—" : "—",
+                court_id: m.court_id,
+                scheduled_date: m.scheduled_date,
+                scheduled_time: m.scheduled_time,
+                notes: m.notes,
+              }))}
+            />
+          )}
+
+          <section>
+            <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Fixture</h2>
+            <p className="text-xs text-[var(--text-tertiary)]">~{courtHours} h de cancha estimadas · {matchRows.length} partidos</p>
+            <ul className="mt-3 space-y-3">{matchRows.map((m) => matchCard(m))}</ul>
+          </section>
+        </>
+      )}
     </div>
   );
 }

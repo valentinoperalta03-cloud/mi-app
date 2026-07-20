@@ -1,15 +1,20 @@
 import { isPowerOfTwo } from "./validation";
 
-export type MatchInsert = {
+export type TournamentMatchInsert = {
+  id?: string;
   tournament_id: string;
   round: number;
   round_name: string;
+  bracket?: "gold" | "silver";
   pair1_id?: string | null;
   pair2_id?: string | null;
   feeder_left_match_id?: string | null;
   feeder_right_match_id?: string | null;
   status: "pending";
 };
+
+// Alias para no romper las funciones existentes de abajo (americano/mixing), intactas.
+type MatchInsert = TournamentMatchInsert;
 
 function roundName(matchesInRound: number): string {
   if (matchesInRound >= 8) return "Octavos de final";
@@ -89,49 +94,96 @@ export function buildMixingNextRound(
 }
 
 /**
- * Retorna la primera capa de partidos (con pair1_id / pair2_id) y las
- * capas de placeholders para rondas siguientes (con feeder_left/right_match_id).
- * La insercion en DB debe hacerse por capas en orden para obtener los IDs.
+ * Genera el fixture completo de eliminacion directa en un solo array, listo
+ * para un unico insert en batch. Los IDs de cada partido se generan de
+ * antemano (crypto.randomUUID) para poder encadenar feeder_left/right_match_id
+ * de las rondas futuras sin necesidad de insertar capa por capa.
+ *
+ * Si consolationBracket = true, ademas de la llave principal (bracket: 'gold')
+ * se genera una llave paralela (bracket: 'silver', "Copa de Plata") alimentada
+ * por los perdedores de la ronda 1 de gold: cada partido de silver ronda 1
+ * tiene como feeder_left/right_match_id los dos partidos de gold ronda 1 cuyo
+ * perdedor cae ahi (propagateBracket decide "ganador" vs "perdedor" segun si
+ * el partido hijo es del mismo bracket o de uno distinto al del padre).
+ *
+ * Los placeholders de rondas futuras se crean con pair1_id/pair2_id = null —
+ * se completan automaticamente cuando propagateBracket corre al cargar cada
+ * resultado.
  */
-export function buildEliminationFirstRound(
+export function buildEliminationFixture(
   tournamentId: string,
-  pairIds: string[]
-): MatchInsert[] {
+  pairIds: string[],
+  consolationBracket: boolean
+): TournamentMatchInsert[] {
   if (!isPowerOfTwo(pairIds.length)) {
     throw new Error("Eliminacion directa requiere potencia de 2");
   }
+  const rows: TournamentMatchInsert[] = [];
   const shuffled = [...pairIds].sort(() => Math.random() - 0.5);
-  const rn = shuffled.length / 2;
-  const rows: MatchInsert[] = [];
+
+  // ---- Llave de Oro: ronda 1 (con parejas ya sorteadas) ----
+  const goldRound1: TournamentMatchInsert[] = [];
   for (let i = 0; i < shuffled.length; i += 2) {
-    rows.push({
+    goldRound1.push({
+      id: crypto.randomUUID(),
       tournament_id: tournamentId,
       round: 1,
-      round_name: roundName(rn),
+      round_name: roundName(shuffled.length / 2),
+      bracket: "gold",
       pair1_id: shuffled[i],
       pair2_id: shuffled[i + 1],
       status: "pending",
     });
   }
-  return rows;
-}
+  rows.push(...goldRound1);
 
-/** Genera la capa siguiente del bracket dado un array de IDs de partidos de la capa anterior */
-export function buildEliminationNextLayer(
-  tournamentId: string,
-  round: number,
-  feederIds: string[]
-): MatchInsert[] {
-  const rows: MatchInsert[] = [];
-  for (let i = 0; i < feederIds.length; i += 2) {
-    rows.push({
-      tournament_id: tournamentId,
-      round,
-      round_name: roundName(feederIds.length / 2),
-      feeder_left_match_id: feederIds[i],
-      feeder_right_match_id: feederIds[i + 1],
-      status: "pending",
-    });
+  // ---- Llave de Oro: rondas siguientes (placeholders encadenados) ----
+  let goldPrevLayer = goldRound1.map((m) => m.id!);
+  let goldRound = 2;
+  while (goldPrevLayer.length > 1) {
+    const layer: TournamentMatchInsert[] = [];
+    for (let i = 0; i < goldPrevLayer.length; i += 2) {
+      layer.push({
+        id: crypto.randomUUID(),
+        tournament_id: tournamentId,
+        round: goldRound,
+        round_name: roundName(goldPrevLayer.length / 2),
+        bracket: "gold",
+        feeder_left_match_id: goldPrevLayer[i],
+        feeder_right_match_id: goldPrevLayer[i + 1],
+        status: "pending",
+      });
+    }
+    rows.push(...layer);
+    goldPrevLayer = layer.map((m) => m.id!);
+    goldRound++;
   }
+
+  // ---- Copa de Plata: alimentada por los perdedores de gold ronda 1 ----
+  // Requiere al menos 2 partidos de gold ronda 1 (4 parejas) para tener con
+  // quien emparejar a los perdedores.
+  if (consolationBracket && goldRound1.length >= 2) {
+    let silverPrevLayer = goldRound1.map((m) => m.id!); // "entrantes": los perdedores de estos partidos
+    let silverRound = 1;
+    while (silverPrevLayer.length > 1) {
+      const layer: TournamentMatchInsert[] = [];
+      for (let i = 0; i < silverPrevLayer.length; i += 2) {
+        layer.push({
+          id: crypto.randomUUID(),
+          tournament_id: tournamentId,
+          round: silverRound,
+          round_name: `Copa de Plata · ${roundName(silverPrevLayer.length / 2)}`,
+          bracket: "silver",
+          feeder_left_match_id: silverPrevLayer[i],
+          feeder_right_match_id: silverPrevLayer[i + 1],
+          status: "pending",
+        });
+      }
+      rows.push(...layer);
+      silverPrevLayer = layer.map((m) => m.id!);
+      silverRound++;
+    }
+  }
+
   return rows;
 }
