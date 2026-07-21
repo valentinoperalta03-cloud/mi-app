@@ -2,11 +2,8 @@ import Link from "next/link";
 import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { DB_TABLES } from "@/lib/db-tables";
+import { moneyArs, SUBSCRIPTION_PRICE_ARS, type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
-
-function money(n: number) {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
-}
 
 export default async function SuperadminDashboardPage() {
   const { svc } = await requireSuperadminAction();
@@ -14,43 +11,10 @@ export default async function SuperadminDashboardPage() {
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
   const sixMonthsAgo = format(startOfMonth(subMonths(new Date(), 5)), "yyyy-MM-dd");
+  const in7Days = new Date(Date.now() + 7 * 24 * 3600 * 1000);
 
-  const [
-    { count: clubsActive },
-    { count: playersTotal },
-    { count: reservasAll },
-    { count: reservasMonth },
-    paidMatches,
-    debtsPending,
-    reservasByMonth,
-    matchesThisMonth,
-    courtsRows,
-    clubsRows,
-    debtsAgg,
-    clubsIdle,
-    blockedWeek,
-  ] = await Promise.all([
-    svc.from(DB_TABLES.clubs).select("id", { count: "exact", head: true }).eq("is_active", true),
-    svc.from(DB_TABLES.profiles).select("user_id", { count: "exact", head: true }),
-    svc
-      .from(DB_TABLES.matches)
-      .select("id", { count: "exact", head: true })
-      .eq("match_type", "reservation")
-      .neq("match_status", "cancelled"),
-    svc
-      .from(DB_TABLES.matches)
-      .select("id", { count: "exact", head: true })
-      .eq("match_type", "reservation")
-      .neq("match_status", "cancelled")
-      .gte("scheduled_date", monthStart)
-      .lte("scheduled_date", monthEnd),
-    svc
-      .from(DB_TABLES.matches)
-      .select("total_price")
-      .eq("match_type", "reservation")
-      .eq("payment_status", "paid")
-      .neq("match_status", "cancelled"),
-    svc.from(DB_TABLES.clubDebts).select("amount").eq("status", "pending"),
+  const [{ data: overviewRaw }, reservasByMonth, matchesThisMonth, courtsRows] = await Promise.all([
+    svc.from("superadmin_clubs_overview").select("*"),
     svc
       .from(DB_TABLES.matches)
       .select("scheduled_date")
@@ -65,23 +29,31 @@ export default async function SuperadminDashboardPage() {
       .gte("scheduled_date", monthStart)
       .lte("scheduled_date", monthEnd),
     svc.from(DB_TABLES.courts).select("id,club_id"),
-    svc.from(DB_TABLES.clubs).select("id,name,is_active"),
-    svc.from(DB_TABLES.clubDebts).select("club_id,amount").eq("status", "pending"),
-    svc.from(DB_TABLES.clubs).select("id,name,created_at").eq("is_active", true),
-    svc
-      .from(DB_TABLES.blockedUsers)
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()),
   ]);
 
-  const ingresosPagados =
-    (paidMatches.data ?? []).reduce((a, r) => a + Number((r as { total_price: number | null }).total_price ?? 0), 0) ||
-    0;
+  const overview = (overviewRaw ?? []) as SuperadminClubOverview[];
 
-  const deudaTotal = (debtsPending.data ?? []).reduce(
-    (a, r) => a + Number((r as { amount: number | null }).amount ?? 0),
-    0
-  );
+  const clubsTotal = overview.length;
+  const enTrial = overview.filter((r) => r.subscription_status === "pending" || r.subscription_status === "trial").length;
+  const activos = overview.filter((r) => r.subscription_status === "active").length;
+  const conProblemas = overview.filter((r) => r.subscription_status === "past_due" || r.subscription_status === "paused").length;
+  const mrr = activos * SUBSCRIPTION_PRICE_ARS;
+
+  const trialsPorVencer = overview
+    .filter((r) => r.subscription_status === "trial" && r.trial_end_date && new Date(r.trial_end_date) <= in7Days)
+    .sort((a, b) => new Date(a.trial_end_date ?? 0).getTime() - new Date(b.trial_end_date ?? 0).getTime());
+
+  const pagosFallidos = overview
+    .filter((r) => r.subscription_status === "past_due")
+    .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+
+  const sinTarjeta = overview
+    .filter((r) => r.subscription_status === "pending")
+    .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+
+  const reservasTotal = overview.reduce((a, r) => a + Number(r.reservations_total), 0);
+  const reservasMes = overview.reduce((a, r) => a + Number(r.reservations_this_month), 0);
+  const jugadoresActivos30d = overview.reduce((a, r) => a + Number(r.unique_players_30d), 0);
 
   const byMonth = new Map<string, number>();
   for (let i = 5; i >= 0; i--) {
@@ -102,9 +74,7 @@ export default async function SuperadminDashboardPage() {
   const courtToClub = new Map(
     ((courtsRows.data ?? []) as Array<{ id: string; club_id: string }>).map((c) => [c.id, c.club_id])
   );
-  const clubName = new Map(
-    ((clubsRows.data ?? []) as Array<{ id: string; name: string | null }>).map((c) => [c.id, c.name ?? "Club"])
-  );
+  const clubName = new Map(overview.map((c) => [c.id, c.name ?? "Club"]));
   const resCountByClub = new Map<string, number>();
   for (const m of (matchesThisMonth.data ?? []) as Array<{ court_id: string }>) {
     const cid = courtToClub.get(m.court_id);
@@ -116,39 +86,12 @@ export default async function SuperadminDashboardPage() {
     .slice(0, 5)
     .map(([id, n]) => ({ id, name: clubName.get(id) ?? "Club", count: n }));
 
-  const debtByClub = new Map<string, number>();
-  for (const d of (debtsAgg.data ?? []) as Array<{ club_id: string; amount: number | null }>) {
-    debtByClub.set(d.club_id, (debtByClub.get(d.club_id) ?? 0) + Number(d.amount ?? 0));
-  }
-  const debtAlerts = [...debtByClub.entries()].filter(([, v]) => v > 50_000);
-
-  const lastActivity = new Map<string, string>();
-  const { data: lastMatches } = await svc
-    .from(DB_TABLES.matches)
-    .select("court_id,scheduled_date")
-    .eq("match_type", "reservation")
-    .neq("match_status", "cancelled")
-    .order("scheduled_date", { ascending: false })
-    .limit(5000);
-  for (const m of lastMatches ?? []) {
-    const row = m as { court_id: string; scheduled_date: string | null };
-    const clubId = courtToClub.get(row.court_id);
-    if (!clubId || lastActivity.has(clubId)) continue;
-    if (row.scheduled_date) lastActivity.set(clubId, row.scheduled_date);
-  }
-  const weekAgoYmd = format(new Date(Date.now() - 7 * 24 * 3600 * 1000), "yyyy-MM-dd");
-  const idleClubs = ((clubsIdle.data ?? []) as Array<{ id: string; name: string | null }>).filter((c) => {
-    const last = lastActivity.get(c.id);
-    if (!last) return true;
-    return last < weekAgoYmd;
-  });
-
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Dashboard global</h1>
-          <p className="mt-1 text-sm text-slate-400">Métricas en tiempo real de la plataforma.</p>
+          <p className="mt-1 text-sm text-slate-400">Salud de suscripciones y uso de la plataforma.</p>
         </div>
         <Link
           href="/superadmin/clubes"
@@ -158,14 +101,12 @@ export default async function SuperadminDashboardPage() {
         </Link>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Clubes activos", value: String(clubsActive ?? 0), tone: "from-cyan-500/20 to-blue-600/10" },
-          { label: "Jugadores registrados", value: String(playersTotal ?? 0), tone: "from-violet-500/20 to-fuchsia-600/10" },
-          { label: "Reservas (histórico)", value: String(reservasAll ?? 0), tone: "from-emerald-500/20 to-teal-600/10" },
-          { label: "Reservas este mes", value: String(reservasMonth ?? 0), tone: "from-amber-500/20 to-orange-600/10" },
-          { label: "Ingresos turnos pagados (suma total)", value: money(ingresosPagados), tone: "from-green-500/20 to-lime-600/10" },
-          { label: "Deuda PadeLibre pendiente", value: money(deudaTotal), tone: "from-rose-500/20 to-red-600/10" },
+          { label: "Clubes totales", value: String(clubsTotal), tone: "from-cyan-500/20 to-blue-600/10" },
+          { label: "En trial (sin tarjeta + trial)", value: String(enTrial), tone: "from-sky-500/20 to-blue-600/10" },
+          { label: "Activos (pagando)", value: String(activos), tone: "from-emerald-500/20 to-teal-600/10" },
+          { label: "Con problemas", value: String(conProblemas), tone: "from-rose-500/20 to-red-600/10" },
         ].map((c) => (
           <div
             key={c.label}
@@ -173,6 +114,88 @@ export default async function SuperadminDashboardPage() {
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{c.label}</p>
             <p className="mt-2 text-2xl font-bold text-white">{c.value}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 to-slate-900/60 p-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300/80">MRR (ingresos recurrentes)</p>
+        <p className="mt-2 text-3xl font-bold text-white">{moneyArs(mrr)}</p>
+        <p className="mt-1 text-sm text-slate-400">
+          {activos} club{activos === 1 ? "" : "es"} activo{activos === 1 ? "" : "s"} × {moneyArs(SUBSCRIPTION_PRICE_ARS)}/mes
+        </p>
+      </section>
+
+      <section className="grid gap-8 lg:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
+          <h2 className="text-lg font-bold text-white">Trials por vencer (próximos 7 días)</h2>
+          <ul className="mt-4 space-y-2">
+            {trialsPorVencer.length === 0 ? (
+              <li className="text-sm text-slate-500">Ningún trial vence esta semana.</li>
+            ) : (
+              trialsPorVencer.map((c) => (
+                <li key={c.id} className="flex items-center justify-between rounded-xl border border-sky-500/20 bg-sky-950/30 px-3 py-2">
+                  <Link href={`/superadmin/clubes/${c.id}`} className="text-sm text-sky-100 underline-offset-2 hover:underline">
+                    {c.name}
+                  </Link>
+                  <span className="text-xs text-sky-300">
+                    {c.trial_end_date ? format(new Date(c.trial_end_date), "dd/MM/yyyy") : "—"}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
+          <h2 className="text-lg font-bold text-white">Pagos fallidos recientes</h2>
+          <ul className="mt-4 space-y-2">
+            {pagosFallidos.length === 0 ? (
+              <li className="text-sm text-slate-500">Ningún club en past_due.</li>
+            ) : (
+              pagosFallidos.map((c) => (
+                <li key={c.id} className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-950/30 px-3 py-2">
+                  <Link href={`/superadmin/clubes/${c.id}`} className="text-sm text-rose-100 underline-offset-2 hover:underline">
+                    {c.name}
+                  </Link>
+                  <span className="text-xs text-rose-300">Pago fallido</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-bold text-white">Clubes sin tarjeta cargada</h2>
+        <p className="mt-1 text-xs text-slate-500">Nunca completaron el alta de suscripción (subscription_status = pending).</p>
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {sinTarjeta.length === 0 ? (
+            <li className="text-sm text-slate-500">Ninguno.</li>
+          ) : (
+            sinTarjeta.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/superadmin/clubes/${c.id}`}
+                  className="inline-flex rounded-full border border-slate-500/30 bg-slate-800/60 px-3 py-1 text-xs font-semibold text-slate-300 hover:bg-slate-700/60"
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-3">
+        {[
+          { label: "Reservas (histórico)", value: String(reservasTotal) },
+          { label: "Reservas este mes", value: String(reservasMes) },
+          { label: "Jugadores activos (30d)", value: String(jugadoresActivos30d) },
+        ].map((c) => (
+          <div key={c.label} className="rounded-2xl border border-white/10 bg-slate-900/50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{c.label}</p>
+            <p className="mt-1 text-xl font-bold text-white">{c.value}</p>
           </div>
         ))}
       </section>
@@ -193,57 +216,23 @@ export default async function SuperadminDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-8 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
-          <h2 className="text-lg font-bold text-white">Clubes más activos (este mes)</h2>
-          <ul className="mt-4 space-y-2">
-            {topClubs.length === 0 ? (
-              <li className="text-sm text-slate-500">Sin datos aún.</li>
-            ) : (
-              topClubs.map((c, i) => (
-                <li key={c.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-950/50 px-3 py-2">
-                  <span className="text-sm text-slate-300">
-                    <span className="mr-2 font-mono text-cyan-400">{i + 1}.</span>
-                    {c.name}
-                  </span>
-                  <span className="text-sm font-semibold text-white">{c.count} reservas</span>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
-          <h2 className="text-lg font-bold text-white">Alertas</h2>
-          <ul className="mt-4 space-y-3 text-sm">
-            <li className="rounded-xl border border-rose-500/30 bg-rose-950/30 px-3 py-2 text-rose-100">
-              <span className="font-semibold">Deuda &gt; $50.000:</span>{" "}
-              {debtAlerts.length ? (
-                <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
-                  {debtAlerts.flatMap(([id, v], i) => [
-                    i > 0 ? (
-                      <span key={`sep-${id}`} className="text-rose-300/80">
-                        ·
-                      </span>
-                    ) : null,
-                    <Link key={id} href={`/superadmin/clubes/${id}`} className="underline">
-                      {clubName.get(id)} ({money(v)})
-                    </Link>,
-                  ])}
+      <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-bold text-white">Clubes más activos (este mes)</h2>
+        <ul className="mt-4 space-y-2">
+          {topClubs.length === 0 ? (
+            <li className="text-sm text-slate-500">Sin datos aún.</li>
+          ) : (
+            topClubs.map((c, i) => (
+              <li key={c.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-950/50 px-3 py-2">
+                <span className="text-sm text-slate-300">
+                  <span className="mr-2 font-mono text-cyan-400">{i + 1}.</span>
+                  {c.name}
                 </span>
-              ) : (
-                "ninguna"
-              )}
-            </li>
-            <li className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-3 py-2 text-amber-100">
-              <span className="font-semibold">Sin reservas hace +7 días:</span>{" "}
-              {idleClubs.length ? `${idleClubs.length} clubes` : "ninguno detectado"}
-            </li>
-            <li className="rounded-xl border border-violet-500/30 bg-violet-950/30 px-3 py-2 text-violet-100">
-              <span className="font-semibold">Bloqueos esta semana:</span> {blockedWeek.count ?? 0}
-            </li>
-          </ul>
-        </div>
+                <span className="text-sm font-semibold text-white">{c.count} reservas</span>
+              </li>
+            ))
+          )}
+        </ul>
       </section>
     </div>
   );

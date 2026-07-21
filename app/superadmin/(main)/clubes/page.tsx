@@ -1,22 +1,20 @@
 import Link from "next/link";
-import {
-  markClubDebtsPaidAction,
-  toggleClubActiveAction,
-} from "@/app/superadmin/actions";
+import { toggleClubActiveAction } from "@/app/superadmin/actions";
 import CreateClubForm from "@/components/superadmin/create-club-form";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
 import DeleteClubForm from "@/components/superadmin/delete-club-form";
+import SubscriptionBadge from "@/components/superadmin/subscription-badge";
 import { moneyArs, type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
 
-type Filter = "all" | "active" | "inactive" | "debt" | "idle";
+type Filter = "all" | "pending" | "trial" | "active" | "problems";
 
 const filterTabs: { key: Filter; label: string }[] = [
   { key: "all", label: "Todos" },
+  { key: "pending", label: "Sin tarjeta" },
+  { key: "trial", label: "En trial" },
   { key: "active", label: "Activos" },
-  { key: "inactive", label: "Inactivos" },
-  { key: "debt", label: "Con deuda" },
-  { key: "idle", label: "Sin actividad" },
+  { key: "problems", label: "Con problemas" },
 ];
 
 const errorMessages: Record<string, string> = {
@@ -39,17 +37,16 @@ export default async function SuperadminClubesPage({
 
   let rows = (overview ?? []) as SuperadminClubOverview[];
 
-  if (filter === "active") rows = rows.filter((r) => r.is_active);
-  if (filter === "inactive") rows = rows.filter((r) => !r.is_active);
-  if (filter === "debt") rows = rows.filter((r) => Number(r.pending_debt) > 0);
-  if (filter === "idle") {
-    rows = rows.filter((r) => r.is_active && r.reservations_this_month === 0);
+  if (filter === "pending") rows = rows.filter((r) => r.subscription_status === "pending");
+  if (filter === "trial") rows = rows.filter((r) => r.subscription_status === "trial");
+  if (filter === "active") rows = rows.filter((r) => r.subscription_status === "active");
+  if (filter === "problems") {
+    rows = rows.filter((r) => r.subscription_status === "past_due" || r.subscription_status === "paused");
   }
 
   const totals = {
     clubs: rows.length,
-    active: rows.filter((r) => r.is_active).length,
-    debt: rows.reduce((a, r) => a + Number(r.pending_debt), 0),
+    subsActive: rows.filter((r) => r.subscription_status === "active").length,
     resMonth: rows.reduce((a, r) => a + Number(r.reservations_this_month), 0),
     revenueMonth: rows.reduce((a, r) => a + Number(r.revenue_paid_this_month), 0),
   };
@@ -62,7 +59,7 @@ export default async function SuperadminClubesPage({
       <header>
         <h1 className="text-3xl font-bold text-white">Clubes</h1>
         <p className="mt-1 text-sm text-slate-400">
-          Alta, baja, métricas y salud operativa de cada club en la plataforma.
+          Alta, baja, suscripción y salud operativa de cada club en la plataforma.
         </p>
       </header>
 
@@ -93,13 +90,12 @@ export default async function SuperadminClubesPage({
 
       <CreateClubForm />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Clubes (filtro)", value: String(totals.clubs) },
-          { label: "Activos", value: String(totals.active) },
+          { label: "Suscripciones activas", value: String(totals.subsActive) },
           { label: "Reservas del mes", value: String(totals.resMonth) },
           { label: "Ingresos pagados (mes)", value: moneyArs(totals.revenueMonth) },
-          { label: "Deuda pendiente", value: moneyArs(totals.debt) },
         ].map((c) => (
           <div key={c.label} className="rounded-2xl border border-white/10 bg-slate-900/50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{c.label}</p>
@@ -136,7 +132,8 @@ export default async function SuperadminClubesPage({
               <th className="hidden px-4 py-3 lg:table-cell">Part. abiertos</th>
               <th className="hidden px-4 py-3 md:table-cell">Ingresos mes</th>
               <th className="hidden px-4 py-3 lg:table-cell">Jug. 30d</th>
-              <th className="hidden px-4 py-3 md:table-cell">Deuda</th>
+              <th className="px-4 py-3">Suscripción</th>
+              <th className="hidden px-4 py-3 lg:table-cell">Próximo cobro</th>
               <th className="hidden px-4 py-3 md:table-cell">MP</th>
               <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
@@ -144,18 +141,17 @@ export default async function SuperadminClubesPage({
           <tbody className="divide-y divide-white/5">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={12} className="px-4 py-8 text-center text-slate-500">
                   No hay clubes con este filtro.
                 </td>
               </tr>
             ) : (
               rows.map((c) => {
-                const debt = Number(c.pending_debt);
                 return (
                   <tr key={c.id} className="text-slate-200">
                     <td className="px-4 py-3">
                       <p className="font-medium text-white">{c.name ?? "—"}</p>
-                      <p className="text-xs text-slate-500">{c.location ?? "—"}</p>
+                      <p className="text-xs text-slate-500">{c.city ?? c.location ?? "—"}</p>
                     </td>
                     <td className="px-4 py-3">
                       <ClubHealthBadge row={c} />
@@ -166,7 +162,12 @@ export default async function SuperadminClubesPage({
                     <td className="hidden px-4 py-3 lg:table-cell">{c.open_matches_this_month}</td>
                     <td className="hidden px-4 py-3 md:table-cell">{moneyArs(Number(c.revenue_paid_this_month))}</td>
                     <td className="hidden px-4 py-3 lg:table-cell">{c.unique_players_30d}</td>
-                    <td className="hidden px-4 py-3 md:table-cell">{moneyArs(debt)}</td>
+                    <td className="px-4 py-3">
+                      <SubscriptionBadge row={c} />
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-400 lg:table-cell">
+                      {c.next_billing_date ? new Date(c.next_billing_date).toLocaleDateString("es-AR") : "—"}
+                    </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <span className={c.mp_connected ? "text-emerald-300" : "text-amber-300"}>
                         {c.mp_connected ? "Sí" : "No"}
@@ -194,18 +195,6 @@ export default async function SuperadminClubesPage({
                             {c.is_active ? "Dar de baja" : "Dar de alta"}
                           </button>
                         </form>
-                        {debt > 0 ? (
-                          <form action={markClubDebtsPaidAction}>
-                            <input type="hidden" name="club_id" value={c.id} />
-                            <input type="hidden" name="return_to" value="/superadmin/clubes" />
-                            <button
-                              type="submit"
-                              className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-200"
-                            >
-                              Deuda pagada
-                            </button>
-                          </form>
-                        ) : null}
                         <DeleteClubForm
                           clubId={c.id}
                           clubName={c.name ?? "Club"}

@@ -16,7 +16,6 @@ export default function ClubAnalyticsGrid({ row }: { row: SuperadminClubOverview
         ? format(new Date(row.last_reservation_date), "dd/MM/yyyy")
         : "Sin actividad",
     },
-    { label: "Deuda pendiente", value: moneyArs(Number(row.pending_debt)) },
   ];
 
   return (

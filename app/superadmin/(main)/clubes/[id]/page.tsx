@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
-import {
-  markClubDebtsPaidAction,
-  notifyClubOwnerAction,
-  toggleClubActiveAction,
-} from "@/app/superadmin/actions";
+import { notifyClubOwnerAction, toggleClubActiveAction } from "@/app/superadmin/actions";
 import ClubAnalyticsGrid from "@/components/superadmin/club-analytics-grid";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
 import DeleteClubForm from "@/components/superadmin/delete-club-form";
+import SubscriptionActionsForm from "@/components/superadmin/subscription-actions-form";
+import SubscriptionBadge from "@/components/superadmin/subscription-badge";
 import { DB_TABLES } from "@/lib/db-tables";
 import { type SuperadminClubOverview } from "@/lib/superadmin/club-overview";
 import { requireSuperadminAction } from "@/lib/superadmin/guards";
@@ -17,9 +15,22 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
+const subMessages: Record<string, string> = {
+  activated: "Suscripción activada manualmente.",
+  extended: "Trial extendido correctamente.",
+  past_due: "Club marcado como pago fallido.",
+  reset: "Suscripción reseteada a pending.",
+};
+
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notif?: string; created?: string; delete_error?: string }>;
+  searchParams: Promise<{
+    notif?: string;
+    created?: string;
+    delete_error?: string;
+    sub?: string;
+    sub_error?: string;
+  }>;
 };
 
 export default async function SuperadminClubDetailPage({ params, searchParams }: PageProps) {
@@ -70,14 +81,8 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
           .limit(20)
       : { data: [] };
 
-  const { data: debts } = await svc
-    .from(DB_TABLES.clubDebts)
-    .select("id,amount,status,payment_method,confirmed_at,paid_at,match_id")
-    .eq("club_id", id)
-    .order("confirmed_at", { ascending: false })
-    .limit(100);
-
   const mpOk = overview.mp_connected;
+  const subOk = sp.sub ? subMessages[sp.sub] : null;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -126,8 +131,21 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </p>
       ) : null}
 
+      {subOk ? (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+          {subOk}
+        </p>
+      ) : null}
+
+      {sp.sub_error === "dias" ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          Ingresá una cantidad de días válida para extender el trial.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2">
         <ClubHealthBadge row={overview} />
+        <SubscriptionBadge row={overview} />
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
             overview.onboarding_completed
@@ -252,48 +270,39 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </ul>
       </section>
 
-      <section id="deuda" className="scroll-mt-24 rounded-2xl border border-white/10 bg-slate-900/50 p-6">
+      <section id="suscripcion" className="scroll-mt-24 rounded-2xl border border-white/10 bg-slate-900/50 p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-white">Deuda con PadeLibre</h2>
-          <form action={markClubDebtsPaidAction}>
-            <input type="hidden" name="club_id" value={id} />
-            <input type="hidden" name="return_to" value={`/superadmin/clubes/${id}`} />
-            <button
-              type="submit"
-              className="rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
-            >
-              Marcar deuda como pagada
-            </button>
-          </form>
+          <h2 className="text-lg font-bold text-white">Suscripción PadeLibre</h2>
+          <SubscriptionBadge row={overview} />
         </div>
-        <ul className="mt-4 max-h-80 space-y-2 overflow-y-auto">
-          {(debts ?? []).length === 0 ? (
-            <li className="text-sm text-slate-500">Sin movimientos de deuda.</li>
-          ) : (
-            (debts ?? []).map((d) => {
-              const row = d as {
-                id: string;
-                amount: number | null;
-                status: string | null;
-                payment_method: string | null;
-                confirmed_at: string | null;
-                paid_at: string | null;
-                match_id: string | null;
-              };
-              return (
-                <li key={row.id} className="rounded-xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
-                  <span className="font-semibold text-white">{money(Number(row.amount ?? 0))}</span> · {row.status ?? "—"} ·{" "}
-                  {row.payment_method ?? "—"}
-                  <span className="ml-2 text-xs text-slate-500">
-                    {row.confirmed_at ? format(new Date(row.confirmed_at), "dd/MM/yy HH:mm") : ""}
-                    {row.paid_at ? ` → pagado ${format(new Date(row.paid_at), "dd/MM/yy")}` : ""}
-                  </span>
-                  {row.match_id ? <span className="ml-2 font-mono text-[10px] text-slate-600">{row.match_id.slice(0, 8)}…</span> : null}
-                </li>
-              );
-            })
-          )}
-        </ul>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-slate-500">
+              {overview.subscription_status === "trial" ? "Vence el trial" : "Próximo cobro"}
+            </dt>
+            <dd className="text-slate-200">
+              {overview.subscription_status === "trial"
+                ? overview.trial_end_date
+                  ? format(new Date(overview.trial_end_date), "dd/MM/yyyy HH:mm")
+                  : "—"
+                : overview.next_billing_date
+                  ? format(new Date(overview.next_billing_date), "dd/MM/yyyy")
+                  : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">ID de suscripción en MP</dt>
+            <dd className="break-all font-mono text-xs text-slate-300">{overview.mp_subscription_id ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">MP conectado para cobrar a jugadores</dt>
+            <dd className={mpOk ? "text-emerald-300" : "text-amber-300"}>{mpOk ? "Sí" : "No"}</dd>
+          </div>
+        </dl>
+        <div className="mt-6">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones manuales</p>
+          <SubscriptionActionsForm clubId={id} />
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
