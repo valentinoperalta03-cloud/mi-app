@@ -15,12 +15,13 @@ import {
   adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
-import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { AR_TIME_ZONE, formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
 import {
   confirmOfflineCobro,
   confirmPracticeOfflineCobro,
+  confirmRemainingBalanceAction,
   markOfflineNoShow,
   markPracticeOfflineNoShow,
 } from "./actions";
@@ -37,7 +38,7 @@ function isYmdInArgentina(iso: string, ymd: string): boolean {
 }
 
 type PageProps = {
-  searchParams?: Promise<{ error?: string; ok?: string }>;
+  searchParams?: Promise<{ error?: string; ok?: string; saldo?: string }>;
 };
 
 export default async function AdminCobrosPage({ searchParams }: PageProps) {
@@ -71,6 +72,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     { data: practiceApprovedRows },
     { data: debtRows },
     { data: noShowRows },
+    { data: pendingBalanceRows, error: pendingBalanceErr },
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.matches)
@@ -122,6 +124,16 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .in("court_id", ctx.courtIds)
       .eq("scheduled_date", todayAr)
       .eq("payment_status", "no_show")
+      .order("scheduled_time", { ascending: true }),
+    supabase
+      .from(DB_TABLES.matches)
+      .select("id, owner_id, court_id, scheduled_date, scheduled_time, total_price, amount_paid, amount_pending")
+      .in("court_id", ctx.courtIds)
+      .eq("financial_status", "partially_paid")
+      .gt("amount_pending", 0)
+      .gte("scheduled_date", todayAr)
+      .neq("match_status", "cancelled")
+      .order("scheduled_date", { ascending: true })
       .order("scheduled_time", { ascending: true }),
   ]);
 
@@ -180,6 +192,20 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   }>;
 
   const courtName = new Map(ctx.courts.map((c) => [c.id, c.name ?? "Cancha"]));
+  const clubNameByCourt = new Map(
+    ctx.courts.map((c) => [c.id, ctx.clubs.find((club) => club.id === c.club_id)?.name ?? "Club"])
+  );
+
+  const pendingBalances = (pendingBalanceRows ?? []) as Array<{
+    id: string;
+    owner_id: string;
+    court_id: string;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    total_price: number | null;
+    amount_paid: number | null;
+    amount_pending: number | null;
+  }>;
 
   const paymentsAll = (payRows ?? []) as Array<{
     id: string;
@@ -230,6 +256,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       ...practiceApprovedToday.map((p) => p.player_id),
       ...paymentsToday.map((p) => p.user_id),
       ...noShows.map((m) => m.owner_id),
+      ...pendingBalances.map((m) => m.owner_id),
     ].filter(Boolean)),
   ];
   const { data: profs } = profileUserIds.length
@@ -253,6 +280,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
   const err = sp.error ? decodeURIComponent(sp.error) : "";
   const ok = sp.ok === "1";
+  const saldoOk = sp.saldo === "1";
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pb-28 pt-6 md:max-w-3xl md:px-8">
@@ -267,6 +295,14 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
           Actualizado correctamente.
         </p>
+      ) : null}
+      {saldoOk ? (
+        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+          Saldo registrado correctamente.
+        </p>
+      ) : null}
+      {pendingBalanceErr ? (
+        <p className="text-sm text-rose-600">No se pudieron cargar los saldos pendientes: {pendingBalanceErr.message}</p>
       ) : null}
       {err ? (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
@@ -462,6 +498,59 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
                       </button>
                     </form>
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Saldos pendientes en club</h2>
+        <p className="text-xs text-[var(--text-tertiary)]">
+          Reservas y partidos con seña pagada online por Mercado Pago cuyo saldo restante se cobra en persona.
+        </p>
+        {pendingBalances.length === 0 ? (
+          <p className={adminEmptyState}>No hay saldos pendientes de cobro en el club.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {pendingBalances.map((m) => {
+              const name = playerName.get(m.owner_id) ?? "Jugador";
+              const club = clubNameByCourt.get(m.court_id) ?? "Club";
+              const court = courtName.get(m.court_id) ?? "Cancha";
+              const time = String(m.scheduled_time ?? "").slice(0, 5);
+              const dateLabel = m.scheduled_date
+                ? formatDateInArgentina(`${m.scheduled_date}T12:00:00`)
+                : "—";
+              const paid = Math.round(Number(m.amount_paid ?? 0));
+              const pendingAmount = Math.round(Number(m.amount_pending ?? 0));
+              return (
+                <li
+                  key={m.id}
+                  className={`${adminCard} flex flex-col gap-3 border-[var(--border-subtle)]`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
+                      <p className="text-sm text-[var(--text-tertiary)]">
+                        {club} · {court} · {dateLabel} {time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <span className="text-[var(--text-tertiary)]">
+                      Seña pagada: <span className="font-semibold text-[var(--text-primary)]">${paid.toLocaleString("es-AR")}</span>
+                    </span>
+                    <span className="text-[var(--text-tertiary)]">
+                      Saldo pendiente: <span className="font-semibold text-amber-700 dark:text-amber-300">${pendingAmount.toLocaleString("es-AR")}</span>
+                    </span>
+                  </div>
+                  <form action={confirmRemainingBalanceAction}>
+                    <input type="hidden" name="match_id" value={m.id} />
+                    <button type="submit" className={`w-full ${adminCTAPrimary}`}>
+                      Confirmar saldo recibido
+                    </button>
+                  </form>
                 </li>
               );
             })}

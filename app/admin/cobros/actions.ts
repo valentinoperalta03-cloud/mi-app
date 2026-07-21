@@ -112,6 +112,56 @@ export async function confirmOfflineCobro(formData: FormData) {
   redirect("/admin/cobros?ok=1");
 }
 
+export async function confirmRemainingBalanceAction(formData: FormData) {
+  const matchId = getMatchId(formData);
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !matchId || !ctx.courtIds.length) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const { data: match, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id, court_id, total_price, financial_status, amount_pending")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (mErr || !match) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se encontró el turno."));
+  }
+
+  const courtId = String((match as { court_id: string }).court_id);
+  if (!ctx.courtIds.includes(courtId)) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  const financialStatus = String((match as { financial_status: string | null }).financial_status ?? "");
+  const amountPending = Number((match as { amount_pending: number | null }).amount_pending ?? 0);
+  if (financialStatus !== "partially_paid" || amountPending <= 0) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("Este turno no tiene saldo pendiente."));
+  }
+
+  const totalPrice = Number((match as { total_price: number | null }).total_price ?? 0);
+  const svc = createServiceClient();
+
+  const { error: upErr } = await svc
+    .from(DB_TABLES.matches)
+    .update({
+      amount_paid: totalPrice,
+      amount_pending: 0,
+      financial_status: "fully_paid",
+    })
+    .eq("id", matchId);
+  if (upErr) {
+    redirect("/admin/cobros?error=" + encodeURIComponent("No se pudo registrar el saldo."));
+  }
+
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/reservas");
+  revalidatePath("/admin/finanzas");
+  redirect("/admin/cobros?saldo=1");
+}
+
 export async function markOfflineNoShow(formData: FormData) {
   const matchId = getMatchId(formData);
   const supabase = await createClient({ allowCookieWrites: true });
