@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/expire-unpaid-matches",
-      "schedule": "0 3 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/auto-cancel-matches",

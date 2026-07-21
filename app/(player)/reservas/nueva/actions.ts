@@ -146,7 +146,15 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     } | null;
   } | null;
   const clubId = String(courtClubTyped?.club_id ?? "").trim();
+  // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+  const { data: clubMpRow } = clubId
+    ? await createServiceClient().from(DB_TABLES.clubs).select("mp_access_token").eq("id", clubId).maybeSingle()
+    : { data: null };
+  const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
   if (clubId) {
+    if (!clubAccessToken) {
+      return { error: "Este club no acepta reservas online todavía. Contactalos directamente." };
+    }
     const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubId);
     if (!canReceiveReservations) {
       return {
@@ -159,11 +167,6 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   }
   const clubDepositType = courtClubTyped?.clubs?.deposit_type ?? null;
   const clubDepositValue = Number(courtClubTyped?.clubs?.deposit_value ?? 0);
-  // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
-  const { data: clubMpRow } = clubId
-    ? await createServiceClient().from(DB_TABLES.clubs).select("mp_access_token").eq("id", clubId).maybeSingle()
-    : { data: null };
-  const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
   const acceptsCash = Boolean(courtClubTyped?.clubs?.accepts_cash);
   const acceptsTransfer = Boolean(courtClubTyped?.clubs?.accepts_transfer);
   const bankAlias = String(courtClubTyped?.clubs?.bank_alias ?? "").trim();
@@ -171,12 +174,6 @@ export async function createReservation(formData: FormData): Promise<CreateReser
   const paymentMethodRaw = normalizePlayerPaymentMethod(getField(formData, "payment_method"));
   const paymentMethod = paymentMethodRaw ?? "mercadopago";
 
-  if (paymentMethod === "mercadopago" && !clubAccessToken) {
-    return {
-      error:
-        "Este club aún no tiene Mercado Pago configurado. No es posible realizar reservas con MP por el momento. Contactá al club para más información.",
-    };
-  }
   if (paymentMethod === "cash" && !acceptsCash) {
     return { error: "Este club no acepta pago en efectivo." };
   }

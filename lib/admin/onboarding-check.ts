@@ -74,6 +74,7 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
       totalCount: 8,
       allCompleted: false,
       canReceiveReservations: false,
+      hasMpConnected: false,
       club: null,
       onboardingCompleted: false,
     };
@@ -108,7 +109,7 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
     horarios: hasClubWallTimes(c.open_time, c.close_time) || hasValidBusinessHours(c.business_hours),
     canchas: hasCourts,
     precios: hasPrices,
-    metodos_pago: Boolean(c.accepts_cash || c.accepts_transfer || hasMpConnected),
+    metodos_pago: hasMpConnected,
     politica_cancelacion: Boolean(String(c.cancellation_policy ?? "").trim()),
     sena: Number(c.deposit_value ?? 0) > 0,
   };
@@ -127,6 +128,7 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
     totalCount,
     allCompleted,
     canReceiveReservations,
+    hasMpConnected,
     club: c,
     onboardingCompleted: Boolean(c.onboarding_completed),
   };

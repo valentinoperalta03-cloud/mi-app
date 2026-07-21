@@ -157,7 +157,20 @@ export async function crearPartido(
     }
 
     const clubIdStr = String((courtData as { club_id?: string | null }).club_id ?? "").trim();
+    // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+    const { data: clubMpRow } = clubIdStr
+      ? await createServiceClient()
+          .from(DB_TABLES.clubs)
+          .select("mp_access_token")
+          .eq("id", clubIdStr)
+          .maybeSingle()
+      : { data: null };
+    const clubAccessToken =
+      (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
     if (clubIdStr) {
+      if (!clubAccessToken) {
+        return { error: "Este club no acepta reservas online todavía. Contactalos directamente." };
+      }
       const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubIdStr);
       if (!canReceiveReservations) {
         return { error: "Este club no está disponible para reservas en este momento." };
@@ -202,16 +215,6 @@ export async function crearPartido(
     const clubName = String(
       ((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club")
     );
-    // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
-    const { data: clubMpRow } = clubIdStr
-      ? await createServiceClient()
-          .from(DB_TABLES.clubs)
-          .select("mp_access_token")
-          .eq("id", clubIdStr)
-          .maybeSingle()
-      : { data: null };
-    const clubAccessToken =
-      (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
     const acceptsCash = Boolean(
       (courtData as { clubs?: { accepts_cash?: boolean | null } | null }).clubs?.accepts_cash
     );
@@ -226,11 +229,6 @@ export async function crearPartido(
     const paymentMethodRaw = normalizePlayerPaymentMethod(getField(formData, "payment_method"));
     const paymentMethod = paymentMethodRaw ?? "mercadopago";
 
-    if (paymentMethod === "mercadopago" && !clubAccessToken) {
-      return {
-        error: "Este club aún no tiene Mercado Pago configurado. No es posible crear partidos con MP en este club por el momento.",
-      };
-    }
     if (paymentMethod === "cash" && !acceptsCash) {
       return { error: "Este club no acepta pago en efectivo." };
     }

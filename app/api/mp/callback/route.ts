@@ -105,12 +105,26 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${configUrl}?mp=red_error`);
   }
 
+  let mpEmail: string | null = null;
+  try {
+    const meRes = await fetch("https://api.mercadopago.com/users/me", {
+      headers: { Authorization: `Bearer ${tokenJson.access_token}` },
+    });
+    if (meRes.ok) {
+      const me = (await meRes.json().catch(() => null)) as { email?: string } | null;
+      mpEmail = me?.email?.trim() || null;
+    }
+  } catch (e) {
+    log.warn({ event: "mp.oauth.users_me_failed", err: e });
+  }
+
   const serviceClient = createServiceClient();
   const { error: updErr } = await serviceClient
     .from(DB_TABLES.clubs)
     .update({
       mp_access_token: tokenJson.access_token,
       mp_user_id: tokenJson.user_id != null ? String(tokenJson.user_id) : null,
+      mp_email: mpEmail,
     })
     .eq("id", clubId)
     .eq("owner_id", user.id);

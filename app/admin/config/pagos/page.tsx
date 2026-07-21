@@ -55,7 +55,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
   // mp_access_token/mp_user_id estan revocadas para anon/authenticated: se leen con service client.
   const { data: clubRaw, error: clubErr } = await createServiceClient()
     .from(DB_TABLES.clubs)
-    .select("mp_access_token,mp_user_id,accepts_cash,accepts_transfer,bank_alias,bank_cbu")
+    .select("mp_access_token,mp_user_id,mp_email,accepts_cash,accepts_transfer,bank_alias,bank_cbu")
     .eq("id", clubId)
     .eq("owner_id", ctx.userId)
     .maybeSingle();
@@ -78,6 +78,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
   const club = clubRaw as {
     mp_access_token: string | null;
     mp_user_id: string | null;
+    mp_email: string | null;
     accepts_cash: boolean | null;
     accepts_transfer: boolean | null;
     bank_alias: string | null;
@@ -104,6 +105,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
           <ConfigPaymentMethodsForm
             isMpConnected={isMpConnected}
             mpUserId={club.mp_user_id}
+            mpEmail={club.mp_email}
             initial={{
               accepts_cash: Boolean(club.accepts_cash),
               accepts_transfer: Boolean(club.accepts_transfer),

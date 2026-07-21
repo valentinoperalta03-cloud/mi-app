@@ -50,9 +50,12 @@ export async function confirmOfflineCobro(formData: FormData) {
   const totalPrice = Number((match as { total_price: number | null }).total_price ?? 0);
   const { amountPaid, amountPending, financialStatus } = resolveOfflinePaymentConfirmation(totalPrice);
   const ownerId = String((match as { owner_id: string }).owner_id);
-  const matchType = String((match as { match_type?: string | null }).match_type ?? "");
-  const prevMs = String((match as { match_status: string | null }).match_status ?? "").toLowerCase();
-  const nextMatchStatus = matchType === "reservation" ? "reserved" : prevMs || "scheduled";
+  // Igual que el webhook de MP (app/api/mp/webhook/route.ts): confirmar el pago
+  // del organizador reserva el turno sin importar el tipo de partido. Antes esto
+  // solo pasaba para match_type "reservation", dejando amistosos/competitivos
+  // pagados offline en "scheduled" y afuera de los filtros de los crons de
+  // recordatorio (que buscan match_status IN reserved/full).
+  const nextMatchStatus = "reserved";
 
   try {
     assertMatchPaymentStatusTransition(pay, "paid", { matchId, trigger: "admin.cobros.confirm" });

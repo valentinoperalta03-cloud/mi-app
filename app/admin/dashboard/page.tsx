@@ -280,7 +280,28 @@ export default async function AdminDashboardPage({
     : { data: [] };
   const newPlayersWeekCount = (newPlayersWeekRaw ?? []).length;
 
+  const clubOnboardingCompletedFromDb = Boolean(club?.onboarding_completed);
+  const onboardingStatus = club?.id ? await checkOnboardingStatus(supabase, club.id) : null;
+  if (club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && onboardingStatus.allCompleted) {
+    await supabase
+      .from(DB_TABLES.clubs)
+      .update({ onboarding_completed: true })
+      .eq("id", club.id)
+      .eq("owner_id", ctx.userId);
+  }
+  const showOnboardingChecklist = Boolean(
+    club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && !onboardingStatus.allCompleted
+  );
+
   const criticalAlerts = [
+    onboardingStatus && !onboardingStatus.hasMpConnected
+      ? {
+          key: "mp_not_connected",
+          text: "Para recibir reservas online necesitás conectar tu cuenta de Mercado Pago para poder recibir el dinero de tus clientes.",
+          href: "/admin/config/pagos",
+          cta: "Conectar ahora",
+        }
+      : null,
     refundRequestedCount > 0
       ? {
           key: "refunds",
@@ -288,7 +309,7 @@ export default async function AdminDashboardPage({
           href: "/admin/finanzas/reembolsos",
         }
       : null,
-  ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
+  ].filter(Boolean) as Array<{ key: string; text: string; href: string; cta?: string }>;
 
   const importantAlerts = [
     reservasSinPagoHoyAlert > 0
@@ -323,19 +344,6 @@ export default async function AdminDashboardPage({
         }
       : null,
   ].filter(Boolean) as Array<{ key: string; text: string; href: string }>;
-
-  const clubOnboardingCompletedFromDb = Boolean(club?.onboarding_completed);
-  const onboardingStatus = club?.id ? await checkOnboardingStatus(supabase, club.id) : null;
-  if (club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && onboardingStatus.allCompleted) {
-    await supabase
-      .from(DB_TABLES.clubs)
-      .update({ onboarding_completed: true })
-      .eq("id", club.id)
-      .eq("owner_id", ctx.userId);
-  }
-  const showOnboardingChecklist = Boolean(
-    club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && !onboardingStatus.allCompleted
-  );
 
   const totalAlerts = criticalAlerts.length + importantAlerts.length + infoAlerts.length;
   const nextCourtRel = Array.isArray(nextMatch?.courts) ? nextMatch?.courts[0] : nextMatch?.courts;
@@ -439,10 +447,16 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-100 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-100 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
               >
                 <span>🔴 {a.text}</span>
-                <ChevronRight size={16} />
+                {a.cta ? (
+                  <span className="shrink-0 rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white">
+                    {a.cta}
+                  </span>
+                ) : (
+                  <ChevronRight size={16} />
+                )}
               </Link>
             ))}
             {importantAlerts.map((a) => (

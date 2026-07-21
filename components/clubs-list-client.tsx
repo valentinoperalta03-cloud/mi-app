@@ -20,6 +20,7 @@ export type ClubRow = {
   description?: string | null;
   business_hours?: string | null;
   isAvailable?: boolean;
+  mpConnected?: boolean;
 };
 
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
@@ -168,20 +169,26 @@ export default function ClubsListClient({
           const thumb = clubThumbUrl(club);
           const descShort = shortDescription(club.description);
           const isAvailable = club.isAvailable ?? true;
+          const mpConnected = club.mpConnected ?? false;
+          const isOnlineBookable = isAvailable && mpConnected;
           return (
             <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
               <Link
                 href={`/clubes/${club.id}`}
                 onClick={(e) => {
-                  if (isAvailable) return;
+                  if (isOnlineBookable) return;
                   e.preventDefault();
                   setUnavailableNotice(club.id);
                 }}
-                className={`relative block p-5 ${PLAYER_CARD_INTERACTIVE} ${!isAvailable ? "opacity-60" : ""}`}
+                className={`relative block p-5 ${PLAYER_CARD_INTERACTIVE} ${!isOnlineBookable ? "opacity-60" : ""}`}
               >
                 {!isAvailable ? (
                   <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
                     No disponible
+                  </span>
+                ) : !mpConnected ? (
+                  <span className="absolute right-3 top-3 z-10 rounded-full bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                    Solo presencial
                   </span>
                 ) : null}
                 <div className="flex items-start gap-4">
@@ -223,7 +230,9 @@ export default function ClubsListClient({
               </Link>
               {unavailableNotice === club.id ? (
                 <p className="mt-1.5 px-1 text-xs font-medium text-rose-600 dark:text-rose-400">
-                  Este club no está tomando reservas en este momento.
+                  {!isAvailable
+                    ? "Este club no está tomando reservas en este momento."
+                    : "Este club no acepta reservas online todavía. Contactalos directamente."}
                 </p>
               ) : null}
             </motion.article>

@@ -16,6 +16,7 @@ const inputClass =
 type Props = {
   isMpConnected: boolean;
   mpUserId: string | null;
+  mpEmail: string | null;
   initial: {
     accepts_cash: boolean;
     accepts_transfer: boolean;
@@ -24,9 +25,13 @@ type Props = {
   };
 };
 
-export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, initial }: Props) {
+export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, mpEmail, initial }: Props) {
   return (
     <form action={savePaymentMethods} className="space-y-4">
+      <p className="text-sm text-[var(--text-secondary)]">
+        Conectá tu cuenta de Mercado Pago para recibir los pagos de tus jugadores directamente en tu cuenta.
+        Sin esto, los jugadores no pueden reservar canchas online en tu club.
+      </p>
       <Link
         href="/admin/config/mp-connect"
         className={`block rounded-2xl border p-5 transition ${adminPressable} ${
@@ -47,14 +52,22 @@ export default function ConfigPaymentMethodsForm({ isMpConnected, mpUserId, init
             Mercado Pago
           </p>
           <span className={isMpConnected ? adminBadgeLima : adminBadgePending}>
-            {isMpConnected ? "Conectado" : "Desconectado"}
+            {isMpConnected ? "✓ Conectado" : "Desconectado"}
           </span>
         </div>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          {isMpConnected ? `MP User ID: ${mpUserId ?? "—"}` : "Conectá tu cuenta para cobrar reservas online."}
+          {isMpConnected
+            ? `Cuenta: ${mpEmail ?? mpUserId ?? "—"}`
+            : "Conectá tu cuenta para cobrar reservas online."}
         </p>
-        <span className="mt-3 inline-flex rounded-xl bg-[var(--bg-card)] px-3 py-1.5 text-sm font-semibold text-[var(--text-secondary)]">
-          {isMpConnected ? "Reconectar" : "Conectar ahora"}
+        <span
+          className={`mt-3 inline-flex rounded-xl px-3 py-1.5 text-sm font-semibold ${
+            isMpConnected
+              ? "bg-[var(--bg-card)] text-[var(--text-secondary)]"
+              : "bg-brand-gradient text-white"
+          }`}
+        >
+          {isMpConnected ? "Reconectar" : "Conectar Mercado Pago"}
         </span>
       </Link>
 
