@@ -5,7 +5,9 @@ import Link from "next/link";
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { ChevronRight, MapPin, Search } from "lucide-react";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+import { ChevronRight, MapPin, Search, Share2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
@@ -16,6 +18,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
+import { StepHelpTooltip } from "@/components/step-help-tooltip";
 import { crearPartido } from "./actions";
 
 function fmtAr(numero: number) {
@@ -82,8 +85,32 @@ type TurnSlot = {
   endTime: string;
   duration: number;
 };
-type Step = "clubs" | "club-detail" | "options" | "payment";
+type Step = "clubs" | "club-detail" | "options" | "payment" | "confirmation";
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
+
+const STEP_ORDER: Step[] = ["clubs", "club-detail", "options", "payment"];
+
+function StepProgress({ step }: { step: Step }) {
+  const idx = STEP_ORDER.indexOf(step);
+  if (idx === -1) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex gap-1">
+        {STEP_ORDER.map((s, i) => (
+          <span
+            key={s}
+            className={`h-1.5 w-1.5 rounded-full transition-colors ${
+              i <= idx ? "bg-[#0585FC]" : "bg-slate-200 dark:bg-slate-700"
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-[11px] font-medium text-slate-400">
+        Paso {idx + 1} de {STEP_ORDER.length}
+      </span>
+    </div>
+  );
+}
 
 function buildClubSlots(openTime: string): TurnSlot[] {
   const parseT = (hhmm: string) => {
@@ -167,6 +194,8 @@ export default function CrearPartidoForm({
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [isSubmitting, startSubmit] = useTransition();
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
+  const [confirmedMatchId, setConfirmedMatchId] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -351,6 +380,43 @@ export default function CrearPartidoForm({
     selectedClub && (selectedClub.mpConnected || selectedClub.acceptsCash || selectedClub.acceptsTransfer)
   );
 
+  const matchShareUrl = confirmedMatchId ? `https://padelibre.online/partidos/${confirmedMatchId}` : "";
+
+  async function handleShareLink() {
+    if (!matchShareUrl) return;
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ title: "Partido de pádel", url: matchShareUrl });
+        return;
+      } catch {
+        // el usuario canceló o el navegador no pudo compartir: seguimos con copiar
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(matchShareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // noop
+    }
+  }
+
+  async function handleShareWhatsapp() {
+    if (!matchShareUrl) return;
+    const clubLabel = selectedClub?.name ?? "el club";
+    const dateLabel = selectedDate
+      ? formatDateInArgentina(`${selectedDate}T12:00:00`, { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const timeLabel = selectedSlot?.time ?? "";
+    const message = `¡Te invito a un partido de pádel! 🎾\n📍 ${clubLabel}\n📅 ${dateLabel} a las ${timeLabel}\nAnotate acá: ${matchShareUrl}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    if (Capacitor.isNativePlatform()) {
+      await Browser.open({ url });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
   function toggleFriend(friendId: string) {
     setSelectedFriendIds((prev) => {
       const exists = prev.includes(friendId);
@@ -371,21 +437,37 @@ export default function CrearPartidoForm({
         const formData = new FormData(event.currentTarget);
         startSubmit(async () => {
           try {
-            const result = (await crearPartido(formData)) as { error?: string } | void;
-            if (result && "error" in result) setError(result.error ?? "No se pudo crear el partido.");
+            const result = (await crearPartido(formData)) as
+              | { error?: string }
+              | { success?: true; matchId?: string }
+              | void;
+            if (result && "error" in result && result.error) {
+              setError(result.error);
+            } else if (result && "success" in result && result.matchId) {
+              setConfirmedMatchId(result.matchId);
+              setCurrentStep("confirmation");
+            }
           } catch {
-            // Si hay redirect del server action, Next resuelve fuera del cliente.
+            // Si hay redirect del server action (Mercado Pago), Next resuelve fuera del cliente.
           }
         });
       }}
     >
+      {currentStep !== "confirmation" ? <StepProgress step={currentStep} /> : null}
+
       {currentStep === "clubs" ? (
         <div className="space-y-4">
           <header className="space-y-1">
             <Link href="/home" className="text-sm font-semibold text-[#0585FC]">
               ← Volver
             </Link>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">¿Dónde querés jugar?</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-white">¿Dónde querés jugar?</h1>
+              <StepHelpTooltip title="🏟️ Elegí dónde jugar" label="Ayuda: elegir club">
+                <p>Buscá un club por nombre o filtrá por tu ciudad.</p>
+                <p>Todos los clubes muestran sus canchas disponibles.</p>
+              </StepHelpTooltip>
+            </div>
             <p className="text-sm text-slate-500">Elegí un club para ver sus canchas</p>
           </header>
 
@@ -604,7 +686,14 @@ export default function CrearPartidoForm({
           ) : null}
 
           <div className="space-y-3">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Elegí tu cancha y horario</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Elegí tu cancha y horario</h2>
+              <StepHelpTooltip title="📅 Elegí fecha, cancha y horario" label="Ayuda: fecha y horario">
+                <p>Seleccioná el día y el horario que más te convenga.</p>
+                <p>Solo aparecen los horarios disponibles.</p>
+                <p>El precio que ves incluye la seña a pagar ahora.</p>
+              </StepHelpTooltip>
+            </div>
 
             <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {dates.map((date) => (
@@ -704,7 +793,25 @@ export default function CrearPartidoForm({
           </button>
 
           <div>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Opciones del partido</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Opciones del partido</h1>
+              <StepHelpTooltip title="⚙️ Configurá tu partido" label="Ayuda: opciones del partido">
+                <p>
+                  <strong>🔒 Privado:</strong> la cancha queda reservada para vos. Invitá a tus amigos por WhatsApp
+                  o compartí el link. No necesitan unirse por la app.
+                </p>
+                <p>
+                  <strong>🌐 Público:</strong> cualquier jugador puede unirse desde la app hasta completar los 4
+                  lugares.
+                </p>
+                <p>
+                  <strong>⚡ Competitivo:</strong> los resultados afectan tu nivel ELO.
+                </p>
+                <p>
+                  <strong>🤝 Amistoso:</strong> solo por diversión, sin cambios de nivel.
+                </p>
+              </StepHelpTooltip>
+            </div>
             <p className="mt-1 text-sm text-slate-500">
               {selectedClub?.name} ·{" "}
               {selectedDate
@@ -923,7 +1030,15 @@ export default function CrearPartidoForm({
             ← Volver a opciones
           </button>
 
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Confirmá tu partido</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Confirmá tu partido</h1>
+            <StepHelpTooltip title="💳 Confirmá tu reserva" label="Ayuda: pago y confirmación">
+              <p>Pagás solo la seña ahora para asegurar la cancha.</p>
+              <p>El saldo restante lo abonás en el club el día del partido.</p>
+              <p>Si pagás por Mercado Pago: la cancha se confirma automáticamente al acreditarse el pago.</p>
+              <p>Si pagás en efectivo o transferencia: coordiná con el club para confirmar la reserva.</p>
+            </StepHelpTooltip>
+          </div>
 
           <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06]">
             <div
@@ -1096,6 +1211,67 @@ export default function CrearPartidoForm({
               </Button>
             </div>
           )}
+        </div>
+      ) : null}
+
+      {currentStep === "confirmation" ? (
+        <div className="space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl dark:bg-emerald-950/40">
+            ✅
+          </div>
+
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-white">
+              {visibility === "privado" ? "¡Cancha reservada!" : "¡Partido publicado!"}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {selectedClub?.name} ·{" "}
+              {selectedDate
+                ? formatDateInArgentina(`${selectedDate}T12:00:00`, { day: "numeric", month: "long" })
+                : "—"}{" "}
+              · {selectedSlot?.time}
+            </p>
+          </div>
+
+          {visibility === "privado" ? (
+            <div className="space-y-3 rounded-2xl border border-black/[0.06] bg-white p-5 text-left dark:border-white/[0.06] dark:bg-slate-900">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Tu cancha está reservada ✓ Podés invitar a tus amigos por WhatsApp o compartir el link de la app.
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => void handleShareLink()}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <Share2 size={16} />
+                  {shareCopied ? "¡Link copiado!" : "Compartir link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleShareWhatsapp()}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-3 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+                >
+                  WhatsApp
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-black/[0.06] bg-white p-5 text-left dark:border-white/[0.06] dark:bg-slate-900">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Tu partido ya aparece en el buscador. Otros jugadores pueden unirse desde la app.
+              </p>
+            </div>
+          )}
+
+          {confirmedMatchId ? (
+            <Link
+              href={`/partidos/${confirmedMatchId}`}
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-[#0585FC] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+            >
+              Ver mi partido
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

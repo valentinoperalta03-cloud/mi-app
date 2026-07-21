@@ -86,7 +86,9 @@ async function getUser() {
   return { supabase, user };
 }
 
-export async function crearPartido(formData: FormData): Promise<{ error: string } | void> {
+export async function crearPartido(
+  formData: FormData
+): Promise<{ error: string } | { success: true; matchId: string }> {
   const courtId = getField(formData, "court_id");
   const scheduledDate = getField(formData, "scheduled_date");
   const scheduledTime = getField(formData, "scheduled_time");
@@ -390,7 +392,7 @@ export async function crearPartido(formData: FormData): Promise<{ error: string 
     }
 
     if (paymentMethod === "cash" || paymentMethod === "transfer") {
-      redirect(`/partidos/${data.id}`);
+      return { success: true, matchId: data.id };
     }
 
     const mp = await createMPPreference({
