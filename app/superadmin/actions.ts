@@ -94,6 +94,18 @@ export async function markClubPastDueAction(formData: FormData) {
   redirect(`/superadmin/clubes/${clubId}?sub=past_due`);
 }
 
+export async function pauseClubSubscriptionAction(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  if (!clubId) redirect("/superadmin/clubes");
+  const s = await svc();
+  await s.from(DB_TABLES.clubs).update({ subscription_status: "paused" }).eq("id", clubId);
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  revalidatePath(`/superadmin/clubes/${clubId}`);
+  revalidatePath("/superadmin/finanzas");
+  redirect(`/superadmin/clubes/${clubId}?sub=paused`);
+}
+
 export async function resetClubToPendingAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");

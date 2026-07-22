@@ -301,7 +301,7 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </dl>
         <div className="mt-6">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones manuales</p>
-          <SubscriptionActionsForm clubId={id} />
+          <SubscriptionActionsForm clubId={id} subscriptionStatus={overview.subscription_status} />
         </div>
       </section>
 

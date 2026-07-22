@@ -50,10 +50,32 @@ async function updateClubSubscription(
 }
 
 async function findClubByRefs(admin: SupabaseClient, refs: ClubRefs) {
-  const query = admin.from(DB_TABLES.clubs).select("id, owner_id, subscription_status, next_billing_date");
+  const query = admin
+    .from(DB_TABLES.clubs)
+    .select("id, owner_id, subscription_status, next_billing_date, last_webhook_request_id");
   return refs.clubId
     ? await query.eq("id", refs.clubId).maybeSingle()
     : await query.eq("mp_subscription_id", refs.preapprovalId).maybeSingle();
+}
+
+/**
+ * Idempotencia real de MP: chequea el x-request-id de la entrega actual
+ * contra el ultimo que proceso ese club. A diferencia del chequeo "por
+ * estado" (mas abajo), esto detecta reintentos exactos de MP aunque el
+ * estado del club ya haya cambiado por otro medio.
+ */
+async function isDuplicateWebhookDelivery(
+  admin: SupabaseClient,
+  refs: ClubRefs,
+  mpRequestId: string | null
+): Promise<boolean> {
+  if (!mpRequestId) return false;
+  const query = admin.from(DB_TABLES.clubs).select("last_webhook_request_id");
+  const { data } = refs.clubId
+    ? await query.eq("id", refs.clubId).maybeSingle()
+    : await query.eq("mp_subscription_id", refs.preapprovalId).maybeSingle();
+  const row = data as { last_webhook_request_id?: string | null } | null;
+  return row?.last_webhook_request_id === mpRequestId;
 }
 
 export async function handleSubscriptionWebhook(req: Request): Promise<NextResponse> {
@@ -73,6 +95,10 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
     log.warn({ event: "mp.subscription.webhook.invalid_signature", requestId, dataId });
     return NextResponse.json({ ok: false }, { status: 401 });
   }
+
+  // FIX 2: idempotencia por x-request-id de MP (ademas del chequeo por
+  // estado que ya habia). MP puede reentregar el mismo evento.
+  const mpRequestId = req.headers.get("x-request-id");
 
   const accessToken = process.env.MP_ACCESS_TOKEN;
   if (!accessToken) {
@@ -100,11 +126,17 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
     const paymentStatus = String(payment.status ?? "").toLowerCase();
     if (!preapprovalId) return NextResponse.json({ ok: true });
 
+    const apRefs: ClubRefs = { clubId: "", preapprovalId };
+    if (await isDuplicateWebhookDelivery(admin, apRefs, mpRequestId)) {
+      log.info({ event: "mp.subscription.webhook.duplicate_request_id", requestId, mpRequestId, preapprovalId });
+      return NextResponse.json({ received: true, skipped: "duplicate" });
+    }
+
     if (paymentStatus === "rejected") {
       const { data: updated, error } = await updateClubSubscription(
         admin,
-        { clubId: "", preapprovalId },
-        { subscription_status: "past_due" },
+        apRefs,
+        { subscription_status: "past_due", ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}) },
         requestId
       );
       if (error) {
@@ -146,6 +178,7 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
           subscription_status: "active",
           next_billing_date: prePayload.next_payment_date ?? null,
           mp_subscription_id: preapprovalId,
+          ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
         },
         requestId
       );
@@ -205,7 +238,13 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
       owner_id: string | null;
       subscription_status: string | null;
       next_billing_date: string | null;
+      last_webhook_request_id: string | null;
     };
+
+    if (mpRequestId && clubRow.last_webhook_request_id === mpRequestId) {
+      log.info({ event: "mp.subscription.webhook.duplicate_request_id", requestId, mpRequestId, clubId: clubRow.id });
+      return NextResponse.json({ received: true, skipped: "duplicate" });
+    }
 
     // FIX 2: idempotencia. MP puede reenviar el mismo evento "authorized" mas
     // de una vez (retries / entregas duplicadas). Sin este chequeo, una
@@ -233,11 +272,13 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
           trial_start_date: now.toISOString(),
           trial_end_date: new Date(now.getTime() + TRIAL_DURATION_MS).toISOString(),
           mp_subscription_id: preapprovalId,
+          ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
         }
       : {
           subscription_status: "active",
           next_billing_date: preapproval.next_payment_date ?? null,
           mp_subscription_id: preapprovalId,
+          ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
         };
 
     const { error } = await admin.from(DB_TABLES.clubs).update(patch).eq("id", clubRow.id);
@@ -263,10 +304,14 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
       preapprovalId,
     });
   } else if (status === "cancelled" || status === "paused") {
+    if (await isDuplicateWebhookDelivery(admin, refs, mpRequestId)) {
+      log.info({ event: "mp.subscription.webhook.duplicate_request_id", requestId, mpRequestId, clubId });
+      return NextResponse.json({ received: true, skipped: "duplicate" });
+    }
     const { data: updated, error } = await updateClubSubscription(
       admin,
       refs,
-      { subscription_status: "paused" },
+      { subscription_status: "paused", ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}) },
       requestId
     );
     if (error) {

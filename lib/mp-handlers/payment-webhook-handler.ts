@@ -39,6 +39,23 @@ function extractPaymentId(req: Request, body: unknown): { paymentId: string | nu
   return { paymentId: null, topic: null };
 }
 
+function extractMerchantOrderId(req: Request, body: unknown): string | null {
+  const url = new URL(req.url);
+  const topic = url.searchParams.get("topic") ?? url.searchParams.get("type");
+  const qId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
+  if (qId && topic === "merchant_order") return qId;
+  if (body && typeof body === "object") {
+    const b = body as { type?: string; topic?: string; resource?: string; data?: { id?: string } };
+    const t = b.type ?? b.topic ?? null;
+    if (t === "merchant_order") {
+      if (b.data?.id != null) return String(b.data.id);
+      const match = String(b.resource ?? "").match(/merchant_orders\/(\d+)/);
+      if (match) return match[1];
+    }
+  }
+  return null;
+}
+
 function parseExternalReference(ref: string): { matchId: string; userId: string | null } {
   const trimmed = String(ref ?? "").trim();
   if (!trimmed) return { matchId: "", userId: null };
@@ -340,60 +357,17 @@ async function handlePracticePaymentIfPresent(
   return true;
 }
 
-export async function handlePaymentWebhook(req: Request): Promise<NextResponse> {
-  const requestId = crypto.randomUUID();
-  let body: unknown = null;
-  if (req.headers.get("content-type")?.includes("application/json")) {
-    body = await req.json().catch((err) => {
-      log.warn({ event: "mp.webhook.body_parse_failed", requestId, err });
-      return null;
-    });
-  }
-
-  const bodySummary =
-    body && typeof body === "object"
-      ? {
-          type: (body as { type?: string }).type,
-          topic: (body as { topic?: string }).topic,
-          action: (body as { action?: string }).action,
-          dataId: (body as { data?: { id?: string } }).data?.id,
-        }
-      : null;
-  log.info({
-    event: "mp.webhook.received",
-    requestId,
-    method: req.method,
-    bodySummary,
-  });
-
-  const url = new URL(req.url);
-  let { paymentId } = extractPaymentId(req, body);
-  if (!paymentId) {
-    const qPaymentId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
-    if (qPaymentId) {
-      paymentId = qPaymentId;
-    }
-  }
-  if (!paymentId) {
-    return NextResponse.json({ ok: true });
-  }
-
-  // FIX 1: verificar firma HMAC antes de tocar la DB o llamar a la API de MP.
-  // Mismo comportamiento fail-open que el webhook de suscripciones: si
-  // MP_WEBHOOK_SECRET no esta configurada, verifyMpWebhookSignature deja
-  // pasar con un warning (ver lib/mp-webhook-signature.ts).
-  const signatureVerified = await verifyMpWebhookSignature(req, paymentId);
-  if (!signatureVerified) {
-    log.warn({ event: "mp.webhook.invalid_signature", requestId, paymentId });
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  }
-
-  const admin = getSupabaseAdmin();
-  if (!admin) {
-    log.warn({ event: "mp.webhook.no_admin", requestId });
-    return NextResponse.json({ ok: true });
-  }
-
+/**
+ * Procesa un pago de MP ya identificado (ya sea porque el webhook trajo el
+ * paymentId directamente, o porque se extrajo de un merchant_order). No
+ * verifica firma: eso ya lo hizo el caller sobre el dataId de la notificacion
+ * original.
+ */
+async function processPaymentId(
+  admin: SupabaseClient,
+  paymentId: string,
+  requestId: string
+): Promise<NextResponse> {
   let mpPayment: { status?: string; external_reference?: string | null };
   try {
     mpPayment = await getPaymentClient().get({ id: paymentId });
@@ -734,4 +708,135 @@ export async function handlePaymentWebhook(req: Request): Promise<NextResponse> 
   }
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * FIX 3: un merchant_order trae un `resource`/id de orden, no un payment id.
+ * Se consulta la orden en la API de MP y se procesa cada pago aprobado con
+ * la misma logica que un topic=payment normal.
+ */
+async function handleMerchantOrderWebhook(
+  admin: SupabaseClient,
+  requestId: string,
+  merchantOrderId: string
+): Promise<NextResponse> {
+  const accessToken = process.env.MP_ACCESS_TOKEN;
+  if (!accessToken) {
+    log.warn({ event: "mp.webhook.merchant_order.no_token", requestId, merchantOrderId });
+    return NextResponse.json({ ok: true });
+  }
+
+  let order: { payments?: Array<{ id?: string | number; status?: string }> };
+  try {
+    const res = await fetch(`https://api.mercadopago.com/merchant_orders/${merchantOrderId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      log.warn({
+        event: "mp.webhook.merchant_order.fetch_failed",
+        requestId,
+        merchantOrderId,
+        status: res.status,
+      });
+      return NextResponse.json({ ok: true });
+    }
+    order = await res.json();
+  } catch (err) {
+    log.warn({ event: "mp.webhook.merchant_order.fetch_error", requestId, merchantOrderId, err });
+    return NextResponse.json({ ok: true });
+  }
+
+  const approvedPaymentIds = (order.payments ?? [])
+    .filter((p) => String(p.status ?? "").toLowerCase() === "approved" && p.id != null)
+    .map((p) => String(p.id));
+
+  log.info({
+    event: "mp.webhook.merchant_order.received",
+    requestId,
+    merchantOrderId,
+    approvedCount: approvedPaymentIds.length,
+  });
+
+  for (const paymentId of approvedPaymentIds) {
+    await processPaymentId(admin, paymentId, requestId);
+  }
+  return NextResponse.json({ ok: true });
+}
+
+export async function handlePaymentWebhook(req: Request): Promise<NextResponse> {
+  const requestId = crypto.randomUUID();
+  let body: unknown = null;
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    body = await req.json().catch((err) => {
+      log.warn({ event: "mp.webhook.body_parse_failed", requestId, err });
+      return null;
+    });
+  }
+
+  const bodySummary =
+    body && typeof body === "object"
+      ? {
+          type: (body as { type?: string }).type,
+          topic: (body as { topic?: string }).topic,
+          action: (body as { action?: string }).action,
+          dataId: (body as { data?: { id?: string } }).data?.id,
+        }
+      : null;
+  log.info({
+    event: "mp.webhook.received",
+    requestId,
+    method: req.method,
+    bodySummary,
+  });
+
+  const url = new URL(req.url);
+  let { paymentId } = extractPaymentId(req, body);
+  if (!paymentId) {
+    const qPaymentId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
+    if (qPaymentId) {
+      paymentId = qPaymentId;
+    }
+  }
+
+  if (!paymentId) {
+    // FIX 3: antes de descartar en silencio, intentar tratarlo como
+    // merchant_order (el otro tipo de notificacion que enruta el endpoint
+    // unificado hacia este handler).
+    const merchantOrderId = extractMerchantOrderId(req, body);
+    if (!merchantOrderId) {
+      log.info({ event: "mp.webhook.unhandled_notification", requestId, bodySummary });
+      return NextResponse.json({ ok: true });
+    }
+
+    const signatureVerified = await verifyMpWebhookSignature(req, merchantOrderId);
+    if (!signatureVerified) {
+      log.warn({ event: "mp.webhook.invalid_signature", requestId, merchantOrderId });
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      log.warn({ event: "mp.webhook.no_admin", requestId });
+      return NextResponse.json({ ok: true });
+    }
+    return handleMerchantOrderWebhook(admin, requestId, merchantOrderId);
+  }
+
+  // FIX 1: verificar firma HMAC antes de tocar la DB o llamar a la API de MP.
+  // Mismo comportamiento fail-open que el webhook de suscripciones: si
+  // MP_WEBHOOK_SECRET no esta configurada, verifyMpWebhookSignature deja
+  // pasar con un warning (ver lib/mp-webhook-signature.ts).
+  const signatureVerified = await verifyMpWebhookSignature(req, paymentId);
+  if (!signatureVerified) {
+    log.warn({ event: "mp.webhook.invalid_signature", requestId, paymentId });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    log.warn({ event: "mp.webhook.no_admin", requestId });
+    return NextResponse.json({ ok: true });
+  }
+
+  return processPaymentId(admin, paymentId, requestId);
 }

@@ -5,11 +5,19 @@ import {
   activateClubSubscriptionAction,
   extendClubTrialAction,
   markClubPastDueAction,
+  pauseClubSubscriptionAction,
   resetClubToPendingAction,
 } from "@/app/superadmin/actions";
 
-export default function SubscriptionActionsForm({ clubId }: { clubId: string }) {
+export default function SubscriptionActionsForm({
+  clubId,
+  subscriptionStatus,
+}: {
+  clubId: string;
+  subscriptionStatus: string | null;
+}) {
   const [days, setDays] = useState("15");
+  const canPause = subscriptionStatus === "active" || subscriptionStatus === "trial";
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -59,6 +67,25 @@ export default function SubscriptionActionsForm({ clubId }: { clubId: string }) 
           Extender trial
         </button>
       </form>
+
+      {canPause && (
+        <form
+          action={pauseClubSubscriptionAction}
+          onSubmit={(e) => {
+            if (!window.confirm("¿Pausar la suscripción de este club? Va a perder acceso al panel de admin.")) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="club_id" value={clubId} />
+          <button
+            type="submit"
+            className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-500/20"
+          >
+            Pausar suscripción
+          </button>
+        </form>
+      )}
 
       <form
         action={markClubPastDueAction}
