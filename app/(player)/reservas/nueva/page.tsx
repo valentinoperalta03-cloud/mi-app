@@ -16,6 +16,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
+import { nativeOpenUrl } from "@/lib/native-open";
 import { createClient } from "@/utils/supabase/client";
 import { createReservation, type CreateReservationResult } from "./actions";
 
@@ -100,6 +101,9 @@ function NuevaReservaContent() {
     const deposit = resolveDepositCharge(precioTurno, clubPay.deposit_type, clubPay.deposit_value);
     return { requiresDeposit: deposit < precioTurno, deposit, saldo: precioTurno - deposit };
   }, [clubPay, precioTurno]);
+
+  /** Si el club configuró seña, el pago inicial es obligatorio por MP: no se ofrece efectivo/transferencia. */
+  const clubHasDeposit = Boolean(clubPay && clubPay.deposit_value > 0);
 
   const dateChips = useMemo(() => {
     const start = new Date();
@@ -355,9 +359,10 @@ function NuevaReservaContent() {
         deposit_value: Number(c?.deposit_value ?? 0),
       };
       setClubPay(next);
+      const hasDeposit = next.deposit_value > 0;
       if (accepts_mp) setPayMethod("mercadopago");
-      else if (next.accepts_cash) setPayMethod("cash");
-      else if (next.accepts_transfer) setPayMethod("transfer");
+      else if (!hasDeposit && next.accepts_cash) setPayMethod("cash");
+      else if (!hasDeposit && next.accepts_transfer) setPayMethod("transfer");
     })();
     return () => {
       cancelled = true;
@@ -552,12 +557,18 @@ function NuevaReservaContent() {
           {clubPay === null ? (
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">Cargando medios de pago…</p>
           ) : null}
-          {clubPay && !clubPay.accepts_mp && !clubPay.accepts_cash && !clubPay.accepts_transfer ? (
+          {clubPay &&
+          !clubPay.accepts_mp &&
+          !(clubPay.accepts_cash && !clubHasDeposit) &&
+          !(clubPay.accepts_transfer && !clubHasDeposit) ? (
             <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-              Este club no tiene medios de pago habilitados. Contactá al administrador.
+              {clubHasDeposit
+                ? "Este club requiere seña por Mercado Pago y todavía no la conectó. Contactá al administrador."
+                : "Este club no tiene medios de pago habilitados. Contactá al administrador."}
             </p>
           ) : null}
-          {clubPay && (clubPay.accepts_mp || clubPay.accepts_cash || clubPay.accepts_transfer) ? (
+          {clubPay &&
+          (clubPay.accepts_mp || (clubPay.accepts_cash && !clubHasDeposit) || (clubPay.accepts_transfer && !clubHasDeposit)) ? (
             <div className="space-y-3">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Medio de pago</p>
               <div className="grid gap-2.5">
@@ -579,7 +590,7 @@ function NuevaReservaContent() {
                     <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pago instantáneo</span>
                   </button>
                 ) : null}
-                {clubPay.accepts_cash ? (
+                {clubPay.accepts_cash && !clubHasDeposit ? (
                   <button
                     key="cash"
                     type="button"
@@ -597,7 +608,7 @@ function NuevaReservaContent() {
                     <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pagás cuando llegás</span>
                   </button>
                 ) : null}
-                {clubPay.accepts_transfer ? (
+                {clubPay.accepts_transfer && !clubHasDeposit ? (
                   <button
                     key="tr"
                     type="button"
@@ -652,9 +663,11 @@ function NuevaReservaContent() {
                   const result = (await createReservation(formData)) as CreateReservationResult;
                   if (result && "error" in result) {
                     setError(result.error);
+                  } else if (result && "mpUrl" in result && result.mpUrl) {
+                    await nativeOpenUrl(result.mpUrl);
                   }
                 } catch {
-                  /* redirect() de la server action */
+                  /* redirect() de la server action (efectivo/transferencia) */
                 }
               });
             }}

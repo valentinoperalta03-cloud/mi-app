@@ -3,6 +3,7 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import EmptyStateCard from "@/components/empty-state-card";
+import { MatchesRealtimeRefresh } from "@/components/matches-realtime-refresh";
 import MotionPage from "@/components/motion-page";
 import { Badge } from "@/components/ui/badge";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
@@ -394,6 +395,7 @@ export default async function ReservasPage({
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
+      <MatchesRealtimeRefresh channelName={`reservas-live:${user.id}`} filter={`owner_id=eq.${user.id}`} />
       <header className="space-y-1">
         <p className="text-sm font-medium text-[#0585FC]">Reservas</p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-950">Mis reservas</h1>

@@ -47,7 +47,7 @@ function getCurrentClockInArgentina(now: Date = new Date()): string {
   }).format(now);
 }
 
-export type CreateReservationResult = { error: string } | void;
+export type CreateReservationResult = { error: string } | { mpUrl: string } | void;
 
 export async function createReservation(formData: FormData): Promise<CreateReservationResult> {
   const courtId = getField(formData, "court_id");
@@ -184,6 +184,11 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     if (!bankAlias) {
       return { error: "El club no cargó un alias CBU para transferencias." };
     }
+  }
+  // Si el club configuró seña, el pago inicial es obligatorio por Mercado Pago
+  // (el saldo se cobra en el club aparte) — no se puede saltear pagando todo offline.
+  if (clubDepositValue > 0 && paymentMethod !== "mercadopago") {
+    return { error: "Este club requiere seña: la reserva se paga por Mercado Pago." };
   }
   if (clubId) {
     const { data: blocked } = await supabase
@@ -414,5 +419,8 @@ export async function createReservation(formData: FormData): Promise<CreateReser
     return { error: "No se pudo registrar el pago. Intentá de nuevo." };
   }
 
-  redirect(mp.initPoint);
+  // No redirect() acá: el WebView de Capacitor no puede navegar directo a
+  // mercadopago.com (no esta en allowNavigation). El cliente abre esta URL con
+  // nativeOpenUrl() (Browser.open en nativo), igual que torneos y clases.
+  return { mpUrl: mp.initPoint };
 }

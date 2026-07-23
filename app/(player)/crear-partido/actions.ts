@@ -88,7 +88,9 @@ async function getUser() {
 
 export async function crearPartido(
   formData: FormData
-): Promise<{ error: string } | { success: true; matchId: string }> {
+): Promise<
+  { error: string } | { success: true; matchId: string } | { success: true; matchId: string; mpUrl: string }
+> {
   const courtId = getField(formData, "court_id");
   const scheduledDate = getField(formData, "scheduled_date");
   const scheduledTime = getField(formData, "scheduled_time");
@@ -235,6 +237,10 @@ export async function crearPartido(
     if (paymentMethod === "transfer") {
       if (!acceptsTransfer) return { error: "Este club no acepta transferencia bancaria." };
       if (!bankAlias) return { error: "El club no cargó un alias CBU para transferencias." };
+    }
+    // Si el club configuró seña, el pago inicial es obligatorio por Mercado Pago.
+    if (clubDepositValue > 0 && paymentMethod !== "mercadopago") {
+      return { error: "Este club requiere seña: el partido se paga por Mercado Pago." };
     }
 
     const slotStart = clockToMinutes(scheduledTime);
@@ -429,7 +435,10 @@ export async function crearPartido(
       return { error: "No se pudo registrar el pago. Intentá de nuevo." };
     }
 
-    redirect(mp.initPoint);
+    // No redirect() acá: el WebView de Capacitor no puede navegar directo a
+    // mercadopago.com (no esta en allowNavigation). El cliente abre esta URL con
+    // nativeOpenUrl() (Browser.open en nativo), igual que torneos y clases.
+    return { success: true, matchId: data.id, mpUrl: mp.initPoint };
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { error: "No se pudo crear el partido." };

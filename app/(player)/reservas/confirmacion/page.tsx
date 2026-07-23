@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { MatchesRealtimeRefresh } from "@/components/matches-realtime-refresh";
 import MotionPage from "@/components/motion-page";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PLAYER_CARD, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -212,6 +213,9 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+      {/* El webhook de MP puede tardar unos segundos en confirmar el pago:
+          si esta fila cambia mientras el jugador esta acá, se refresca solo. */}
+      <MatchesRealtimeRefresh channelName={`reserva-confirmacion:${id}`} filter={`id=eq.${id}`} />
       {params.error === "sim" ? (
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm text-rose-800">
           No se pudo simular el pago. Probá de nuevo o revisá que seas el titular de la reserva.

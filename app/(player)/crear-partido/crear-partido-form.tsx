@@ -14,6 +14,7 @@ import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { normalizeCity } from "@/lib/locations";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
+import { nativeOpenUrl } from "@/lib/native-open";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
@@ -370,15 +371,21 @@ export default function CrearPartidoForm({
     return { total: turnPrice, requiresDeposit: deposit < turnPrice, deposit, saldo: turnPrice - deposit };
   }, [getTurnPrice, selectedClub, selectedCourt, selectedSlot]);
 
+  /** Si el club configuró seña, el pago inicial es obligatorio por MP: no se ofrece efectivo/transferencia. */
+  const clubHasDeposit = Boolean(selectedClub?.depositValue && selectedClub.depositValue > 0);
+
   useEffect(() => {
     if (currentStep !== "payment" || !selectedClub) return;
     if (selectedClub.mpConnected) setPayMethod("mercadopago");
-    else if (selectedClub.acceptsCash) setPayMethod("cash");
-    else if (selectedClub.acceptsTransfer) setPayMethod("transfer");
-  }, [currentStep, selectedClub]);
+    else if (!clubHasDeposit && selectedClub.acceptsCash) setPayMethod("cash");
+    else if (!clubHasDeposit && selectedClub.acceptsTransfer) setPayMethod("transfer");
+  }, [currentStep, selectedClub, clubHasDeposit]);
 
   const payAvailable = Boolean(
-    selectedClub && (selectedClub.mpConnected || selectedClub.acceptsCash || selectedClub.acceptsTransfer)
+    selectedClub &&
+      (selectedClub.mpConnected ||
+        (selectedClub.acceptsCash && !clubHasDeposit) ||
+        (selectedClub.acceptsTransfer && !clubHasDeposit))
   );
 
   const matchShareUrl = confirmedMatchId ? `https://padelibre.online/partidos/${confirmedMatchId}` : "";
@@ -440,10 +447,12 @@ export default function CrearPartidoForm({
           try {
             const result = (await crearPartido(formData)) as
               | { error?: string }
-              | { success?: true; matchId?: string }
+              | { success?: true; matchId?: string; mpUrl?: string }
               | void;
             if (result && "error" in result && result.error) {
               setError(result.error);
+            } else if (result && "mpUrl" in result && result.mpUrl) {
+              await nativeOpenUrl(result.mpUrl);
             } else if (result && "success" in result && result.matchId) {
               setConfirmedMatchId(result.matchId);
               setCurrentStep("confirmation");
@@ -1115,7 +1124,9 @@ export default function CrearPartidoForm({
 
           {!payAvailable ? (
             <p className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-              Este club no tiene medios de pago habilitados.
+              {clubHasDeposit
+                ? "Este club requiere seña por Mercado Pago y todavía no la conectó."
+                : "Este club no tiene medios de pago habilitados."}
             </p>
           ) : (
             <div className="space-y-3">
@@ -1138,7 +1149,7 @@ export default function CrearPartidoForm({
                     <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pago instantáneo</span>
                   </button>
                 ) : null}
-                {selectedClub?.acceptsCash ? (
+                {selectedClub?.acceptsCash && !clubHasDeposit ? (
                   <button
                     type="button"
                     onClick={() => setPayMethod("cash")}
@@ -1155,7 +1166,7 @@ export default function CrearPartidoForm({
                     <span className="mt-0.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Pagás cuando llegás</span>
                   </button>
                 ) : null}
-                {selectedClub?.acceptsTransfer ? (
+                {selectedClub?.acceptsTransfer && !clubHasDeposit ? (
                   <button
                     type="button"
                     onClick={() => setPayMethod("transfer")}
