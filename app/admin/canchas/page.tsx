@@ -5,6 +5,7 @@ import {
   adminAccentBar,
   adminBadgeError,
   adminBadgeLima,
+  adminButtonSecondary,
   adminCTAPrimary,
   adminCard,
   adminEmptyState,
@@ -249,19 +250,14 @@ export default async function AdminCanchasPage({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Link
-                    href={`/admin/canchas/${c.id}/horarios`}
-                    className="rounded-2xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5"
-                  >
+                  <Link href={`/admin/canchas/${c.id}/horarios`} className={adminButtonSecondary}>
                     Precios
                   </Link>
                 </div>
               </div>
               <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-transparent p-4">
                 <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                  <span className="inline-flex rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/20 hover:bg-[#0585FC]/5">
-                    Editar
-                  </span>
+                  <span className={adminButtonSecondary}>Editar</span>
                 </summary>
                 <form action={updateCourt} className="mt-3 space-y-3">
                   <input type="hidden" name="court_id" value={c.id} />

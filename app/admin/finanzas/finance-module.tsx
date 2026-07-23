@@ -14,13 +14,13 @@ import {
   sumByCourt,
   totalPaid,
 } from "@/lib/admin/finance-math";
-import { adminAccentBar, adminCard, adminCTAPrimary, adminKicker, adminPressable } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminButtonSecondary, adminCard, adminCTAPrimary, adminKicker, adminPressable } from "@/components/admin/admin-premium";
 import { SkeletonBlock } from "@/components/admin/ui-skeleton";
 
 const CACHE_PREFIX = "admin_finance_matches_v1:";
 const CACHE_TTL_MS = 90_000;
 
-const btnSecondary = `rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] shadow-sm ${adminPressable} hover:bg-[var(--bg-app)]`;
+const btnSecondary = `${adminButtonSecondary} bg-[var(--bg-card)] shadow-sm ${adminPressable}`;
 
 type Court = { id: string; name: string | null };
 type FinanceRow = MatchMoneyRow & {

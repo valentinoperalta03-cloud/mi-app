@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { adminCard, adminCTAPrimary } from "@/components/admin/admin-premium";
+import { adminButtonSecondary, adminCard, adminCTAPrimary } from "@/components/admin/admin-premium";
 import { createManualCourtBlockAction, type ManualBlockState } from "./actions";
 
 const initial: ManualBlockState = { success: false, message: "" };
@@ -94,11 +94,7 @@ function ManualBlockDialog({
           ) : null}
 
           <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-2xl border border-[var(--border-subtle)] py-3 text-sm font-semibold text-[var(--text-secondary)]"
-            >
+            <button type="button" onClick={onClose} className={`flex-1 ${adminButtonSecondary}`}>
               Cancelar
             </button>
             <button type="submit" disabled={pending} className={`flex-1 ${adminCTAPrimary} disabled:opacity-60`}>

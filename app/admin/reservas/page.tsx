@@ -712,7 +712,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               ) : null}
               <Link
                 href={`/admin/reservas?date=${selectedDate}`}
-                className="inline-flex rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)]"
+                className="inline-flex rounded-full border border-[var(--border-strong)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-subtle)]"
               >
                 Cerrar detalle
               </Link>

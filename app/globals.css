@@ -6,6 +6,21 @@
   --color-sky-500: #0585FC;
   --color-sky-600: #0461C4;
   --color-sky-700: #0461C4;
+
+  /* Colores de marca (antes en tailwind.config.ts, nunca conectado al pipeline v4) */
+  --color-brand-primary: #0585FC;
+  --color-brand-secondary: #0461C4;
+  --color-brand-lima: #CCFF00;
+  --color-brand-navy: #031733;
+
+  /* Gradientes de marca */
+  --background-image-brand-gradient: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  --background-image-brand-gradient-dark: linear-gradient(135deg, #031733 0%, #0461C4 100%);
+
+  /* Fuentes admin (variables generadas por next/font en app/admin/layout.tsx).
+     Namespace --font-* (no --font-family-*): asi genera Tailwind v4 los .font-*. */
+  --font-admin-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-admin-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
 }
 
 /* CSS Variables for theming */
@@ -26,6 +41,7 @@
   --text-tertiary: #94a3b8;
   --border-default: rgba(0,0,0,0.06);
   --border-subtle: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.18);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
   --glass-bg: rgba(255,255,255,0.85);
   --player-bottom-nav-inner-height: 5.75rem;
@@ -95,6 +111,7 @@
   --text-tertiary: #6b7280;
   --border-default: rgba(255,255,255,0.06);
   --border-subtle: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.22);
   --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
   --glass-bg: rgba(28,28,30,0.85);
 
