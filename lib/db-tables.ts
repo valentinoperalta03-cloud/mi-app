@@ -48,4 +48,7 @@ export const DB_TABLES = {
   practices: "practices",
   practiceSessions: "practice_sessions",
   practiceRegistrations: "practice_registrations",
+  penas: "penas",
+  penaRegistrations: "pena_registrations",
+  penaRoundMatches: "pena_round_matches",
 } as const;

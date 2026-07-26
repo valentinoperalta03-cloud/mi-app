@@ -11,6 +11,7 @@ import { createNotification } from "@/lib/notifications";
 import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
+import { parsePenaRegistrationRef } from "@/lib/mp-pena-preference";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseAdmin() {
@@ -357,6 +358,75 @@ async function handlePracticePaymentIfPresent(
   return true;
 }
 
+async function handlePenaPaymentIfPresent(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    paymentId: string;
+    extRef: string;
+    status: string;
+  }
+): Promise<boolean> {
+  const parsed = parsePenaRegistrationRef(params.extRef);
+  if (params.extRef.startsWith("pena_reg_") && !parsed) {
+    log.warn({ event: "mp.webhook.pena_ref_invalid", requestId: params.requestId, extRef: params.extRef });
+    return true;
+  }
+  if (!parsed) return false;
+
+  const { registrationId, payerUserId } = parsed;
+  const { data: reg } = await admin
+    .from(DB_TABLES.penaRegistrations)
+    .select("id, player_id, payment_status")
+    .eq("id", registrationId)
+    .maybeSingle();
+  const regRow = reg as { id?: string; player_id?: string; payment_status?: string | null } | null;
+  if (!regRow?.id || regRow.player_id !== payerUserId) {
+    log.warn({
+      event: "mp.webhook.pena_registration_mismatch",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+    });
+    return true;
+  }
+
+  if (params.status === "approved") {
+    if (regRow.payment_status === "confirmed") {
+      log.info({ event: "mp.webhook.pena.idempotent_skip", requestId: params.requestId, registrationId });
+      return true;
+    }
+    await admin
+      .from(DB_TABLES.penaRegistrations)
+      .update({ payment_status: "confirmed", mp_payment_id: params.paymentId })
+      .eq("id", registrationId);
+    log.info({
+      event: "payment.pena.approved",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+      mpPaymentId: params.paymentId,
+    });
+    return true;
+  }
+
+  if (params.status === "refunded" || params.status === "charged_back") {
+    await admin
+      .from(DB_TABLES.penaRegistrations)
+      .update({ payment_status: "refunded" })
+      .eq("id", registrationId);
+    log.info({
+      event: "payment.pena.refunded",
+      requestId: params.requestId,
+      registrationId,
+      mpPaymentId: params.paymentId,
+    });
+    return true;
+  }
+
+  return true;
+}
+
 /**
  * Procesa un pago de MP ya identificado (ya sea porque el webhook trajo el
  * paymentId directamente, o porque se extrajo de un merchant_order). No
@@ -407,6 +477,16 @@ async function processPaymentId(
     mpPayment,
   });
   if (tournamentHandled) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const penaHandled = await handlePenaPaymentIfPresent(admin, {
+    requestId,
+    paymentId,
+    extRef,
+    status,
+  });
+  if (penaHandled) {
     return NextResponse.json({ ok: true });
   }
 
