@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { adminCTAPrimary } from "@/components/admin/admin-premium";
-import { MAX_PAIRS_OPTIONS, PENA_WHAT_INCLUDES_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { MAX_PAIRS_OPTIONS, PENA_MAX_PLAYERS_OPTIONS, PENA_WHAT_INCLUDES_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
 import TournamentDepositFields from "@/components/admin/tournament-deposit-fields";
@@ -136,7 +136,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       <label className="block">
         <span className="text-xs font-semibold text-[var(--text-secondary)]">{tournamentType === "pena" ? "Máx. jugadores" : "Máx. parejas"}</span>
         <select name="max_pairs" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
-          {MAX_PAIRS_OPTIONS.map((n) => (
+          {(tournamentType === "pena" ? PENA_MAX_PLAYERS_OPTIONS : MAX_PAIRS_OPTIONS).map((n) => (
             <option key={n} value={n}>
               {n}
             </option>

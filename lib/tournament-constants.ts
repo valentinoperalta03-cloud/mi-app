@@ -15,5 +15,8 @@ export const TOURNAMENT_STATUS_LABELS: Record<string, string> = {
 
 export const MAX_PAIRS_OPTIONS = [8, 16, 32, 64] as const;
 
+/** Máximo de jugadores para peña (inscripción individual, no por pareja). Todos pares para poder formar parejas. */
+export const PENA_MAX_PLAYERS_OPTIONS = [8, 12, 16, 20, 24] as const;
+
 /** Opciones de "qué incluye" para torneos de tipo peña. */
 export const PENA_WHAT_INCLUDES_OPTIONS = ["Pizza", "Empanadas", "Hamburguesas", "Choripán", "Bebida", "Café", "Agua"] as const;

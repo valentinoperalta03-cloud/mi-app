@@ -199,6 +199,10 @@ export async function saveTournamentMatchAction(
   const gate = await assertTournamentOwner(supabase, tournamentId);
   if (!gate.ok) return gate;
 
+  if ((gate.row as { tournament_type?: string }).tournament_type === "pena") {
+    return { ok: false, message: "Las peñas no cargan resultados ni afectan el ELO." };
+  }
+
   const s1 = Number(formData.get("pair1_score"));
   const s2 = Number(formData.get("pair2_score"));
   const setsRaw = String(formData.get("sets_json") ?? "").trim();

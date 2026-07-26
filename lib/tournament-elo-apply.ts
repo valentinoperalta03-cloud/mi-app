@@ -34,6 +34,40 @@ async function countFinishedTournamentMatchesForPlayer(
 }
 
 /**
+ * Si `matchId` ya está `finished`, lo resetea a `pending` (limpia scores,
+ * sets y winner_pair_id) y hace lo mismo recursivamente con los partidos que
+ * lo tengan como feeder. Se usa antes de reasignar pair1_id/pair2_id de un
+ * partido hijo: si ese hijo ya se jugó con la pareja vieja, su resultado y el
+ * ELO que ya se aplicó quedan basados en un cruce que nunca existió, así que
+ * hay que invalidarlo en cascada en vez de pisarle la pareja en silencio. El
+ * ELO ya aplicado a ese partido no se revierte (limitación conocida:
+ * level_evolution no guarda match_id), pero al menos el partido deja de
+ * quedar con una pareja que no jugó ese resultado.
+ */
+async function resetMatchAndCascadeIfFinished(admin: SupabaseClient, matchId: string): Promise<void> {
+  const { data: row } = await admin
+    .from(DB_TABLES.tournamentMatches)
+    .select("id, status")
+    .eq("id", matchId)
+    .maybeSingle();
+  const m = row as { id?: string; status?: string } | null;
+  if (!m?.id || m.status !== "finished") return;
+
+  await admin
+    .from(DB_TABLES.tournamentMatches)
+    .update({ status: "pending", pair1_score: null, pair2_score: null, sets: null, winner_pair_id: null })
+    .eq("id", matchId);
+
+  const { data: children } = await admin
+    .from(DB_TABLES.tournamentMatches)
+    .select("id")
+    .or(`feeder_left_match_id.eq.${matchId},feeder_right_match_id.eq.${matchId}`);
+  for (const child of (children ?? []) as Array<{ id: string }>) {
+    await resetMatchAndCascadeIfFinished(admin, child.id);
+  }
+}
+
+/**
  * Propaga el resultado de un partido a los partidos que lo tienen como feeder.
  *
  * Regla general (vale para gold-only y para gold+silver por igual): si el
@@ -46,9 +80,11 @@ async function countFinishedTournamentMatchesForPlayer(
  * queda automaticamente eliminado sin ninguna accion extra.
  *
  * Al editar un resultado ya finalizado y cambiar el ganador, se vuelve a
- * llamar con el mismo finishedMatchId: como el ganador/perdedor se recalculan
- * de nuevo contra las mismas dos parejas fijas del partido, esto corrige
- * automaticamente tanto el hijo de gold como el de silver si corresponde.
+ * llamar con el mismo finishedMatchId. Antes de reasignar la pareja que
+ * avanza al partido hijo, si ese hijo ya estaba `finished` (jugado con la
+ * pareja vieja) se resetea en cascada — ver `resetMatchAndCascadeIfFinished`
+ * — para no dejar un partido jugado con una pareja que en realidad nunca
+ * avanzó a esa instancia.
  */
 export async function propagateBracket(admin: SupabaseClient, finishedMatchId: string, winnerPairId: string | null) {
   if (!winnerPairId) return;
@@ -76,6 +112,12 @@ export async function propagateBracket(admin: SupabaseClient, finishedMatchId: s
     const sameBracket = (row.bracket ?? "gold") === finishedBracket;
     const advancingPairId = sameBracket ? winnerPairId : loserPairId;
     if (!advancingPairId) continue;
+
+    // Si el hijo ya se jugó con la pareja vieja, invalidar en cascada antes
+    // de pisarla — evita dejar un resultado/ELO aplicado sobre un cruce que
+    // ya no existe.
+    await resetMatchAndCascadeIfFinished(admin, row.id);
+
     if (row.feeder_left_match_id === finishedMatchId) {
       await admin.from(DB_TABLES.tournamentMatches).update({ pair1_id: advancingPairId }).eq("id", row.id);
     }

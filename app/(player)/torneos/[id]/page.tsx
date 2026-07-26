@@ -337,9 +337,16 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         if (tour.tournament_type === "eliminacion") {
           const goldMatches = matchRows.filter((m) => (m.bracket ?? "gold") === "gold");
           const silverMatches = matchRows.filter((m) => m.bracket === "silver");
+          const myMatch = myRegId != null ? matchRows.find((m) => m.pair1_id === myRegId || m.pair2_id === myRegId) : undefined;
+          const myBracket = myMatch ? (myMatch.bracket ?? "gold") : null;
           return (
             <>
-              <section className="mt-8">
+              {myBracket ? (
+                <p className="mt-8 text-sm font-medium text-[var(--text-secondary)]">
+                  Estás en la {myBracket === "silver" ? "🥈 Llave de Plata" : "🥇 Llave de Oro"}.
+                </p>
+              ) : null}
+              <section className={myBracket ? "mt-3" : "mt-8"}>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">🥇 Llave de Oro</h2>
                 <ul className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
                   {goldMatches.map((m) => matchCard(m))}
