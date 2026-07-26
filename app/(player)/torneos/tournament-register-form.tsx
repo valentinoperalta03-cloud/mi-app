@@ -8,11 +8,11 @@ import { nativeOpenUrl } from "@/lib/native-open";
 
 type Props = {
   tournamentId: string;
-  isMixing: boolean;
+  isIndividual: boolean;
   canRegister: boolean;
 };
 
-export default function TournamentRegisterForm({ tournamentId, isMixing, canRegister }: Props) {
+export default function TournamentRegisterForm({ tournamentId, isIndividual, canRegister }: Props) {
   const [partnerQuery, setPartnerQuery] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [results, setResults] = useState<Array<{ user_id: string; name: string | null }>>([]);
@@ -35,7 +35,7 @@ export default function TournamentRegisterForm({ tournamentId, isMixing, canRegi
     setMsg(null);
     const fd = new FormData(e.currentTarget);
     fd.set("tournament_id", tournamentId);
-    fd.set("partner_user_id", isMixing ? "" : partnerId);
+    fd.set("partner_user_id", isIndividual ? "" : partnerId);
     start(async () => {
       const res = await beginTournamentCheckoutAction(fd);
       if (!res.ok) {
@@ -53,7 +53,7 @@ export default function TournamentRegisterForm({ tournamentId, isMixing, canRegi
       <h3 className="text-sm font-semibold text-[var(--text-primary)]">Inscribirse</h3>
       {msg ? <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{msg}</p> : null}
       <form onSubmit={onSubmit} className="mt-3 space-y-3">
-        {!isMixing ? (
+        {!isIndividual ? (
           <div>
             <label className="text-xs font-medium text-[var(--text-tertiary)]">Compañero/a</label>
             <input
@@ -84,14 +84,14 @@ export default function TournamentRegisterForm({ tournamentId, isMixing, canRegi
             <input type="hidden" name="partner_user_id" value={partnerId} />
           </div>
         ) : (
-          <p className="text-xs text-[var(--text-tertiary)]">Mixing: inscripción individual. Te asignamos pareja por sorteo.</p>
+          <p className="text-xs text-[var(--text-tertiary)]">Inscripción individual. Te asignamos pareja por sorteo el día de la peña.</p>
         )}
         <p className="text-[11px] text-[var(--text-tertiary)]">
           El pago se procesa con Mercado Pago. El 100% va directo a la cuenta del club, sin comisión de PadeLibre.
         </p>
         <button
           type="submit"
-          disabled={pending || (!isMixing && !partnerId)}
+          disabled={pending || (!isIndividual && !partnerId)}
           className="btn-primary-gradient w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-50"
         >
           {pending ? "Procesando…" : "Pagar inscripción"}

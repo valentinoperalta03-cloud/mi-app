@@ -19,7 +19,7 @@ import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
 import { formatCategoryRange } from "@/lib/tournament-utils";
-import { advanceMixingRoundFormAction, finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction } from "./actions";
+import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction, updatePenaMatchPairsAction } from "./actions";
 import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
 import { TournamentScheduler } from "./TournamentScheduler";
 
@@ -36,7 +36,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket"
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual"
     )
     .eq("id", id)
     .maybeSingle();
@@ -62,6 +62,9 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     category_max: number | null;
     group_chat_id: string | null;
     consolation_bracket: boolean;
+    what_includes: string[] | null;
+    game_format: string | null;
+    is_individual: boolean;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
@@ -225,6 +228,9 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   }
 
   const courtHours = Math.round((matchRows.length * 90) / 60);
+  const penaPairs = regList
+    .filter((r) => r.player2_id)
+    .map((r) => ({ id: r.id, label: pairNameMap.get(r.id) ?? "Pareja" }));
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 pb-28 pt-6 md:pb-10">
@@ -238,15 +244,22 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         <p className={adminKicker}>{typeBadge}</p>
         <h1 className={`mt-1 ${adminTitle}`}>{tour.name}</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved.length}/{tour.max_pairs} parejas pagadas
+          {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved.length}/{tour.max_pairs}{" "}
+          {tour.is_individual ? "jugadores pagados" : "parejas pagadas"}
         </p>
         {tour.description ? <p className="mt-2 text-sm text-[var(--text-secondary)]">{tour.description}</p> : null}
+        {tour.is_individual ? (
+          <div className="mt-2 text-xs text-[var(--text-tertiary)]">
+            {tour.game_format ? <p>Formato: {tour.game_format}</p> : null}
+            {tour.what_includes && tour.what_includes.length > 0 ? <p>Incluye: {tour.what_includes.join(", ")}</p> : null}
+          </div>
+        ) : null}
         <p className="mt-2 text-xs text-[var(--text-tertiary)]">
           Categoría: {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
         <div className="mt-2">
           <p className="text-sm font-semibold text-[var(--text-secondary)]">
-            Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} por pareja
+            Precio: ${Math.round(Number(tour.price_per_pair)).toLocaleString("es-AR")} por {tour.is_individual ? "jugador" : "pareja"}
           </p>
           <p className="mt-1 text-xs text-[var(--text-tertiary)]">
             {tour.requires_deposit
@@ -262,14 +275,6 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
             <input type="hidden" name="tournament_id" value={id} />
             <button type="submit" className={adminCTAPrimary}>
               Iniciar torneo
-            </button>
-          </form>
-        ) : null}
-        {tour.status === "in_progress" && tour.tournament_type === "mixing" ? (
-          <form action={advanceMixingRoundFormAction}>
-            <input type="hidden" name="tournament_id" value={id} />
-            <button type="submit" className={adminCTAPrimary}>
-              Generar siguiente ronda
             </button>
           </form>
         ) : null}
@@ -344,6 +349,82 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           {bracketSection("🥇 Llave de Oro", goldMatches)}
           {tour.consolation_bracket ? bracketSection("🥈 Llave de Plata", silverMatches) : null}
         </>
+      ) : tour.tournament_type === "pena" ? (
+        <section>
+          <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Primera ronda</h2>
+          {matchRows.length === 0 ? (
+            <p className="mt-2 text-sm text-[var(--text-tertiary)]">
+              {tour.status === "open" ? "Se genera automáticamente al iniciar la peña." : "Todavía no se generó la ronda."}
+            </p>
+          ) : (
+            <>
+              {courtList.length > 0 ? (
+                <TournamentScheduler
+                  tournamentId={id}
+                  courts={courtList}
+                  matches={matchRows.map((m) => ({
+                    id: m.id,
+                    round_name: m.round_name,
+                    pair1_name: m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "—" : "—",
+                    pair2_name: m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "—" : "—",
+                    court_id: m.court_id,
+                    scheduled_date: m.scheduled_date,
+                    scheduled_time: m.scheduled_time,
+                    notes: m.notes,
+                  }))}
+                />
+              ) : null}
+              <ul className="mt-3 space-y-3">
+                {matchRows.map((m) => {
+                  async function handlePairSwap(formData: FormData) {
+                    "use server";
+                    const p1 = String(formData.get("pair1_id") ?? "").trim() || null;
+                    const p2 = String(formData.get("pair2_id") ?? "").trim() || null;
+                    await updatePenaMatchPairsAction(id, m.id, p1, p2);
+                  }
+                  return (
+                    <li key={m.id} className={`${adminCard} text-sm`}>
+                      <p className="text-xs font-semibold text-[var(--text-tertiary)]">Partido {m.round}</p>
+                      <p className="mt-1 text-[var(--text-secondary)]">
+                        {m.pair1_id ? pairNameMap.get(m.pair1_id) ?? "Pareja 1" : "—"} vs{" "}
+                        {m.pair2_id ? pairNameMap.get(m.pair2_id) ?? "Pareja 2" : "—"}
+                      </p>
+                      <form action={handlePairSwap} className="mt-2 grid gap-2 sm:grid-cols-3">
+                        <select
+                          name="pair1_id"
+                          defaultValue={m.pair1_id ?? ""}
+                          className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                        >
+                          <option value="">— Sin asignar —</option>
+                          {penaPairs.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          name="pair2_id"
+                          defaultValue={m.pair2_id ?? ""}
+                          className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                        >
+                          <option value="">— Sin asignar —</option>
+                          {penaPairs.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="submit" className={`${adminCTAPrimary} px-2 py-1 text-xs`}>
+                          Editar
+                        </button>
+                      </form>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </section>
       ) : (
         <>
           {tour.status === "in_progress" && courtList.length > 0 && (

@@ -41,9 +41,14 @@ export async function createTournamentAction(
   const depositValueRaw = String(formData.get("deposit_value") ?? "").trim();
   const depositValue = depositValueRaw ? Number(depositValueRaw) : 0;
   const consolationBracket = tournamentType === "eliminacion" && formData.get("consolation_bracket") === "true";
+  const isPena = tournamentType === "pena";
+  const whatIncludes = isPena
+    ? formData.getAll("what_includes").map((v) => String(v).trim()).filter(Boolean)
+    : [];
+  const gameFormat = isPena ? String(formData.get("game_format") ?? "").trim() || null : null;
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
-  if (!["americano", "eliminacion", "mixing"].includes(tournamentType)) {
+  if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
     return { ok: false, message: "Tipo de torneo inválido." };
   }
   if (!startDate || !endDate || !startTime || !registrationDeadline) {
@@ -87,6 +92,9 @@ export async function createTournamentAction(
       deposit_type: requiresDeposit ? depositType : null,
       deposit_value: requiresDeposit ? depositValue : 0,
       consolation_bracket: consolationBracket,
+      what_includes: whatIncludes,
+      game_format: gameFormat,
+      is_individual: isPena,
       prize,
       start_date: startDate,
       end_date: endDate,

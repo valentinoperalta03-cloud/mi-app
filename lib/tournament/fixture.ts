@@ -13,8 +13,20 @@ export type TournamentMatchInsert = {
   status: "pending";
 };
 
-// Alias para no romper las funciones existentes de abajo (americano/mixing), intactas.
+// Alias para no romper las funciones existentes de abajo (americano/eliminacion), intactas.
 type MatchInsert = TournamentMatchInsert;
+
+/** Una inscripción individual de peña: una fila de tournament_registrations con un solo jugador. */
+export type PenaPlayerSlot = { registrationId: string; playerId: string };
+
+/** Pareja sorteada al azar entre dos inscripciones individuales de peña. */
+export type PenaPairMerge = {
+  /** Inscripción que se conserva: se le asigna player2_id = mergePlayerId. */
+  keepRegistrationId: string;
+  mergePlayerId: string;
+  /** Inscripción del segundo jugador de la pareja, que queda redundante y se borra. */
+  removeRegistrationId: string;
+};
 
 function roundName(matchesInRound: number): string {
   if (matchesInRound >= 8) return "Octavos de final";
@@ -44,53 +56,50 @@ export function buildAmericanoMatches(tournamentId: string, pairIds: string[]): 
   return rows;
 }
 
-/** Primera ronda de mixing (sorteo aleatorio) */
-export function buildMixingRound1(tournamentId: string, pairIds: string[]): MatchInsert[] {
-  const shuffled = [...pairIds].sort(() => Math.random() - 0.5);
-  const rows: MatchInsert[] = [];
+/**
+ * Arma la primera (y única) ronda de una peña: sortea a los jugadores
+ * inscriptos individualmente y los agrupa de a 2 para formar parejas, luego
+ * enfrenta pareja 1 vs pareja 2, pareja 3 vs pareja 4, etc. La app no genera
+ * rondas siguientes — la peña es un evento social de una sola ronda.
+ *
+ * Como la inscripción de peña es individual (1 fila de tournament_registrations
+ * = 1 jugador) pero tournament_matches.pair1_id/pair2_id apuntan a UNA sola
+ * fila de tournament_registrations, cada pareja sorteada se materializa
+ * fusionando las dos inscripciones individuales en una sola fila (se
+ * devuelve en `merges`; el caller debe aplicar esos merges — UPDATE
+ * player2_id en `keepRegistrationId` + DELETE de `removeRegistrationId` —
+ * antes de insertar `matches`, ya que `matches` referencia los
+ * `keepRegistrationId` resultantes). Si la cantidad de parejas es impar,
+ * la última pareja queda sin rival (bye) y no genera partido.
+ */
+export function buildPenaFirstRound(
+  tournamentId: string,
+  slots: PenaPlayerSlot[]
+): { matches: TournamentMatchInsert[]; merges: PenaPairMerge[] } {
+  const shuffled = [...slots].sort(() => Math.random() - 0.5);
+
+  const merges: PenaPairMerge[] = [];
   for (let i = 0; i + 1 < shuffled.length; i += 2) {
-    rows.push({
+    merges.push({
+      keepRegistrationId: shuffled[i].registrationId,
+      mergePlayerId: shuffled[i + 1].playerId,
+      removeRegistrationId: shuffled[i + 1].registrationId,
+    });
+  }
+
+  const matches: TournamentMatchInsert[] = [];
+  for (let i = 0; i + 1 < merges.length; i += 2) {
+    matches.push({
       tournament_id: tournamentId,
       round: 1,
       round_name: "Ronda 1 (sorteo)",
-      pair1_id: shuffled[i],
-      pair2_id: shuffled[i + 1],
+      pair1_id: merges[i].keepRegistrationId,
+      pair2_id: merges[i + 1].keepRegistrationId,
       status: "pending",
     });
   }
-  return rows;
-}
 
-/** Genera la siguiente ronda de mixing mezclando jugadores de parejas distintas.
- *  pairIds son los IDs de registration de los N ganadores de la ronda anterior;
- *  previousPairings es el set de "A:B" ya jugados para evitar repeticiones. */
-export function buildMixingNextRound(
-  tournamentId: string,
-  round: number,
-  pairIds: string[],
-  previousPairings: Set<string>
-): MatchInsert[] {
-  const shuffled = [...pairIds].sort(() => Math.random() - 0.5);
-  const rows: MatchInsert[] = [];
-  for (let i = 0; i + 1 < shuffled.length; i += 2) {
-    const key = [shuffled[i], shuffled[i + 1]].sort().join(":");
-    if (previousPairings.has(key)) {
-      // intento simple: swap con siguiente disponible
-      const swapIdx = shuffled.findIndex((_, k) => k > i + 1 && !previousPairings.has([shuffled[i], shuffled[k]].sort().join(":")));
-      if (swapIdx !== -1) {
-        [shuffled[i + 1], shuffled[swapIdx]] = [shuffled[swapIdx], shuffled[i + 1]];
-      }
-    }
-    rows.push({
-      tournament_id: tournamentId,
-      round,
-      round_name: `Ronda ${round} (mixing)`,
-      pair1_id: shuffled[i],
-      pair2_id: shuffled[i + 1],
-      status: "pending",
-    });
-  }
-  return rows;
+  return { matches, merges };
 }
 
 /**

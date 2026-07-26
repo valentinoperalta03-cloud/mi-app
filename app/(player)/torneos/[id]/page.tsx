@@ -27,7 +27,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, clubs(name, logo_url)"
+      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, what_includes, game_format, is_individual, clubs(name, logo_url)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -58,6 +58,9 @@ export default async function TorneoDetallePage({ params }: PageProps) {
     category_min: number | null;
     category_max: number | null;
     group_chat_id: string | null;
+    what_includes: string[] | null;
+    game_format: string | null;
+    is_individual: boolean;
     clubs: { name: string | null; logo_url: string | null } | null;
   };
 
@@ -143,12 +146,19 @@ export default async function TorneoDetallePage({ params }: PageProps) {
           {dateLabel} · {timeLabel}hs
         </p>
         <p className="mt-2 text-xs text-[var(--text-tertiary)]">
-          {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved}/{tour.max_pairs} parejas ·{" "}
-          {formatCategoryRange(tour.category_min, tour.category_max)}
+          {TOURNAMENT_STATUS_LABELS[tour.status] ?? tour.status} · {approved}/{tour.max_pairs}{" "}
+          {tour.is_individual ? "jugadores" : "parejas"} · {formatCategoryRange(tour.category_min, tour.category_max)}
         </p>
+        {tour.is_individual ? (
+          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+            {[tour.game_format, tour.what_includes && tour.what_includes.length > 0 ? `Incluye: ${tour.what_includes.join(", ")}` : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
         <div className="mt-2 space-y-1.5">
           <p className="text-sm font-bold text-[var(--text-primary)]">
-            ${priceDisplay.toLocaleString("es-AR")} por pareja
+            ${priceDisplay.toLocaleString("es-AR")} por {tour.is_individual ? "jugador" : "pareja"}
           </p>
           {tour.requires_deposit ? (
             <div className="rounded-xl bg-[#0585FC]/10 px-3 py-2 text-xs">
@@ -187,7 +197,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
               Tu nivel no entra en el rango de este torneo.
             </p>
           ) : (
-            <TournamentRegisterForm tournamentId={id} isMixing={tour.tournament_type === "mixing"} canRegister={canRegister} />
+            <TournamentRegisterForm tournamentId={id} isIndividual={tour.is_individual} canRegister={canRegister} />
           )}
         </div>
       )}
@@ -231,6 +241,44 @@ export default async function TorneoDetallePage({ params }: PageProps) {
           courts: { name: string }[] | { name: string } | null;
         }>;
         if (matchRows.length === 0) return null;
+
+        if (tour.is_individual) {
+          const myMatch = matchRows.find((m) => myRegId != null && (m.pair1_id === myRegId || m.pair2_id === myRegId));
+          if (!myMatch) {
+            return (
+              <section className="mt-8 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 text-center text-sm text-[var(--text-tertiary)]">
+                Ya se armó la primera ronda. Si no ves tu partido acá, consultá con el club.
+              </section>
+            );
+          }
+          const myReg = regList.find((r) => r.id === myRegId);
+          const partnerUserId = myReg?.player1_id === user.id ? myReg?.player2_id : myReg?.player1_id;
+          const partnerName = partnerUserId ? pmap.get(partnerUserId)?.name ?? null : null;
+          const opponentRegId = myMatch.pair1_id === myRegId ? myMatch.pair2_id : myMatch.pair1_id;
+          const rivalsName = opponentRegId ? pairNameMap.get(opponentRegId) ?? "Por definir" : "Por definir";
+          const courtName = Array.isArray(myMatch.courts) ? myMatch.courts[0]?.name : myMatch.courts?.name;
+          const scheduleLabel = [
+            courtName ?? null,
+            myMatch.scheduled_date ? format(parseISO(myMatch.scheduled_date), "d MMM", { locale: es }) : null,
+            myMatch.scheduled_time ? myMatch.scheduled_time.slice(0, 5) + "hs" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <section className="mt-8 rounded-3xl border border-[#0585FC] bg-[#0585FC]/5 p-5 dark:border-sky-500 dark:bg-sky-950/20">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">🎉 Tu partido</h2>
+              {partnerName ? (
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Jugás con <span className="font-semibold text-[var(--text-primary)]">{partnerName}</span>
+                </p>
+              ) : null}
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Vs. <span className="font-semibold text-[var(--text-primary)]">{rivalsName}</span>
+              </p>
+              {scheduleLabel ? <p className="mt-1 text-xs text-[var(--text-tertiary)]">{scheduleLabel}</p> : null}
+            </section>
+          );
+        }
 
         function matchCard(m: (typeof matchRows)[number]) {
           const name1 = m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "Por definir";

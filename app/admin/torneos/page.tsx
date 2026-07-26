@@ -84,7 +84,7 @@ export default async function AdminTorneosPage() {
             <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
               <li><span className="font-semibold">🏆 Americano:</span> Todas las parejas juegan entre sí. Gana quien más puntos acumule. Ideal para grupos pequeños (hasta 8 parejas).</li>
               <li><span className="font-semibold">⚡ Eliminación directa:</span> El que pierde queda afuera. Requiere potencia de 2 de parejas (4, 8, 16…). Para muchos participantes. Opcionalmente podés activar la Copa de Plata 🥈, una llave paralela para los perdedores de primera ronda.</li>
-              <li><span className="font-semibold">🔀 Mixing:</span> Las parejas se sortean al azar en cada ronda. Requiere número par de participantes.</li>
+              <li><span className="font-semibold">🎉 Peña:</span> Evento social. Los jugadores se inscriben individualmente, sin competencia ni ranking. Se sortea una única ronda de parejas al iniciar.</li>
             </ul>
           </div>
 

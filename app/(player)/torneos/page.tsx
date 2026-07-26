@@ -19,7 +19,7 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
 
   let q = supabase
     .from(DB_TABLES.tournaments)
-    .select("id, name, tournament_type, status, start_date, start_time, max_pairs, price_per_pair, prize, registration_deadline, category_min, category_max, clubs(name, logo_url)")
+    .select("id, name, tournament_type, status, start_date, start_time, max_pairs, price_per_pair, prize, registration_deadline, category_min, category_max, is_individual, clubs(name, logo_url)")
     .order("start_date", { ascending: true });
 
   if (f === "open") q = q.eq("status", "open");
@@ -40,6 +40,7 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
     registration_deadline: string;
     category_min: number | null;
     category_max: number | null;
+    is_individual: boolean;
     clubs: { name: string | null; logo_url: string | null }[] | { name: string | null; logo_url: string | null } | null;
   }>).map((row) => {
     const c = row.clubs;
@@ -102,7 +103,9 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
           </li>
         ) : null}
         {list.map((t) => {
-          const badge = TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === t.tournament_type)?.badge ?? t.tournament_type;
+          const badge = t.is_individual
+            ? "🎉 Peña Social"
+            : TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === t.tournament_type)?.badge ?? t.tournament_type;
           const st = t.status;
           const stLabel = TOURNAMENT_STATUS_LABELS[st] ?? st;
           const stClass =
@@ -146,8 +149,8 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                       {dateLabel} · {timeLabel}hs
                     </p>
                     <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">
-                      ${Math.round(Number(t.price_per_pair)).toLocaleString("es-AR")} / pareja · {n}/{t.max_pairs} parejas ·{" "}
-                      {formatCategoryRange(t.category_min, t.category_max)}
+                      ${Math.round(Number(t.price_per_pair)).toLocaleString("es-AR")} / {t.is_individual ? "jugador" : "pareja"} · {n}/
+                      {t.max_pairs} {t.is_individual ? "jugadores" : "parejas"} · {formatCategoryRange(t.category_min, t.category_max)}
                     </p>
                     {t.prize ? (
                       <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">🏅 Premio: {t.prize}</p>

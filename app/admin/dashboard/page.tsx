@@ -31,7 +31,7 @@ const quickActions: Array<{
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }> = [
-  { href: "/admin/torneos", label: "Torneos", description: "Americanos, llaves y mixing", icon: Trophy },
+  { href: "/admin/torneos", label: "Torneos", description: "Americanos, llaves y peñas", icon: Trophy },
   { href: "/admin/clases", label: "Clases", description: "Prácticas y entrenamientos", icon: GraduationCap },
   { href: "/admin/reservas", label: "Reservas", description: "Gestioná agenda y pagos", icon: CalendarDays },
   { href: "/admin/finanzas", label: "Finanzas", description: "Controlá ingresos y egresos", icon: Wallet },

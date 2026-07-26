@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { adminCTAPrimary } from "@/components/admin/admin-premium";
-import { MAX_PAIRS_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import { MAX_PAIRS_OPTIONS, PENA_WHAT_INCLUDES_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
 import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
 import { LEVEL_HIERARCHY } from "@/lib/match-level";
 import TournamentDepositFields from "@/components/admin/tournament-deposit-fields";
@@ -70,6 +70,34 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         </label>
       ) : null}
 
+      {tournamentType === "pena" ? (
+        <>
+          <fieldset>
+            <legend className="text-xs font-semibold text-[var(--text-secondary)]">¿Qué incluye?</legend>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {PENA_WHAT_INCLUDES_OPTIONS.map((opt) => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2"
+                >
+                  <input type="checkbox" name="what_includes" value={opt} />
+                  <span className="text-sm text-[var(--text-primary)]">{opt}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">Formato de juego</span>
+            <input
+              name="game_format"
+              placeholder="Set a 6, Tie Break, etc."
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+            />
+          </label>
+        </>
+      ) : null}
+
       <label className="block">
         <span className="text-xs font-semibold text-[var(--text-secondary)]">Descripción (opcional)</span>
         <textarea
@@ -106,7 +134,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Máx. parejas</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">{tournamentType === "pena" ? "Máx. jugadores" : "Máx. parejas"}</span>
         <select name="max_pairs" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
           {MAX_PAIRS_OPTIONS.map((n) => (
             <option key={n} value={n}>
@@ -118,7 +146,7 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
 
       <div className="block">
         <label htmlFor="price_per_pair" className="text-xs font-semibold text-[var(--text-secondary)]">
-          Precio por pareja (ARS, para el club)
+          {tournamentType === "pena" ? "Precio por jugador (ARS, para el club)" : "Precio por pareja (ARS, para el club)"}
         </label>
         <input
           id="price_per_pair"
@@ -132,8 +160,10 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         />
         <p className="mt-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           Los jugadores verán{" "}
-          <span className="font-bold">${clubPrice.toLocaleString("es-AR")} por pareja</span>. Ese monto va
-          entero a tu cuenta de Mercado Pago.
+          <span className="font-bold">
+            ${clubPrice.toLocaleString("es-AR")} por {tournamentType === "pena" ? "jugador" : "pareja"}
+          </span>
+          . Ese monto va entero a tu cuenta de Mercado Pago.
         </p>
       </div>
 

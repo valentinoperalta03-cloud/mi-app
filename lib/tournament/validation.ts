@@ -13,8 +13,9 @@ export function validatePairsForType(
   if (type === "eliminacion" && !isPowerOfTwo(count)) {
     return { ok: false, message: "Eliminacion directa requiere cantidad de parejas potencia de 2 (ej. 4, 8, 16)." };
   }
-  if (type === "mixing" && count % 2 !== 0) {
-    return { ok: false, message: "Mixing requiere un numero par de parejas inscriptas." };
+  if (type === "pena") {
+    if (count < 4) return { ok: false, message: "Se necesitan al menos 4 jugadores inscriptos." };
+    if (count % 2 !== 0) return { ok: false, message: "Se necesita un numero par de jugadores inscriptos." };
   }
   return { ok: true };
 }

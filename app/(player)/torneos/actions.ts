@@ -23,7 +23,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max, requires_deposit, deposit_type, deposit_value"
+      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max, requires_deposit, deposit_type, deposit_value, is_individual"
     )
     .eq("id", tournamentId)
     .maybeSingle();
@@ -41,6 +41,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     requires_deposit: boolean;
     deposit_type: "percentage" | "fixed" | null;
     deposit_value: number;
+    is_individual: boolean;
   };
 
   if (await isClubSubscriptionBlocked(tour.club_id)) {
@@ -58,12 +59,12 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     return { ok: false, message: "Tu nivel no está dentro del rango permitido para este torneo." };
   }
 
-  const isMixing = tour.tournament_type === "mixing";
-  if (isMixing && partnerId) return { ok: false, message: "En mixing la inscripción es individual." };
-  if (!isMixing && !partnerId) return { ok: false, message: "Elegí a tu compañero/a." };
-  if (!isMixing && partnerId === user.id) return { ok: false, message: "Elegí otro jugador como compañero/a." };
+  const isIndividual = tour.is_individual;
+  if (isIndividual && partnerId) return { ok: false, message: "En una peña la inscripción es individual." };
+  if (!isIndividual && !partnerId) return { ok: false, message: "Elegí a tu compañero/a." };
+  if (!isIndividual && partnerId === user.id) return { ok: false, message: "Elegí otro jugador como compañero/a." };
 
-  if (!isMixing) {
+  if (!isIndividual) {
     const { data: op } = await supabase.from(DB_TABLES.profiles).select("level").eq("user_id", partnerId).maybeSingle();
     const ol = (op as { level?: number | null } | null)?.level;
     if (!playerLevelInTournamentBounds(ol, tour.category_min, tour.category_max)) {
@@ -102,7 +103,7 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     .insert({
       tournament_id: tournamentId,
       player1_id: user.id,
-      player2_id: isMixing ? null : partnerId,
+      player2_id: isIndividual ? null : partnerId,
       payment_status: "pending",
       waitlist: false,
       total_price: Number(tour.price_per_pair),

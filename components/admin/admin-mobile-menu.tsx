@@ -11,7 +11,6 @@ import {
   CreditCard,
   DollarSign,
   GraduationCap,
-  PartyPopper,
   SquareChartGantt,
   Trophy,
   Users,
@@ -44,7 +43,6 @@ const GROUPS: DrawerGroup[] = [
       { href: "/admin/jugadores", label: "Jugadores", icon: Users },
       { href: "/admin/clases", label: "Clases", icon: GraduationCap },
       { href: "/admin/torneos", label: "Torneos", icon: Trophy },
-      { href: "/admin/penas", label: "Peñas", icon: PartyPopper },
     ],
   },
   {

@@ -10,8 +10,7 @@ import { propagateBracket, saveTournamentMatchResultAndElo } from "@/lib/tournam
 import {
   buildAmericanoMatches,
   buildEliminationFixture,
-  buildMixingNextRound,
-  buildMixingRound1,
+  buildPenaFirstRound,
 } from "@/lib/tournament/fixture";
 import { validatePairsForType } from "@/lib/tournament/validation";
 import type { TournamentTypeKey } from "@/lib/tournament-constants";
@@ -76,10 +75,32 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
       const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
       if (error) return { ok: false, message: error.message };
     }
-  } else if (ttype === "mixing") {
-    const rows = buildMixingRound1(tournamentId, pairIds);
-    if (rows.length) {
-      const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
+  } else if (ttype === "pena") {
+    const slots = ((regs ?? []) as Array<{ id: string; player1_id: string }>).map((r) => ({
+      registrationId: r.id,
+      playerId: r.player1_id,
+    }));
+    const { matches, merges } = buildPenaFirstRound(tournamentId, slots);
+
+    // La inscripción de peña es individual: cada pareja sorteada se materializa
+    // fusionando dos inscripciones (una absorbe a la otra como player2_id) para
+    // que pair1_id/pair2_id de tournament_matches puedan seguir referenciando
+    // una única fila de tournament_registrations, igual que en americano/eliminación.
+    for (const m of merges) {
+      const { error: mergeErr } = await service
+        .from(DB_TABLES.tournamentRegistrations)
+        .update({ player2_id: m.mergePlayerId })
+        .eq("id", m.keepRegistrationId);
+      if (mergeErr) return { ok: false, message: mergeErr.message };
+      const { error: removeErr } = await service
+        .from(DB_TABLES.tournamentRegistrations)
+        .delete()
+        .eq("id", m.removeRegistrationId);
+      if (removeErr) return { ok: false, message: removeErr.message };
+    }
+
+    if (matches.length) {
+      const { error } = await service.from(DB_TABLES.tournamentMatches).insert(matches);
       if (error) return { ok: false, message: error.message };
     }
   } else if (ttype === "eliminacion") {
@@ -291,67 +312,31 @@ export async function saveMatchScheduleAction(formData: FormData): Promise<{ ok:
   return { ok: true, message: "Horario guardado." };
 }
 
-export async function advanceMixingRoundFormAction(formData: FormData): Promise<void> {
-  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
-  if (!tournamentId) return;
-  await advanceMixingRoundAction(tournamentId);
-}
-
-export async function advanceMixingRoundAction(tournamentId: string): Promise<{ ok: boolean; message: string }> {
+/** Peña: reasignar qué pareja (registration ya fusionada) enfrenta a cuál en un partido. */
+export async function updatePenaMatchPairsAction(
+  tournamentId: string,
+  matchId: string,
+  pair1Id: string | null,
+  pair2Id: string | null
+): Promise<{ ok: boolean; message: string }> {
   const supabase = await createClient({ allowCookieWrites: true });
   const gate = await assertTournamentOwner(supabase, tournamentId);
   if (!gate.ok) return gate;
 
-  if ((gate.row as { tournament_type?: string }).tournament_type !== "mixing") {
-    return { ok: false, message: "Solo aplica a torneos mixing." };
+  if ((gate.row as { tournament_type?: string }).tournament_type !== "pena") {
+    return { ok: false, message: "Solo aplica a peñas." };
   }
 
   const service = createServiceClient();
-  const { data: allMatches } = await service
+  const { error } = await service
     .from(DB_TABLES.tournamentMatches)
-    .select("id, round, status, winner_pair_id, pair1_id, pair2_id")
-    .eq("tournament_id", tournamentId)
-    .order("round", { ascending: false });
-
-  const rows = (allMatches ?? []) as Array<{
-    id: string;
-    round: number;
-    status: string;
-    winner_pair_id: string | null;
-    pair1_id: string | null;
-    pair2_id: string | null;
-  }>;
-
-  if (rows.length === 0) return { ok: false, message: "No hay partidos aun." };
-
-  const maxRound = rows[0].round;
-  const currentRound = rows.filter((r) => r.round === maxRound);
-  const pending = currentRound.filter((r) => r.status !== "finished");
-  if (pending.length > 0) {
-    return {
-      ok: false,
-      message: `Hay ${pending.length} partido${pending.length === 1 ? "" : "s"} pendiente${pending.length === 1 ? "" : "s"} en la ronda actual.`,
-    };
-  }
-
-  const winners = currentRound.map((r) => r.winner_pair_id).filter(Boolean) as string[];
-  if (winners.length < 2) {
-    return { ok: false, message: "No hay suficientes ganadores para generar una nueva ronda." };
-  }
-
-  const playedKeys = new Set<string>();
-  for (const m of rows) {
-    if (m.pair1_id && m.pair2_id) {
-      playedKeys.add([m.pair1_id, m.pair2_id].sort().join(":"));
-    }
-  }
-
-  const nextMatches = buildMixingNextRound(tournamentId, maxRound + 1, winners, playedKeys);
-  const { error } = await service.from(DB_TABLES.tournamentMatches).insert(nextMatches);
+    .update({ pair1_id: pair1Id || null, pair2_id: pair2Id || null })
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId);
   if (error) return { ok: false, message: error.message };
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  return { ok: true, message: `Ronda ${maxRound + 1} generada.` };
+  return { ok: true, message: "Pareja actualizada." };
 }
 
 export async function removeRegistrationAction(registrationId: string, tournamentId: string) {
