@@ -464,3 +464,74 @@ export async function finishPenaAction(penaId: string): Promise<{ ok: boolean; e
   revalidatePath(`/admin/penas/${penaId}`);
   return { ok: true };
 }
+
+export async function cancelPenaRegistrationByAdminAction(registrationId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) return { ok: false, error: "Sesión requerida." };
+
+  const service = createServiceClient();
+  const { data: reg } = await service
+    .from(DB_TABLES.penaRegistrations)
+    .select("id, pena_id, player_id, status, payment_status, payment_method, mp_payment_id, penas!inner(id, club_id, name)")
+    .eq("id", registrationId)
+    .maybeSingle();
+  if (!reg) return { ok: false, error: "Inscripción no encontrada." };
+
+  const raw = reg as Record<string, unknown>;
+  const penaPack = raw.penas;
+  const pena = (Array.isArray(penaPack) ? penaPack[0] : penaPack) as { id: string; club_id: string; name: string } | null;
+  if (!pena || !ctx.clubIds.includes(pena.club_id)) return { ok: false, error: "No autorizado." };
+
+  const status = String(raw.status);
+  if (status === "cancelled") return { ok: false, error: "Esta inscripción ya está cancelada." };
+
+  let refundFailed = false;
+  if (raw.payment_status === "confirmed" && raw.payment_method === "mercadopago" && raw.mp_payment_id) {
+    const result = await refundMercadoPagoPayment(String(raw.mp_payment_id));
+    if (result.ok) {
+      await service.from(DB_TABLES.penaRegistrations).update({ payment_status: "refunded" }).eq("id", registrationId);
+    } else {
+      refundFailed = true;
+    }
+  }
+
+  const { error } = await service.from(DB_TABLES.penaRegistrations).update({ status: "cancelled" }).eq("id", registrationId);
+  if (error) return { ok: false, error: error.message };
+
+  await createNotification(service, {
+    user_id: String(raw.player_id),
+    type: "reservation_cancelled",
+    title: "Inscripción cancelada",
+    body: `El club canceló tu inscripción a la peña "${pena.name}".`,
+  });
+
+  if (status === "registered") {
+    const { data: nextInLine } = await service
+      .from(DB_TABLES.penaRegistrations)
+      .select("id, player_id")
+      .eq("pena_id", pena.id)
+      .eq("status", "waitlist")
+      .order("registered_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const promoted = nextInLine as { id: string; player_id: string } | null;
+    if (promoted) {
+      await service.from(DB_TABLES.penaRegistrations).update({ status: "registered" }).eq("id", promoted.id);
+      await createNotification(service, {
+        user_id: promoted.player_id,
+        type: "reservation_confirmed",
+        title: "¡Entraste a la peña!",
+        body: `Se liberó un lugar en "${pena.name}" y quedaste inscripto.`,
+      });
+    }
+  }
+
+  revalidatePath("/admin/penas");
+  revalidatePath(`/admin/penas/${pena.id}`);
+
+  if (refundFailed) {
+    return { ok: true, error: "Inscripción cancelada, pero no se pudo reembolsar el pago. Hacelo manualmente desde Mercado Pago." };
+  }
+  return { ok: true };
+}
