@@ -58,7 +58,9 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     .select("id, player1_id, player2_id, payment_status, waitlist")
     .eq("tournament_id", tournamentId)
     .eq("payment_status", "approved")
-    .eq("waitlist", false);
+    .eq("waitlist", false)
+    .order("registration_order", { ascending: true })
+    .order("registered_at", { ascending: true });
 
   const pairIds = ((regs ?? []) as Array<{ id: string }>).map((r) => r.id);
   const ttype = String((gate.row as { tournament_type?: string }).tournament_type ?? "") as TournamentTypeKey;
@@ -132,12 +134,20 @@ export async function startTournamentAction(tournamentId: string): Promise<{ ok:
     .eq("id", tournamentId);
   if (statusErr) return { ok: false, message: statusErr.message };
 
+  const clubId = String((gate.row as { club_id?: string }).club_id ?? "");
+  const clubName = gate.ctx.clubs.find((c) => c.id === clubId)?.name ?? "el club";
+  const isPena = ttype === "pena";
+  const notifTitle = isPena ? "¡Tu peña comenzó! 🎉" : "¡Tu torneo comenzó! 🏆";
+  const notifBody = isPena
+    ? `${tname} en ${clubName} ya está en marcha. Revisá tu pareja y cancha asignada.`
+    : `${tname} en ${clubName} ya está en marcha. Revisá el fixture.`;
+
   for (const uid of memberIds) {
     await createNotification(service, {
       user_id: uid,
       type: "tournament_event",
-      title: "¡Comenzó el torneo!",
-      body: `El torneo "${tname}" ya está en curso. Revisá el fixture en la app.`,
+      title: notifTitle,
+      body: notifBody,
     });
   }
 
@@ -351,4 +361,35 @@ export async function removeRegistrationAction(registrationId: string, tournamen
   if (error) return { ok: false, message: error.message };
   revalidatePath(`/admin/torneos/${tournamentId}`);
   return { ok: true, message: "Inscripción eliminada." };
+}
+
+/**
+ * Guarda el orden manual de inscripciones antes de iniciar el torneo. Ese
+ * orden es el que usa startTournamentAction para armar los cruces del
+ * fixture (pareja 1 vs pareja 2, pareja 3 vs pareja 4, etc.).
+ */
+export async function reorderTournamentRegistrationsAction(
+  tournamentId: string,
+  orderedIds: string[]
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+
+  if ((gate.row as { status?: string }).status !== "open") {
+    return { ok: false, message: "Solo se puede reordenar mientras la inscripción está abierta." };
+  }
+
+  const service = createServiceClient();
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await service
+      .from(DB_TABLES.tournamentRegistrations)
+      .update({ registration_order: i })
+      .eq("id", orderedIds[i])
+      .eq("tournament_id", tournamentId);
+    if (error) return { ok: false, message: error.message };
+  }
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: "Orden guardado." };
 }

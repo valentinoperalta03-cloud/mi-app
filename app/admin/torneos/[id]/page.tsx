@@ -21,6 +21,7 @@ import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refr
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { finishTournamentFormAction, saveTournamentMatchFormAction, startTournamentFormAction, updatePenaMatchPairsAction } from "./actions";
 import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
+import { ReorderRegistrations } from "./reorder-registrations";
 import { TournamentScheduler } from "./TournamentScheduler";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -73,9 +74,10 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     service
       .from(DB_TABLES.tournamentRegistrations)
       .select(
-        "id, player1_id, player2_id, payment_status, waitlist, registered_at, financial_status, amount_paid, amount_pending"
+        "id, player1_id, player2_id, payment_status, waitlist, registered_at, registration_order, financial_status, amount_paid, amount_pending"
       )
       .eq("tournament_id", id)
+      .order("registration_order", { ascending: true })
       .order("registered_at", { ascending: true }),
     service
       .from(DB_TABLES.tournamentMatches)
@@ -290,6 +292,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
 
       <section>
         <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">Inscriptos</h2>
+        {tour.status === "open" ? (
+          <ReorderRegistrations
+            tournamentId={id}
+            items={approved.map((r) => ({ id: r.id, label: pairNameMap.get(r.id) ?? "Jugador" }))}
+          />
+        ) : null}
         <ul className="mt-2 space-y-2">
           {approved.map((r) => (
             <li
