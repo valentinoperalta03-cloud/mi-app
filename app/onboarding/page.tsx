@@ -22,8 +22,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const TOTAL_QUESTIONS = ONBOARDING_QUESTIONS.length;
 
-const PAGE_BACKGROUND =
-  "linear-gradient(180deg, #031733 0%, #041a3d 50%, rgba(0,133,252,0.06) 100%)";
+const PAGE_BACKGROUND = "#0085FC";
 
 type Step = "profile" | "quiz" | "result";
 
