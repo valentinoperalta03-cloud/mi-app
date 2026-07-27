@@ -88,7 +88,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
         <div className="px-4 pt-4">
           <Link
             href="/clubes"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0585FC] transition hover:text-[#0461C4]"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0085FC] transition hover:text-[#0461C4]"
           >
             <ArrowLeft className="h-4 w-4" />
             Clubes
@@ -100,7 +100,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={heroSrc} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0585FC] via-sky-500 to-cyan-400 text-3xl font-bold text-white/90">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0085FC] via-sky-500 to-cyan-400 text-3xl font-bold text-white/90">
               {clubName.slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -138,7 +138,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
           ) : null}
           {location ? (
             <p className="flex items-start gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0585FC]" />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0085FC]" />
               <span>{location}</span>
             </p>
           ) : null}
@@ -158,7 +158,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
               {tel ? (
                 <li>
                   <a href={tel} className="flex items-center gap-2 font-medium text-[#0461C4] transition hover:underline">
-                    <Phone className="h-4 w-4 shrink-0 text-[#0585FC]" />
+                    <Phone className="h-4 w-4 shrink-0 text-[#0085FC]" />
                     {club.contact_phone?.trim()}
                   </a>
                 </li>
@@ -191,7 +191,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
               ) : null}
               {club.business_hours?.trim() ? (
                 <li className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#0585FC]" />
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#0085FC]" />
                   <span>{club.business_hours.trim()}</span>
                 </li>
               ) : null}
@@ -272,7 +272,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
           <Link
             href={`/crear-partido?clubId=${encodeURIComponent(id)}`}
             aria-disabled={!canReserve}
-            className={`flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-[#0585FC]/25 transition hover:brightness-105 active:scale-[0.99] ${
+            className={`flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#0085FC] to-cyan-500 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-[#0085FC]/25 transition hover:brightness-105 active:scale-[0.99] ${
               !canReserve ? "pointer-events-none opacity-50 grayscale" : ""
             }`}
           >

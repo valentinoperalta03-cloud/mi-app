@@ -75,7 +75,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       <AdminBackLink href="/admin/canchas" />
 
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Precios</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Precios</p>
         <h1 className={adminTitle}>{(court as { name?: string | null }).name ?? "Cancha"}</h1>
         <p className={adminSubtitle}>Configurá el precio de cada turno de 90 min.</p>
       </header>
@@ -131,7 +131,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
                   step="1"
                   name={`price_${turn.start}`}
                   defaultValue={byTurnStart.get(turn.start) ?? basePrice}
-                  className="w-36 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-right text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                  className="w-36 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-right text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
                 />
               </label>
             ))}

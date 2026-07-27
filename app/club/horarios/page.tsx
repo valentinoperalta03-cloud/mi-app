@@ -43,9 +43,9 @@ const dayLabels = [
 const courtPillBase =
   "rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200";
 const courtPillActive =
-  "border-[#0585FC]/20/90 bg-[#0585FC]/5 text-[#0585FC] shadow-sm ring-1 ring-[#0585FC]/20/50";
+  "border-[#0085FC]/20/90 bg-[#0085FC]/5 text-[#0085FC] shadow-sm ring-1 ring-[#0085FC]/20/50";
 const courtPillIdle =
-  "border-slate-200/80 bg-white text-slate-600 hover:border-[#0585FC]/20/80 hover:bg-slate-50/90 hover:text-[#0585FC]";
+  "border-slate-200/80 bg-white text-slate-600 hover:border-[#0085FC]/20/80 hover:bg-slate-50/90 hover:text-[#0085FC]";
 
 export default async function ClubHorariosPage({ searchParams }: HorariosPageProps) {
   const supabase = await createClient();
@@ -110,7 +110,7 @@ export default async function ClubHorariosPage({ searchParams }: HorariosPagePro
       <AdminBackLink />
       <header className="space-y-2">
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">
-          <CalendarClock size={14} className="text-[#0585FC]" strokeWidth={2} />
+          <CalendarClock size={14} className="text-[#0085FC]" strokeWidth={2} />
           Horarios
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">

@@ -124,7 +124,7 @@ export function CompetitiveResultConfirmationCard(props: {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 rounded-2xl p-4 text-center"
-          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
         >
           <p className="text-base font-semibold text-white">🏆 ¡Resultado confirmado!</p>
           <p className="mt-1 text-sm text-white/80">

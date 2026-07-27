@@ -85,7 +85,7 @@ function PlayerDrawer({
       >
         <div
           className="shrink-0 border-b border-white/15 p-5"
-          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
         >
           <div className="flex items-center gap-3">
             {avatarUrl?.trim() ? (
@@ -363,7 +363,7 @@ export default function TopNav() {
         </div>
         <div
           className="h-0.5 w-full"
-          style={{ background: "linear-gradient(90deg, #0585FC, #38bdf8, #0585FC)" }}
+          style={{ background: "linear-gradient(90deg, #0085FC, #38bdf8, #0085FC)" }}
         />
       </header>
 

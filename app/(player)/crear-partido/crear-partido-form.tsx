@@ -101,7 +101,7 @@ function StepProgress({ step }: { step: Step }) {
           <span
             key={s}
             className={`h-1.5 w-1.5 rounded-full transition-colors ${
-              i <= idx ? "bg-[#0585FC]" : "bg-slate-200 dark:bg-slate-700"
+              i <= idx ? "bg-[#0085FC]" : "bg-slate-200 dark:bg-slate-700"
             }`}
           />
         ))}
@@ -468,7 +468,7 @@ export default function CrearPartidoForm({
       {currentStep === "clubs" ? (
         <div className="space-y-4">
           <header className="space-y-1">
-            <Link href="/home" className="text-sm font-semibold text-[#0585FC]">
+            <Link href="/home" className="text-sm font-semibold text-[#0085FC]">
               ← Volver
             </Link>
             <div className="flex items-center gap-2">
@@ -488,7 +488,7 @@ export default function CrearPartidoForm({
               placeholder="Buscar club..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-[#0085FC] focus:ring-2 focus:ring-[#0085FC]/20 dark:border-slate-700 dark:bg-slate-800"
             />
           </div>
 
@@ -498,7 +498,7 @@ export default function CrearPartidoForm({
               onClick={() => setLocationFilter("mi_ciudad")}
               className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
                 locationFilter === "mi_ciudad"
-                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                   : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               }`}
             >
@@ -509,7 +509,7 @@ export default function CrearPartidoForm({
               onClick={() => setLocationFilter("mi_provincia")}
               className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
                 locationFilter === "mi_provincia"
-                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                   : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               }`}
             >
@@ -520,7 +520,7 @@ export default function CrearPartidoForm({
               onClick={() => setLocationFilter("todos")}
               className={`rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
                 locationFilter === "todos"
-                  ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                  ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                   : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               }`}
             >
@@ -584,7 +584,7 @@ export default function CrearPartidoForm({
                   <div className="relative z-10 flex items-center gap-4">
                     <div
                       className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${
-                        cover ? "border-2 border-white/90 bg-white/10 shadow-md ring-1 ring-white/20" : "bg-[#0585FC]/10"
+                        cover ? "border-2 border-white/90 bg-white/10 shadow-md ring-1 ring-white/20" : "bg-[#0085FC]/10"
                       }`}
                     >
                       {logo ? (
@@ -596,7 +596,7 @@ export default function CrearPartidoForm({
                       ) : (
                         <div
                           className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
-                          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
                         >
                           {clubInitials(club.name)}
                         </div>
@@ -646,12 +646,12 @@ export default function CrearPartidoForm({
           <button
             type="button"
             onClick={() => setCurrentStep("clubs")}
-            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+            className="flex items-center gap-1 text-sm font-semibold text-[#0085FC]"
           >
             ← Volver a clubes
           </button>
 
-          <div className="relative h-48 w-full overflow-hidden rounded-3xl bg-[#0585FC]/10">
+          <div className="relative h-48 w-full overflow-hidden rounded-3xl bg-[#0085FC]/10">
             {(() => {
               const heroSrc =
                 selectedClub?.coverImageUrl?.trim() ||
@@ -668,7 +668,7 @@ export default function CrearPartidoForm({
                   ) : (
                     <div
                       className="flex h-full w-full items-center justify-center"
-                      style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                      style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
                     >
                       <svg width="80" height="80" viewBox="0 0 80 80" opacity="0.3">
                         <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" />
@@ -732,7 +732,7 @@ export default function CrearPartidoForm({
                   }}
                   className={`flex min-w-[4rem] shrink-0 flex-col items-center rounded-2xl border px-3 py-2.5 text-center transition-all ${
                     selectedDate === date.key
-                      ? "border-[#0585FC] bg-[#0585FC] text-white"
+                      ? "border-[#0085FC] bg-[#0085FC] text-white"
                       : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800"
                   }`}
                 >
@@ -751,7 +751,7 @@ export default function CrearPartidoForm({
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
-                      <p className="text-sm font-semibold text-[#0585FC]">
+                      <p className="text-sm font-semibold text-[#0085FC]">
                         Desde ${new Intl.NumberFormat("es-AR").format(minPriceByCourt.get(court.id) ?? court.price)}/turno
                       </p>
                     </div>
@@ -777,8 +777,8 @@ export default function CrearPartidoForm({
                             }}
                             className={`rounded-xl border py-2.5 text-center text-xs font-semibold transition-all ${
                               selectedSlot?.time === slot.time
-                                ? "border-[#0585FC] bg-[#0585FC] text-white"
-                                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800"
+                                ? "border-[#0085FC] bg-[#0085FC] text-white"
+                                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#0085FC]/30 dark:border-slate-700 dark:bg-slate-800"
                             }`}
                           >
                             <span className="block">{slot.time}</span>
@@ -796,7 +796,7 @@ export default function CrearPartidoForm({
                         setSelectedCourtId(court.id);
                         setSelectedSlot(null);
                       }}
-                      className="mt-2 w-full rounded-xl border border-[#0585FC]/20 bg-[#0585FC]/5 py-2 text-sm font-semibold text-[#0585FC] transition-colors hover:bg-[#0585FC]/10"
+                      className="mt-2 w-full rounded-xl border border-[#0085FC]/20 bg-[#0085FC]/5 py-2 text-sm font-semibold text-[#0085FC] transition-colors hover:bg-[#0085FC]/10"
                     >
                       Ver horarios disponibles
                     </button>
@@ -813,7 +813,7 @@ export default function CrearPartidoForm({
           <button
             type="button"
             onClick={() => setCurrentStep("club-detail")}
-            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+            className="flex items-center gap-1 text-sm font-semibold text-[#0085FC]"
           >
             ← Volver a la cancha
           </button>
@@ -859,7 +859,7 @@ export default function CrearPartidoForm({
                 onClick={() => setMatchType("amistoso")}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   matchType === "amistoso"
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -870,7 +870,7 @@ export default function CrearPartidoForm({
                 onClick={() => setMatchType("competitivo")}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   matchType === "competitivo"
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -887,7 +887,7 @@ export default function CrearPartidoForm({
                 onClick={() => setVisibility("publico")}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   visibility === "publico"
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -898,7 +898,7 @@ export default function CrearPartidoForm({
                 onClick={() => setVisibility("privado")}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   visibility === "privado"
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -927,8 +927,8 @@ export default function CrearPartidoForm({
                         isDisabled
                           ? "cursor-not-allowed border-slate-100 bg-slate-50 opacity-40 dark:border-slate-800 dark:bg-slate-900/40"
                           : genderCategory === option
-                            ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-[#0085FC]/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       }`}
                     >
                       {option === "masculino" ? "Masculino" : option === "femenino" ? "Femenino" : "Mixto"}
@@ -958,7 +958,7 @@ export default function CrearPartidoForm({
                 onClick={() => setLevelRestricted(false)}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   !levelRestricted
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -969,7 +969,7 @@ export default function CrearPartidoForm({
                 onClick={() => setLevelRestricted(true)}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                   levelRestricted
-                    ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
                     : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 }`}
               >
@@ -1007,7 +1007,7 @@ export default function CrearPartidoForm({
                         onClick={() => toggleFriend(friend.userId)}
                         className={`min-w-[12rem] rounded-2xl border px-3 py-3 text-left transition ${
                           selected
-                            ? "border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10"
+                            ? "border-[#0085FC]/20 bg-[#0085FC]/5 dark:bg-[#0085FC]/10"
                             : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
                         }`}
                       >
@@ -1016,7 +1016,7 @@ export default function CrearPartidoForm({
                             {friend.avatarUrl ? (
                               <Image src={friend.avatarUrl} alt={friend.name} fill className="object-cover" />
                             ) : (
-                              <span className="flex h-full w-full items-center justify-center bg-[#0585FC]/10 text-xs font-semibold text-[#0461C4]">
+                              <span className="flex h-full w-full items-center justify-center bg-[#0085FC]/10 text-xs font-semibold text-[#0461C4]">
                                 {friend.name.slice(0, 1).toUpperCase()}
                               </span>
                             )}
@@ -1051,7 +1051,7 @@ export default function CrearPartidoForm({
           <button
             type="button"
             onClick={() => setCurrentStep("options")}
-            className="flex items-center gap-1 text-sm font-semibold text-[#0585FC]"
+            className="flex items-center gap-1 text-sm font-semibold text-[#0085FC]"
           >
             ← Volver a opciones
           </button>
@@ -1068,7 +1068,7 @@ export default function CrearPartidoForm({
 
           <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.06]">
             <div
-              className="flex h-20 w-full items-center gap-3 bg-[#0585FC]/10 px-5"
+              className="flex h-20 w-full items-center gap-3 bg-[#0085FC]/10 px-5"
               style={{ background: "var(--color-brand-gradient)" }}
             >
               <div>
@@ -1108,7 +1108,7 @@ export default function CrearPartidoForm({
                 </div>
                 {resumenPago.requiresDeposit ? (
                   <>
-                    <div className="flex items-center justify-between rounded-xl bg-[#0585FC]/10 px-3 py-2">
+                    <div className="flex items-center justify-between rounded-xl bg-[#0085FC]/10 px-3 py-2">
                       <span className="text-sm font-semibold text-[#0461C4] dark:text-sky-300">Seña a pagar ahora</span>
                       <span className="text-base font-bold text-[#0461C4] dark:text-sky-300">${fmtAr(resumenPago.deposit)}</span>
                     </div>
@@ -1138,7 +1138,7 @@ export default function CrearPartidoForm({
                     onClick={() => setPayMethod("mercadopago")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "mercadopago"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -1155,7 +1155,7 @@ export default function CrearPartidoForm({
                     onClick={() => setPayMethod("cash")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "cash"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -1172,7 +1172,7 @@ export default function CrearPartidoForm({
                     onClick={() => setPayMethod("transfer")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "transfer"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -1295,7 +1295,7 @@ export default function CrearPartidoForm({
           {confirmedMatchId ? (
             <Link
               href={`/partidos/${confirmedMatchId}`}
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-[#0585FC] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+              className="inline-flex w-full items-center justify-center rounded-2xl bg-[#0085FC] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
             >
               Ver mi partido
             </Link>

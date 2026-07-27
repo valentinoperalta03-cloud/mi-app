@@ -4,8 +4,8 @@
   "description": "Reserva canchas y gestiona tus partidos de padel",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0585FC",
-  "theme_color": "#0585FC",
+  "background_color": "#0085FC",
+  "theme_color": "#0085FC",
   "icons": [
     {
       "src": "/logo.png",

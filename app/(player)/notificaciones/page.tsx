@@ -34,21 +34,21 @@ type NotificationRow = {
 };
 
 const TYPE_UI: Record<string, { Icon: typeof UserPlus; className: string }> = {
-  join_request: { Icon: UserPlus, className: "text-[#0585FC]" },
+  join_request: { Icon: UserPlus, className: "text-[#0085FC]" },
   join_approved: { Icon: CheckCircle, className: "text-emerald-600" },
   join_rejected: { Icon: XCircle, className: "text-rose-600" },
-  player_joined: { Icon: Users, className: "text-[#0585FC]" },
+  player_joined: { Icon: Users, className: "text-[#0085FC]" },
   match_reminder: { Icon: Clock, className: "text-amber-600" },
   result_pending: { Icon: AlertCircle, className: "text-amber-600" },
   reservation_confirmed: { Icon: CalendarCheck, className: "text-emerald-600" },
   reservation_cancelled: { Icon: CalendarX, className: "text-rose-600" },
   payment_approved: { Icon: CreditCard, className: "text-emerald-600" },
   payment_rejected: { Icon: CreditCard, className: "text-rose-600" },
-  level_up: { Icon: TrendingUp, className: "text-[#0585FC]" },
-  new_follower: { Icon: UserPlus, className: "text-[#0585FC]" },
+  level_up: { Icon: TrendingUp, className: "text-[#0085FC]" },
+  new_follower: { Icon: UserPlus, className: "text-[#0085FC]" },
   now_friends: { Icon: Users, className: "text-emerald-600" },
-  new_message: { Icon: MessageCircle, className: "text-[#0585FC]" },
-  group_message: { Icon: MessageSquare, className: "text-[#0585FC]" },
+  new_message: { Icon: MessageCircle, className: "text-[#0085FC]" },
+  group_message: { Icon: MessageSquare, className: "text-[#0085FC]" },
   added_to_group: { Icon: UserPlus, className: "text-emerald-600" },
 };
 
@@ -103,7 +103,7 @@ export default async function NotificacionesPage() {
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-[#0585FC]">Notificaciones</p>
+          <p className="text-sm font-medium text-[#0085FC]">Notificaciones</p>
           <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Tu actividad reciente</h1>
         </div>
         <NotificationsPermissionButton />
@@ -135,14 +135,14 @@ export default async function NotificacionesPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-bold text-slate-900">{n.title}</p>
-                            {!n.read ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#0585FC]/50" /> : null}
+                            {!n.read ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#0085FC]/50" /> : null}
                           </div>
                           <p className="mt-1 break-words text-sm text-slate-600">{n.body}</p>
                           <p className="mt-2 text-xs text-slate-400">{rel}</p>
                           {showProfileButton ? (
                             <Link
                               href={`/jugador/${n.actor_id}`}
-                              className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] transition active:scale-[0.97] dark:text-sky-400"
+                              className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[#0085FC]/25 bg-[#0085FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] transition active:scale-[0.97] dark:text-sky-400"
                             >
                               Ver perfil →
                             </Link>

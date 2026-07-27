@@ -27,7 +27,7 @@ export async function HomeSuggestionsSection({
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
               style={{ background: "rgba(5,133,252,0.1)" }}
             >
-              <Users size={18} className="text-[#0585FC]" strokeWidth={2} aria-hidden />
+              <Users size={18} className="text-[#0085FC]" strokeWidth={2} aria-hidden />
             </div>
             <div>
               <p className="text-sm font-bold text-[var(--text-primary)]">
@@ -44,8 +44,8 @@ export async function HomeSuggestionsSection({
 
     return (
       <div className="rounded-2xl border border-slate-200/80 bg-[var(--bg-card)] px-5 py-6 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)] dark:border-slate-700/80">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
-          <Users className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0085FC]/12">
+          <Users className="h-6 w-6 text-[#0085FC]" strokeWidth={1.75} aria-hidden />
         </div>
         <h3 className="mt-4 text-base font-bold tracking-tight text-[var(--text-primary)]">
           Encontrá jugadores de tu nivel
@@ -129,11 +129,11 @@ export async function HomeSuggestedClubs() {
             className="w-[10rem] shrink-0 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]"
           >
             <Link href={`/clubes/${club.id}`} className="block text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#0585FC]/10">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#0085FC]/10">
                 {imgUrl ? (
                   <img src={imgUrl} alt={label} className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-base font-semibold text-[#0585FC]">
+                  <span className="text-base font-semibold text-[#0085FC]">
                     {label.slice(0, 2).toUpperCase()}
                   </span>
                 )}

@@ -34,7 +34,7 @@ export function HomeSuggestionPlus({ targetUserId }: { targetUserId: string }) {
         disabled={pending}
         onClick={() => click()}
         aria-label="Agregar a favoritos"
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/90 bg-white text-lg font-light leading-none text-slate-500 shadow-sm transition hover:border-[#0585FC]/30 hover:bg-[#0585FC]/5 hover:text-[#0461C4] disabled:opacity-50"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/90 bg-white text-lg font-light leading-none text-slate-500 shadow-sm transition hover:border-[#0085FC]/30 hover:bg-[#0085FC]/5 hover:text-[#0461C4] disabled:opacity-50"
       >
         +
       </button>

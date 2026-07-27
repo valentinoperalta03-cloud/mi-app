@@ -312,7 +312,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6));
             setPinError(false);
           }}
-          className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+          className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
           placeholder="······"
           autoComplete="one-time-code"
         />
@@ -482,7 +482,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
           <section className={adminCard}>
             <Link
               href="/admin/finanzas/reembolsos"
-              className="text-base font-bold text-[#0585FC] transition hover:text-[#0461C4]"
+              className="text-base font-bold text-[#0085FC] transition hover:text-[#0461C4]"
             >
               Ver panel de reembolsos →
             </Link>

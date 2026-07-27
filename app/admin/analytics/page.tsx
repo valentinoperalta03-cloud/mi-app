@@ -223,7 +223,7 @@ export default async function AdminAnalyticsPage() {
             {totalReservations} reservas / {totalAvailableSlots} slots
           </p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-            <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, globalOccupancy)}%` }} />
+            <div className="h-full rounded-full bg-[#0085FC]" style={{ width: `${Math.max(2, globalOccupancy)}%` }} />
           </div>
         </div>
         <div className={adminCard}>
@@ -282,7 +282,7 @@ export default async function AdminAnalyticsPage() {
                 <div className="h-3 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                   <div
                     className={`h-full rounded-full ${
-                      isMax ? "bg-[#0585FC]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
+                      isMax ? "bg-[#0085FC]" : isMin ? "bg-rose-300 dark:bg-rose-700" : "bg-[#7CC0FF]"
                     }`}
                     style={{ width: `${Math.max(3, (count / maxDayCount) * 100)}%` }}
                   />
@@ -310,7 +310,7 @@ export default async function AdminAnalyticsPage() {
                   <span className="font-bold text-[var(--text-primary)]">{ratio}%</span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-                  <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(2, ratio)}%` }} />
+                  <div className="h-full rounded-full bg-[#0085FC]" style={{ width: `${Math.max(2, ratio)}%` }} />
                 </div>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   {reservations} reservas / {slots} slots disponibles
@@ -332,7 +332,7 @@ export default async function AdminAnalyticsPage() {
               <p className="text-xs font-semibold text-[var(--text-tertiary)]">Semana {idx + 1}</p>
               <div className="mt-2 flex h-24 items-end justify-center">
                 <div
-                  className="w-10 rounded-t-md bg-[#0585FC]"
+                  className="w-10 rounded-t-md bg-[#0085FC]"
                   style={{ height: `${Math.max(8, (value / maxWeek) * 100)}%` }}
                 />
               </div>

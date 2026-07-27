@@ -58,7 +58,7 @@ export default function ClubDepositFields({
         placeholder={type === "percentage" ? "Ej. 30" : "Ej. 3000"}
         className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
       />
-      <p className="rounded-xl bg-[#0585FC]/5 px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
+      <p className="rounded-xl bg-[#0085FC]/5 px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
         {validValue
           ? `Para una cancha de $${EXAMPLE_TOTAL.toLocaleString("es-AR")}, la seña sería $${depositAmount.toLocaleString("es-AR")}.`
           : type === "percentage"

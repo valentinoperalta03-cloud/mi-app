@@ -78,7 +78,7 @@ export default function OnboardingChecklist({
 
   return (
     <section
-      className={`${adminCard} space-y-5 border-[#0585FC]/20 bg-gradient-to-br from-[var(--bg-subtle)] via-[var(--bg-card)] to-sky-50/40 ring-1 ring-[#0585FC]/10 dark:border-sky-900/30 dark:from-[var(--bg-app)] dark:via-[var(--bg-subtle)] dark:to-sky-950/20 dark:ring-sky-500/10`}
+      className={`${adminCard} space-y-5 border-[#0085FC]/20 bg-gradient-to-br from-[var(--bg-subtle)] via-[var(--bg-card)] to-sky-50/40 ring-1 ring-[#0085FC]/10 dark:border-sky-900/30 dark:from-[var(--bg-app)] dark:via-[var(--bg-subtle)] dark:to-sky-950/20 dark:ring-sky-500/10`}
     >
       <header className="space-y-1">
         <p className="font-admin-display text-xl font-semibold tracking-tight text-[var(--text-primary)]">👋 Bienvenido a PadeLibre</p>
@@ -144,7 +144,7 @@ export default function OnboardingChecklist({
                 <Link
                   href={step.href}
                   prefetch
-                  className={`mt-2 inline-flex w-fit items-center rounded-xl px-3 py-1.5 text-xs font-bold text-[#0585FC] ring-1 ring-[#0585FC]/25 transition hover:bg-[#0585FC]/10 dark:text-sky-400 dark:ring-sky-500/30 dark:hover:bg-sky-500/10 ${adminPressable}`}
+                  className={`mt-2 inline-flex w-fit items-center rounded-xl px-3 py-1.5 text-xs font-bold text-[#0085FC] ring-1 ring-[#0085FC]/25 transition hover:bg-[#0085FC]/10 dark:text-sky-400 dark:ring-sky-500/30 dark:hover:bg-sky-500/10 ${adminPressable}`}
                 >
                   Completar →
                 </Link>

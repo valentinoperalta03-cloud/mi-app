@@ -115,7 +115,7 @@ export function RatePlayerDrawer({
               <select
                 value={peerId}
                 onChange={(e) => setPeerId(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20/60"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20/60"
               >
                 <option value="">Elegí a quién calificás</option>
                 {peerOptions.map((p) => (
@@ -142,7 +142,7 @@ export function RatePlayerDrawer({
                   onClick={() => setRating(n)}
                   className={`rounded-2xl border py-2.5 text-sm font-bold tabular-nums transition-all active:scale-[0.97] disabled:opacity-50 ${
                     rating === n
-                      ? "border-[#0585FC]/20 bg-[#0585FC]/50 text-white shadow-md shadow-sky-500/25"
+                      ? "border-[#0085FC]/20 bg-[#0085FC]/50 text-white shadow-md shadow-sky-500/25"
                       : "border-slate-200/90 bg-white text-slate-700 hover:border-slate-300"
                   }`}
                 >
@@ -162,7 +162,7 @@ export function RatePlayerDrawer({
             type="button"
             disabled={pending || !peerId || rating == null}
             onClick={() => handleSubmit()}
-            className="w-full rounded-3xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50 disabled:cursor-not-allowed disabled:opacity-45"
+            className="w-full rounded-3xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0085FC]/50 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {pending ? "Guardando…" : "Guardar calificación"}
           </button>

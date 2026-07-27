@@ -149,8 +149,8 @@ export function ProfileLevelingWizard() {
                     onClick={() => handleSelectAnswer(opt.score)}
                     className={`w-full rounded-3xl border bg-white px-5 py-4 text-left transition ${
                       on
-                        ? "border-[#0585FC]/20 ring-2 ring-[#0585FC]/40"
-                        : "border-slate-200 hover:border-[#0585FC]/30"
+                        ? "border-[#0085FC]/20 ring-2 ring-[#0085FC]/40"
+                        : "border-slate-200 hover:border-[#0085FC]/30"
                     }`}
                   >
                     <p className="text-base font-semibold text-slate-900">{opt.text}</p>

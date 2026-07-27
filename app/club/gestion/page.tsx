@@ -46,9 +46,9 @@ function formatToday() {
 const courtPillBase =
   "rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200";
 const courtPillActive =
-  "border-[#0585FC]/20/90 bg-[#0585FC]/5 text-[#0585FC] shadow-sm ring-1 ring-[#0585FC]/20/50";
+  "border-[#0085FC]/20/90 bg-[#0085FC]/5 text-[#0085FC] shadow-sm ring-1 ring-[#0085FC]/20/50";
 const courtPillIdle =
-  "border-slate-200/80 bg-white text-slate-600 hover:border-[#0585FC]/20/80 hover:bg-slate-50/90 hover:text-[#0585FC]";
+  "border-slate-200/80 bg-white text-slate-600 hover:border-[#0085FC]/20/80 hover:bg-slate-50/90 hover:text-[#0085FC]";
 
 export default async function ClubGestionPage({ searchParams }: GestionPageProps) {
   const supabase = await createClient();
@@ -144,7 +144,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
       <AdminBackLink />
       <header className="space-y-2">
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm">
-          <LayoutGrid size={14} className="text-[#0585FC]" strokeWidth={2} />
+          <LayoutGrid size={14} className="text-[#0085FC]" strokeWidth={2} />
           Turnos
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
@@ -183,7 +183,7 @@ export default async function ClubGestionPage({ searchParams }: GestionPageProps
                 name="date"
                 type="date"
                 defaultValue={selectedDate}
-                className="rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20/60"
+                className="rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20/60"
               />
               <button
                 type="submit"

@@ -67,7 +67,7 @@ export default function InviteFriendsSection({
                   type="button"
                   disabled={pending || sent}
                   onClick={() => handleInvite(friend.user_id)}
-                  className="rounded-xl border border-[#0585FC] bg-white px-3 py-1.5 text-xs font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5 disabled:opacity-60"
+                  className="rounded-xl border border-[#0085FC] bg-white px-3 py-1.5 text-xs font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/5 disabled:opacity-60"
                 >
                   {pendingUserId === friend.user_id ? "Enviando..." : sent ? "Invitado" : "Invitar"}
                 </button>

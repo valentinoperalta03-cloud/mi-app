@@ -84,7 +84,7 @@ export default async function MatchRequestsPage({ params }: PageProps) {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-2">
-        <Link href={`/partidos/${matchId}`} className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
+        <Link href={`/partidos/${matchId}`} className="inline-block text-sm font-semibold text-[#0085FC] hover:text-[#0461C4]">
           ← Volver al partido
         </Link>
         <h1 className="text-xl font-semibold tracking-tight text-slate-950">Solicitudes de acceso</h1>

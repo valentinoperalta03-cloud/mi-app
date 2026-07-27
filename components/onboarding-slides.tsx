@@ -6,7 +6,7 @@ import { LocationSelectorOnboarding } from "@/components/LocationSelectorOnboard
 import { DEFAULT_USER_LOCATION, type LocationSelection } from "@/lib/location-data";
 import { saveUserLocationToProfile } from "@/lib/locations";
 
-const BLUE = "#0585FC";
+const BLUE = "#0085FC";
 const BLUE_DARK = "#0461C4";
 const BLUE_GLOW = "rgba(5,133,252,0.35)";
 

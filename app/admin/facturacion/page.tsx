@@ -102,7 +102,7 @@ export default async function FacturacionPage({
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
         <div className={`${adminCard} ${adminAccentBar} w-full max-w-lg`}>
-          <p className={`${adminKicker} text-[#0585FC]`}>Suscripción PadeLibre</p>
+          <p className={`${adminKicker} text-[#0085FC]`}>Suscripción PadeLibre</p>
           <h1 className={`${adminTitle} mt-2`}>Estás en período de prueba</h1>
           <p className={`${adminSubtitle} mt-3`}>
             {daysLeft != null
@@ -110,7 +110,7 @@ export default async function FacturacionPage({
               : "Estás en período de prueba gratuita."}
           </p>
 
-          <div className="mt-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-5">
+          <div className="mt-6 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 p-5">
             <p className="text-3xl font-bold text-[var(--text-primary)]">
               $50.000 <span className="text-base font-medium text-[var(--text-tertiary)]">ARS/mes</span>
             </p>
@@ -133,11 +133,11 @@ export default async function FacturacionPage({
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
       <div className={`${adminCard} ${adminAccentBar} w-full max-w-lg`}>
-        <p className={`${adminKicker} text-[#0585FC]`}>Suscripción PadeLibre</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Suscripción PadeLibre</p>
         <h1 className={`${adminTitle} mt-2`}>Activá tu suscripción</h1>
         <p className={`${adminSubtitle} mt-3`}>{message}</p>
 
-        <div className="mt-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-5">
+        <div className="mt-6 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 p-5">
           <p className="text-3xl font-bold text-[var(--text-primary)]">
             $50.000 <span className="text-base font-medium text-[var(--text-tertiary)]">ARS/mes</span>
           </p>

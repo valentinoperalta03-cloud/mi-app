@@ -24,7 +24,7 @@ export default function ClubesError({
       <button
         type="button"
         onClick={() => reset()}
-        className="rounded-2xl bg-[#0585FC] px-4 py-3 text-sm font-semibold text-white"
+        className="rounded-2xl bg-[#0085FC] px-4 py-3 text-sm font-semibold text-white"
       >
         Reintentar
       </button>

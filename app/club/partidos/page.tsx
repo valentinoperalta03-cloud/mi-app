@@ -89,7 +89,7 @@ export default async function ClubPartidosPage() {
     <main className="space-y-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#0585FC]">Partidos</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#0085FC]">Partidos</p>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
           Lista de partidos
         </h1>
@@ -145,7 +145,7 @@ export default async function ClubPartidosPage() {
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
                       match.is_competitive
-                        ? "border border-[#0585FC]/20 bg-[#0585FC]/5 text-[#0461C4]"
+                        ? "border border-[#0085FC]/20 bg-[#0085FC]/5 text-[#0461C4]"
                         : "border border-slate-200 bg-slate-50 text-slate-600"
                     }`}
                   >

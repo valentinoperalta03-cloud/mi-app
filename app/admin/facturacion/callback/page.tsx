@@ -98,7 +98,7 @@ export default async function FacturacionCallbackPage({
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-10 text-center">
       <div className={`${adminCard} w-full max-w-lg`}>
-        <p className={`${adminKicker} text-[#0585FC]`}>Suscripción PadeLibre</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Suscripción PadeLibre</p>
         <h1 className={`${adminTitle} mt-2`}>Procesando tu suscripción</h1>
         <p className={`${adminSubtitle} mt-3`}>
           Tu suscripción está siendo procesada. En unos minutos vas a recibir confirmación.

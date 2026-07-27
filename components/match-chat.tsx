@@ -108,7 +108,7 @@ export function MatchChat({
     <div className="flex flex-col rounded-2xl border border-[var(--border-default)] bg-[var(--bg-card)] overflow-hidden shadow-[var(--shadow-card)]">
       <div
         className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-3"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
       >
         <div className="flex -space-x-2">
           {participants.slice(0, 4).map((p) => (
@@ -163,7 +163,7 @@ export function MatchChat({
                     }`}
                     style={
                       isMe
-                        ? { background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }
+                        ? { background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }
                         : {}
                     }
                   >
@@ -187,14 +187,14 @@ export function MatchChat({
           placeholder={canWrite ? "Escribí un mensaje..." : "Solo lectura para este partido"}
           maxLength={500}
           disabled={!canWrite}
-          className="flex-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20"
+          className="flex-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[#0085FC] focus:ring-2 focus:ring-[#0085FC]/20"
         />
         <button
           type="button"
           onClick={() => void handleSend()}
           disabled={!canWrite || !input.trim() || sending}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white transition-all disabled:opacity-50 hover:shadow-[0_4px_12px_rgba(5,133,252,0.4)]"
-          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
         >
           <Send size={16} />
         </button>

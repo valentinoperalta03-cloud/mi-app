@@ -21,7 +21,7 @@ export function MpLoadingNotice() {
         </div>
       ) : (
         <div className="flex items-center justify-center gap-3 rounded-2xl bg-slate-100 px-4 py-3.5 dark:bg-slate-800">
-          <span className="h-4 w-4 animate-pulse rounded-full bg-[#0585FC]" aria-hidden />
+          <span className="h-4 w-4 animate-pulse rounded-full bg-[#0085FC]" aria-hidden />
           <span className="animate-pulse text-sm font-semibold text-slate-600 dark:text-slate-300">
             Generando el link de pago con Mercado Pago…
           </span>

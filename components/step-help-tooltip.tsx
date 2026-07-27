@@ -19,7 +19,7 @@ export function StepHelpTooltip({ title, children, label }: StepHelpTooltipProps
         type="button"
         onClick={() => setOpen(true)}
         aria-label={label ?? "Ayuda de este paso"}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0585FC]/10 text-[11px] font-bold text-[#0585FC] ring-1 ring-[#0585FC]/25 transition active:scale-90"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0085FC]/10 text-[11px] font-bold text-[#0085FC] ring-1 ring-[#0085FC]/25 transition active:scale-90"
       >
         ?
       </button>

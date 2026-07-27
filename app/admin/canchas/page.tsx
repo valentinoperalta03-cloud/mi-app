@@ -101,7 +101,7 @@ export default async function AdminCanchasPage({
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Canchas</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Canchas</p>
         <h1 className={adminTitle}>Mis canchas</h1>
         <p className={adminSubtitle}>Gestioná precios y horarios de cada cancha.</p>
       </header>
@@ -116,7 +116,7 @@ export default async function AdminCanchasPage({
       {mainClubId ? (
         <details className={`${adminCard} group`} open={clubDepositValue === 0}>
           <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-2 group-open:border-[#0585FC]/30">
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-2 group-open:border-[#0085FC]/30">
               Configuración de seña {clubDepositValue > 0 ? "✓" : "⚠️ Sin configurar"}
             </span>
           </summary>
@@ -140,7 +140,7 @@ export default async function AdminCanchasPage({
       {ctx.clubs.length > 0 ? (
         <details className={`${adminCard} ${adminAccentBar} group`}>
           <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-2 group-open:border-[#0585FC]/30">
+            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-2 group-open:border-[#0085FC]/30">
               Nueva cancha +
             </span>
           </summary>
@@ -150,7 +150,7 @@ export default async function AdminCanchasPage({
               <select
                 name="club_id"
                 required
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
                 defaultValue={ctx.clubs[0]?.id ?? ""}
               >
                 {ctx.clubs.map((c) => (
@@ -167,7 +167,7 @@ export default async function AdminCanchasPage({
                 type="text"
                 required
                 placeholder="Ej. Cancha 1"
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
               />
             </label>
             <label className="block space-y-1.5">
@@ -180,7 +180,7 @@ export default async function AdminCanchasPage({
                 min={0}
                 required
                 placeholder="0"
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
               />
             </label>
             <label className="block space-y-1.5">
@@ -188,7 +188,7 @@ export default async function AdminCanchasPage({
               <select
                 name="surface"
                 required
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20"
+                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
                 defaultValue="cemento"
               >
                 <option value="cemento">Cemento</option>

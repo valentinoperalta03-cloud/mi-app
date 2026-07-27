@@ -38,7 +38,7 @@ export default async function AdminHorariosPage() {
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/config" />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Configuración</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Configuración</p>
         <h1 className={adminTitle}>Horarios bloqueados</h1>
         <p className={adminSubtitle}>
           Bloqueá turnos específicos por día de la semana. Se aplica a todas las canchas del club.

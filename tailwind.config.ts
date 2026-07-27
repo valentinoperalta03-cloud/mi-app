@@ -28,7 +28,7 @@ const config: Config = {
           950: "#082f49",
         },
         brand: {
-          primary: "#0585FC",
+          primary: "#0085FC",
           secondary: "#0461C4",
           lima: "#CCFF00",
           "lima-subtle": "rgba(204,255,0,0.12)",
@@ -36,7 +36,7 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+        "brand-gradient": "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)",
         "brand-gradient-dark": "linear-gradient(135deg, #031733 0%, #0461C4 100%)",
       },
       fontFamily: {

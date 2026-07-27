@@ -54,7 +54,7 @@ export default function VisibilityToggle({
           onClick={onToggle}
           disabled={pending}
           className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
-            isPrivate ? "bg-[#0585FC]" : "bg-slate-300"
+            isPrivate ? "bg-[#0085FC]" : "bg-slate-300"
           } disabled:opacity-60`}
           aria-label={isPrivate ? "Cambiar a público" : "Cambiar a privado"}
           aria-pressed={isPrivate}

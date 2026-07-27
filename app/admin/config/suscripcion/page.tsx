@@ -79,7 +79,7 @@ export default async function AdminConfigSuscripcionPage() {
 
       {status === "pending" ? (
         <section
-          className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
+          className={`${adminCard} border-[#0085FC]/20 bg-[#0085FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
         >
           <p className="text-base font-bold text-[#0461C4] dark:text-sky-300">Activá tu suscripción</p>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -102,7 +102,7 @@ export default async function AdminConfigSuscripcionPage() {
         </section>
       ) : status === "trial" ? (
         <section
-          className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
+          className={`${adminCard} border-[#0085FC]/20 bg-[#0085FC]/5 p-6 dark:border-sky-800 dark:bg-sky-950/20`}
         >
           <p className="text-base font-bold text-[#0461C4] dark:text-sky-300">Período de prueba</p>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">

@@ -161,7 +161,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
             ${priceDisplay.toLocaleString("es-AR")} por {tour.is_individual ? "jugador" : "pareja"}
           </p>
           {tour.requires_deposit ? (
-            <div className="rounded-xl bg-[#0585FC]/10 px-3 py-2 text-xs">
+            <div className="rounded-xl bg-[#0085FC]/10 px-3 py-2 text-xs">
               <p className="flex items-center justify-between font-semibold text-[#0461C4] dark:text-sky-300">
                 <span>Seña a pagar ahora</span>
                 <span>${depositAmount.toLocaleString("es-AR")}</span>
@@ -265,7 +265,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
             .filter(Boolean)
             .join(" · ");
           return (
-            <section className="mt-8 rounded-3xl border border-[#0585FC] bg-[#0585FC]/5 p-5 dark:border-sky-500 dark:bg-sky-950/20">
+            <section className="mt-8 rounded-3xl border border-[#0085FC] bg-[#0085FC]/5 p-5 dark:border-sky-500 dark:bg-sky-950/20">
               <h2 className="text-base font-semibold text-[var(--text-primary)]">🎉 Tu partido</h2>
               {partnerName ? (
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -297,7 +297,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
               key={m.id}
               className={`rounded-2xl border px-3 py-3 ${
                 isMine
-                  ? "border-[#0585FC] bg-[#0585FC]/5 dark:border-sky-500 dark:bg-sky-950/20"
+                  ? "border-[#0085FC] bg-[#0085FC]/5 dark:border-sky-500 dark:bg-sky-950/20"
                   : "border-[var(--border-subtle)] bg-[var(--bg-card)]"
               }`}
             >

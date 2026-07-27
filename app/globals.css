@@ -3,18 +3,18 @@
 @theme {
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
-  --color-sky-500: #0585FC;
+  --color-sky-500: #0085FC;
   --color-sky-600: #0461C4;
   --color-sky-700: #0461C4;
 
   /* Colores de marca (antes en tailwind.config.ts, nunca conectado al pipeline v4) */
-  --color-brand-primary: #0585FC;
+  --color-brand-primary: #0085FC;
   --color-brand-secondary: #0461C4;
   --color-brand-lima: #CCFF00;
   --color-brand-navy: #031733;
 
   /* Gradientes de marca */
-  --background-image-brand-gradient: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  --background-image-brand-gradient: linear-gradient(135deg, #0085FC 0%, #0461C4 100%);
   --background-image-brand-gradient-dark: linear-gradient(135deg, #031733 0%, #0461C4 100%);
 
   /* Fuentes admin (variables generadas por next/font en app/admin/layout.tsx).
@@ -27,10 +27,10 @@
 :root {
   --skeleton-base: var(--bg-subtle);
   --skeleton-shine: var(--bg-card);
-  --color-brand: #0585fc;
+  --color-brand: #0085fc;
   --color-brand-dark: #0461c4;
   --color-brand-light: rgba(5, 133, 252, 0.12);
-  --color-brand-gradient: linear-gradient(135deg, #0585fc 0%, #0461c4 100%);
+  --color-brand-gradient: linear-gradient(135deg, #0085fc 0%, #0461c4 100%);
   --bg-app: #f0f4ff;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
@@ -67,8 +67,8 @@
   );
 
   /* Admin — colores de marca */
-  --admin-brand-gradient: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
-  --admin-brand-primary: #0585FC;
+  --admin-brand-gradient: linear-gradient(135deg, #0085FC 0%, #0461C4 100%);
+  --admin-brand-primary: #0085FC;
   --admin-brand-secondary: #0461C4;
   --admin-accent-lima: #CCFF00;
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
@@ -76,10 +76,10 @@
 
   /* Admin — header/topbar: fondo sigue el tema, contenido siempre azul de marca, linea lima fija */
   --admin-header-bg: #FFFFFF;
-  --admin-header-text: #0585FC;
+  --admin-header-text: #0085FC;
   --admin-header-active-bg: rgba(5, 133, 252, 0.12);
   --admin-header-active-text: #0461C4;
-  --admin-header-logo-border: #0585FC;
+  --admin-header-logo-border: #0085FC;
   --admin-header-lima-line: #CCFF00;
 
   /* Admin — estados positivos con lima */
@@ -155,7 +155,7 @@ html {
 }
 
 html.capacitor-native {
-  background-color: #0585fc;
+  background-color: #0085fc;
   overscroll-behavior: none;
 }
 
@@ -163,8 +163,8 @@ html.capacitor-native body {
   background-color: var(--bg-app);
   background-image: linear-gradient(
     180deg,
-    #0585fc 0%,
-    #0585fc var(--cap-safe-top),
+    #0085fc 0%,
+    #0085fc var(--cap-safe-top),
     var(--bg-app) var(--cap-safe-top)
   );
   overscroll-behavior: none;
@@ -251,12 +251,12 @@ html.capacitor-native svg {
 
 .player-nav-progress-bar {
   animation: player-nav-progress 0.85s ease-in-out infinite;
-  background: linear-gradient(90deg, transparent, #38bdf8, #0585fc, transparent);
+  background: linear-gradient(90deg, transparent, #38bdf8, #0085fc, transparent);
 }
 
 /* TopNav edge-to-edge: un solo bloque azul (status bar + barra) sin capas duplicadas */
 .player-top-chrome {
-  background-color: #0585fc;
+  background-color: #0085fc;
   padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
 }
 
@@ -270,7 +270,7 @@ html.capacitor-native svg {
 }
 
 html.capacitor-native .player-top-chrome {
-  background-color: #0585fc;
+  background-color: #0085fc;
   padding-top: var(--cap-safe-top);
 }
 
@@ -500,7 +500,7 @@ input::placeholder, textarea::placeholder {
 
 /* Brand button */
 .btn-primary {
-  background: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  background: linear-gradient(135deg, #0085FC 0%, #0461C4 100%);
   color: white;
   box-shadow: 0 2px 8px rgba(5,133,252,0.3);
   transition: all 0.2s ease;
@@ -511,7 +511,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #0585FC 0%, #0461C4 100%);
+  background: linear-gradient(135deg, #0085FC 0%, #0461C4 100%);
   box-shadow: 0 2px 8px rgba(5,133,252,0.3);
   color: #fff;
 }
@@ -528,15 +528,15 @@ input::placeholder, textarea::placeholder {
   color: #fff;
 }
 
-button.bg-\[\#0585FC\],
+button.bg-\[\#0085FC\],
 button.bg-\[\#0461C4\],
 button.bg-sky-500,
 button.bg-blue-500,
-a.bg-\[\#0585FC\],
+a.bg-\[\#0085FC\],
 a.bg-\[\#0461C4\],
 a.bg-sky-500,
 a.bg-blue-500 {
-  background: linear-gradient(135deg, #0585FC 0%, #0461C4 100%) !important;
+  background: linear-gradient(135deg, #0085FC 0%, #0461C4 100%) !important;
   box-shadow: 0 2px 8px rgba(5,133,252,0.3) !important;
   color: #fff !important;
 }
@@ -570,7 +570,7 @@ button.bg-red-600 {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .form-input:focus {
-  border-color: #0585FC;
+  border-color: #0085FC;
   box-shadow: 0 0 0 3px rgba(5,133,252,0.15);
 }
 .form-label {

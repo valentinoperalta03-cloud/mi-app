@@ -36,7 +36,7 @@ export function MatchStatusBanner({ matchFullyPaid, myPaymentNorm, confirmedPlay
         isConfirmed
           ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
           : isReserved
-            ? "border-[#0585FC]/20 bg-[#0585FC]/5 dark:border-[#0585FC]/30 dark:bg-[#0585FC]/10"
+            ? "border-[#0085FC]/20 bg-[#0085FC]/5 dark:border-[#0085FC]/30 dark:bg-[#0085FC]/10"
             : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
       }`}
     >
@@ -69,7 +69,7 @@ export function MatchStatusBanner({ matchFullyPaid, myPaymentNorm, confirmedPlay
           isConfirmed
             ? "border-emerald-200 dark:border-emerald-800"
             : isReserved
-              ? "border-[#0585FC]/20 dark:border-[#0585FC]/30"
+              ? "border-[#0085FC]/20 dark:border-[#0085FC]/30"
               : "border-amber-200 dark:border-amber-800"
         }`}
       >

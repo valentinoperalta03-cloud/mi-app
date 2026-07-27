@@ -188,7 +188,7 @@ export default async function AdminTurnosFijosPage({ searchParams }: PageProps) 
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>Operación semanal</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Operación semanal</p>
         <h1 className={adminTitle}>Turnos fijos</h1>
         <p className={adminSubtitle}>Configurá turnos semanales por cancha y asigná jugadores.</p>
       </header>

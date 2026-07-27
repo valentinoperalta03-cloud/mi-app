@@ -269,7 +269,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         </Link>
         <Link
           href="/home"
-          className="inline-flex justify-center rounded-2xl py-3 text-center text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
+          className="inline-flex justify-center rounded-2xl py-3 text-center text-sm font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/5"
         >
           Volver al inicio
         </Link>

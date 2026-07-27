@@ -271,7 +271,7 @@ export default async function AdminJugadoresPage() {
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0585FC]`}>CRM</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>CRM</p>
         <h1 className={adminTitle}>Jugadores</h1>
         <p className={adminSubtitle}>Historial de jugadores que reservaron o participaron en partidos de tu club.</p>
       </header>
@@ -287,7 +287,7 @@ export default async function AdminJugadoresPage() {
           <p className="mt-2 text-lg font-bold text-[var(--text-primary)]">{nuevos} / {recurrentes}</p>
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
             <div
-              className="h-full rounded-full bg-[#0585FC]"
+              className="h-full rounded-full bg-[#0085FC]"
               style={{ width: `${Math.max(0, Math.min(100, nuevosRatio))}%` }}
             />
           </div>

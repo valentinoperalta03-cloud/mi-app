@@ -66,8 +66,8 @@ export default function ComoFuncionaContent() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.25 }}
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
-        className="relative overflow-hidden rounded-3xl border border-[#0585FC]/20 p-7 text-white"
+        style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
+        className="relative overflow-hidden rounded-3xl border border-[#0085FC]/20 p-7 text-white"
       >
         <div className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
         <p className="text-sm font-semibold uppercase tracking-widest text-white/70">Padelibre</p>
@@ -88,7 +88,7 @@ export default function ComoFuncionaContent() {
         className="space-y-4"
       >
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-[#0585FC]">Para jugadores</p>
+          <p className="text-sm font-semibold text-[#0085FC]">Para jugadores</p>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             Soluciones reales para jugar más y organizar menos
           </h2>
@@ -101,7 +101,7 @@ export default function ComoFuncionaContent() {
                 key={feature.title}
                 className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm dark:border-slate-800"
               >
-                <span className="inline-flex rounded-xl bg-[#0585FC]/10 p-2.5 text-[#0585FC]">
+                <span className="inline-flex rounded-xl bg-[#0085FC]/10 p-2.5 text-[#0085FC]">
                   <Icon size={20} />
                 </span>
                 <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">{feature.title}</h3>
@@ -122,7 +122,7 @@ export default function ComoFuncionaContent() {
         className="space-y-4 rounded-3xl border border-black/[0.06] bg-white p-6 shadow-sm dark:border-slate-800"
       >
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-[#0585FC]">Te damos una mano</p>
+          <p className="text-sm font-semibold text-[#0085FC]">Te damos una mano</p>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             Preguntas frecuentes
           </h2>
@@ -145,7 +145,7 @@ export default function ComoFuncionaContent() {
           ))}
         </div>
 
-        <div className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 p-4">
+        <div className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 p-4">
           <p className="text-sm font-bold text-slate-900 dark:text-white">¿Sos dueño de un club?</p>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
             Hablá con nosotros por WhatsApp y te ayudamos a sumarte a Padelibre.

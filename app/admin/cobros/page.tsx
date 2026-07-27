@@ -660,7 +660,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
       <p className="text-center text-xs text-[var(--text-tertiary)]">
         ¿Problemas con un cobro?{" "}
-        <Link href="/admin/config" className="font-semibold text-[#0585FC] hover:underline">
+        <Link href="/admin/config" className="font-semibold text-[#0085FC] hover:underline">
           Configuración
         </Link>
       </p>

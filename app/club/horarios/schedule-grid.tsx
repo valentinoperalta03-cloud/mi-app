@@ -69,7 +69,7 @@ function DayScheduleForm({
           type="time"
           defaultValue={openTime ?? "09:00"}
           required
-          className="w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20/50"
+          className="w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20/50"
         />
       </label>
       <label className="grid gap-1 sm:block">
@@ -81,7 +81,7 @@ function DayScheduleForm({
           type="time"
           defaultValue={closeTime ?? "21:00"}
           required
-          className="w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-[#0585FC]/30 focus:ring-2 focus:ring-[#0585FC]/20/50"
+          className="w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20/50"
         />
       </label>
       <div className="sm:justify-self-end">

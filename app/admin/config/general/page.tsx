@@ -33,7 +33,7 @@ export default async function AdminConfigGeneralPage() {
       <section className={`${adminCard} p-6`}>
         <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Soporte</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">¿Necesitás ayuda con PadeLibre?</p>
-        <div className="mt-4 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
+        <div className="mt-4 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           <div className="flex flex-wrap gap-2">
             <a
               href="mailto:soporte.padelibre@gmail.com"

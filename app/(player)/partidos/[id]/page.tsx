@@ -548,7 +548,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       <header className="space-y-2">
-        <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]">
+        <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0085FC] hover:text-[#0461C4]">
           ← Volver
         </Link>
         <h1 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-white">Detalle del partido</h1>
@@ -700,7 +700,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <span
             className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
               isPrivate
-                ? "border border-[#0585FC]/25 bg-[#0585FC]/10 text-[#0461C4] dark:text-sky-300"
+                ? "border border-[#0085FC]/25 bg-[#0085FC]/10 text-[#0461C4] dark:text-sky-300"
                 : "border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
             }`}
           >
@@ -743,7 +743,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       </article>
 
       {isOwner ? (
-        <section className="rounded-2xl border border-[var(--border-subtle)] border-l-[3px] border-l-[#0585FC] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
+        <section className="rounded-2xl border border-[var(--border-subtle)] border-l-[3px] border-l-[#0085FC] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">Tu partido</h2>
             <span className="shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-emerald-500">
@@ -760,7 +760,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               target="_blank"
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-center text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.35)] transition hover:brightness-95 active:scale-[0.99]"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
             >
               <MessageCircle size={18} aria-hidden />
               Compartir por WhatsApp
@@ -768,7 +768,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             {showGroupChat && groupChatHref ? (
               <Link
                 href={groupChatHref}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10 dark:text-sky-400"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/25 bg-[#0085FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10 dark:text-sky-400"
               >
                 <MessageCircle size={16} aria-hidden />
                 Chat del grupo
@@ -790,7 +790,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
           <Link
             href={groupChatHref}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/25 bg-[#0585FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10 dark:text-sky-400"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/25 bg-[#0085FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10 dark:text-sky-400"
           >
             <MessageCircle size={16} aria-hidden />
             Chat del grupo
@@ -918,14 +918,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       ) : null}
 
       {isPrivate && !isOwner && !isParticipant && inviteOpen ? (
-        <section className="rounded-2xl border border-[#0585FC]/20/80 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-[#0085FC]/20/80 bg-white p-5 shadow-sm">
           <h2 className="text-base font-semibold tracking-tight text-slate-900">Unirte al partido</h2>
           <p className="mt-2 text-sm text-slate-600">
             Este partido es privado. Enviá una solicitud al creador para sumarte.
           </p>
           <div className="mt-4">
             {hasPendingAccessRequest ? (
-              <p className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-medium text-[#0585FC]">
+              <p className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-medium text-[#0085FC]">
                 Ya enviaste una solicitud pendiente.
               </p>
             ) : (
@@ -1028,7 +1028,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <section className="space-y-3">
           <div
             className="rounded-2xl p-4 text-center"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
           >
             <p className="text-white font-bold text-lg">🏆 ¡El partido terminó!</p>
             <p className="text-white/80 text-sm mt-1">
@@ -1106,7 +1106,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       ) : null}
 
       {hasInvitedPayment && !isParticipant ? (
-        <section className="rounded-2xl border border-[#0585FC]/30 bg-[#0585FC]/5 p-4 space-y-3">
+        <section className="rounded-2xl border border-[#0085FC]/30 bg-[#0085FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
           <p className="text-sm text-slate-700">Sumate cuando quieras. El pago lo coordinás con el organizador.</p>
           <form action={requestToJoin}>
@@ -1114,7 +1114,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             <button
               type="submit"
               className="w-full rounded-2xl py-3 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
             >
               Unirme al partido
             </button>
@@ -1130,7 +1130,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           {(pendingRequestsCount ?? 0) > 0 ? (
             <Link
               href={`/partidos/${id}/solicitudes`}
-              className="block w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0585FC]/10"
+              className="block w-full rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10"
             >
               Ver solicitudes ({pendingRequestsCount})
             </Link>
@@ -1164,7 +1164,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       <Link
         href="/buscar-partido"
-        className="block w-full py-2 text-center text-sm font-semibold text-[#0585FC] transition hover:text-[#0461C4]"
+        className="block w-full py-2 text-center text-sm font-semibold text-[#0085FC] transition hover:text-[#0461C4]"
       >
         ← Volver al buscador
       </Link>

@@ -217,7 +217,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
       <Link
         href="/home"
-        className="mb-4 inline-block text-sm font-semibold text-slate-600 transition hover:text-[#0585FC]"
+        className="mb-4 inline-block text-sm font-semibold text-slate-600 transition hover:text-[#0085FC]"
       >
         ← Volver
       </Link>

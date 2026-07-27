@@ -19,28 +19,28 @@ const tileVisuals: TileVisual[] = [
     id: "para-ti",
     label: "Para Ti",
     Icon: Sparkles,
-    accent: "#0585FC",
+    accent: "#0085FC",
     accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "jugadores",
     label: "Jugadores",
     Icon: Users,
-    accent: "#0585FC",
+    accent: "#0085FC",
     accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "mensajes",
     label: "Mensajes",
     Icon: MessageCircle,
-    accent: "#0585FC",
+    accent: "#0085FC",
     accentBg: "rgba(5,133,252,0.1)",
   },
   {
     id: "rankings",
     label: "Rankings",
     Icon: Trophy,
-    accent: "#0585FC",
+    accent: "#0085FC",
     accentBg: "rgba(5,133,252,0.1)",
   },
 ];
@@ -63,7 +63,7 @@ function ComunidadNavTile({ tile, href, hero = false }: { tile: TileVisual; href
       >
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
         >
           <tile.Icon size={22} style={{ color: "#CCFF00" }} strokeWidth={2.1} aria-hidden />
         </div>
@@ -118,7 +118,7 @@ export function ComunidadClient({
               <Link
                 href="/comunidad/rankings"
                 prefetch
-                className="font-bold text-[#0585FC] underline-offset-2 hover:underline"
+                className="font-bold text-[#0085FC] underline-offset-2 hover:underline"
               >
                 #{rankingsPreview.myGlobalPosition}
               </Link>{" "}

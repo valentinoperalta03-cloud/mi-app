@@ -14,7 +14,7 @@ export default function SobrePadelibrePage() {
 
       <section
         className="relative overflow-hidden rounded-3xl p-7 text-white"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
       >
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
         <p className="text-sm font-semibold uppercase tracking-widest text-white/70">Nuestra historia</p>
@@ -32,7 +32,7 @@ export default function SobrePadelibrePage() {
 
       <section className="space-y-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-[#0585FC]">Para jugadores</p>
+          <p className="text-sm font-semibold text-[#0085FC]">Para jugadores</p>
           <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Los problemas que eliminamos</h3>
         </div>
         <div className="space-y-3">
@@ -79,7 +79,7 @@ export default function SobrePadelibrePage() {
 
       <section className="space-y-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-[#0585FC]">Para clubes</p>
+          <p className="text-sm font-semibold text-[#0085FC]">Para clubes</p>
           <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Tu club en piloto automático</h3>
         </div>
         <div className="space-y-3">
@@ -124,7 +124,7 @@ export default function SobrePadelibrePage() {
         </div>
       </section>
 
-      <section className="space-y-3 rounded-3xl border border-[#0585FC]/15 bg-gradient-to-b from-[#0585FC]/5 to-transparent p-5">
+      <section className="space-y-3 rounded-3xl border border-[#0085FC]/15 bg-gradient-to-b from-[#0085FC]/5 to-transparent p-5">
         <h3 className="text-base font-semibold text-[var(--text-primary)]">Un modelo justo para todos</h3>
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
           Los clubes acceden a PadeLibre con una suscripción mensual fija. Sin comisión por reserva, sin letra chica.

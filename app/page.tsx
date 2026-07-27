@@ -92,7 +92,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section
         className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24"
-        style={{ background: "linear-gradient(180deg, #031733 0%, #0461C4 60%, #0585FC 100%)" }}
+        style={{ background: "linear-gradient(180deg, #031733 0%, #0461C4 60%, #0085FC 100%)" }}
       >
         {/* Glow */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -211,8 +211,8 @@ export default function LandingPage() {
                   transition={{ duration: 0.35, delay: idx * 0.06 }}
                   className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5 shadow-sm"
                 >
-                  <div className="mb-3 inline-flex rounded-xl bg-[#0585FC]/10 p-2.5">
-                    <Icon className="h-5 w-5 text-[#0585FC]" strokeWidth={1.75} />
+                  <div className="mb-3 inline-flex rounded-xl bg-[#0085FC]/10 p-2.5">
+                    <Icon className="h-5 w-5 text-[#0085FC]" strokeWidth={1.75} />
                   </div>
                   <h3 className="text-base font-bold">{f.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">{f.description}</p>

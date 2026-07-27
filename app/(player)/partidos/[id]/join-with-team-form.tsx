@@ -69,7 +69,7 @@ function TeamJoinButton({
   const isDisabled = disabled || pending;
   const toneClass =
     tone === "blue"
-      ? "border-[#0585FC]/30 bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] hover:brightness-95"
+      ? "border-[#0085FC]/30 bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] hover:brightness-95"
       : "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700";
   return (
     <button

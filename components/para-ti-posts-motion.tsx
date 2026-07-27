@@ -32,13 +32,13 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
           p.post_type === "result"
             ? "border-l-[#f59e0b]"
             : p.post_type === "photo"
-              ? "border-l-[#0585FC]"
+              ? "border-l-[#0085FC]"
               : "border-l-[#8b5cf6]";
         const badgeClass =
           p.post_type === "result"
             ? "border-amber-300/80 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-900 shadow-sm dark:from-amber-950/50 dark:to-amber-900/30 dark:text-amber-200"
             : p.post_type === "photo"
-              ? "border-[#0585FC]/30 bg-gradient-to-r from-[#0585FC]/12 to-sky-100/80 text-[#0461C4] shadow-sm dark:to-sky-950/40 dark:text-sky-200"
+              ? "border-[#0085FC]/30 bg-gradient-to-r from-[#0085FC]/12 to-sky-100/80 text-[#0461C4] shadow-sm dark:to-sky-950/40 dark:text-sky-200"
               : "border-violet-300/70 bg-gradient-to-r from-violet-50 to-violet-100/80 text-violet-900 shadow-sm dark:from-violet-950/40 dark:to-violet-900/25 dark:text-violet-200";
 
         return (

@@ -68,7 +68,7 @@ export default function EmptyStateCard({
       <article className="w-full max-w-sm text-center space-y-6">
         {/* Icon */}
         <div className="flex justify-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-[#0585FC]/8 text-[#0585FC] dark:bg-[#0585FC]/10">
+          <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-[#0085FC]/8 text-[#0085FC] dark:bg-[#0085FC]/10">
             {icons[icon]}
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function EmptyStateCard({
           <Link
             href={ctaHref}
             className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(5,133,252,0.4)] active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
           >
             {ctaLabel}
           </Link>

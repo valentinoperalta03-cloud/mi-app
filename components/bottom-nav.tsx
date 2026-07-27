@@ -75,7 +75,7 @@ export default function BottomNav() {
       <div
         className="pointer-events-auto flex w-full max-w-md items-center justify-around gap-2 rounded-2xl px-3 py-2"
         style={{
-          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)",
           boxShadow: "0 -4px 20px rgba(5,133,252,0.3)",
           border: "none",
         }}

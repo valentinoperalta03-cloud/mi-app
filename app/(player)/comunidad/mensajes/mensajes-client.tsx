@@ -55,7 +55,7 @@ export function MensajesClient({
           type="button"
           onClick={() => setActiveTab("directos")}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-            activeTab === "directos" ? "bg-[#0585FC] text-white" : "text-slate-600"
+            activeTab === "directos" ? "bg-[#0085FC] text-white" : "text-slate-600"
           }`}
         >
           Directos
@@ -64,7 +64,7 @@ export function MensajesClient({
           type="button"
           onClick={() => setActiveTab("grupos")}
           className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${
-            activeTab === "grupos" ? "bg-[#0585FC] text-white" : "text-slate-600"
+            activeTab === "grupos" ? "bg-[#0085FC] text-white" : "text-slate-600"
           }`}
         >
           Grupos
@@ -145,7 +145,7 @@ export function MensajesClient({
                       <p className="line-clamp-1 text-sm text-slate-500">{c.lastPreview}</p>
                       {when ? <p className="mt-0.5 text-xs font-medium text-slate-400">{when}</p> : null}
                     </div>
-                    <span className="text-[#0585FC]">→</span>
+                    <span className="text-[#0085FC]">→</span>
                   </Link>
                 </li>
               );
@@ -222,7 +222,7 @@ export function MensajesClient({
             <button
               type="button"
               onClick={() => setShowInfo(false)}
-              className="mt-6 w-full rounded-2xl bg-[#0585FC] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+              className="mt-6 w-full rounded-2xl bg-[#0085FC] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
             >
               Entendido
             </button>

@@ -127,7 +127,7 @@ export default async function AdminReembolsosPage({ searchParams }: PageProps) {
         )}
       </section>
 
-      <Link href="/admin/reservas" className="text-sm font-semibold text-[#0585FC]">
+      <Link href="/admin/reservas" className="text-sm font-semibold text-[#0085FC]">
         Ir a reservas para solicitar reembolsos
       </Link>
     </div>

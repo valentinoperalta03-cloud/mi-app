@@ -19,8 +19,8 @@ export function ProfileMatchCardsPremium({
   if (cards.length === 0) {
     return (
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
-          <Trophy className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0085FC]/12">
+          <Trophy className="h-6 w-6 text-[#0085FC]" strokeWidth={1.75} aria-hidden />
         </div>
         <h3 className="mt-4 text-base font-bold text-[var(--text-primary)]">Todavía no jugaste partidos</h3>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">

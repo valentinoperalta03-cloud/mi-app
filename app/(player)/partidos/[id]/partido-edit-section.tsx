@@ -45,7 +45,7 @@ export default function PartidoEditSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
+        className="w-full rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/10"
       >
         {open ? "Cerrar edición" : "Editar partido"}
       </button>

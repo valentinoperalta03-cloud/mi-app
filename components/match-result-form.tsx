@@ -29,7 +29,7 @@ function SubmitRow({ label, disabled }: { label: string; disabled?: boolean }) {
       type="submit"
       disabled={pending || disabled}
       className="w-full rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(5,133,252,0.4)] active:scale-[0.98] disabled:opacity-60"
-      style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+      style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
     >
       {pending ? "Guardando..." : label}
     </button>
@@ -171,7 +171,7 @@ export function MatchResultForm({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl p-6 text-center text-white"
-        style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
       >
         <button
           type="button"
@@ -217,7 +217,7 @@ export function MatchResultForm({
               type="submit"
               disabled={lockedByTeammate}
               className="w-full rounded-2xl py-4 text-base font-bold text-white shadow-[0_4px_16px_rgba(5,133,252,0.3)] transition-all hover:-translate-y-0.5 disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
             >
               📊 Cargar resultado
             </button>
@@ -250,8 +250,8 @@ export function MatchResultForm({
           <input type="hidden" name="sets_json" value={JSON.stringify(payloadForSubmit)} />
 
           <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/10 p-3 dark:bg-[#0585FC]/20">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#0585FC]">Equipo A</p>
+            <div className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/10 p-3 dark:bg-[#0085FC]/20">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#0085FC]">Equipo A</p>
               <p className="mt-1 truncate text-sm font-bold text-[var(--text-primary)]">{teamALabel}</p>
             </div>
             <div className="rounded-2xl border border-[var(--border-subtle)] bg-slate-100 p-3 dark:bg-slate-800">
@@ -263,7 +263,7 @@ export function MatchResultForm({
           </div>
 
           <p className="text-center text-sm font-semibold text-[var(--text-primary)]">
-            Parcial: <span className="text-[#0585FC]">{previewLabel}</span>
+            Parcial: <span className="text-[#0085FC]">{previewLabel}</span>
           </p>
 
           {[0, 1].map((idx) => (
@@ -344,7 +344,7 @@ export function MatchResultForm({
             <p className="text-center text-xs text-[var(--text-tertiary)]">Sets ganados (cuando el marcador sea válido)</p>
             <div className="mt-2 grid grid-cols-3 items-center gap-2 text-center">
               <div>
-                <p className="text-3xl font-bold text-[#0585FC]">
+                <p className="text-3xl font-bold text-[#0085FC]">
                   {canSubmit ? validation.setsWonA : "—"}
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">Equipo A</p>
@@ -459,7 +459,7 @@ export function MatchResultForm({
             <button
               type="button"
               onClick={() => setShowInfo(false)}
-              className="mt-6 w-full rounded-2xl bg-[#0585FC] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+              className="mt-6 w-full rounded-2xl bg-[#0085FC] py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
             >
               Entendido
             </button>

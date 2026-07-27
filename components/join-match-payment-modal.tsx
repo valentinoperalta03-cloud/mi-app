@@ -100,7 +100,7 @@ export function JoinMatchPaymentModal({
               type="button"
               disabled={pending}
               onClick={() => void handleConfirm()}
-              className="w-full rounded-2xl bg-[#0585FC] py-3.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50"
+              className="w-full rounded-2xl bg-[#0085FC] py-3.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50"
             >
               {pending ? "Uniéndote..." : "Confirmar y unirme"}
             </button>

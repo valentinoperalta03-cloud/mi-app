@@ -191,7 +191,7 @@ export function PlayerAvatar({ name }: { name: string }) {
   const initial = (name.trim().charAt(0) || "?").toUpperCase();
   return (
     <div
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0585FC] to-indigo-100 text-base font-bold text-[#0585FC] ring-1 ring-[#0585FC]/20"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0085FC] to-indigo-100 text-base font-bold text-[#0085FC] ring-1 ring-[#0085FC]/20"
       aria-hidden
     >
       {initial}

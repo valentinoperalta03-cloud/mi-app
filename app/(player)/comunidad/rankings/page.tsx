@@ -55,7 +55,7 @@ export default async function RankingsPage() {
                   <p className="truncate text-xs text-[var(--text-tertiary)]">{row.categoryLabel}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold text-[#0585FC]">{row.wins} victorias</p>
+                  <p className="text-sm font-bold text-[#0085FC]">{row.wins} victorias</p>
                   <p className="text-xs text-[var(--text-tertiary)]">ELO {row.level?.toFixed(1) ?? "—"}</p>
                 </div>
               </li>
@@ -89,7 +89,7 @@ export default async function RankingsPage() {
                   <p className="truncate text-xs text-[var(--text-tertiary)]">{row.categoryLabel}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold text-[#0585FC]">{row.matches_played} partidos</p>
+                  <p className="text-sm font-bold text-[#0085FC]">{row.matches_played} partidos</p>
                 </div>
               </li>
             ))

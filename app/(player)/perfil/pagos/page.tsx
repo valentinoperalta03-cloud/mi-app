@@ -31,8 +31,8 @@ export default async function PerfilPagosPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
-        <p className="text-xs uppercase tracking-widest text-[#0585FC]">Perfil</p>
+      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0085FC] to-cyan-500 px-4 py-4 text-white">
+        <p className="text-xs uppercase tracking-widest text-[#0085FC]">Perfil</p>
         <h1 className="text-xl font-semibold leading-tight tracking-tight">Tus pagos</h1>
       </header>
 

@@ -61,7 +61,7 @@ export default function FriendsSearchClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar jugadores..."
-            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 pl-9 pr-4 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20"
+            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 pl-9 pr-4 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:ring-2 focus:ring-[#0085FC]/20"
           />
         </div>
       </header>
@@ -77,7 +77,7 @@ export default function FriendsSearchClient({
                   <ProfileAvatar avatarUrl={player.avatar_url} name={label} size={48} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{label}</p>
-                    <span className="mt-1 inline-flex rounded-full border border-[#0585FC]/20 bg-[#0585FC]/5 px-2.5 py-1 text-[11px] font-semibold text-[#0461C4]">
+                    <span className="mt-1 inline-flex rounded-full border border-[#0085FC]/20 bg-[#0085FC]/5 px-2.5 py-1 text-[11px] font-semibold text-[#0461C4]">
                       {player.category ? `Nivel ${player.category}` : nivelParts.category || "Sin nivel"}
                     </span>
                     {player.bio?.trim() ? (
@@ -115,7 +115,7 @@ export default function FriendsSearchClient({
                       className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
                         followingIds.has(player.user_id)
                           ? "border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-secondary)]"
-                          : "bg-[#0585FC] text-white hover:bg-[#0461C4]"
+                          : "bg-[#0085FC] text-white hover:bg-[#0461C4]"
                       }`}
                     >
                       {followingIds.has(player.user_id)
@@ -126,7 +126,7 @@ export default function FriendsSearchClient({
                     </button>
                     <Link
                       href={`/jugador/${player.user_id}`}
-                      className="rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[#0585FC]/30 hover:text-[#0585FC]"
+                      className="rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-center text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[#0085FC]/30 hover:text-[#0085FC]"
                     >
                       Ver perfil
                     </Link>

@@ -61,7 +61,7 @@ export default function ProfileSocialActions({
               ? "border border-slate-200 dark:border-slate-700 text-[var(--text-secondary)] bg-[var(--bg-card)]"
               : "text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
           }`}
-          style={!following ? { background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" } : {}}
+          style={!following ? { background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" } : {}}
         >
           {following ? (
             <>
@@ -98,7 +98,7 @@ export default function ProfileSocialActions({
         {mutual ? (
           <Link
             href={`/comunidad/mensajes/${targetUserId}`}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/10"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/10"
           >
             <MessageSquare size={16} />
             Mandar mensaje
@@ -107,7 +107,7 @@ export default function ProfileSocialActions({
           <button
             type="button"
             disabled
-            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-semibold text-[#0585FC] opacity-50"
+            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-semibold text-[#0085FC] opacity-50"
           >
             <MessageSquare size={16} />
             Mandar mensaje

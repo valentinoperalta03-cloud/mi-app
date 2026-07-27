@@ -28,7 +28,7 @@ type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
 const segmentButton = (active: boolean) =>
   `rounded-2xl border px-3 py-2.5 text-center text-xs font-semibold transition ${
     active
-      ? "border-[#0585FC] bg-[#0585FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
+      ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
       : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
   }`;
 
@@ -201,8 +201,8 @@ export default function ClubsListClient({
                     />
                   ) : (
                     <div
-                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white ring-1 ring-[#0585FC]/30"
-                      style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white ring-1 ring-[#0085FC]/30"
+                      style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
                     >
                       {clubInitials(club.name)}
                     </div>

@@ -114,7 +114,7 @@ export default async function MpConnectPage() {
             },
           ].map((step) => (
             <div key={step.n} className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0585FC] text-xs font-bold text-white">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0085FC] text-xs font-bold text-white">
                 {step.n}
               </span>
               <div>

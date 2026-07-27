@@ -383,7 +383,7 @@ export default async function AdminDashboardPage({
                 className="h-12 w-12 rounded-full border border-white/20 object-cover md:h-16 md:w-16 md:rounded-2xl"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0585FC] text-base font-bold text-white md:h-16 md:w-16 md:rounded-2xl md:text-xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0085FC] text-base font-bold text-white md:h-16 md:w-16 md:rounded-2xl md:text-xl">
                 {clubInitials || "CL"}
               </div>
             )}
@@ -412,7 +412,7 @@ export default async function AdminDashboardPage({
             {occupiedNowCount} <span className="text-base font-semibold text-[var(--text-secondary)]">de {totalCourts}</span>
           </p>
           <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-            <div className="h-full rounded-full bg-[#0585FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
+            <div className="h-full rounded-full bg-[#0085FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
           </div>
         </Link>
         <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
@@ -507,7 +507,7 @@ export default async function AdminDashboardPage({
         <SuperadminEntryLink variant="admin" />
         <div className="hidden md:block">
           <div className="flex items-center gap-2">
-            <LayoutGrid size={16} className="text-[#0585FC]" />
+            <LayoutGrid size={16} className="text-[#0085FC]" />
             <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Accesos rápidos</h2>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -518,8 +518,8 @@ export default async function AdminDashboardPage({
                 className={`${adminCard} group`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <item.icon size={22} className="text-[#0585FC]" />
-                  <ChevronRight size={16} className="text-[var(--text-tertiary)] transition group-hover:text-[#0585FC]" />
+                  <item.icon size={22} className="text-[#0085FC]" />
+                  <ChevronRight size={16} className="text-[var(--text-tertiary)] transition group-hover:text-[#0085FC]" />
                 </div>
                 <p className="mt-3 text-base font-bold text-[var(--text-primary)]">{item.label}</p>
                 <p className="mt-1 text-sm text-[var(--text-tertiary)]">{item.description}</p>

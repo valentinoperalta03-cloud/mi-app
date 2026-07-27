@@ -48,7 +48,7 @@ export function FavoritePlayerButton({
     none: {
       icon: UserPlus,
       label: "Agregar amigo",
-      className: "bg-[#0585FC] text-white border-[#0585FC]",
+      className: "bg-[#0085FC] text-white border-[#0085FC]",
     },
     pending_sent: {
       icon: Clock,

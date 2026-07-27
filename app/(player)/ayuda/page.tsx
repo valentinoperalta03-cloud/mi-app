@@ -105,7 +105,7 @@ export default function AyudaPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[var(--bg-app)]">
-      <header className="flex items-center gap-3 bg-gradient-to-r from-[#0585FC] to-[#0461C4] px-4 py-4 text-white">
+      <header className="flex items-center gap-3 bg-gradient-to-r from-[#0085FC] to-[#0461C4] px-4 py-4 text-white">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20">
           <Bot size={22} className="text-white" />
         </div>
@@ -119,7 +119,7 @@ export default function AyudaPage() {
         {messages.length === 0 && !selectedCategory ? (
           <section className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0085FC]">
                 <Bot size={16} className="text-white" />
               </div>
               <div className="rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)]">
@@ -149,7 +149,7 @@ export default function AyudaPage() {
         {selectedCategory && messages.length === 0 ? (
           <section className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0085FC]">
                 <Bot size={16} className="text-white" />
               </div>
               <div className="rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)]">
@@ -161,7 +161,7 @@ export default function AyudaPage() {
             <button
               type="button"
               onClick={() => setSelectedCategory(null)}
-              className="flex items-center gap-1 text-xs font-semibold text-[#0585FC]"
+              className="flex items-center gap-1 text-xs font-semibold text-[#0085FC]"
             >
               <ChevronLeft size={14} /> Volver a categorías
             </button>
@@ -185,12 +185,12 @@ export default function AyudaPage() {
             {messages.map((m, idx) => (
               <div key={`${m.question}-${idx}`} className="space-y-3">
                 <div className="flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#0585FC] px-4 py-2.5 text-sm text-white shadow-sm">
+                  <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#0085FC] px-4 py-2.5 text-sm text-white shadow-sm">
                     {m.question}
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0585FC]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0085FC]">
                     <Bot size={16} className="text-white" />
                   </div>
                   <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-primary)] shadow-[var(--shadow-card)]">
@@ -219,7 +219,7 @@ export default function AyudaPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory(messages[messages.length - 1]?.category ?? null)}
-                  className="rounded-full border border-[#0585FC]/25 bg-[#0585FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] shadow-sm transition active:scale-[0.97] dark:text-sky-400"
+                  className="rounded-full border border-[#0085FC]/25 bg-[#0085FC]/5 px-3 py-1.5 text-xs font-semibold text-[#0461C4] shadow-sm transition active:scale-[0.97] dark:text-sky-400"
                 >
                   Más preguntas
                 </button>

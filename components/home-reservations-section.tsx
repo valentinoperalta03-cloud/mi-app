@@ -15,7 +15,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
         <Link
           href="/buscar-partido"
           className="mt-4 inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition"
-          style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
         >
           Buscar Partido
         </Link>
@@ -33,7 +33,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
               style={{ background: "#CCFF00" }}
             />
             <div className="flex gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0585FC]/10 text-[#0461C4]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0085FC]/10 text-[#0461C4]">
                 {r.matchTypeLabel === "Competitivo" ? (
                   <Trophy size={18} strokeWidth={2.1} aria-hidden />
                 ) : (
@@ -49,7 +49,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                   className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
                   style={{
                     background: r.matchTypeLabel === "Competitivo" ? "rgba(5,133,252,0.1)" : "rgba(204,255,0,0.15)",
-                    color: r.matchTypeLabel === "Competitivo" ? "#0585FC" : "#5a7a00",
+                    color: r.matchTypeLabel === "Competitivo" ? "#0085FC" : "#5a7a00",
                   }}
                 >
                   {r.matchTypeLabel}
@@ -68,7 +68,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${Math.min(100, Math.max(0, (r.slotsFilled / 4) * 100))}%`,
-                        background: r.slotsFilled === 4 ? "#CCFF00" : "linear-gradient(90deg, #0585FC, #0461C4)",
+                        background: r.slotsFilled === 4 ? "#CCFF00" : "linear-gradient(90deg, #0085FC, #0461C4)",
                       }}
                     />
                   </div>
@@ -76,7 +76,7 @@ export async function HomeReservationsSection({ userId }: { userId: string }) {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
                   <Link
                     href={`/partidos/${r.matchId}`}
-                    className="text-xs font-semibold text-[#0585FC] underline decoration-sky-200/80 underline-offset-2 hover:text-[#0461C4]"
+                    className="text-xs font-semibold text-[#0085FC] underline decoration-sky-200/80 underline-offset-2 hover:text-[#0461C4]"
                   >
                     Ver detalle
                   </Link>

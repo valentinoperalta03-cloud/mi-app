@@ -128,7 +128,7 @@ export default function TurnosFijosForm({ courts }: { courts: Court[] }) {
                 <button
                   type="button"
                   onClick={() => addPlayer(r)}
-                  className="rounded-lg border border-[#0585FC]/30 bg-[#0585FC]/10 px-2 py-1 text-xs font-semibold text-[#0461C4]"
+                  className="rounded-lg border border-[#0085FC]/30 bg-[#0085FC]/10 px-2 py-1 text-xs font-semibold text-[#0461C4]"
                 >
                   Agregar
                 </button>

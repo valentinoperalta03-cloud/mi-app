@@ -104,7 +104,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <section
         className="relative overflow-hidden rounded-3xl p-5 text-white"
         style={{
-          background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+          background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)",
           boxShadow: "0 4px 24px rgba(5,133,252,0.3)",
         }}
       >
@@ -145,7 +145,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           prefetch
           className="group relative flex items-center gap-4 overflow-hidden rounded-3xl p-5 text-white transition active:scale-[0.98]"
           style={{
-            background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)",
+            background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)",
             boxShadow: "0 4px 20px rgba(5,133,252,0.25)",
           }}
         >
@@ -188,7 +188,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             >
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ background: "linear-gradient(135deg, #0585FC 0%, #0461C4 100%)" }}
+                style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
               >
                 <Icon size={19} className="text-white" />
               </div>
@@ -208,12 +208,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         prefetch
         className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition hover:opacity-95 active:scale-[0.99]"
       >
-        <Building2 size={20} className="shrink-0 text-[#0585FC]" aria-hidden />
+        <Building2 size={20} className="shrink-0 text-[#0085FC]" aria-hidden />
         <div className="min-w-0 flex-1 text-left">
           <p className="font-bold text-[var(--text-primary)]">Explorar clubes</p>
           <p className="text-sm text-[var(--text-tertiary)]">Encontrá canchas cerca tuyo</p>
         </div>
-        <ChevronRight size={20} className="shrink-0 text-[#0585FC]" aria-hidden />
+        <ChevronRight size={20} className="shrink-0 text-[#0085FC]" aria-hidden />
       </Link>
 
       <HomeSocialSection />

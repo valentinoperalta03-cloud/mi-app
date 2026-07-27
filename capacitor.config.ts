@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const STATUS_BAR_COLOR = '#0585FC';
+const STATUS_BAR_COLOR = '#0085FC';
 
 const config: CapacitorConfig = {
   appId: 'com.padelibre.app',

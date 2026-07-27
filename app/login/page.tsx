@@ -50,7 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               className={
                 isError
                   ? "mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
-                  : "mb-6 rounded-2xl border border-[#0585FC]/20 bg-[#0585FC]/5 px-4 py-3 text-sm font-medium text-[#0585FC] dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
+                  : "mb-6 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-medium text-[#0085FC] dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
               }
             >
               {text}

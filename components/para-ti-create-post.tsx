@@ -93,7 +93,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
             onClick={() => setPostType(tab.type)}
             className={`rounded-2xl py-2.5 text-sm font-semibold transition ${
               postType === tab.type
-                ? "bg-[#0585FC] text-white"
+                ? "bg-[#0085FC] text-white"
                 : "border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800"
             }`}
           >
@@ -116,7 +116,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
                 : "Contá cómo te fue en el partido..."
           }
           disabled={pending}
-          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#0585FC] focus:ring-2 focus:ring-[#0585FC]/20 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#0085FC] focus:ring-2 focus:ring-[#0085FC]/20 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
 
         {postType === "photo" ? (
@@ -155,7 +155,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-2xl border-2 border-dashed border-slate-200 py-8 text-center text-sm text-slate-400 transition-colors hover:border-[#0585FC]/30 hover:text-[#0585FC] dark:border-slate-700"
+                className="w-full rounded-2xl border-2 border-dashed border-slate-200 py-8 text-center text-sm text-slate-400 transition-colors hover:border-[#0085FC]/30 hover:text-[#0085FC] dark:border-slate-700"
               >
                 📸 Tocá para subir una foto
               </button>
@@ -170,7 +170,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
               name="link_match"
               defaultChecked
               disabled={pending}
-              className="mt-1 h-4 w-4 text-[#0585FC]"
+              className="mt-1 h-4 w-4 text-[#0085FC]"
             />
             <span className="text-sm text-slate-600 dark:text-slate-300">
               <span className="block font-semibold">Vincular resultado</span>
@@ -193,7 +193,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-2xl bg-[#0585FC] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0461C4] disabled:opacity-50"
+          className="w-full rounded-2xl bg-[#0085FC] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0461C4] disabled:opacity-50"
         >
           {pending ? "Publicando..." : "Publicar"}
         </button>
@@ -233,7 +233,7 @@ export function ParaTiCreatePostButton({ latestMatch }: { latestMatch: LatestMat
       <button
         type="button"
         onClick={handleOpen}
-        className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#0585FC] px-3.5 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(5,133,252,0.45)] transition active:scale-[0.97]"
+        className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#0085FC] px-3.5 py-2 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(5,133,252,0.45)] transition active:scale-[0.97]"
       >
         <Plus size={16} strokeWidth={2.5} aria-hidden />
         Publicar

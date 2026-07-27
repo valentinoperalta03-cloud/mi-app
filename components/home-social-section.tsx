@@ -39,7 +39,7 @@ export function HomeSocialSection() {
       transition={{ duration: 0.4 }}
     >
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0585FC]">Comunidad</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0085FC]">Comunidad</p>
         <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Seguinos en redes</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Enterate de sorteos, memes de pádel y las últimas novedades de la app.
@@ -69,7 +69,7 @@ export function HomeSocialSection() {
               </div>
               <p className="mt-3 text-xs font-bold text-[var(--text-primary)]">{network.platform}</p>
               <p className="mt-0.5 text-[10px] leading-snug text-[var(--text-tertiary)]">{network.tagline}</p>
-              <p className="mt-2 text-xs font-extrabold text-[#0585FC]">{network.handle}</p>
+              <p className="mt-2 text-xs font-extrabold text-[#0085FC]">{network.handle}</p>
             </div>
           </motion.a>
         ))}

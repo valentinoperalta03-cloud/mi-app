@@ -214,7 +214,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                     <li key={mp.player_id}>
                       <Link
                         href={`/jugador/${mp.player_id}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0585FC]"
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0085FC]"
                       >
                         <ProfileAvatar
                           avatarUrl={mp.avatar_url}
@@ -224,7 +224,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                         />
                         <span className="flex flex-col leading-tight">
                           <span>{mp.name}</span>
-                          <span className="text-[10px] font-medium text-[#0585FC]/90">
+                          <span className="text-[10px] font-medium text-[#0085FC]/90">
                             <span className="font-bold">{mp.nivelCategory || "—"}</span>
                             {mp.nivelDescription ? (
                               <span>{" - "}{mp.nivelDescription}</span>

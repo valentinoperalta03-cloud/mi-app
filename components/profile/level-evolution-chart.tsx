@@ -8,15 +8,15 @@ type LevelEvolutionChartProps = {
   points: EvolutionPoint[];
 };
 
-const STROKE = "#0585FC";
+const STROKE = "#0085FC";
 const FILL = "rgba(5, 133, 252, 0.08)";
 
 export function LevelEvolutionChart({ points }: LevelEvolutionChartProps) {
   if (points.length === 0) {
     return (
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0585FC]/12">
-          <TrendingUp className="h-6 w-6 text-[#0585FC]" strokeWidth={1.75} aria-hidden />
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0085FC]/12">
+          <TrendingUp className="h-6 w-6 text-[#0085FC]" strokeWidth={1.75} aria-hidden />
         </div>
         <h3 className="mt-4 text-base font-bold text-[var(--text-primary)]">Tu nivel va a crecer acá</h3>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">Jugá partidos para ver tu evolución</p>

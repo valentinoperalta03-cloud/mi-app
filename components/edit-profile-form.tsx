@@ -148,10 +148,10 @@ export function EditProfileForm({
               <img
                 src={previewUrl}
                 alt="Preview del avatar"
-                className="h-28 w-28 rounded-full object-cover ring-4 ring-[#0585FC]/40"
+                className="h-28 w-28 rounded-full object-cover ring-4 ring-[#0085FC]/40"
               />
             ) : (
-              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[#0585FC] to-cyan-500 text-4xl font-semibold text-white ring-4 ring-[#0585FC]/40">
+              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[#0085FC] to-cyan-500 text-4xl font-semibold text-white ring-4 ring-[#0085FC]/40">
                 {(defaultName.trim()[0] ?? "J").toUpperCase()}
               </div>
             )}
@@ -196,7 +196,7 @@ export function EditProfileForm({
             autoComplete="name"
             defaultValue={defaultName}
             maxLength={120}
-            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
+            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
           />
         </label>
 
@@ -211,7 +211,7 @@ export function EditProfileForm({
             pattern="[0-9]*"
             placeholder="Ej. 28"
             defaultValue={defaultAge ?? ""}
-            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
+            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
           />
         </label>
 
@@ -224,7 +224,7 @@ export function EditProfileForm({
               aria-pressed={gender === "masculino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "masculino"
-                  ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                  ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm dark:bg-sky-500"
                   : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
               }`}
             >
@@ -236,7 +236,7 @@ export function EditProfileForm({
               aria-pressed={gender === "femenino"}
               className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                 gender === "femenino"
-                  ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                  ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm dark:bg-sky-500"
                   : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
               }`}
             >
@@ -272,7 +272,7 @@ export function EditProfileForm({
             maxLength={2000}
             placeholder="Contá un poco sobre vos, tu estilo de juego…"
             defaultValue={defaultBio ?? ""}
-            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
+            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
           />
         </label>
 
@@ -291,7 +291,7 @@ export function EditProfileForm({
                 aria-pressed={preferredHand === option.value}
                 className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                   preferredHand === option.value
-                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm dark:bg-sky-500"
                     : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
                 }`}
               >
@@ -317,7 +317,7 @@ export function EditProfileForm({
                 aria-pressed={courtPosition === option.value}
                 className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                   courtPosition === option.value
-                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm dark:bg-sky-500"
                     : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
                 }`}
               >
@@ -344,7 +344,7 @@ export function EditProfileForm({
                 aria-pressed={preferredSchedule === option.value}
                 className={`rounded-3xl border px-4 py-4 text-sm font-semibold transition ${
                   preferredSchedule === option.value
-                    ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-sm dark:bg-sky-500"
+                    ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm dark:bg-sky-500"
                     : "bg-transparent border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
                 }`}
               >
@@ -359,7 +359,7 @@ export function EditProfileForm({
           <button
             type="submit"
             disabled={pending || uploadingAvatar}
-            className="flex flex-1 items-center justify-center gap-2 rounded-3xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0585FC]/50 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-3xl bg-[#0461C4] py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0085FC]/50 disabled:opacity-50"
           >
             {pending || uploadingAvatar ? (
               <>

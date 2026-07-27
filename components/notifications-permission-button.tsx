@@ -49,9 +49,9 @@ export default function NotificationsPermissionButton() {
       className="flex items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-[var(--shadow-card)] transition active:scale-95"
     >
       {status === "requesting" ? (
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#0585FC] border-t-transparent" />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#0085FC] border-t-transparent" />
       ) : (
-        <Bell size={14} className="text-[#0585FC]" />
+        <Bell size={14} className="text-[#0085FC]" />
       )}
       {status === "requesting" ? "Activando..." : "Activar notificaciones"}
     </button>

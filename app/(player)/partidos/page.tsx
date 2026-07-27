@@ -25,7 +25,7 @@ export default async function PartidosPage() {
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-[#0585FC]">Inicio</p>
+        <p className="text-sm font-medium text-[#0085FC]">Inicio</p>
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Matches</h1>
         <p className="text-sm font-light text-[var(--text-tertiary)]">
           Partidos abiertos y proximos en la tabla{" "}
@@ -75,7 +75,7 @@ export default async function PartidosPage() {
                 </p>
                 <Link
                   href="/reservas"
-                  className="rounded-2xl px-3 py-2 text-sm font-medium text-[#0585FC] transition-all duration-300 hover:opacity-95 active:scale-95"
+                  className="rounded-2xl px-3 py-2 text-sm font-medium text-[#0085FC] transition-all duration-300 hover:opacity-95 active:scale-95"
                 >
                   Reservar cancha
                 </Link>

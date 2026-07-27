@@ -71,11 +71,11 @@ export default async function HomeJoinRequestsSection({ userId }: { userId: stri
   if (visible.length === 0) return null;
 
   return (
-    <article className="rounded-[2rem] border border-[#0585FC]/20 bg-[#0585FC]/5/70 p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
+    <article className="rounded-[2rem] border border-[#0085FC]/20 bg-[#0085FC]/5/70 p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
       <h2 className="text-base font-semibold tracking-tight text-slate-900">Solicitudes pendientes</h2>
       <ul className="mt-3 space-y-2">
         {visible.slice(0, 6).map((item) => (
-          <li key={item.id} className="flex gap-3 rounded-2xl border border-[#0585FC]/20 bg-white/90 px-3 py-2">
+          <li key={item.id} className="flex gap-3 rounded-2xl border border-[#0085FC]/20 bg-white/90 px-3 py-2">
             <ProfileAvatar avatarUrl={item.avatarUrl} name={item.requesterName} size={40} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-slate-900">{item.requesterName}</p>

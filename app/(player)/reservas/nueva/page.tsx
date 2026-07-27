@@ -393,7 +393,7 @@ function NuevaReservaContent() {
           <span
             key={n}
             className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-              active === n ? "bg-[#0585FC] text-white dark:bg-sky-500" : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+              active === n ? "bg-[#0085FC] text-white dark:bg-sky-500" : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
             }`}
           >
             {n}
@@ -424,8 +424,8 @@ function NuevaReservaContent() {
                   }}
                   className={`flex min-w-[4.5rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center text-sm font-semibold transition-all ${
                     selected
-                      ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-md dark:bg-sky-500"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#0085FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                   }`}
                 >
                   <span className="text-[11px] font-semibold uppercase leading-tight opacity-90">
@@ -474,8 +474,8 @@ function NuevaReservaContent() {
                       !slot.available
                         ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
                         : selected
-                          ? "border-[#0585FC]/20 bg-[#0585FC] text-white shadow-md dark:bg-sky-500"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0585FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                          ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-md dark:bg-sky-500"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0085FC]/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                     }`}
                   >
                     <span>{slot.time}</span>
@@ -493,7 +493,7 @@ function NuevaReservaContent() {
               setStep(1);
               setSelectedSlot(null);
             }}
-            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
+            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/5"
           >
             Cambiar fecha
           </button>
@@ -537,7 +537,7 @@ function NuevaReservaContent() {
             </div>
             {payMethod === "mercadopago" && depositInfo.requiresDeposit ? (
               <>
-                <div className="flex items-center justify-between rounded-xl bg-[#0585FC]/10 px-3 py-2">
+                <div className="flex items-center justify-between rounded-xl bg-[#0085FC]/10 px-3 py-2">
                   <span className="text-sm font-semibold text-[#0461C4] dark:text-sky-300">Seña a pagar ahora</span>
                   <span className="text-base font-bold text-[#0461C4] dark:text-sky-300">${fmtAr(depositInfo.deposit)}</span>
                 </div>
@@ -579,7 +579,7 @@ function NuevaReservaContent() {
                     onClick={() => setPayMethod("mercadopago")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "mercadopago"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -597,7 +597,7 @@ function NuevaReservaContent() {
                     onClick={() => setPayMethod("cash")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "cash"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -615,7 +615,7 @@ function NuevaReservaContent() {
                     onClick={() => setPayMethod("transfer")}
                     className={`rounded-2xl border px-4 py-3.5 text-left transition ${
                       payMethod === "transfer"
-                        ? "border-[#0585FC] bg-[#0585FC]/8 ring-2 ring-[#0585FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
+                        ? "border-[#0085FC] bg-[#0085FC]/8 ring-2 ring-[#0085FC]/20 dark:border-sky-500 dark:bg-sky-500/10 dark:ring-sky-500/25"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                     }`}
                   >
@@ -709,7 +709,7 @@ function NuevaReservaContent() {
           <button
             type="button"
             onClick={() => setStep(2)}
-            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0585FC] transition hover:bg-[#0585FC]/5"
+            className="w-full rounded-2xl py-3 text-sm font-semibold text-[#0085FC] transition hover:bg-[#0085FC]/5"
           >
             Cambiar horario
           </button>

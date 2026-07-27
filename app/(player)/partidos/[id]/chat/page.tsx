@@ -84,7 +84,7 @@ export default async function MatchChatPage({
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-6 space-y-4">
       <header className="space-y-1">
-        <Link href={`/partidos/${id}`} className="text-sm font-semibold text-[#0585FC]">
+        <Link href={`/partidos/${id}`} className="text-sm font-semibold text-[#0085FC]">
           ← Volver al partido
         </Link>
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">

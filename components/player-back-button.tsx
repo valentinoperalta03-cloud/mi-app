@@ -11,7 +11,7 @@ export function PlayerBackButton({
   return (
     <Link
       href={href}
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-card)] text-[#0585FC] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition active:scale-95 dark:ring-white/10"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-card)] text-[#0085FC] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition active:scale-95 dark:ring-white/10"
       aria-label={label}
     >
       <ChevronLeft size={22} aria-hidden />

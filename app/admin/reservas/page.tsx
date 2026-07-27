@@ -282,10 +282,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       <AdminBackLink />
 
       <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0585FC]/10 blur-2xl" />
+        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0085FC]/10 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <p className={`${adminKicker} text-[#0585FC]`}>Agenda diaria</p>
+            <p className={`${adminKicker} text-[#0085FC]`}>Agenda diaria</p>
             <h1 className={adminTitle}>Gestión de reservas</h1>
             <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
           </div>
@@ -462,7 +462,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                                 </p>
                               </form>
                             ) : (
-                              <details className="h-full rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] p-2 transition-colors hover:border-[var(--admin-brand-primary)] hover:bg-[#0585FC]/[0.04] open:border-[var(--admin-brand-primary)] open:bg-[#0585FC]/[0.04]">
+                              <details className="h-full rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] p-2 transition-colors hover:border-[var(--admin-brand-primary)] hover:bg-[#0085FC]/[0.04] open:border-[var(--admin-brand-primary)] open:bg-[#0085FC]/[0.04]">
                                 <summary className="cursor-pointer list-none text-center text-[11px] font-medium text-[var(--text-tertiary)] [&::-webkit-details-marker]:hidden">
                                   Disponible
                                 </summary>
@@ -564,7 +564,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       )}
 
       {selectedMatch ? (
-        <section className={`${adminCard} border-[#0585FC]/20 bg-[#0585FC]/5 dark:bg-[#0585FC]/10`}>
+        <section className={`${adminCard} border-[#0085FC]/20 bg-[#0085FC]/5 dark:bg-[#0085FC]/10`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               {ownerProfile?.avatar_url ? (

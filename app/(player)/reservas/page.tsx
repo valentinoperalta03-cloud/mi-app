@@ -114,7 +114,7 @@ function ReservationCard({
         </div>
         <div className="flex justify-between">
           <dt className="text-[var(--text-tertiary)]">Precio</dt>
-          <dd className="shrink-0 font-bold text-[#0585FC]">{precio}</dd>
+          <dd className="shrink-0 font-bold text-[#0085FC]">{precio}</dd>
         </div>
       </dl>
       {showCancel && badgeReserved ? (
@@ -191,7 +191,7 @@ function FixedSlotCard({ slot }: { slot: FixedSlotEntry }) {
               <input type="hidden" name="match_id" value={slot.matchId} />
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#0585FC] py-2.5 text-sm font-semibold text-white transition hover:brightness-105"
+                className="w-full rounded-xl bg-[#0085FC] py-2.5 text-sm font-semibold text-white transition hover:brightness-105"
               >
                 Confirmo asistencia
               </button>
@@ -397,7 +397,7 @@ export default async function ReservasPage({
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <MatchesRealtimeRefresh channelName={`reservas-live:${user.id}`} filter={`owner_id=eq.${user.id}`} />
       <header className="space-y-1">
-        <p className="text-sm font-medium text-[#0585FC]">Reservas</p>
+        <p className="text-sm font-medium text-[#0085FC]">Reservas</p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-950">Mis reservas</h1>
         <p className="text-sm font-light text-[var(--text-tertiary)]">Canchas que reservaste con FaltaUno.</p>
       </header>

@@ -128,7 +128,7 @@ export default function SettingsClient({
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-[var(--bg-app)] px-4 pb-24 pt-6">
-      <header className="rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
+      <header className="rounded-2xl bg-gradient-to-r from-[#0085FC] to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Ajustes</p>
         <h1 className="text-xl font-semibold">Configuración</h1>
       </header>
@@ -211,7 +211,7 @@ export default function SettingsClient({
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-[var(--text-primary)]">Mi nivel</h2>
-          <p className="rounded-full bg-[#0585FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">{category || "—"}</p>
+          <p className="rounded-full bg-[#0085FC]/10 px-3 py-1 text-xs font-semibold text-[#0461C4]">{category || "—"}</p>
         </div>
         <button
           type="button"
@@ -262,7 +262,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Nueva contraseña"
-              className="w-full rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
+              className="w-full rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
             />
             <input
               type="password"
@@ -270,7 +270,7 @@ export default function SettingsClient({
               minLength={6}
               required
               placeholder="Confirmar contraseña"
-              className="w-full rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus:border-[#0585FC] focus:outline-none focus:ring-2 focus:ring-[#0585FC]/20"
+              className="w-full rounded-xl border bg-[var(--bg-input)] border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
             />
             <button
               type="submit"
@@ -290,7 +290,7 @@ export default function SettingsClient({
             // eslint-disable-next-line @next/next/no-img-element -- avatar externo de usuario
             <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0585FC]/50 text-sm font-bold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0085FC]/50 text-sm font-bold text-white">
               {(name[0] ?? "J").toUpperCase()}
             </div>
           )}

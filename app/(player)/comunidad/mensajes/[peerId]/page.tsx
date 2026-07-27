@@ -42,7 +42,7 @@ export default async function ChatPeerPage({ params }: PageProps) {
       <header className="mb-3 flex shrink-0 items-center gap-3">
         <Link
           href="/comunidad/mensajes"
-          className="text-sm font-semibold text-[#0585FC] hover:text-[#0461C4]"
+          className="text-sm font-semibold text-[#0085FC] hover:text-[#0461C4]"
         >
           ←
         </Link>

@@ -191,7 +191,7 @@ export function ChatThread({
                 <p className="whitespace-pre-wrap">{m.content}</p>
                 <p
                   className={`mt-1 text-[10px] font-medium tabular-nums ${
-                    mine ? "text-[#0585FC]" : "text-slate-400"
+                    mine ? "text-[#0085FC]" : "text-slate-400"
                   }`}
                 >
                   {format(new Date(m.created_at), "HH:mm", { locale: es })}

@@ -67,7 +67,7 @@ export default function ActivityTabs({
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md space-y-4 bg-transparent px-4 pb-24 pt-6">
-      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0585FC] to-cyan-500 px-4 py-4 text-white">
+      <header className="space-y-1 rounded-2xl bg-gradient-to-r from-[#0085FC] to-cyan-500 px-4 py-4 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">Perfil</p>
         <h1 className="text-xl font-semibold leading-tight tracking-tight">Tu actividad</h1>
       </header>
@@ -77,7 +77,7 @@ export default function ActivityTabs({
           type="button"
           onClick={() => setTab("partidos")}
           className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
-            tab === "partidos" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+            tab === "partidos" ? "bg-[#0085FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
           }`}
         >
           Partidos
@@ -86,7 +86,7 @@ export default function ActivityTabs({
           type="button"
           onClick={() => setTab("reservas")}
           className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
-            tab === "reservas" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+            tab === "reservas" ? "bg-[#0085FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
           }`}
         >
           Reservas
@@ -95,7 +95,7 @@ export default function ActivityTabs({
           type="button"
           onClick={() => setTab("torneos")}
           className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
-            tab === "torneos" ? "bg-[#0585FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
+            tab === "torneos" ? "bg-[#0085FC] text-white dark:bg-sky-500" : "text-slate-600 dark:text-slate-300"
           }`}
         >
           Torneos

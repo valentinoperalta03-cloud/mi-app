@@ -30,7 +30,7 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
               />
             ) : (
               <div
-                className="h-9 w-9 rounded-full border-2 bg-[#0585FC]"
+                className="h-9 w-9 rounded-full border-2 bg-[#0085FC]"
                 style={{ borderColor: "var(--admin-header-logo-border)" }}
               />
             )}
@@ -40,7 +40,7 @@ export default function AdminMobileTopBar({ logoUrl }: { logoUrl: string | null 
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
             aria-expanded={open}
-            className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0585FC]/10 active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-[#0085FC]/10 active:scale-95"
             style={{ color: "var(--admin-header-text)" }}
           >
             <Menu size={22} aria-hidden />

@@ -17,9 +17,9 @@ export default function GlobalError({ error, reset }: Props) {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0585FC] via-white to-slate-50" />
-      <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[#0585FC]/10 blur-3xl" />
-      <div className="absolute -right-20 bottom-12 h-64 w-64 rounded-full bg-[#0585FC]/10 blur-3xl" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0085FC] via-white to-slate-50" />
+      <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[#0085FC]/10 blur-3xl" />
+      <div className="absolute -right-20 bottom-12 h-64 w-64 rounded-full bg-[#0085FC]/10 blur-3xl" />
 
       <section className="relative w-full max-w-md overflow-hidden rounded-[32px] border border-slate-200/70 bg-white/90 p-8 text-center shadow-[0_20px_60px_-28px_rgba(15,23,42,0.28)] backdrop-blur-[2px] sm:p-10">
         <div className="mx-auto mb-6">
@@ -28,7 +28,7 @@ export default function GlobalError({ error, reset }: Props) {
           </div>
         </div>
 
-        <div className="mx-auto mb-7 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0585FC]/5 text-[#0585FC] ring-1 ring-[#0585FC]/20/80">
+        <div className="mx-auto mb-7 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0085FC]/5 text-[#0085FC] ring-1 ring-[#0085FC]/20/80">
           <AlertTriangle size={34} strokeWidth={2.1} aria-hidden />
         </div>
 
