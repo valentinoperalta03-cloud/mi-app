@@ -24,7 +24,7 @@ export function BienvenidaClient() {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#020D1F]">
+    <div className="min-h-dvh bg-[#020D1F]">
       <OnboardingSlides onComplete={handleComplete} />
     </div>
   );
