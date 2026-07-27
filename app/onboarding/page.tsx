@@ -2,11 +2,11 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Space_Grotesk } from "next/font/google";
-import { Check, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { AppleToast } from "@/components/apple-toast";
-import { ONBOARDING_QUIZ_SLIDES, type OnboardingQuestionKey } from "@/lib/onboarding-quiz-data";
+import { ONBOARDING_QUESTIONS } from "@/lib/onboarding-quiz-data";
 import {
   calculatePlayerLevel,
   levelCodeToNumeric,
@@ -20,7 +20,10 @@ import { createClient } from "@/utils/supabase/client";
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-const TOTAL_SLIDES = ONBOARDING_QUIZ_SLIDES.length;
+const TOTAL_QUESTIONS = ONBOARDING_QUESTIONS.length;
+
+const PAGE_BACKGROUND =
+  "linear-gradient(135deg, #0085FC 0%, #031733 60%, rgba(204,255,0,0.08) 100%)";
 
 type Step = "profile" | "quiz" | "result";
 
@@ -56,7 +59,8 @@ export default function OnboardingPage() {
   const [pending, startTransition] = useTransition();
 
   // Paso 1 — perfil
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
   const [age, setAge] = useState("");
   const [phone, setPhone] = useState("");
@@ -67,9 +71,8 @@ export default function OnboardingPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // Quiz — 4 diapositivas, 2 preguntas cada una
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [subIndex, setSubIndex] = useState<0 | 1>(0);
+  // Quiz — 8 pantallas individuales, una por pregunta
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({});
   const [computedLevel, setComputedLevel] = useState<PlayerLevelCode | null>(null);
 
@@ -119,7 +122,7 @@ export default function OnboardingPage() {
   }
 
   function handleContinueFromProfile() {
-    if (!name.trim() || !gender || !preferredHand || !courtPosition || !preferredSchedule) {
+    if (!firstName.trim() || !lastName.trim() || !gender || !preferredHand || !courtPosition || !preferredSchedule) {
       showToast("Completá todos los datos de tu perfil.");
       return;
     }
@@ -130,18 +133,13 @@ export default function OnboardingPage() {
     setStep("quiz");
   }
 
-  function selectAnswer(key: OnboardingQuestionKey, value: string) {
+  function selectAnswer(key: keyof OnboardingAnswers, value: string) {
     const nextAnswers = { ...answers, [key]: value } as Partial<OnboardingAnswers>;
     setAnswers(nextAnswers);
 
     window.setTimeout(() => {
-      if (subIndex === 0) {
-        setSubIndex(1);
-        return;
-      }
-      if (slideIndex < TOTAL_SLIDES - 1) {
-        setSlideIndex((i) => i + 1);
-        setSubIndex(0);
+      if (questionIndex < TOTAL_QUESTIONS - 1) {
+        setQuestionIndex((i) => i + 1);
         return;
       }
       const level = calculatePlayerLevel(nextAnswers as OnboardingAnswers);
@@ -150,10 +148,24 @@ export default function OnboardingPage() {
     }, 260);
   }
 
+  function goBack() {
+    if (questionIndex === 0) {
+      setStep("profile");
+      return;
+    }
+    const prevKey = ONBOARDING_QUESTIONS[questionIndex - 1].key;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[prevKey];
+      return next;
+    });
+    setQuestionIndex((i) => i - 1);
+  }
+
   function handleFinish() {
     startTransition(async () => {
       const res = await completeOnboarding({
-        name,
+        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         gender: gender as "masculino" | "femenino",
         age: age.trim() === "" ? null : Number(age),
         avatarUrl: avatarUrl || null,
@@ -172,12 +184,11 @@ export default function OnboardingPage() {
     });
   }
 
-  const currentSlide = ONBOARDING_QUIZ_SLIDES[slideIndex];
-  const currentQuestion = currentSlide.questions[subIndex];
+  const currentQuestion = ONBOARDING_QUESTIONS[questionIndex];
   const selectedValue = answers[currentQuestion.key];
 
   return (
-    <main className="min-h-dvh bg-brand-navy">
+    <main className="min-h-dvh" style={{ background: PAGE_BACKGROUND }}>
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-10 pt-[max(1.5rem,env(safe-area-inset-top))]">
         {step === "profile" ? (
           <div className="flex flex-1 flex-col">
@@ -212,10 +223,16 @@ export default function OnboardingPage() {
               />
               <p className="text-center text-xs text-white/40">{uploadingAvatar ? "Subiendo foto…" : "Foto de perfil (opcional)"}</p>
 
-              <label className="block">
-                <span className="text-xs font-semibold text-white/60">Nombre completo</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" className={inputClass} />
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-xs font-semibold text-white/60">Nombre</span>
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Tu nombre" className={inputClass} />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-white/60">Apellido</span>
+                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Tu apellido" className={inputClass} />
+                </label>
+              </div>
 
               <div>
                 <span className="text-xs font-semibold text-white/60">Género</span>
@@ -321,39 +338,44 @@ export default function OnboardingPage() {
 
         {step === "quiz" ? (
           <div className="flex flex-1 flex-col">
-            <div className="shrink-0">
-              <h1 className={`${spaceGrotesk.className} text-2xl font-bold text-white`}>Contanos sobre tu juego</h1>
-              <p className="mt-1 text-sm text-white/50">Esto nos ayuda a encontrarte los mejores partidos.</p>
-
-              <div className="mt-5 flex gap-1.5">
-                {ONBOARDING_QUIZ_SLIDES.map((_, i) => {
-                  const filled = i < slideIndex ? 1 : i === slideIndex ? (subIndex + 1) / 2 : 0;
-                  return (
-                    <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-brand-lima transition-all duration-300 ease-out"
-                        style={{ width: `${filled * 100}%` }}
-                      />
-                    </div>
-                  );
-                })}
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={goBack}
+                aria-label="Volver"
+                className="flex shrink-0 items-center gap-1 py-1 text-xs font-medium text-white/40 transition hover:text-white/70"
+              >
+                <ChevronLeft size={16} />
+                Volver
+              </button>
+              <div className="flex flex-1 gap-1.5">
+                {ONBOARDING_QUESTIONS.map((_, i) => (
+                  <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-brand-lima transition-all duration-300 ease-out"
+                      style={{ width: i <= questionIndex ? "100%" : "0%" }}
+                    />
+                  </div>
+                ))}
               </div>
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-                {slideIndex + 1} de {TOTAL_SLIDES}
-              </p>
             </div>
+            <p className="mt-2 shrink-0 text-right text-xs font-semibold uppercase tracking-wide text-white/40">
+              {questionIndex + 1} de {TOTAL_QUESTIONS}
+            </p>
 
-            <div className="mt-8 flex-1">
+            <div className="mt-6 flex-1">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={`${slideIndex}-${subIndex}`}
+                  key={questionIndex}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }}
                   transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                  className="flex flex-col items-center text-center"
                 >
-                  <h2 className="text-lg font-semibold leading-snug text-white">{currentQuestion.question}</h2>
-                  <div className="mt-5 space-y-2.5">
+                  <span className="text-6xl">{currentQuestion.emoji}</span>
+                  <h2 className="mt-4 text-lg font-semibold leading-snug text-white">{currentQuestion.question}</h2>
+                  <div className="mt-6 w-full space-y-2.5 text-left">
                     {currentQuestion.options.map((opt) => (
                       <OptionCard
                         key={opt.value}
