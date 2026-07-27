@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Building2, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
-import PlayerProfileIncompleteBanner from "@/components/player-profile-incomplete-banner";
+import PlayerProfileNudgeBanner from "@/components/player-profile-nudge-banner";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
@@ -137,13 +137,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Link>
       </section>
 
-      {!profileComplete ? (
-        <PlayerProfileIncompleteBanner
-          hasName={hasName}
-          hasGender={hasGender}
-          hasOnboarding={hasOnboarding}
-        />
-      ) : null}
+      {!profileComplete ? <PlayerProfileNudgeBanner /> : null}
 
       <section className={`flex flex-col gap-3 ${!profileComplete ? "pointer-events-none opacity-40 select-none" : ""}`}>
         <Link
