@@ -23,7 +23,7 @@ const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const TOTAL_QUESTIONS = ONBOARDING_QUESTIONS.length;
 
 const PAGE_BACKGROUND =
-  "linear-gradient(135deg, #0085FC 0%, #031733 60%, rgba(204,255,0,0.08) 100%)";
+  "linear-gradient(180deg, #031733 0%, #041a3d 50%, rgba(0,133,252,0.06) 100%)";
 
 type Step = "profile" | "quiz" | "result";
 
