@@ -197,7 +197,6 @@ export default function CrearPartidoForm({
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
   const [confirmedMatchId, setConfirmedMatchId] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
-  const [unavailableClubNotice, setUnavailableClubNotice] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -535,41 +534,28 @@ export default function CrearPartidoForm({
               const thumbFallback = club.imageUrl?.trim() || null;
               const isAvailable = club.isAvailable ?? true;
               const mpConnected = club.mpConnected ?? false;
+              const isUnavailable = !isAvailable || !mpConnected;
               return (
                 <div key={club.id} className="space-y-1.5">
                 <button
                   type="button"
-                  disabled={!isAvailable}
+                  disabled={isUnavailable}
                   onClick={() => {
-                    if (!isAvailable) return;
-                    if (!mpConnected) {
-                      setUnavailableClubNotice(club.id);
-                      return;
-                    }
-                    setUnavailableClubNotice(null);
+                    if (isUnavailable) return;
                     setSelectedClub(club);
                     setSelectedClubId(club.id);
                     setCurrentStep("club-detail");
                   }}
                   className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition-all ${
-                    isAvailable
-                      ? "hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
-                      : "cursor-not-allowed opacity-60"
+                    isUnavailable
+                      ? "cursor-not-allowed opacity-60"
+                      : "hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
                   } ${
                     cover
                       ? "border-black/[0.06] dark:border-white/[0.06]"
                       : "border-black/[0.06] bg-white dark:border-white/[0.06]"
                   }`}
                 >
-                  {!isAvailable ? (
-                    <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                      No disponible
-                    </span>
-                  ) : !mpConnected ? (
-                    <span className="absolute right-3 top-3 z-10 rounded-full bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                      Solo presencial
-                    </span>
-                  ) : null}
                   {cover ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element -- URL de Supabase storage */}
@@ -603,11 +589,18 @@ export default function CrearPartidoForm({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p
-                        className={`truncate font-bold ${cover ? "text-white drop-shadow-sm" : "text-slate-900 dark:text-white"}`}
-                      >
-                        {club.name}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`min-w-0 flex-1 truncate font-bold ${cover ? "text-white drop-shadow-sm" : "text-slate-900 dark:text-white"}`}
+                        >
+                          {club.name}
+                        </p>
+                        {isUnavailable ? (
+                          <span className="shrink-0 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                            No disponible
+                          </span>
+                        ) : null}
+                      </div>
                       <p
                         className={`mt-0.5 flex items-center gap-1 text-sm ${cover ? "text-white/85" : "text-slate-500"}`}
                       >
@@ -618,11 +611,6 @@ export default function CrearPartidoForm({
                     <ChevronRight size={18} className={`shrink-0 ${cover ? "text-white/90" : "text-slate-400"}`} />
                   </div>
                 </button>
-                {unavailableClubNotice === club.id ? (
-                  <p className="px-1 text-xs font-medium text-rose-600 dark:text-rose-400">
-                    Este club no acepta reservas online todavía. Contactalos directamente.
-                  </p>
-                ) : null}
                 </div>
               );
             })}

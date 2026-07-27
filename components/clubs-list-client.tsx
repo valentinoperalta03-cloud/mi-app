@@ -83,7 +83,6 @@ export default function ClubsListClient({
   const cityLabel = hasCity ? formatCityLabel(userCity) : "tu ciudad";
   const provinceLabel = userProvince?.trim() || "tu provincia";
   const [locationFilter, setLocationFilter] = useState<LocationFilter>(hasCity ? "mi_ciudad" : "todos");
-  const [unavailableNotice, setUnavailableNotice] = useState<string | number | null>(null);
 
   const filteredClubs = useMemo(() => {
     if (locationFilter === "mi_ciudad") {
@@ -170,27 +169,16 @@ export default function ClubsListClient({
           const descShort = shortDescription(club.description);
           const isAvailable = club.isAvailable ?? true;
           const mpConnected = club.mpConnected ?? false;
-          const isOnlineBookable = isAvailable && mpConnected;
+          const isUnavailable = !isAvailable || !mpConnected;
           return (
             <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
               <Link
                 href={`/clubes/${club.id}`}
                 onClick={(e) => {
-                  if (isOnlineBookable) return;
-                  e.preventDefault();
-                  setUnavailableNotice(club.id);
+                  if (isUnavailable) e.preventDefault();
                 }}
-                className={`relative block p-5 ${PLAYER_CARD_INTERACTIVE} ${!isOnlineBookable ? "opacity-60" : ""}`}
+                className={`block p-5 ${PLAYER_CARD_INTERACTIVE} ${isUnavailable ? "opacity-60" : ""}`}
               >
-                {!isAvailable ? (
-                  <span className="absolute right-3 top-3 z-10 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                    No disponible
-                  </span>
-                ) : !mpConnected ? (
-                  <span className="absolute right-3 top-3 z-10 rounded-full bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-                    Solo presencial
-                  </span>
-                ) : null}
                 <div className="flex items-start gap-4">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -208,9 +196,16 @@ export default function ClubsListClient({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100">
-                      {club.name ?? "Club sin nombre"}
-                    </h2>
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100">
+                        {club.name ?? "Club sin nombre"}
+                      </h2>
+                      {isUnavailable ? (
+                        <span className="shrink-0 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                          No disponible
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="truncate text-sm font-light text-slate-500 dark:text-slate-400">
                       {club.location ?? "Sin ubicación"}
                     </p>
@@ -228,13 +223,6 @@ export default function ClubsListClient({
                   </div>
                 </div>
               </Link>
-              {unavailableNotice === club.id ? (
-                <p className="mt-1.5 px-1 text-xs font-medium text-rose-600 dark:text-rose-400">
-                  {!isAvailable
-                    ? "Este club no está tomando reservas en este momento."
-                    : "Este club no acepta reservas online todavía. Contactalos directamente."}
-                </p>
-              ) : null}
             </motion.article>
           );
         })}
