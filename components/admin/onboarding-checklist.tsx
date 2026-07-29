@@ -88,14 +88,14 @@ export default function OnboardingChecklist({
       </header>
 
       {!canReceiveReservations ? (
-        <div className="rounded-2xl border border-rose-200/90 bg-rose-100 px-4 py-3 text-sm font-semibold text-rose-900 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+        <div className="rounded-2xl border border-[var(--border-error)] bg-[var(--bg-error-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-error)] shadow-sm">
           🚫 Tu club no puede recibir reservas todavía. Completá al menos: datos básicos, canchas con precio, horarios y
           un método de pago.
         </div>
       ) : null}
 
       {canReceiveReservations && !allCompleted ? (
-        <div className="rounded-2xl border border-amber-200/90 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="rounded-2xl border border-[var(--border-warning)] bg-[var(--bg-warning-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-warning)] shadow-sm">
           ⚠️ Podés recibir reservas pero te faltan algunos pasos para tener el perfil completo.
         </div>
       ) : null}
@@ -123,7 +123,7 @@ export default function OnboardingChecklist({
               key={step.key}
               className={`flex gap-3 rounded-2xl border px-4 py-3.5 transition ${
                 done
-                  ? "border-emerald-200/80 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/25"
+                  ? "border-[var(--border-success)] bg-[var(--bg-success-subtle)]"
                   : "border-[var(--border-subtle)] bg-[var(--bg-card)]/90"
               }`}
             >
@@ -144,7 +144,7 @@ export default function OnboardingChecklist({
                 <Link
                   href={step.href}
                   prefetch
-                  className={`mt-2 inline-flex w-fit items-center rounded-xl px-3 py-1.5 text-xs font-bold text-[#0085FC] ring-1 ring-[#0085FC]/25 transition hover:bg-[#0085FC]/10 dark:text-sky-400 dark:ring-sky-500/30 dark:hover:bg-sky-500/10 ${adminPressable}`}
+                  className={`mt-2 inline-flex w-fit items-center rounded-xl px-3 py-1.5 text-xs font-bold text-[var(--admin-brand-primary)] ring-1 ring-[var(--admin-brand-primary)]/25 transition hover:bg-[var(--admin-brand-primary)]/10 ${adminPressable}`}
                 >
                   Completar →
                 </Link>

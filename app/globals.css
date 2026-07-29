@@ -92,6 +92,16 @@
   --admin-card-border-hover: rgba(5, 133, 252, 0.25);
   --admin-card-shadow: 0 1px 3px rgba(5, 133, 252, 0.06), 0 8px 24px rgba(5, 133, 252, 0.08);
   --admin-card-shadow-hover: 0 4px 20px rgba(5, 133, 252, 0.12);
+
+  /* Semantic status (success/error/warning) - fondos, bordes y texto sutiles */
+  --bg-success-subtle: rgba(16, 185, 129, 0.08);
+  --border-success: rgba(16, 185, 129, 0.35);
+  --bg-error-subtle: rgba(244, 63, 94, 0.12);
+  --border-error: rgba(244, 63, 94, 0.35);
+  --text-error: #881337;
+  --bg-warning-subtle: rgba(245, 158, 11, 0.14);
+  --border-warning: rgba(245, 158, 11, 0.35);
+  --text-warning: #451a03;
 }
 
 .dark {
@@ -134,6 +144,16 @@
   --admin-card-border-hover: rgba(255, 255, 255, 0.14);
   --admin-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
   --admin-card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  /* Semantic status (success/error/warning) - dark */
+  --bg-success-subtle: rgba(16, 185, 129, 0.14);
+  --border-success: rgba(16, 185, 129, 0.3);
+  --bg-error-subtle: rgba(244, 63, 94, 0.18);
+  --border-error: rgba(244, 63, 94, 0.45);
+  --text-error: #ffe4e6;
+  --bg-warning-subtle: rgba(245, 158, 11, 0.18);
+  --border-warning: rgba(245, 158, 11, 0.45);
+  --text-warning: #fef3c7;
 }
 
 /* Base */
