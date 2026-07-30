@@ -76,15 +76,6 @@ export async function POST(req: Request) {
     await service.from(DB_TABLES.clubs).update({ mp_subscription_id: null }).eq("id", clubId);
   }
 
-  const { data: authUser } = await service.auth.admin.getUserById(user.id);
-  const payerEmail = authUser?.user?.email;
-  if (!payerEmail) {
-    return NextResponse.json(
-      { error: "No se pudo obtener el email del dueño del club." },
-      { status: 500 }
-    );
-  }
-
   try {
     // El SDK oficial (mercadopago) no tipa `free_trial` en el request de
     // PreApproval.create pese a que la API de MP si lo acepta; se tipa acá
@@ -92,7 +83,6 @@ export async function POST(req: Request) {
     const preApprovalBody: {
       reason: string;
       external_reference: string;
-      payer_email: string;
       back_url?: string;
       auto_recurring: {
         frequency: number;
@@ -105,7 +95,6 @@ export async function POST(req: Request) {
     } = {
       reason: `Suscripción mensual PadeLibre - ${clubRow.name ?? "Club"}`,
       external_reference: clubId,
-      payer_email: payerEmail,
       ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
       auto_recurring: {
         frequency: 1,
