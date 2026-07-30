@@ -47,6 +47,28 @@ export async function toggleClubActiveAction(formData: FormData) {
   redirect("/superadmin/clubes");
 }
 
+export async function deactivateClubAction(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  if (!clubId) redirect("/superadmin/clubes");
+  const s = await svc();
+  await s.from(DB_TABLES.clubs).update({ is_active: false }).eq("id", clubId);
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  revalidatePath(`/superadmin/clubes/${clubId}`);
+  redirect(`/superadmin/clubes/${clubId}?active=0`);
+}
+
+export async function reactivateClubAction(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  if (!clubId) redirect("/superadmin/clubes");
+  const s = await svc();
+  await s.from(DB_TABLES.clubs).update({ is_active: true }).eq("id", clubId);
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  revalidatePath(`/superadmin/clubes/${clubId}`);
+  redirect(`/superadmin/clubes/${clubId}?active=1`);
+}
+
 export async function activateClubSubscriptionAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
@@ -61,6 +83,23 @@ export async function activateClubSubscriptionAction(formData: FormData) {
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
   redirect(`/superadmin/clubes/${clubId}?sub=activated`);
+}
+
+export async function activateClubTrialAction(formData: FormData) {
+  const clubId = String(formData.get("club_id") ?? "").trim();
+  if (!clubId) redirect("/superadmin/clubes");
+  const s = await svc();
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + 15 * 24 * 3600 * 1000).toISOString();
+  await s
+    .from(DB_TABLES.clubs)
+    .update({ subscription_status: "trial", trial_start_date: now.toISOString(), trial_end_date: trialEnd })
+    .eq("id", clubId);
+  revalidatePath("/superadmin");
+  revalidatePath("/superadmin/clubes");
+  revalidatePath(`/superadmin/clubes/${clubId}`);
+  revalidatePath("/superadmin/finanzas");
+  redirect(`/superadmin/clubes/${clubId}?sub=trial_activated`);
 }
 
 export async function extendClubTrialAction(formData: FormData) {
@@ -123,9 +162,9 @@ export async function resetClubToPendingAction(formData: FormData) {
 
 export async function notifyClubOwnerAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
-  const title = String(formData.get("title") ?? "Mensaje de PadeLibre").trim() || "Mensaje de PadeLibre";
-  const body = String(formData.get("body") ?? "").trim() || "Tenés novedades en tu club.";
+  const message = String(formData.get("message") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
+  if (!message) redirect(`/superadmin/clubes/${clubId}?notif_error=1`);
   const s = await svc();
   const { data: row } = await s.from(DB_TABLES.clubs).select("owner_id").eq("id", clubId).maybeSingle();
   const ownerId = String((row as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
@@ -134,8 +173,8 @@ export async function notifyClubOwnerAction(formData: FormData) {
       await createNotification(s, {
         user_id: ownerId,
         type: "club_agenda",
-        title,
-        body,
+        title: "Mensaje de PadeLibre",
+        body: message,
       });
     } catch {
       /* notifications table puede no existir en algunos entornos */
@@ -208,6 +247,24 @@ export async function deleteClubAction(formData: FormData) {
   if (!clubId) redirect("/superadmin/clubes");
 
   const s = await svc();
+  const target = returnTo.startsWith("/superadmin/clubes/") ? returnTo : `/superadmin/clubes/${clubId}`;
+
+  const { data: courts } = await s.from(DB_TABLES.courts).select("id").eq("club_id", clubId);
+  const courtIds = (courts ?? []).map((row) => (row as { id: string }).id);
+  if (courtIds.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { count } = await s
+      .from(DB_TABLES.matches)
+      .select("id", { count: "exact", head: true })
+      .eq("match_type", "reservation")
+      .neq("match_status", "cancelled")
+      .gte("scheduled_date", today)
+      .in("court_id", courtIds);
+    if ((count ?? 0) > 0) {
+      redirect(`${target}?delete_error=reservas`);
+    }
+  }
+
   const { error } = await s.rpc("superadmin_delete_club", { p_club_id: clubId });
 
   if (error) {

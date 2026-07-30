@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   activateClubSubscriptionAction,
+  activateClubTrialAction,
   extendClubTrialAction,
   markClubPastDueAction,
   pauseClubSubscriptionAction,
@@ -22,6 +23,27 @@ export default function SubscriptionActionsForm({
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <form
+        action={activateClubTrialAction}
+        onSubmit={(e) => {
+          if (
+            !window.confirm(
+              "¿Activar el trial de este club? Arranca ahora y dura 15 días desde este momento."
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <input type="hidden" name="club_id" value={clubId} />
+        <button
+          type="submit"
+          className="w-full rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-sm font-semibold text-sky-100 hover:bg-sky-500/20"
+        >
+          Activar trial (15 días)
+        </button>
+      </form>
+
+      <form
         action={activateClubSubscriptionAction}
         onSubmit={(e) => {
           if (
@@ -36,7 +58,7 @@ export default function SubscriptionActionsForm({
         <input type="hidden" name="club_id" value={clubId} />
         <button
           type="submit"
-          className="w-full rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/20"
+          className="w-full rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-sm font-semibold text-sky-100 hover:bg-sky-500/20"
         >
           Activar manualmente
         </button>
@@ -98,7 +120,7 @@ export default function SubscriptionActionsForm({
         <input type="hidden" name="club_id" value={clubId} />
         <button
           type="submit"
-          className="w-full rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-100 hover:bg-rose-500/20"
+          className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-500/20"
         >
           Marcar como past_due
         </button>

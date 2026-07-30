@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
-import { notifyClubOwnerAction, toggleClubActiveAction } from "@/app/superadmin/actions";
 import ClubAnalyticsGrid from "@/components/superadmin/club-analytics-grid";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
-import DeleteClubForm from "@/components/superadmin/delete-club-form";
+import ClubManagementActionsForm from "@/components/superadmin/club-management-actions-form";
 import SubscriptionActionsForm from "@/components/superadmin/subscription-actions-form";
 import SubscriptionBadge from "@/components/superadmin/subscription-badge";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -17,17 +16,26 @@ function money(n: number) {
 
 const subMessages: Record<string, string> = {
   activated: "Suscripción activada manualmente.",
+  trial_activated: "Trial activado manualmente por 15 días.",
   extended: "Trial extendido correctamente.",
   past_due: "Club marcado como pago fallido.",
+  paused: "Suscripción pausada.",
   reset: "Suscripción reseteada a pending.",
+};
+
+const deleteErrorMessages: Record<string, string> = {
+  "1": "No se pudo eliminar el club. Puede haber datos vinculados que impiden el borrado.",
+  reservas: "No se puede eliminar: el club tiene reservas futuras activas. Cancelalas antes de borrar el club.",
 };
 
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     notif?: string;
+    notif_error?: string;
     created?: string;
     delete_error?: string;
+    active?: string;
     sub?: string;
     sub_error?: string;
   }>;
@@ -94,23 +102,6 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
           <h1 className="mt-2 text-3xl font-bold text-white">{overview.name ?? "Club"}</h1>
           <p className="mt-1 text-sm text-slate-400">{overview.location ?? "Sin ciudad"}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <form action={toggleClubActiveAction}>
-            <input type="hidden" name="club_id" value={id} />
-            <input type="hidden" name="next_active" value={overview.is_active ? "0" : "1"} />
-            <input type="hidden" name="return_to" value={`/superadmin/clubes/${id}`} />
-            <button
-              type="submit"
-              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
-                overview.is_active
-                  ? "border border-rose-500/40 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
-                  : "border border-emerald-500/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
-              }`}
-            >
-              {overview.is_active ? "Desactivar club" : "Activar club"}
-            </button>
-          </form>
-        </div>
       </div>
 
       {sp.created === "1" ? (
@@ -125,9 +116,27 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </p>
       ) : null}
 
-      {sp.delete_error === "1" ? (
+      {sp.notif_error === "1" ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
-          No se pudo eliminar el club. Puede haber datos vinculados que impiden el borrado.
+          Escribí un mensaje antes de notificar al club.
+        </p>
+      ) : null}
+
+      {sp.active === "0" ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+          Club dado de baja. Se ocultó de la app del jugador.
+        </p>
+      ) : null}
+
+      {sp.active === "1" ? (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+          Club reactivado. Vuelve a estar visible en la app del jugador.
+        </p>
+      ) : null}
+
+      {sp.delete_error ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          {deleteErrorMessages[sp.delete_error] ?? "No se pudo eliminar el club."}
         </p>
       ) : null}
 
@@ -306,46 +315,12 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-bold text-white">Enviar notificación al club</h2>
-        <form action={notifyClubOwnerAction} className="mt-4 flex flex-col gap-3">
-          <input type="hidden" name="club_id" value={id} />
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Título
-            <input
-              name="title"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white"
-              placeholder="Asunto"
-            />
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Mensaje
-            <textarea
-              name="body"
-              rows={4}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white"
-              placeholder="Cuerpo del mensaje"
-            />
-          </label>
-          <button
-            type="submit"
-            className="w-fit rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500"
-          >
-            Enviar notificación
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-6">
-        <h2 className="text-lg font-bold text-rose-100">Zona peligrosa</h2>
-        <p className="mt-2 text-sm text-rose-200/90">
-          Eliminar el club borra de forma permanente canchas, reservas, partidos, torneos y chats asociados.
-          No se puede deshacer.
-        </p>
+        <h2 className="text-lg font-bold text-white">Gestión del club</h2>
         <div className="mt-4">
-          <DeleteClubForm
+          <ClubManagementActionsForm
             clubId={id}
             clubName={overview.name ?? "Club"}
-            returnTo={`/superadmin/clubes/${id}`}
+            isActive={Boolean(overview.is_active)}
           />
         </div>
       </section>

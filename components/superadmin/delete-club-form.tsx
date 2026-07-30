@@ -16,10 +16,18 @@ export default function DeleteClubForm({ clubId, clubName, returnTo, variant = "
     <form
       action={deleteClubAction}
       onSubmit={(e) => {
-        const ok = window.confirm(
-          `¿Eliminar "${clubName}" de forma permanente?\n\nSe borrarán canchas, reservas, partidos, torneos y datos asociados. Esta acción no se puede deshacer.`
+        const step1 = window.confirm(
+          `¿Estás seguro que querés eliminar "${clubName}"? Esta acción es irreversible.\n\nSe borrarán canchas, reservas, partidos, torneos y datos asociados.`
         );
-        if (!ok) e.preventDefault();
+        if (!step1) {
+          e.preventDefault();
+          return;
+        }
+        const typed = window.prompt(`Escribí el nombre del club para confirmar: ${clubName}`);
+        if (typed !== clubName) {
+          window.alert("El nombre no coincide. Se canceló la eliminación.");
+          e.preventDefault();
+        }
       }}
     >
       <input type="hidden" name="club_id" value={clubId} />
