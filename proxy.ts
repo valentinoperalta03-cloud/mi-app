@@ -7,6 +7,7 @@ import {
   isGlobalBlockExemptPath,
   isJugadorAppPath,
   isPublicAuthPath,
+  isPublicPath,
   isSuperadminPath,
   resolveHomePath,
 } from "@/lib/auth-redirect";
@@ -99,7 +100,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!user) {
-    if (isPublicAuthPath(pathname) || pathname.startsWith("/api/")) {
+    if (isPublicAuthPath(pathname) || isPublicPath(pathname) || pathname.startsWith("/api/")) {
       return response;
     }
     const loginUrl = new URL("/login", request.url);

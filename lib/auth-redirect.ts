@@ -58,6 +58,11 @@ export function isPublicAuthPath(pathname: string): boolean {
   return false;
 }
 
+/** Rutas públicas sin sesión que NO deben redirigir a usuarios ya logueados (a diferencia de isPublicAuthPath). */
+export function isPublicPath(pathname: string): boolean {
+  return pathname === "/agenda";
+}
+
 /** Rutas permitidas con sesión activa pero cuenta suspendida globalmente. */
 export function isGlobalBlockExemptPath(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/auth/");

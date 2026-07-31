@@ -48,4 +48,6 @@ export const DB_TABLES = {
   practices: "practices",
   practiceSessions: "practice_sessions",
   practiceRegistrations: "practice_registrations",
+  meetingAvailability: "meeting_availability",
+  meetings: "meetings",
 } as const;

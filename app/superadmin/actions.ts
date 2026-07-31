@@ -241,6 +241,35 @@ export async function createClubAction(formData: FormData) {
   redirect(`/superadmin/clubes/${clubId}?created=1`);
 }
 
+const AVAILABILITY_WEEKDAYS = [1, 2, 3, 4, 5] as const;
+
+export async function saveAvailabilityAction(formData: FormData) {
+  const s = await svc();
+
+  for (const day of AVAILABILITY_WEEKDAYS) {
+    await s.from(DB_TABLES.meetingAvailability).delete().eq("day_of_week", day);
+
+    const enabled = formData.get(`enabled_${day}`) === "on";
+    if (!enabled) continue;
+
+    const startTime = String(formData.get(`start_${day}`) ?? "").trim();
+    const endTime = String(formData.get(`end_${day}`) ?? "").trim();
+    const duration = Number.parseInt(String(formData.get(`duration_${day}`) ?? "").trim(), 10);
+    if (!startTime || !endTime || !Number.isFinite(duration) || duration <= 0) continue;
+
+    await s.from(DB_TABLES.meetingAvailability).insert({
+      day_of_week: day,
+      start_time: startTime,
+      end_time: endTime,
+      slot_duration_minutes: duration,
+      is_active: true,
+    });
+  }
+
+  revalidatePath("/superadmin/reuniones");
+  redirect("/superadmin/reuniones?availability=saved");
+}
+
 export async function deleteClubAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   const returnTo = String(formData.get("return_to") ?? "").trim();
