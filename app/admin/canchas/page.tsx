@@ -2,7 +2,6 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import {
-  adminAccentBar,
   adminBadgeError,
   adminBadgeLima,
   adminButtonSecondary,
@@ -17,8 +16,9 @@ import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { createCourt, deleteCourt, updateClubDeposit, updateCourt } from "./actions";
+import { deleteCourt, updateClubDeposit, updateCourt } from "./actions";
 import CourtImageUploader from "./court-image-uploader";
+import NewCourtForm from "./new-court-form";
 
 type CourtRow = {
   id: string;
@@ -138,75 +138,7 @@ export default async function AdminCanchasPage({
       ) : null}
 
       {ctx.clubs.length > 0 ? (
-        <details className={`${adminCard} ${adminAccentBar} group`}>
-          <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-2 group-open:border-[#0085FC]/30">
-              Nueva cancha +
-            </span>
-          </summary>
-          <form action={createCourt} className="mt-4 space-y-4 border-t border-[var(--border-subtle)] pt-4">
-            <label className="block space-y-1.5">
-              <span className={adminKicker}>Club</span>
-              <select
-                name="club_id"
-                required
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-                defaultValue={ctx.clubs[0]?.id ?? ""}
-              >
-                {ctx.clubs.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name ?? "Club"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1.5">
-              <span className={adminKicker}>Nombre</span>
-              <input
-                name="name"
-                type="text"
-                required
-                placeholder="Ej. Cancha 1"
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className={adminKicker}>
-                Precio del turno (90 min)
-              </span>
-              <input
-                name="price"
-                type="number"
-                min={0}
-                required
-                placeholder="0"
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className={adminKicker}>Superficie</span>
-              <select
-                name="surface"
-                required
-                className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-                defaultValue="cemento"
-              >
-                <option value="cemento">Cemento</option>
-                <option value="cristal">Cristal</option>
-                <option value="cesped sintetico">Césped sintético</option>
-                <option value="moqueta">Moqueta</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)]">
-              <input type="checkbox" name="indoor" className="h-4 w-4 rounded border-[var(--border-subtle)]" />
-              Techada
-            </label>
-            <CourtImageUploader courtId={`new-${ctx.userId}`} label="Imagen de cancha" />
-            <button type="submit" className={`w-full ${adminCTAPrimary}`}>
-              Crear cancha
-            </button>
-          </form>
-        </details>
+        <NewCourtForm clubs={ctx.clubs} ownerUserId={ctx.userId} />
       ) : (
         <p className={`${adminCard} text-sm font-medium text-amber-800`}>
           Necesitás un club asignado para crear canchas.
