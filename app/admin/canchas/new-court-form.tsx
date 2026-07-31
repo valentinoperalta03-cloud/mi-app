@@ -26,9 +26,11 @@ export default function NewCourtForm({
   const [selectedCount, setSelectedCount] = useState<number | "5+">(0);
   const [customCount, setCustomCount] = useState("5");
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [dismissedCourtId, setDismissedCourtId] = useState<string | null>(null);
   const [isDuplicating, startDuplicating] = useTransition();
 
   function goToList() {
+    if (state.court) setDismissedCourtId(state.court.id);
     router.push("/admin/canchas");
     router.refresh();
   }
@@ -51,7 +53,7 @@ export default function NewCourtForm({
     });
   }
 
-  if (state.ok && state.court) {
+  if (state.ok && state.court && state.court.id !== dismissedCourtId) {
     return (
       <div className={`${adminCard} space-y-4`}>
         <p className="text-lg font-bold text-[var(--text-primary)]">✅ ¡Cancha creada!</p>
