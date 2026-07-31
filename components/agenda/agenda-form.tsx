@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { addDays, format } from "date-fns";
+import { es } from "date-fns/locale";
 
 type Step = 1 | 2 | 3;
 type Slot = { time: string; available: boolean };
+type DateChip = { key: string; labelTop: string; labelBottom: string };
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0085FC] focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)]";
 
 const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500";
-
-function tomorrowIso(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
 
 export default function AgendaForm() {
   const [step, setStep] = useState<Step>(1);
@@ -23,6 +20,8 @@ export default function AgendaForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  const [dateChips, setDateChips] = useState<DateChip[]>([]);
+  const [loadingDays, setLoadingDays] = useState(true);
   const [date, setDate] = useState("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -30,6 +29,26 @@ export default function AgendaForm() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoadingDays(true);
+    fetch("/api/meetings/available-days")
+      .then((r) => r.json())
+      .then((data) => {
+        const activeDays = new Set<number>((data.days ?? []) as number[]);
+        const start = addDays(new Date(), 1);
+        const chips: DateChip[] = Array.from({ length: 14 }, (_, i) => addDays(start, i))
+          .filter((d) => activeDays.has(d.getDay()))
+          .map((d) => ({
+            key: format(d, "yyyy-MM-dd"),
+            labelTop: format(d, "EEE", { locale: es }),
+            labelBottom: format(d, "d", { locale: es }),
+          }));
+        setDateChips(chips);
+      })
+      .catch(() => setDateChips([]))
+      .finally(() => setLoadingDays(false));
+  }, []);
 
   useEffect(() => {
     if (!date) return;
@@ -139,16 +158,37 @@ export default function AgendaForm() {
         </form>
       ) : (
         <div className="space-y-4">
-          <label className="block">
-            <span className={labelClass}>Fecha</span>
-            <input
-              type="date"
-              className={inputClass}
-              min={tomorrowIso()}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
+          <div>
+            <span className={labelClass}>Elegí un día</span>
+            {loadingDays ? (
+              <p className="text-sm text-slate-500">Buscando días disponibles...</p>
+            ) : dateChips.length === 0 ? (
+              <p className="text-sm text-slate-500">No hay días disponibles en las próximas dos semanas.</p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {dateChips.map((chip) => {
+                  const selected = date === chip.key;
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setDate(chip.key)}
+                      className={`flex min-w-[4.5rem] shrink-0 flex-col items-center rounded-2xl border px-4 py-3 text-center text-sm font-semibold capitalize transition-all ${
+                        selected
+                          ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-md"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-[#0085FC]/40"
+                      }`}
+                    >
+                      <span className="text-[11px] font-semibold uppercase leading-tight opacity-90">
+                        {chip.labelTop}
+                      </span>
+                      <span className="text-lg leading-tight">{chip.labelBottom}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {date ? (
             <div>
