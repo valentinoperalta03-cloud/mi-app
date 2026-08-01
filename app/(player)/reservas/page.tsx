@@ -19,6 +19,7 @@ type ReservationRow = {
   duration_minutes: number | null;
   total_price: number | null;
   match_status: string | null;
+  financial_status: string | null;
   courts: { name: string | null; clubs: { name: string | null } | null } | null;
 };
 
@@ -44,8 +45,9 @@ function ReservationCard({
   const dur = row.duration_minutes ?? 90;
   const precio = row.total_price != null ? `$${Math.round(Number(row.total_price)).toLocaleString("es-AR")}` : "—";
   const status = row.match_status ?? "";
-  const badgeReserved = status === "reserved";
-  const badgePending = status === "pending";
+  const financialStatus = row.financial_status ?? "unpaid";
+  const badgeReserved = status === "reserved" && financialStatus !== "unpaid";
+  const badgePending = status === "reserved" && financialStatus === "unpaid";
   const badgeCancelled = status === "cancelled";
 
   return (
@@ -117,7 +119,7 @@ function ReservationCard({
           <dd className="shrink-0 font-bold text-[#0085FC]">{precio}</dd>
         </div>
       </dl>
-      {showCancel && badgeReserved ? (
+      {showCancel && status === "reserved" ? (
         <form action={cancelReservation} className="mt-4">
           <input type="hidden" name="id" value={row.id} />
           <button
@@ -246,7 +248,9 @@ export default async function ReservasPage({
 
   const { data: rows, error } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, match_type")
+    .select(
+      "id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, financial_status, match_type"
+    )
     .eq("owner_id", user.id)
     .eq("match_type", "reservation")
     .order("scheduled_date", { ascending: false });
@@ -381,11 +385,11 @@ export default async function ReservasPage({
 
   const upcoming = list.filter((r) => {
     const d = r.scheduled_date ?? "";
-    return (d >= today && r.match_status === "reserved") || false;
+    return d >= today && r.match_status === "reserved" && (r.financial_status ?? "unpaid") !== "unpaid";
   });
   const pending = list.filter((r) => {
     const d = r.scheduled_date ?? "";
-    return (d >= today && r.match_status === "pending") || false;
+    return d >= today && r.match_status === "reserved" && (r.financial_status ?? "unpaid") === "unpaid";
   });
 
   const history = list.filter((r) => {

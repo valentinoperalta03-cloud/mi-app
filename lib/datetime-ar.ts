@@ -13,6 +13,16 @@ export function getTodayYmdInArgentina(now: Date = new Date()): string {
   }).format(now);
 }
 
+/** Hora local de Argentina en formato HH:mm (24hs), para comparar con `scheduled_time`. */
+export function getCurrentClockInArgentina(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: AR_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
+}
+
 export function formatLongDateInArgentina(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("es-AR", {
     timeZone: AR_TIME_ZONE,

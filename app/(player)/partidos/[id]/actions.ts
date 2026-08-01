@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
@@ -11,6 +12,7 @@ import { notifyClubOwner } from "@/lib/club-notify";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { refundApprovedPayment } from "@/lib/payment-refund";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
@@ -28,6 +30,19 @@ function overlaps(aStart: number, aLen: number, bStart: number, bLen: number) {
   const aEnd = aStart + aLen;
   const bEnd = bStart + bLen;
   return aStart < bEnd && bStart < aEnd;
+}
+
+async function getClubIdForCourt(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  courtId: string
+): Promise<string> {
+  if (!courtId) return "";
+  const { data: courtRow } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id")
+    .eq("id", courtId)
+    .maybeSingle();
+  return String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
 }
 
 async function addPlayerToMatchGroup(
@@ -184,6 +199,11 @@ export async function requestToJoin(formData: FormData): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) {
     redirect("/login");
+  }
+
+  const allowedByRateLimit = await checkRateLimit(`join_match:${user.id}`, 10, 3600);
+  if (!allowedByRateLimit) {
+    redirect(`/partidos/${matchId}?join_error=rate_limit`);
   }
 
   const { isOnboardingComplete } = await import("@/lib/onboarding-check");
@@ -533,6 +553,11 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     redirect("/login");
   }
 
+  const cancellationGuard = await checkCancellationLimit(supabase, user.id);
+  if (!cancellationGuard.allowed) {
+    redirect(`/partidos/${matchId}?cancel_error=rate_limit`);
+  }
+
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id,owner_id,location_name,match_status,match_type,court_id,scheduled_time,total_price")
@@ -557,6 +582,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   }
 
   const ownerId = String(m.owner_id ?? "").trim();
+  const isOwnerLeaving = ownerId === user.id;
 
   const { data: partRow } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -656,27 +682,46 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     matchCancelled = true;
 
     const courtId = String(m.court_id ?? "").trim();
-    if (courtId) {
-      const { data: courtRow } = await supabase
-        .from(DB_TABLES.courts)
-        .select("club_id")
-        .eq("id", courtId)
-        .maybeSingle();
-      const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
-      const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";
-      if (clubId) {
-        const service = createServiceClient();
-        await notifyClubOwner(service, clubId, {
-          title: "Partido cancelado",
-          body: `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
-          match_id: matchId,
-        });
-      }
+    const clubId = await getClubIdForCourt(supabase, courtId);
+    const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";
+    if (clubId) {
+      const service = createServiceClient();
+      await notifyClubOwner(service, clubId, {
+        title: "Partido cancelado",
+        body: `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
+        match_id: matchId,
+      });
     }
   } else if (remaining < 4 && !matchCancelled) {
     const isReservationType = String(m.match_type ?? "").toLowerCase() === "reservation";
     const downgradedStatus = isReservationType ? "reserved" : "scheduled";
-    await supabase.from(DB_TABLES.matches).update({ match_status: downgradedStatus }).eq("id", matchId);
+    const updatePayload: Record<string, unknown> = { match_status: downgradedStatus };
+
+    // El organizador que se va puede haberse llevado (o recibido reembolso de)
+    // el pago que hizo al crear el partido: el nuevo organizador no puede
+    // heredar un estado "pagado" que ya no corresponde a plata real en el club.
+    if (isOwnerLeaving) {
+      const totalPrice = m.total_price != null ? Number(m.total_price) : 0;
+      updatePayload.payment_status = "pending";
+      updatePayload.financial_status = "unpaid";
+      updatePayload.amount_paid = 0;
+      updatePayload.amount_pending = totalPrice;
+    }
+
+    await supabase.from(DB_TABLES.matches).update(updatePayload).eq("id", matchId);
+
+    if (isOwnerLeaving) {
+      const clubId = await getClubIdForCourt(supabase, String(m.court_id ?? "").trim());
+      if (clubId) {
+        const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";
+        const service = createServiceClient();
+        await notifyClubOwner(service, clubId, {
+          title: "Cambio de organizador",
+          body: `El organizador del turno de las ${timeLabel} dejó su lugar. El pago quedó pendiente para el nuevo organizador.`,
+          match_id: matchId,
+        });
+      }
+    }
   }
 
   if (matchCancelled) {
@@ -708,7 +753,6 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     }
   }
 
-  const isOwnerLeaving = ownerId === user.id;
   if (isOwnerLeaving && delegatedOwner && delegatedOwner !== user.id) {
     const tplOwner = NOTIFICATION_TEMPLATES.match_owner_changed(locationLabel);
     await createNotification(supabase, {

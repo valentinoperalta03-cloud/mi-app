@@ -6,6 +6,7 @@ import { classifyCategory } from "@/lib/level-quiz-logic";
 import { computeEloDelta, eloKForExperience } from "@/lib/level-evolution-elo";
 import { createNotification } from "@/lib/notifications";
 import { validateBestOfThreeSets } from "@/lib/padel-set-score";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type RecordMatchResultState = { ok: boolean; message: string };
@@ -317,6 +318,13 @@ export async function recordMatchResultAction(
 
   if (authErr || !user) {
     return { ok: false, message: "Iniciá sesión para cargar el resultado." };
+  }
+
+  if (intent === "propose") {
+    const allowedByRateLimit = await checkRateLimit(`record_result:${user.id}`, 10, 3600);
+    if (!allowedByRateLimit) {
+      return { ok: false, message: "Cargaste demasiados resultados en poco tiempo. Probá de nuevo en un rato." };
+    }
   }
 
   const { data: mp } = await supabase

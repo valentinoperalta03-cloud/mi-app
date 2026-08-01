@@ -29,6 +29,7 @@ export const JOIN_FLASH_MESSAGES: Record<string, string> = {
   pago: "No pudimos abrir Mercado Pago. Intentá de nuevo en un rato.",
   equipo: "Elegí equipo 1 o 2 antes de unirte.",
   equipo_lleno: "Ese equipo ya tiene 2 jugadores. Elegí el otro.",
+  rate_limit: "Estás intentando unirte a muchos partidos muy rápido. Probá de nuevo en un rato.",
 };
 
 export const CANCEL_ERROR_MESSAGES: Record<string, string> = {
@@ -36,4 +37,5 @@ export const CANCEL_ERROR_MESSAGES: Record<string, string> = {
   no_cupo: "No estabas anotado en este partido.",
   finalizado: "Este partido ya no admite cambios.",
   rpc: "No pudimos liberar tu lugar. Intentá de nuevo.",
+  rate_limit: "Alcanzaste el límite de 5 cancelaciones en 30 días. Contactá soporte si es un error.",
 };

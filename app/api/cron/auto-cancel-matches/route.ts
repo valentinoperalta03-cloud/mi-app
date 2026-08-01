@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { createNotification } from "@/lib/notifications";
 
 type MatchRow = {
@@ -35,9 +36,8 @@ export async function GET(req: Request) {
   });
 
   const now = new Date();
-  const arTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
-  const nowDate = arTime.toISOString().split("T")[0];
-  const nowTime = arTime.toTimeString().slice(0, 5);
+  const nowDate = getTodayYmdInArgentina(now);
+  const nowTime = getCurrentClockInArgentina(now);
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
