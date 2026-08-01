@@ -35,8 +35,9 @@ export async function GET(req: Request) {
   });
 
   const now = new Date();
-  const nowDate = now.toISOString().split("T")[0];
-  const nowTime = now.toTimeString().slice(0, 5);
+  const arTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+  const nowDate = arTime.toISOString().split("T")[0];
+  const nowTime = arTime.toTimeString().slice(0, 5);
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
