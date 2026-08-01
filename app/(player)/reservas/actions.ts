@@ -9,7 +9,8 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { refundMercadoPagoPayment } from "@/lib/mercadopago";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
-import { createClient } from "@/utils/supabase/server";
+import { getClubAccessTokenForMatch } from "@/lib/payment-refund";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function matchStartMs(scheduledDate: string, scheduledTime: string): number {
   const t = scheduledTime.trim().slice(0, 5);
@@ -321,7 +322,11 @@ export async function cancelReservation(formData: FormData) {
         revalidatePath("/reservas");
         redirect("/reservas?info=sin_reembolso");
       }
-      const refundResult = await refundMercadoPagoPayment(mpId);
+      const clubAccessToken = await getClubAccessTokenForMatch(createServiceClient(), id);
+      if (!clubAccessToken) {
+        redirect("/reservas?error=mp_reembolso");
+      }
+      const refundResult = await refundMercadoPagoPayment(mpId, clubAccessToken);
       if (!refundResult.ok) {
         redirect("/reservas?error=mp_reembolso");
       }

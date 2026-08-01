@@ -9,6 +9,39 @@ export type PaymentRefundOutcome =
   | { kind: "failed" };
 
 /**
+ * Busca el token de Mercado Pago del club dueño del match (match → court →
+ * club → mp_access_token), leido con service_role porque la columna esta
+ * revocada para anon/authenticated.
+ */
+export async function getClubAccessTokenForMatch(
+  admin: SupabaseClient,
+  matchId: string
+): Promise<string | null> {
+  const { data: matchRow } = await admin
+    .from(DB_TABLES.matches)
+    .select("court_id")
+    .eq("id", matchId)
+    .maybeSingle();
+  const courtId = String((matchRow as { court_id?: string | null } | null)?.court_id ?? "").trim();
+  if (!courtId) return null;
+
+  const { data: courtRow } = await admin
+    .from(DB_TABLES.courts)
+    .select("club_id")
+    .eq("id", courtId)
+    .maybeSingle();
+  const clubId = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "").trim();
+  if (!clubId) return null;
+
+  const { data: clubRow } = await admin
+    .from(DB_TABLES.clubs)
+    .select("mp_access_token")
+    .eq("id", clubId)
+    .maybeSingle();
+  return (clubRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
+}
+
+/**
  * Reembolsa una fila puntual de `payments` si tiene un pago de Mercado Pago
  * real pendiente de reembolsar (`status` approved o refund_requested —este
  * ultimo cubre el backlog del modelo viejo que solo prometia el reembolso—,
@@ -21,11 +54,12 @@ export async function refundApprovedPayment(
 ): Promise<PaymentRefundOutcome> {
   const { data: row } = await admin
     .from(DB_TABLES.payments)
-    .select("id, status, mp_payment_id, payment_method")
+    .select("id, match_id, status, mp_payment_id, payment_method")
     .eq("id", paymentId)
     .maybeSingle();
   const p = row as {
     id: string;
+    match_id: string | null;
     status: string | null;
     mp_payment_id: string | null;
     payment_method: string | null;
@@ -35,8 +69,11 @@ export async function refundApprovedPayment(
   if (p.payment_method && p.payment_method !== "mercadopago") return { kind: "not_applicable" };
   const mpId = String(p.mp_payment_id ?? "").trim();
   if (!mpId) return { kind: "not_applicable" };
+  const matchId = String(p.match_id ?? "").trim();
+  const clubAccessToken = matchId ? await getClubAccessTokenForMatch(admin, matchId) : null;
+  if (!clubAccessToken) return { kind: "failed" };
 
-  const result = await refundMercadoPagoPayment(mpId);
+  const result = await refundMercadoPagoPayment(mpId, clubAccessToken);
   if (!result.ok) return { kind: "failed" };
 
   await admin

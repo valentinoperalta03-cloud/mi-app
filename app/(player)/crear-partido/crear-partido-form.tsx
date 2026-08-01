@@ -5,6 +5,7 @@ import Link from "next/link";
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { ChevronRight, MapPin, Search, Share2 } from "lucide-react";
@@ -201,6 +202,19 @@ export default function CrearPartidoForm({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let removeListener: (() => void) | undefined;
+    App.addListener("appUrlOpen", (data) => {
+      if (data.url.includes("/reservas/confirmacion") || data.url.includes("status=approved")) {
+        setCurrentStep("confirmation");
+      }
+    }).then((listener) => {
+      removeListener = () => listener.remove();
+    });
+    return () => removeListener?.();
+  }, []);
 
   const dates = useMemo(() => {
     const start = new Date();
@@ -451,6 +465,7 @@ export default function CrearPartidoForm({
             if (result && "error" in result && result.error) {
               setError(result.error);
             } else if (result && "mpUrl" in result && result.mpUrl) {
+              if (result.matchId) setConfirmedMatchId(result.matchId);
               await nativeOpenUrl(result.mpUrl);
             } else if (result && "success" in result && result.matchId) {
               setConfirmedMatchId(result.matchId);

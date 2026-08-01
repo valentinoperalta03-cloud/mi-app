@@ -22,12 +22,23 @@ export function getPaymentRefundClient() {
  * Reembolso real contra la API de MP. Unica funcion que ejecuta un refund en
  * este proyecto — la usan tanto el jugador (app/(player)/reservas/actions.ts)
  * como las acciones de admin, para no duplicar la llamada a MP en cada lugar.
+ * El pago se creo con el token del club (100% va a su cuenta), asi que el
+ * reembolso tiene que hacerse con ese mismo token, no con el de plataforma.
  */
-export async function refundMercadoPagoPayment(mpPaymentId: string): Promise<{ ok: true } | { ok: false }> {
+export async function refundMercadoPagoPayment(
+  mpPaymentId: string,
+  clubAccessToken: string
+): Promise<{ ok: true } | { ok: false }> {
   const id = String(mpPaymentId ?? "").trim();
   if (!id || id === "dev_simulated") return { ok: true };
+  const token = String(clubAccessToken ?? "").trim();
+  if (!token) {
+    console.error("[mp] refund: falta clubAccessToken", { mpPaymentId: id });
+    return { ok: false };
+  }
   try {
-    await getPaymentRefundClient().total({ payment_id: id });
+    const refundClient = new PaymentRefund(new MercadoPagoConfig({ accessToken: token }));
+    await refundClient.total({ payment_id: id });
     return { ok: true };
   } catch (e) {
     console.error("[mp] refund", e);

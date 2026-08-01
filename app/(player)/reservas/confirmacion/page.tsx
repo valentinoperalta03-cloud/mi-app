@@ -52,7 +52,8 @@ function normalizePayState(
 
 export default async function ConfirmacionReservaPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const id = (params.id ?? params.external_reference)?.trim();
+  const rawId = (params.id ?? params.external_reference)?.trim();
+  const id = rawId?.includes("__") ? rawId.split("__")[0] : rawId;
   if (!id) {
     redirect("/reservas");
   }
