@@ -59,12 +59,18 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
 
   const { data: requestRow } = await supabase
     .from(DB_TABLES.matchJoinRequests)
-    .select("id, match_id, player_id, status")
+    .select("id, match_id, player_id, status, voting_closed")
     .eq("id", requestId)
     .eq("match_id", matchId)
     .maybeSingle();
-  if (!requestRow || (requestRow as { status?: string | null }).status !== "pending") {
+  const requestData = requestRow as { status?: string | null; voting_closed?: boolean | null } | null;
+  if (!requestData || requestData.status !== "pending") {
     redirect(`/partidos/${matchId}/solicitudes`);
+  }
+  // El organizador ya resolvió esta solicitud directamente (acceptJoinRequest /
+  // rejectJoinRequest): no seguir contando votos para evitar que se resuelva dos veces.
+  if (requestData.voting_closed) {
+    redirect(`/partidos/${matchId}/solicitudes?error=ya_resuelta`);
   }
 
   const { data: existingVote } = await supabase

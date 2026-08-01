@@ -11,6 +11,7 @@ import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { buildMatchShareUrl, verifyInviteToken } from "@/lib/invite-token";
 import { isMatchPrivate } from "@/lib/match-visibility";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
@@ -375,7 +376,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const favoriteIds = ((favoritesRows ?? []) as { favorite_user_id: string }[]).map((f) => f.favorite_user_id);
 
   const isPrivate = isMatchPrivate(match.visibility);
-  const inviteOpen = sp.invite === "true";
+  const inviteOpen = isPrivate && verifyInviteToken(id, sp.invite);
   const ownerId = match.owner_id ?? "";
   const isFriendOfOwner = Boolean(ownerId && favoriteIds.includes(ownerId));
 
@@ -385,8 +386,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   if (isPrivate && !canAccessPrivate) {
     redirect("/buscar-partido");
   }
-
-  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
 
   const { data: myPendingAccess } =
     isPrivate && !isOwner && !isParticipant && inviteOpen
@@ -502,7 +501,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const heroDateHeadline = `${heroWeekdayCap} ${heroDayNum} ${heroMonthCap}`;
   const heroMatchTitleLine = `${detail.club_name ?? "Club"} · ${heroDateHeadline} · ${hourAr}`;
   const clubWhenDurationLine = `${heroDateHeadline} · ${hourAr} · ${roundedDuration} min`;
-  const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${id}` : `https://padelibre.app/partidos/${id}`;
+  const partyUrl = buildMatchShareUrl(id, match.visibility);
   const sharePath = partyUrl;
   const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
   const ownerLevelLabel = formatProfileNivelFromRow(

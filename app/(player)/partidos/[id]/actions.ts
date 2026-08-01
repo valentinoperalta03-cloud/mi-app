@@ -9,6 +9,7 @@ import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility
 import { log } from "@/lib/logger";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
+import { generateInviteToken } from "@/lib/invite-token";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { refundApprovedPayment } from "@/lib/payment-refund";
@@ -240,6 +241,10 @@ export async function requestToJoin(formData: FormData): Promise<void> {
   }
   const isPrivate = isMatchPrivate(m.visibility);
   const isLevelRestricted = Boolean(m.level_restricted);
+  // Redirects internos del propio server action: el token es legítimo porque
+  // lo generamos nosotros, no lo repetimos ciegamente desde la URL de entrada.
+  // Solo hace falta para partidos privados (público no lo valida igual).
+  const inviteToken = isPrivate ? generateInviteToken(matchId) : "";
 
   if (m.owner_id === user.id) {
     redirect(`/partidos/${matchId}`);
@@ -269,7 +274,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     .maybeSingle();
 
   if (alreadyIn) {
-    redirect(`/partidos/${matchId}?invite=true`);
+    redirect(`/partidos/${matchId}?invite=${inviteToken}`);
   }
 
   const { data: pendingReq } = await supabase
@@ -280,7 +285,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     .maybeSingle();
 
   if (pendingReq && String((pendingReq as { status?: string }).status ?? "") === "pending") {
-    redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
+    redirect(`/partidos/${matchId}?invite=${inviteToken}&join_sent=1`);
   }
 
   let levelDiff = 0;
@@ -308,15 +313,19 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   const needsVotingRequest = isPrivate || (isLevelRestricted && levelDiff > 1 && levelOverride);
   if (needsVotingRequest) {
-    const { error: insErr } = await supabase.from(DB_TABLES.matchJoinRequests).insert({
-      match_id: matchId,
-      player_id: user.id,
-      status: "pending",
-    });
+    const { error: insErr } = await supabase.from(DB_TABLES.matchJoinRequests).upsert(
+      {
+        match_id: matchId,
+        player_id: user.id,
+        status: "pending",
+        voting_closed: false,
+      },
+      { onConflict: "match_id,player_id" }
+    );
 
     if (insErr) {
       console.error("[requestToJoin]", insErr);
-      redirect(`/partidos/${matchId}?invite=true&join_error=error`);
+      redirect(`/partidos/${matchId}?invite=${inviteToken}&join_error=error`);
     }
 
     if (m.owner_id) {
@@ -339,7 +348,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     revalidatePath("/buscar-partido");
-    redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
+    redirect(`/partidos/${matchId}?invite=${inviteToken}&join_sent=1`);
   }
 
   const joinResult = await joinMatchAtomic(supabase, matchId, user.id, requestedTeam);
@@ -348,7 +357,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     revalidatePath("/home");
     revalidatePath("/buscar-partido");
     if (joinResult.reason === "already_in") {
-      redirect(`/partidos/${matchId}?invite=true`);
+      redirect(`/partidos/${matchId}?invite=${inviteToken}`);
     }
     if (joinResult.reason === "team_full" || joinResult.reason === "match_full") {
       redirect(`/partidos/${matchId}?join_error=cupos`);
@@ -414,9 +423,11 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=cupos`);
   }
 
+  // El organizador resuelve directo: cierra la votación en curso (solicitudes/actions.ts)
+  // para que un voto que llegue después no vuelva a resolver la misma solicitud.
   const { error: uErr } = await supabase
     .from(DB_TABLES.matchJoinRequests)
-    .update({ status: "approved" })
+    .update({ status: "approved", voting_closed: true })
     .eq("id", requestId)
     .eq("match_id", matchId);
 
@@ -429,7 +440,7 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
   if (pickedTeam == null) {
     await supabase
       .from(DB_TABLES.matchJoinRequests)
-      .update({ status: "pending" })
+      .update({ status: "pending", voting_closed: false })
       .eq("id", requestId)
       .eq("match_id", matchId);
     redirect(`/partidos/${matchId}?join_error=cupos`);
@@ -443,7 +454,7 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
   if (partErr) {
     await supabase
       .from(DB_TABLES.matchJoinRequests)
-      .update({ status: "pending" })
+      .update({ status: "pending", voting_closed: false })
       .eq("id", requestId)
       .eq("match_id", matchId);
     revalidatePath(`/partidos/${matchId}`);
@@ -512,7 +523,7 @@ export async function rejectJoinRequest(formData: FormData): Promise<void> {
 
   const { error: uErr } = await supabase
     .from(DB_TABLES.matchJoinRequests)
-    .update({ status: "rejected" })
+    .update({ status: "rejected", voting_closed: true })
     .eq("id", requestId)
     .eq("match_id", matchId)
     .eq("status", "pending");

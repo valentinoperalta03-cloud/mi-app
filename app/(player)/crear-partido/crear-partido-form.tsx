@@ -197,6 +197,7 @@ export default function CrearPartidoForm({
   const [isSubmitting, startSubmit] = useTransition();
   const [payMethod, setPayMethod] = useState<"mercadopago" | "cash" | "transfer">("mercadopago");
   const [confirmedMatchId, setConfirmedMatchId] = useState<string | null>(null);
+  const [confirmedShareUrl, setConfirmedShareUrl] = useState<string>("");
   const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
@@ -401,7 +402,7 @@ export default function CrearPartidoForm({
         (selectedClub.acceptsTransfer && !clubHasDeposit))
   );
 
-  const matchShareUrl = confirmedMatchId ? `https://padelibre.online/partidos/${confirmedMatchId}` : "";
+  const matchShareUrl = confirmedShareUrl;
 
   async function handleShareLink() {
     if (!matchShareUrl) return;
@@ -460,15 +461,17 @@ export default function CrearPartidoForm({
           try {
             const result = (await crearPartido(formData)) as
               | { error?: string }
-              | { success?: true; matchId?: string; mpUrl?: string }
+              | { success?: true; matchId?: string; mpUrl?: string; shareUrl?: string }
               | void;
             if (result && "error" in result && result.error) {
               setError(result.error);
             } else if (result && "mpUrl" in result && result.mpUrl) {
               if (result.matchId) setConfirmedMatchId(result.matchId);
+              if (result.shareUrl) setConfirmedShareUrl(result.shareUrl);
               await nativeOpenUrl(result.mpUrl);
             } else if (result && "success" in result && result.matchId) {
               setConfirmedMatchId(result.matchId);
+              if (result.shareUrl) setConfirmedShareUrl(result.shareUrl);
               setCurrentStep("confirmation");
             }
           } catch {

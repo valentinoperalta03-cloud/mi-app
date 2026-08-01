@@ -6,6 +6,7 @@ import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
+import { buildMatchShareUrl } from "@/lib/invite-token";
 import { createMPPreference } from "@/lib/mp-preference";
 import {
   normalizePlayerPaymentMethod,
@@ -89,7 +90,9 @@ async function getUser() {
 export async function crearPartido(
   formData: FormData
 ): Promise<
-  { error: string } | { success: true; matchId: string } | { success: true; matchId: string; mpUrl: string }
+  | { error: string }
+  | { success: true; matchId: string; shareUrl: string }
+  | { success: true; matchId: string; mpUrl: string; shareUrl: string }
 > {
   const courtId = getField(formData, "court_id");
   const scheduledDate = getField(formData, "scheduled_date");
@@ -382,8 +385,7 @@ export async function crearPartido(
       console.error("[crearPartido] group chat", groupRes.message);
     }
 
-    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-    const partyUrl = siteOrigin ? `${siteOrigin}/partidos/${data.id}` : `/partidos/${data.id}`;
+    const partyUrl = buildMatchShareUrl(data.id, visibility);
     if (invitedFriendIds.length > 0) {
       await Promise.all(
         invitedFriendIds.map((friendId) =>
@@ -399,7 +401,7 @@ export async function crearPartido(
     }
 
     if (paymentMethod === "cash" || paymentMethod === "transfer") {
-      return { success: true, matchId: data.id };
+      return { success: true, matchId: data.id, shareUrl: partyUrl };
     }
 
     const mp = await createMPPreference({
@@ -441,7 +443,7 @@ export async function crearPartido(
     // No redirect() acá: el WebView de Capacitor no puede navegar directo a
     // mercadopago.com (no esta en allowNavigation). El cliente abre esta URL con
     // nativeOpenUrl() (Browser.open en nativo), igual que torneos y clases.
-    return { success: true, matchId: data.id, mpUrl: mp.initPoint };
+    return { success: true, matchId: data.id, mpUrl: mp.initPoint, shareUrl: partyUrl };
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { error: "No se pudo crear el partido." };

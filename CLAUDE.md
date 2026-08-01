@@ -80,3 +80,4 @@ Required in `.env.local`:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - Mercado Pago keys (access token + public key, test and prod)
 - `ANTHROPIC_API_KEY` (in `.env`)
+- `INVITE_SECRET` — firma HMAC de los links de invitación a partidos privados (`lib/invite-token.ts`)
