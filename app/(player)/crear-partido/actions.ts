@@ -326,7 +326,10 @@ export async function crearPartido(
         gender_category: genderCategory,
         level_restricted: levelRestricted,
         location_name: clubName,
-        date: new Date(`${scheduledDate}T${scheduledTime}`).toISOString(),
+        date: new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).toISOString(),
+        result_available_at: new Date(
+          new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).getTime() + durationMinutes * 60 * 1000
+        ).toISOString(),
       })
       .select("id")
       .single();

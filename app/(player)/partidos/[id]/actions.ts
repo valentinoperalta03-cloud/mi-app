@@ -142,7 +142,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
     }
   }
 
-  const dateIso = new Date(`${scheduledDate}T${timeNorm}:00`).toISOString();
+  const dateIso = new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString();
 
   const { error: updErr } = await supabase
     .from(DB_TABLES.matches)

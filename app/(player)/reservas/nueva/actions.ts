@@ -22,7 +22,7 @@ function getField(formData: FormData, key: string) {
 }
 
 function toIsoDateTime(date: string, time: string) {
-  return new Date(`${date}T${time}:00`).toISOString();
+  return new Date(`${date}T${time}:00-03:00`).toISOString();
 }
 
 function clockToMinutes(clock: string): number {
@@ -317,6 +317,9 @@ export async function createReservation(formData: FormData): Promise<CreateReser
       location_name: clubName || "Club",
       date: dateIso,
       gender_category: "mixto",
+      result_available_at: new Date(
+        new Date(`${scheduledDate}T${timeNorm}:00-03:00`).getTime() + slotDur * 60 * 1000
+      ).toISOString(),
     })
     .select("id")
     .single();

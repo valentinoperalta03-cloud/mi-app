@@ -6,7 +6,7 @@ import { classifyCategory } from "@/lib/level-quiz-logic";
 import { computeEloDelta, eloKForExperience } from "@/lib/level-evolution-elo";
 import { createNotification } from "@/lib/notifications";
 import { validateBestOfThreeSets } from "@/lib/padel-set-score";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type RecordMatchResultState = { ok: boolean; message: string };
 
@@ -210,7 +210,7 @@ async function applyEloForConfirmedMatch(params: {
     const next = Number(Math.max(0, Math.min(8, prev + delta)).toFixed(3));
     const kUsed = eloKForExperience(totalMatchesPlayed);
 
-    const { error: upErr } = await supabase
+    const { error: upErr } = await createServiceClient()
       .from(DB_TABLES.profiles)
       .update({ level: next, level_of_play: classifyCategory(next) })
       .eq("user_id", playerId);
