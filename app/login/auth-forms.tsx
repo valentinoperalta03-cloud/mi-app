@@ -177,10 +177,12 @@ function LoginForm({
   onOtpRequired,
   notice,
   defaultEmail = "",
+  next,
 }: {
   onOtpRequired: (email: string) => void;
   notice?: string | null;
   defaultEmail?: string;
+  next?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -208,6 +210,8 @@ function LoginForm({
           {notice}
         </p>
       ) : null}
+
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div>
         <label htmlFor="login-email" className={labelClass}>
@@ -264,9 +268,11 @@ function LoginForm({
 function RegisterForm({
   onOtpRequired,
   onExistingAccount,
+  next,
 }: {
   onOtpRequired: (email: string) => void;
   onExistingAccount: (email: string) => void;
+  next?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -293,6 +299,8 @@ function RegisterForm({
         });
       }}
     >
+      {next ? <input type="hidden" name="next" value={next} /> : null}
+
       <div>
         <label htmlFor="login-full-name" className={labelClass}>
           Nombre
@@ -361,9 +369,11 @@ function RegisterForm({
 function OtpForm({
   email,
   onBack,
+  next,
 }: {
   email: string;
   onBack: () => void;
+  next?: string;
 }) {
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -391,6 +401,7 @@ function OtpForm({
           const formData = new FormData();
           formData.set("email", email);
           formData.set("token", token);
+          if (next) formData.set("next", next);
           const result = await verifyOtpCode(formData);
           if (!result.success) {
             setError(result.message);
@@ -478,7 +489,7 @@ function OtpForm({
   );
 }
 
-export function EmailAuthForm() {
+export function EmailAuthForm({ next }: { next?: string }) {
   const [isLogin, setIsLogin] = useState(true);
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [loginEmailPrefill, setLoginEmailPrefill] = useState("");
@@ -492,12 +503,14 @@ export function EmailAuthForm() {
       {otpState.active ? (
         <OtpForm
           email={otpState.email}
+          next={next}
           onBack={() => setOtpState({ active: false, email: "" })}
         />
       ) : isLogin ? (
         <LoginForm
           notice={loginNotice}
           defaultEmail={loginEmailPrefill}
+          next={next}
           onOtpRequired={(email) => {
             setLoginNotice(null);
             setOtpState({ active: true, email });
@@ -505,6 +518,7 @@ export function EmailAuthForm() {
         />
       ) : (
         <RegisterForm
+          next={next}
           onOtpRequired={(email) => setOtpState({ active: true, email })}
           onExistingAccount={(email) => {
             setIsLogin(true);

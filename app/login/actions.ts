@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveHomePath } from "@/lib/auth-redirect";
+import { resolveHomePath, resolveSafeNextPath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { getAuthSiteOrigin } from "@/lib/auth-site-url";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -77,7 +77,8 @@ export async function signInWithEmail(
     return { ok: false, message: "No se pudo obtener la sesión. Volvé a intentar." };
   }
 
-  redirect(await resolveHomePath(supabase, user.id));
+  const next = resolveSafeNextPath(getStringField(formData, "next"));
+  redirect(next ?? (await resolveHomePath(supabase, user.id)));
 }
 
 export type SignUpWithEmailResult =
@@ -143,7 +144,8 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
       data: { user: u },
     } = await supabase.auth.getUser();
     if (u) {
-      redirect(await resolveHomePath(supabase, u.id));
+      const next = resolveSafeNextPath(getStringField(formData, "next"));
+      redirect(next ?? (await resolveHomePath(supabase, u.id)));
     }
   }
 
@@ -216,7 +218,8 @@ export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult
     return { success: false, message: "No se pudo obtener la sesión. Volvé a intentar." };
   }
 
-  redirect(await resolveHomePath(supabase, user.id));
+  const next = resolveSafeNextPath(getStringField(formData, "next"));
+  redirect(next ?? (await resolveHomePath(supabase, user.id)));
 }
 
 export async function resendOtpCode(formData: FormData): Promise<OtpActionResult> {

@@ -786,6 +786,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
+      {!isOwner && !isParticipant && !isMatchFinished ? (
+        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+          <div className="flex w-full justify-center">
+            <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
+          </div>
+        </section>
+      ) : null}
+
       {isParticipant && !isOwner && showGroupChat && groupChatHref ? (
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
           <Link

@@ -4,7 +4,7 @@ import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { AppleAuthForm, EmailAuthForm, GoogleAuthForm } from "./auth-forms";
 
 type LoginPageProps = {
-  searchParams: Promise<{ message?: string; kind?: string }>;
+  searchParams: Promise<{ message?: string; kind?: string; next?: string }>;
 };
 
 function displayMessage(raw: string | undefined) {
@@ -25,7 +25,7 @@ function LoginMark() {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { message, kind } = await searchParams;
+  const { message, kind, next } = await searchParams;
   const text = displayMessage(message);
   const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
@@ -68,7 +68,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <span className="h-px flex-1 bg-slate-200/90 dark:bg-slate-700" />
           </div>
 
-          <EmailAuthForm />
+          <EmailAuthForm next={next} />
 
           <LegalFooterLinks variant="login" className="mt-6" />
         </div>

@@ -18,6 +18,15 @@ export async function resolveHomePath(
   return "/home";
 }
 
+const NEXT_SAFE_PREFIXES = ["/partidos/", "/reservas/", "/torneos/", "/clubes/"] as const;
+
+/** Valida `?next=` post-login: solo rutas internas conocidas, nunca URLs externas. */
+export function resolveSafeNextPath(next: string | null | undefined): string | null {
+  const trimmed = (next ?? "").trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
+  return NEXT_SAFE_PREFIXES.some((p) => trimmed.startsWith(p)) ? trimmed : null;
+}
+
 export function isAdminPanelPath(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
