@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -125,21 +126,21 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
         match_id: matchId,
       });
     } else {
-      const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-        match_id: matchId,
-        player_id: requesterId,
-        team: pickedTeam,
-      });
-      if (!partErr) {
+      // El voto decisivo puede ser de cualquier participante, no solo el dueño:
+      // se llama con service_role porque join_match_atomic solo autoriza al
+      // propio jugador o al dueño del partido (ver migración
+      // 20260801120000_join_match_atomic_allow_service_role.sql).
+      const joinResult = await joinMatchAtomic(createServiceClient(), matchId, requesterId, pickedTeam);
+      if (joinResult.ok) {
         await addPlayerToMatchGroup(matchId, requesterId);
       }
       await createNotification(supabase, {
         user_id: requesterId,
         type: "join_approved",
         title: "¡Solicitud aprobada!",
-        body: partErr
-          ? "Tu solicitud fue aprobada pero hubo un error al confirmarte. Ingresá al partido para intentar nuevamente."
-          : "La mayoría del partido aprobó tu ingreso. ¡Ya estás confirmado!",
+        body: joinResult.ok
+          ? "La mayoría del partido aprobó tu ingreso. ¡Ya estás confirmado!"
+          : "Tu solicitud fue aprobada pero hubo un error al confirmarte. Ingresá al partido para intentar nuevamente.",
         match_id: matchId,
       });
     }

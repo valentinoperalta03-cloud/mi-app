@@ -8,6 +8,7 @@ import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility
 import { log } from "@/lib/logger";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
+import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { refundApprovedPayment } from "@/lib/payment-refund";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -321,23 +322,20 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?invite=true&join_sent=1`);
   }
 
-  const { count: countBefore, error: cErr } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id", { count: "exact", head: true })
-    .eq("match_id", matchId);
-  if (cErr || (countBefore ?? 0) >= 4) {
-    redirect(`/partidos/${matchId}?join_error=cupos`);
-  }
-
-  const { error: joinErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: user.id,
-    team: requestedTeam,
-  });
-  if (joinErr) {
+  const joinResult = await joinMatchAtomic(supabase, matchId, user.id, requestedTeam);
+  if (!joinResult.ok) {
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     revalidatePath("/buscar-partido");
+    if (joinResult.reason === "already_in") {
+      redirect(`/partidos/${matchId}?invite=true`);
+    }
+    if (joinResult.reason === "team_full" || joinResult.reason === "match_full") {
+      redirect(`/partidos/${matchId}?join_error=cupos`);
+    }
+    if (joinResult.reason === "match_closed") {
+      redirect(`/partidos/${matchId}?join_error=no_disponible`);
+    }
     redirect(`/partidos/${matchId}?join_error=db`);
   }
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
+import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { isLevelCompatible } from "@/lib/match-level";
@@ -277,20 +278,15 @@ export async function toggleMatchParticipationAction(
     return { success: false, message: "Este partido ya no tiene cupos libres." };
   }
 
-  const { error: insertError } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: playerId,
-    team: pickedTeam,
-  });
-
-  if (insertError) {
-    if (insertError.code === "23505") {
+  const joinResult = await joinMatchAtomic(supabase, matchId, playerId, pickedTeam);
+  if (!joinResult.ok) {
+    if (joinResult.reason === "already_in") {
       return { success: false, message: "Ya estabas anotado en este partido." };
     }
-    return {
-      success: false,
-      message: `No se pudo completar la inscripcion: ${insertError.message}`,
-    };
+    if (joinResult.reason === "team_full" || joinResult.reason === "match_full") {
+      return { success: false, message: "Este partido ya esta completo." };
+    }
+    return { success: false, message: "No se pudo completar la inscripcion." };
   }
   await addPlayerToMatchGroup(supabase, matchId, playerId);
 

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
+import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { createNotification } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -58,30 +59,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ redirect: `/partidos/${matchId}` });
   }
 
-  const { count } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id", { count: "exact", head: true })
-    .eq("match_id", matchId);
-
-  if ((count ?? 0) >= 4) {
-    return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=cupos` });
-  }
-
-  const { data: alreadyIn } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("match_id")
-    .eq("match_id", matchId)
-    .eq("player_id", user.id)
-    .maybeSingle();
-
-  if (alreadyIn) return NextResponse.json({ redirect: `/partidos/${matchId}` });
-
-  const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: user.id,
-    team: requestedTeam,
-  });
-  if (partErr) {
+  const joinResult = await joinMatchAtomic(supabase, matchId, user.id, requestedTeam);
+  if (!joinResult.ok) {
+    if (joinResult.reason === "already_in") {
+      return NextResponse.json({ redirect: `/partidos/${matchId}` });
+    }
+    if (joinResult.reason === "team_full" || joinResult.reason === "match_full") {
+      return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=cupos` });
+    }
+    if (joinResult.reason === "match_closed") {
+      return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=no_disponible` });
+    }
     return NextResponse.json({ redirect: `/partidos/${matchId}?join_error=db` });
   }
 
