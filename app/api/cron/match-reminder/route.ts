@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     .from(DB_TABLES.matches)
     .select("id, scheduled_date, scheduled_time")
     .eq("scheduled_date", tomorrow)
-    .in("match_status", ["reserved", "full"])
+    .in("match_status", ["reserved", "full", "scheduled"])
     .eq("match_24h_reminder_sent", false)
     .limit(50);
 
@@ -47,6 +47,8 @@ export async function GET(req: Request) {
       .from(DB_TABLES.matchParticipants)
       .select("player_id")
       .eq("match_id", match.id);
+
+    if (!participants?.length) continue;
 
     const time = String(match.scheduled_time ?? "").trim().slice(0, 5);
 

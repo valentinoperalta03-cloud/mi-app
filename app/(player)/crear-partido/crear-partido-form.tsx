@@ -52,6 +52,7 @@ export type ClubOption = {
   bankCbu?: string | null;
   mpConnected?: boolean;
   openTime?: string;
+  closeTime?: string | null;
   depositType?: "percentage" | "fixed" | null;
   depositValue?: number;
   isAvailable?: boolean;
@@ -114,7 +115,7 @@ function StepProgress({ step }: { step: Step }) {
   );
 }
 
-function buildClubSlots(openTime: string): TurnSlot[] {
+function buildClubSlots(openTime: string, closeTime?: string | null): TurnSlot[] {
   const parseT = (hhmm: string) => {
     const [h, m] = hhmm.split(":").map(Number);
     return (h || 0) * 60 + (m || 0);
@@ -125,8 +126,11 @@ function buildClubSlots(openTime: string): TurnSlot[] {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
   const openMin = parseT(openTime || "09:00");
+  // "00:00" significa que el club cierra a medianoche (sin restricción real).
+  const closeMinRaw = closeTime ? parseT(closeTime) : 24 * 60;
+  const closeMin = closeMinRaw === 0 ? 24 * 60 : closeMinRaw;
   const slots: TurnSlot[] = [];
-  for (let t = openMin; t < 24 * 60; t += 90) {
+  for (let t = openMin; t + 90 <= closeMin; t += 90) {
     const end = t + 90;
     slots.push({
       time: fmt(t),
@@ -349,7 +353,7 @@ export default function CrearPartidoForm({
       );
 
       // Generar slots dinámicos desde la apertura del club seleccionado
-      const allSlots = buildClubSlots(selectedClub?.openTime ?? "09:00");
+      const allSlots = buildClubSlots(selectedClub?.openTime ?? "09:00", selectedClub?.closeTime);
 
       const available = allSlots.filter((slot) => {
         if (courtBlockStarts.has(normalizeSlotTime(slot.time))) return false;

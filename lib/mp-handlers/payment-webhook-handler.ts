@@ -7,6 +7,8 @@ import { getPaymentClient } from "@/lib/mercadopago";
 import { verifyMpWebhookSignature } from "@/lib/mp-webhook-signature";
 import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
 import { assertMatchTransition } from "@/lib/state-machines/match-states";
+import { createGroupChat } from "@/lib/group-chats";
+import { buildMatchShareUrl } from "@/lib/invite-token";
 import { createNotification } from "@/lib/notifications";
 import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
@@ -439,7 +441,9 @@ async function processPaymentId(
 
     const { data: matchBefore } = await admin
       .from(DB_TABLES.matches)
-      .select("owner_id,match_status,payment_status,total_price,amount_paid,scheduled_date,court_id,courts(name,club_id)")
+      .select(
+        "owner_id,match_status,payment_status,total_price,amount_paid,scheduled_date,court_id,courts(name,club_id),match_type,gender_category,visibility,location_name,invited_friend_ids"
+      )
       .eq("id", matchId)
       .maybeSingle();
     const mb = matchBefore as {
@@ -450,6 +454,11 @@ async function processPaymentId(
       amount_paid?: number | null;
       scheduled_date?: string | null;
       courts?: { name?: string | null; club_id?: string | null } | null;
+      match_type?: string | null;
+      gender_category?: string | null;
+      visibility?: string | null;
+      location_name?: string | null;
+      invited_friend_ids?: string[] | null;
     } | null;
 
     const totalPrice = Number(mb?.total_price ?? 0);
@@ -503,6 +512,59 @@ async function processPaymentId(
       .eq("id", matchId);
 
     const ownerId = String(mb?.owner_id ?? "").trim();
+
+    // El partido recién se confirma acá (no en crearPartido) cuando la seña se
+    // paga por Mercado Pago: crear el chat grupal y notificar a los amigos
+    // invitados en este momento, no antes. Las reservas de cancha (sin
+    // partido/amigos) no llevan chat grupal.
+    if (ownerId && String(mb?.match_type ?? "").toLowerCase() !== "reservation") {
+      const { data: existingChat } = await admin
+        .from(DB_TABLES.groupChats)
+        .select("id")
+        .eq("match_id", matchId)
+        .maybeSingle();
+      if (!existingChat) {
+        const clubName = String(mb?.location_name ?? "Club").trim() || "Club";
+        const friendlyDate = String(mb?.scheduled_date ?? "").split("-").reverse().join("/");
+        const competitiveLabel =
+          String(mb?.match_type ?? "").toLowerCase() === "competitivo" ? "Partido competitivo" : "Partido amistoso";
+        const genderCategory = String(mb?.gender_category ?? "mixto").toLowerCase();
+        const genderLabel =
+          genderCategory === "femenino"
+            ? "Partido femenino"
+            : genderCategory === "mixto"
+              ? "Partido mixto"
+              : "Partido masculino";
+        const groupRes = await createGroupChat(
+          admin,
+          ownerId,
+          `Partido en ${clubName} el ${friendlyDate}`,
+          `• ${competitiveLabel}\n• ${genderLabel}`,
+          [],
+          matchId
+        );
+        if (!groupRes.ok) {
+          log.error({ event: "mp.webhook.group_chat_failed", requestId, matchId, err: groupRes.message });
+        }
+
+        const invitedFriendIds = (mb?.invited_friend_ids ?? []).filter(Boolean);
+        if (invitedFriendIds.length > 0) {
+          const shareUrl = buildMatchShareUrl(matchId, mb?.visibility);
+          await Promise.all(
+            invitedFriendIds.map((friendId) =>
+              createNotification(admin, {
+                user_id: friendId,
+                type: "join_request",
+                title: "¡Te invitaron a un partido!",
+                body: `Te invitaron a un partido. Confirmá tu lugar desde acá: ${shareUrl}`,
+                match_id: matchId,
+              })
+            )
+          );
+        }
+      }
+    }
+
     if (ownerId) {
       const body =
         financialStatus === "fully_paid"

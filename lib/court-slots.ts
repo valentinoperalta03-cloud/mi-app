@@ -68,7 +68,7 @@ export function parseClockToMinutes(clock: string): number {
  * "00:00" y "23:59" se tratan como medianoche (1440 min), porque un club
  * que cierra "a las 23:59" quiere que el turno 22:30→00:00 aparezca.
  */
-function parseCloseTimeToMinutes(clock: string): number {
+export function parseCloseTimeToMinutes(clock: string): number {
   const m = parseClockToMinutes(clock);
   if (m === 0 || m >= 23 * 60 + 59) return 1440;
   return m;

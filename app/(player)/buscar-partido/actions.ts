@@ -6,6 +6,7 @@ import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { isLevelCompatible } from "@/lib/match-level";
+import { refundApprovedPayment } from "@/lib/payment-refund";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type ToggleJoinState = {
@@ -116,6 +117,35 @@ export async function toggleMatchParticipationAction(
     const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
     const delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
     const wasCancelled = Boolean((resultRow as { cancelled?: boolean } | null)?.cancelled);
+
+    const service = createServiceClient();
+
+    // Si este jugador tenía un pago de MP aprobado, se reembolsa de verdad (no solo se promete).
+    const { data: myPaymentRow } = await supabase
+      .from(DB_TABLES.payments)
+      .select("id")
+      .eq("match_id", matchId)
+      .eq("user_id", playerId)
+      .eq("status", "approved")
+      .maybeSingle();
+    const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
+    if (myPaymentId) {
+      const refundOutcome = await refundApprovedPayment(service, myPaymentId);
+      if (refundOutcome.kind === "failed") {
+        console.error("[toggleMatchParticipationAction] refund failed", matchId, playerId);
+      }
+    }
+
+    // Sacarlo del chat grupal del partido.
+    const { data: groupRow } = await service
+      .from(DB_TABLES.groupChats)
+      .select("id")
+      .eq("match_id", matchId)
+      .maybeSingle();
+    const groupId = (groupRow as { id?: string } | null)?.id;
+    if (groupId) {
+      await service.from(DB_TABLES.groupChatMembers).delete().eq("group_id", groupId).eq("user_id", playerId);
+    }
 
     const remainingIds = participantIds.filter((id) => id !== playerId);
     const isOwnerLeaving = leaveMatch.owner_id === playerId;

@@ -51,7 +51,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "id, name, location, city, province, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, open_time, deposit_type, deposit_value"
+        "id, name, location, city, province, description, image_url, cover_image_url, logo_url, accepts_cash, accepts_transfer, bank_alias, bank_cbu, open_time, close_time, deposit_type, deposit_value"
       )
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -114,6 +114,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bank_alias?: string | null;
     bank_cbu?: string | null;
     open_time?: string | null;
+    close_time?: string | null;
     deposit_type?: "percentage" | "fixed" | null;
     deposit_value?: number | null;
   }>).map((club) => ({
@@ -132,6 +133,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     bankCbu: club.bank_cbu?.trim() || null,
     mpConnected: mpConnectedMap[club.id] ?? false,
     openTime: String(club.open_time ?? "09:00").trim().slice(0, 5) || "09:00",
+    closeTime: club.close_time ? String(club.close_time).trim().slice(0, 5) : null,
     depositType: club.deposit_type ?? null,
     depositValue: Number(club.deposit_value ?? 0),
     isAvailable: availabilityMap[club.id] ?? true,

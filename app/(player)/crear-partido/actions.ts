@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
@@ -152,7 +153,7 @@ export async function crearPartido(
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select(
-        "club_id, price, name, clubs!inner(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value)"
+        "club_id, price, name, clubs!inner(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value, close_time)"
       )
       .eq("id", courtId)
       .maybeSingle();
@@ -247,6 +248,16 @@ export async function crearPartido(
     }
 
     const slotStart = clockToMinutes(scheduledTime);
+    const clubCloseTime = String(
+      (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? ""
+    ).trim();
+    if (clubCloseTime) {
+      const closeMinutes = parseCloseTimeToMinutes(clubCloseTime);
+      if (slotStart + durationMinutes > closeMinutes) {
+        return { error: "El club cierra antes de que termine ese turno." };
+      }
+    }
+
     const todayAr = getTodayYmdInArgentina();
     if (scheduledDate < todayAr) {
       return { error: "La fecha debe ser futura." };
@@ -329,6 +340,7 @@ export async function crearPartido(
         gender_category: genderCategory,
         level_restricted: levelRestricted,
         location_name: clubName,
+        invited_friend_ids: invitedFriendIds,
         date: new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).toISOString(),
         result_available_at: new Date(
           new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).getTime() + durationMinutes * 60 * 1000
@@ -365,42 +377,47 @@ export async function crearPartido(
       });
     }
 
-    const friendlyDate = scheduledDate.split("-").reverse().join("/");
-    const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
-    const genderLabel =
-      genderCategory === "femenino"
-        ? "Partido femenino"
-        : genderCategory === "mixto"
-          ? "Partido mixto"
-          : "Partido masculino";
-    const groupRes = await createGroupChat(
-      supabase,
-      user.id,
-      `Partido en ${clubName} el ${friendlyDate}`,
-      `• ${competitiveLabel}\n• ${genderLabel}`,
-      [],
-      data.id
-    );
-    if (!groupRes.ok) {
-      console.error("[crearPartido] group chat", groupRes.message);
-    }
-
     const partyUrl = buildMatchShareUrl(data.id, visibility);
-    if (invitedFriendIds.length > 0) {
-      await Promise.all(
-        invitedFriendIds.map((friendId) =>
-          createNotification(supabase, {
-            user_id: friendId,
-            type: "join_request",
-            title: "¡Te invitaron a un partido!",
-            body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
-            match_id: data.id,
-          })
-        )
-      );
-    }
 
+    // Sin seña, el partido queda confirmado en el momento: el chat y las
+    // invitaciones a amigos se crean acá. Con Mercado Pago, el partido recién
+    // se confirma cuando el webhook aprueba el pago — ver payment-webhook-handler.ts,
+    // que crea el chat y notifica a partir de matches.invited_friend_ids.
     if (paymentMethod === "cash" || paymentMethod === "transfer") {
+      const friendlyDate = scheduledDate.split("-").reverse().join("/");
+      const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
+      const genderLabel =
+        genderCategory === "femenino"
+          ? "Partido femenino"
+          : genderCategory === "mixto"
+            ? "Partido mixto"
+            : "Partido masculino";
+      const groupRes = await createGroupChat(
+        supabase,
+        user.id,
+        `Partido en ${clubName} el ${friendlyDate}`,
+        `• ${competitiveLabel}\n• ${genderLabel}`,
+        [],
+        data.id
+      );
+      if (!groupRes.ok) {
+        console.error("[crearPartido] group chat", groupRes.message);
+      }
+
+      if (invitedFriendIds.length > 0) {
+        await Promise.all(
+          invitedFriendIds.map((friendId) =>
+            createNotification(supabase, {
+              user_id: friendId,
+              type: "join_request",
+              title: "¡Te invitaron a un partido!",
+              body: `${payerFirstName || "Un amigo"} te invitó a un partido. Confirmá tu lugar desde acá: ${partyUrl}`,
+              match_id: data.id,
+            })
+          )
+        );
+      }
+
       return { success: true, matchId: data.id, shareUrl: partyUrl };
     }
 
