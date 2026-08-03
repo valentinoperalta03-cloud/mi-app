@@ -34,7 +34,7 @@ export default async function ActivacionPage() {
   const clubName = ctx.clubs[0]?.name ?? "tu club";
 
   return (
-    <div className="fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto bg-[#031733] px-4 py-12 text-white">
+    <div className="flex min-h-dvh flex-col items-center justify-center overflow-y-auto bg-[#031733] px-4 py-12 text-white">
       <div className="w-full max-w-lg text-center">
         <p className="text-2xl">🎾 PadeLibre</p>
 
@@ -61,7 +61,7 @@ export default async function ActivacionPage() {
         <ActivateSubscriptionButton clubId={clubId} label="Activar prueba gratuita de 15 días" />
 
         <p className="mt-6 text-xs text-slate-400">
-          ¿Dudas? soporte.padelibre@gmail.com | +54 9 341 257-1953
+          ¿Dudas? soporte.padelibre@gmail.com | +54 9 341 374-1000
         </p>
       </div>
     </div>

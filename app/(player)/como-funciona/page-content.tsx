@@ -152,7 +152,7 @@ export default function ComoFuncionaContent() {
           </p>
           <div className="mt-4">
             <a
-              href="https://wa.me/5493412571953?text=Hola%2C%20quiero%20sumar%20mi%20club%20a%20Padelibre"
+              href="https://wa.me/5493413741000?text=Hola%2C%20quiero%20sumar%20mi%20club%20a%20Padelibre"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-2xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1ebe5d]"

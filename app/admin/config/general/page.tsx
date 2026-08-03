@@ -43,13 +43,13 @@ export default async function AdminConfigGeneralPage() {
               soporte.padelibre@gmail.com
             </a>
             <a
-              href="https://wa.me/5493412571953"
+              href="https://wa.me/5493413741000"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)]"
             >
               <MessageCircle size={16} />
-              +54 9 341 257-1953
+              +54 9 341 374-1000
             </a>
           </div>
         </div>
