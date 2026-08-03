@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -108,14 +109,30 @@ export async function createFixedSlot(formData: FormData) {
   // Generar partidos para las próximas 2 semanas inmediatamente
   const serviceSupabase = createServiceClient();
   const upcomingDates = getUpcomingDatesForDayOfWeek(dayOfWeek, getArgentinaNow(), 14);
+  const todayYmd = getTodayYmdInArgentina();
+  const nowClock = getCurrentClockInArgentina();
+  const slotTimeHHMM = startTime.slice(0, 5);
+  console.log(
+    `[createFixedSlot] turno=${fixedSlotId} cancha=${court.name ?? courtId} dia=${DAY_LABELS[dayOfWeek]} (${dayOfWeek}) hora=${slotTimeHHMM} fechas a generar:`,
+    upcomingDates
+  );
   for (const date of upcomingDates) {
-    await generateMatchForSlotOnDate(serviceSupabase, {
+    if (date === todayYmd && slotTimeHHMM <= nowClock) {
+      console.log(`[createFixedSlot] omitido ${date}: el horario ${slotTimeHHMM} ya pasó hoy (ahora ${nowClock})`);
+      continue;
+    }
+    const result = await generateMatchForSlotOnDate(serviceSupabase, {
       id: fixedSlotId,
       club_id: court.club_id,
       court_id: courtId,
       start_time: startTime,
       duration_minutes: Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : 90,
     }, date);
+    if (result.created) {
+      console.log(`[createFixedSlot] ${date}: match creado OK (matchId=${result.matchId})`);
+    } else {
+      console.error(`[createFixedSlot] ${date}: NO se creó el match — ${result.reason}`);
+    }
   }
 
   revalidatePath("/admin/turnos-fijos");

@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
 
   let created = 0;
   for (const slot of slots) {
-    const ok = await generateMatchForSlotOnDate(supabase, slot, targetDate);
-    if (ok) created++;
+    const result = await generateMatchForSlotOnDate(supabase, slot, targetDate);
+    if (result.created) created++;
   }
 
   return NextResponse.json({ ok: true, targetDate, created });

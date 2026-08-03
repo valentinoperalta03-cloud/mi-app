@@ -12,23 +12,34 @@ export type SlotInput = {
   duration_minutes: number;
 };
 
+export type GenerateMatchResult =
+  | { created: true; matchId: string }
+  | { created: false; reason: string };
+
 /**
  * Intenta crear el partido de un turno fijo para una fecha concreta.
- * No hace nada si ya existe, hay excepción o no hay jugadores.
- * Retorna true si creó el partido.
+ * No hace nada si ya existe, hay excepción o no hay owner_id disponible.
+ * Retorna el resultado con el motivo cuando no crea nada, para poder
+ * diagnosticar por qué una cancha no quedó bloqueada.
  */
 export async function generateMatchForSlotOnDate(
   supabase: SupabaseClient,
   slot: SlotInput,
   targetDate: string
-): Promise<boolean> {
+): Promise<GenerateMatchResult> {
+  const logPrefix = `[fixed-slot-generator] slot=${slot.id} fecha=${targetDate}`;
+
   const { data: exception } = await supabase
     .from(DB_TABLES.fixedSlotExceptions)
     .select("id")
     .eq("fixed_slot_id", slot.id)
     .eq("exception_date", targetDate)
     .maybeSingle();
-  if (exception) return false;
+  if (exception) {
+    const reason = "hay una excepción cargada para esa fecha";
+    console.log(`${logPrefix}: omitido — ${reason}`);
+    return { created: false, reason };
+  }
 
   const slotTime = String(slot.start_time).slice(0, 5);
 
@@ -41,7 +52,11 @@ export async function generateMatchForSlotOnDate(
     .eq("es_turno_fijo", true)
     .neq("match_status", "cancelled")
     .maybeSingle();
-  if (existing) return false;
+  if (existing) {
+    const reason = "ya existe un match de turno fijo para esa fecha/hora";
+    console.log(`${logPrefix}: omitido — ${reason}`);
+    return { created: false, reason };
+  }
 
   const { data: playersRaw } = await supabase
     .from(DB_TABLES.fixedSlotPlayers)
@@ -62,7 +77,35 @@ export async function generateMatchForSlotOnDate(
   // (título solo, sin gente). En ese caso el match queda a nombre del dueño
   // del club — no hay ningún jugador real al que asignarle el owner_id.
   const ownerId = players[0]?.player_id ?? club?.owner_id ?? null;
-  if (!ownerId) return false;
+  if (!ownerId) {
+    const reason = "no hay owner_id disponible (sin jugadores asignados y sin owner_id en el club)";
+    console.error(`${logPrefix}: NO se creó el match — ${reason}`);
+    return { created: false, reason };
+  }
+
+  // matches.owner_id tiene FK a profiles.user_id. Los jugadores siempre tienen
+  // fila en profiles (se buscan desde esa misma tabla), pero el dueño del club
+  // (fallback cuando el turno no tiene jugadores todavía) puede no tenerla —
+  // los admins no pasan necesariamente por el flujo que crea el profile de
+  // jugador. Sin esto, el insert de abajo fallaba en silencio y la cancha
+  // nunca quedaba bloqueada.
+  if (!players[0]) {
+    const { data: ownerProfile } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("user_id")
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (!ownerProfile) {
+      const { error: profileErr } = await supabase
+        .from(DB_TABLES.profiles)
+        .insert({ user_id: ownerId, name: clubName });
+      if (profileErr && profileErr.code !== "23505") {
+        const reason = `no se pudo asegurar el profile del dueño del club: ${profileErr.message}`;
+        console.error(`${logPrefix}: NO se creó el match — ${reason}`);
+        return { created: false, reason };
+      }
+    }
+  }
 
   // Los turnos fijos se cobran por fuera de la app (efectivo/transferencia directa
   // en el club) — no hay ningún flujo de cobro conectado todavía. total_price/
@@ -87,9 +130,14 @@ export async function generateMatchForSlotOnDate(
     })
     .select("id")
     .single();
-  if (matchErr || !matchInserted) return false;
+  if (matchErr || !matchInserted) {
+    const reason = matchErr?.message ?? "insert sin error pero sin id devuelto";
+    console.error(`${logPrefix}: NO se creó el match — error de insert: ${reason}`);
+    return { created: false, reason };
+  }
 
   const matchId = String((matchInserted as { id: string }).id);
+  console.log(`${logPrefix}: match creado OK (matchId=${matchId})`);
 
   if (players.length > 0) {
     await supabase.from(DB_TABLES.matchParticipants).insert(
@@ -113,17 +161,24 @@ export async function generateMatchForSlotOnDate(
     });
   }
 
-  return true;
+  return { created: true, matchId };
 }
 
-/** Retorna las próximas fechas (yyyy-MM-dd) para un día de semana dentro de los próximos N días. */
+/**
+ * Retorna las próximas fechas (yyyy-MM-dd) para un día de semana dentro de los
+ * próximos N días, INCLUYENDO hoy si hoy es ese día de semana (i arranca en 0).
+ * Antes arrancaba en 1 y se saltaba la ocurrencia de hoy: si hoy era miércoles
+ * y se creaba un turno fijo para los miércoles, la cancha no se bloqueaba hasta
+ * la semana siguiente. El caller es responsable de descartar la fecha de hoy
+ * si el horario ya pasó.
+ */
 export function getUpcomingDatesForDayOfWeek(
   dayOfWeek: number,
   fromDate: Date,
   daysAhead: number
 ): string[] {
   const dates: string[] = [];
-  for (let i = 1; i <= daysAhead; i++) {
+  for (let i = 0; i <= daysAhead; i++) {
     const d = new Date(fromDate);
     d.setDate(d.getDate() + i);
     if (d.getDay() === dayOfWeek) {
