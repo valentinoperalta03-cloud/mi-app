@@ -18,6 +18,7 @@ import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/prof
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
+import KickPlayerButton from "./kick-player-button";
 import PartidoEditSection from "./partido-edit-section";
 import RequestJoinButton from "./request-join-button";
 import WhatsappShareButton from "./whatsapp-share-button";
@@ -44,6 +45,7 @@ type PageProps = {
     join_sent?: string;
     join_error?: string;
     join_accepted?: string;
+    joined?: string;
     cancel_ok?: string;
     cancel_error?: string;
     pay_regen_error?: string;
@@ -134,6 +136,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const editErrorMessage = editErrorKey ? EDIT_ERROR_MESSAGES[editErrorKey] ?? "No se pudo guardar la edición." : null;
   const joinSent = sp.join_sent === "1";
   const joinAccepted = sp.join_accepted === "1";
+  const justJoined = sp.joined === "true";
   const cancelOk = sp.cancel_ok === "1";
   const cancelErrorKey = sp.cancel_error?.trim() ?? "";
   const cancelErrorMessage = cancelErrorKey
@@ -596,6 +599,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
                     <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    {isOwner && participant.player_id !== match.owner_id ? (
+                      <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
+                    ) : null}
                   </div>
                 );
               })}
@@ -656,6 +662,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
                     <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    {isOwner && participant.player_id !== match.owner_id ? (
+                      <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
+                    ) : null}
                   </div>
                 );
               })}
@@ -773,6 +782,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 Chat del grupo
               </Link>
             ) : null}
+            <Link
+              href={`/partidos/${id}/chat`}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/25 bg-[#0085FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10 dark:text-sky-400"
+            >
+              <MessageCircle size={16} aria-hidden />
+              Ver chat
+            </Link>
             {(pendingRequestsCount ?? 0) > 0 ? (
               <Link
                 href={`/partidos/${id}/solicitudes`}
@@ -793,14 +809,23 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isParticipant && !isOwner && showGroupChat && groupChatHref ? (
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+      {isParticipant && !isOwner ? (
+        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] space-y-2">
+          {showGroupChat && groupChatHref ? (
+            <Link
+              href={groupChatHref}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/25 bg-[#0085FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10 dark:text-sky-400"
+            >
+              <MessageCircle size={16} aria-hidden />
+              Chat del grupo
+            </Link>
+          ) : null}
           <Link
-            href={groupChatHref}
+            href={`/partidos/${id}/chat`}
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#0085FC]/25 bg-[#0085FC]/5 py-3 text-center text-sm font-semibold text-[#0461C4] transition hover:bg-[#0085FC]/10 dark:text-sky-400"
           >
             <MessageCircle size={16} aria-hidden />
-            Chat del grupo
+            Ver chat
           </Link>
         </section>
       ) : null}
@@ -899,6 +924,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       {joinAccepted && isOwner ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
           El jugador será redirigido al pago para confirmar su lugar (recibirá un aviso con el link).
+        </p>
+      ) : null}
+
+      {joinAccepted && justJoined ? (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+          ¡Te uniste al partido!
         </p>
       ) : null}
 

@@ -34,7 +34,7 @@ export default async function MatchChatPage({
 
   const { data: matchRow } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, level_restricted")
+    .select("id")
     .eq("id", id)
     .maybeSingle();
   if (!matchRow) redirect("/buscar-partido");
@@ -46,8 +46,7 @@ export default async function MatchChatPage({
     .eq("player_id", user.id)
     .maybeSingle();
 
-  const levelRestricted = Boolean((matchRow as { level_restricted?: boolean | null } | null)?.level_restricted);
-  if (!participation && !levelRestricted) redirect(`/partidos/${id}`);
+  if (!participation) redirect(`/partidos/${id}`);
 
   const { data: participantsRaw } = await supabase
     .from(DB_TABLES.matchParticipants)

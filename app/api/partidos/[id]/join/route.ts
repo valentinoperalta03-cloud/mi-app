@@ -138,5 +138,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
   }
 
-  return NextResponse.json({ redirect: `/partidos/${matchId}?join_accepted=1` });
+  return NextResponse.json({ redirect: `/partidos/${matchId}?join_accepted=1&joined=true` });
 }

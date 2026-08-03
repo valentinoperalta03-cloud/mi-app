@@ -252,12 +252,13 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   const { data: userProfile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("gender")
+    .select("gender, name")
     .eq("user_id", user.id)
     .maybeSingle();
   const userGender = String((userProfile as { gender?: string | null } | null)?.gender ?? "")
     .trim()
     .toLowerCase();
+  const joinerName = (userProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
   const matchGenderCategory = String(m.gender_category ?? "").trim().toLowerCase();
   if (matchGenderCategory === "femenino" && userGender === "masculino") {
     redirect(`/partidos/${matchId}?join_error=genero_femenino`);
@@ -370,10 +371,21 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   await addPlayerToMatchGroup(supabase, matchId, user.id);
 
+  if (m.owner_id && m.owner_id !== user.id) {
+    const tpl = NOTIFICATION_TEMPLATES.player_joined(joinerName, "tu partido");
+    await createNotification(supabase, {
+      user_id: m.owner_id,
+      type: "player_joined",
+      title: tpl.title,
+      body: tpl.body,
+      match_id: matchId,
+    });
+  }
+
   revalidatePath(`/partidos/${matchId}`);
   revalidatePath("/home");
   revalidatePath("/buscar-partido");
-  redirect(`/partidos/${matchId}?join_accepted=1`);
+  redirect(`/partidos/${matchId}?join_accepted=1&joined=true`);
 }
 
 export async function acceptJoinRequest(formData: FormData): Promise<void> {
@@ -667,14 +679,9 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     if (newOwner) {
       await supabase.from(DB_TABLES.matches).update({ owner_id: newOwner }).eq("id", matchId);
       delegatedOwner = newOwner;
-
-      await createNotification(supabase, {
-        user_id: newOwner,
-        type: "match_owner_changed",
-        title: "Ahora organizás el partido",
-        body: "El creador salió del partido. Ahora vos sos el organizador.",
-        match_id: matchId,
-      });
+      // La notificación al nuevo organizador se envía una sola vez, más abajo
+      // (bloque "isOwnerLeaving && delegatedOwner"), sin importar si el RPC ya
+      // lo había asignado o si se asignó acá — antes se notificaba dos veces.
     }
   }
 
@@ -773,6 +780,31 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
       body: tplOwner.body,
       match_id: matchId,
     });
+
+    const { data: remainingForOwnerChange } = await supabase
+      .from(DB_TABLES.matchParticipants)
+      .select("player_id")
+      .eq("match_id", matchId);
+    const othersToNotify = ((remainingForOwnerChange ?? []) as Array<{ player_id: string }>)
+      .map((p) => p.player_id)
+      .filter((pid) => pid !== delegatedOwner && pid !== user.id);
+    if (othersToNotify.length > 0) {
+      const { data: newOwnerProfile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("name")
+        .eq("user_id", delegatedOwner)
+        .maybeSingle();
+      const newOwnerName = (newOwnerProfile as { name?: string | null } | null)?.name?.trim() || "Un jugador";
+      for (const pid of othersToNotify) {
+        await createNotification(supabase, {
+          user_id: pid,
+          type: "match_owner_changed",
+          title: "Nuevo organizador",
+          body: `${newOwnerName} es el nuevo organizador del partido.`,
+          match_id: matchId,
+        });
+      }
+    }
   }
 
   if (!matchCancelled && ownerId && ownerId !== user.id) {
@@ -992,6 +1024,102 @@ export async function invitePlayerToMatch(
   return { ok: true, message: "Invitación enviada" };
 }
 
+export async function kickPlayerFromMatch(
+  matchId: string,
+  playerIdToKick: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Iniciá sesión." };
+  if (!matchId || !playerIdToKick) return { ok: false, error: "Datos inválidos." };
 
+  const { data: matchRow, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select("owner_id, match_status, match_type, location_name")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (mErr || !matchRow) return { ok: false, error: "Partido no encontrado." };
 
+  const m = matchRow as {
+    owner_id: string | null;
+    match_status: string | null;
+    match_type: string | null;
+    location_name: string | null;
+  };
+  if (m.owner_id !== user.id) {
+    return { ok: false, error: "Solo el organizador puede expulsar jugadores." };
+  }
+  if (playerIdToKick === m.owner_id) {
+    return { ok: false, error: "No podés expulsarte a vos mismo." };
+  }
+
+  const { data: kickedProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", playerIdToKick)
+    .maybeSingle();
+  const kickedName = (kickedProfile as { name?: string | null } | null)?.name?.trim() || "El jugador";
+
+  const { error: delErr } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .delete()
+    .eq("match_id", matchId)
+    .eq("player_id", playerIdToKick);
+  if (delErr) {
+    return { ok: false, error: "No se pudo expulsar al jugador." };
+  }
+
+  const service = createServiceClient();
+  const { data: group } = await service
+    .from(DB_TABLES.groupChats)
+    .select("id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  const groupId = (group as { id?: string } | null)?.id;
+  if (groupId) {
+    await service.from(DB_TABLES.groupChatMembers).delete().eq("group_id", groupId).eq("user_id", playerIdToKick);
+  }
+
+  const locationLabel = String(m.location_name ?? "").trim() || "el partido";
+  await createNotification(supabase, {
+    user_id: playerIdToKick,
+    type: "match_cancelled",
+    title: "Te sacaron del partido",
+    body: `El organizador te sacó de ${locationLabel}.`,
+    match_id: matchId,
+  });
+
+  const { data: remainingRows } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId);
+  const remainingIds = ((remainingRows ?? []) as Array<{ player_id: string }>)
+    .map((r) => r.player_id)
+    .filter((pid) => pid !== user.id);
+  for (const pid of remainingIds) {
+    await createNotification(supabase, {
+      user_id: pid,
+      type: "match_cancelled",
+      title: "Un jugador fue expulsado",
+      body: `${kickedName} fue expulsado del partido.`,
+      match_id: matchId,
+    });
+  }
+
+  const matchStatusNorm = String(m.match_status ?? "").toLowerCase();
+  if (matchStatusNorm === "full") {
+    const isReservationType = String(m.match_type ?? "").toLowerCase() === "reservation";
+    await supabase
+      .from(DB_TABLES.matches)
+      .update({ match_status: isReservationType ? "reserved" : "scheduled" })
+      .eq("id", matchId);
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  revalidatePath("/home");
+  revalidatePath("/buscar-partido");
+  return { ok: true };
+}
 

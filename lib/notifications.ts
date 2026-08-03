@@ -38,16 +38,21 @@ export async function createNotification(
   }
 ) {
   // 1. Guardar en base de datos (in-app)
-  await supabase.from("notifications").insert({
-    user_id: params.user_id,
-    type: params.type,
-    title: params.title,
-    body: params.body,
-    match_id: params.match_id ?? null,
-    actor_id: params.actor_id ?? null,
-  });
+  try {
+    const { error } = await supabase.from("notifications").insert({
+      user_id: params.user_id,
+      type: params.type,
+      title: params.title,
+      body: params.body,
+      match_id: params.match_id ?? null,
+      actor_id: params.actor_id ?? null,
+    });
+    if (error) console.error("[createNotification] insert failed:", error);
+  } catch (err) {
+    console.error("[createNotification] unexpected error:", err);
+  }
 
-  // 2. Disparar push externo (OneSignal)
+  // 2. Disparar push externo (OneSignal) — se intenta igual aunque el insert falle
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online";
     await fetch(`${baseUrl}/api/push`, {
