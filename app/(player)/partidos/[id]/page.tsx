@@ -20,19 +20,18 @@ import { createClient, getAdminClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
 import KickPlayerButton from "./kick-player-button";
 import PartidoEditSection from "./partido-edit-section";
+import RegenerarPagoButton from "./regenerar-pago-button";
 import RequestJoinButton from "./request-join-button";
 import WhatsappShareButton from "./whatsapp-share-button";
 import { MatchStatusBanner } from "@/components/match-status-banner";
 import { JoinMatchPaymentModal } from "../../../../components/join-match-payment-modal";
 import { MercadoPagoPayButton } from "@/components/mercadopago-pay-button";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from "@/lib/messages";
 import { PAYMENT_COPY } from "@/lib/payment-copy";
 import {
   acceptJoinRequest,
   cancelParticipation,
-  regenerarLinkPago,
   rejectJoinRequest,
   requestToJoin,
 } from "./actions";
@@ -48,7 +47,6 @@ type PageProps = {
     joined?: string;
     cancel_ok?: string;
     cancel_error?: string;
-    pay_regen_error?: string;
   }>;
 };
 
@@ -165,7 +163,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,result_available_at,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,es_turno_fijo,courts(name,clubs(name,location))"
+      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,result_available_at,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location))"
     )
     .eq("id", id)
     .maybeSingle();
@@ -190,6 +188,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     level_restricted: boolean | null;
     duration_minutes: number | null;
     total_price: number | null;
+    financial_status: string | null;
+    amount_pending: number | null;
     es_turno_fijo: boolean | null;
     courts:
       | {
@@ -305,7 +305,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   // Check if current user has paid
   const { data: myPayment } = await supabase
     .from(DB_TABLES.payments)
-    .select("id,status,mp_preference_id,payment_method,updated_at")
+    .select("id,status,mp_preference_id,payment_method,amount,updated_at")
     .eq("match_id", id)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -319,11 +319,11 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const hasInvitedPayment = myPaymentStatus === "invited";
   const myPrefId = String((myPayment as { mp_preference_id?: string | null } | null)?.mp_preference_id ?? "").trim();
   const hasPaid = myPaymentStatus === "approved" || myPaymentStatus === "paid";
+  const myPaymentAmount = Number((myPayment as { amount?: number | null } | null)?.amount ?? 0);
   const mercadoPagoPayHref = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${encodeURIComponent(myPrefId)}`;
   const paymentRowId = String((myPayment as { id?: string | null } | null)?.id ?? "").trim();
   /** Preferencia vencida en MP: estado explícito en DB (evita Date.now en render por react-hooks/purity). */
   const needsPaymentRegenerate = String(myPaymentStatus).toLowerCase() === "expired";
-  const payRegenErr = sp.pay_regen_error === "1";
   const myPaymentBanner = (() => {
     const s = myPaymentStatus;
     if (s === "approved" || s === "paid") return "approved" as const;
@@ -732,19 +732,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           </div>
           {isParticipant ? (
             <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
-              <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu parte</p>
-              <p className="text-base font-bold text-[var(--text-primary)]">
-                ${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")}
+              <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu pago</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {hasPaid
+                  ? `✓ Pagaste $${Math.round(myPaymentAmount).toLocaleString("es-AR")}`
+                  : match.financial_status === "partially_paid"
+                    ? `Coordiná el pago de $${Math.round(match.amount_pending ?? 0).toLocaleString("es-AR")} con el organizador en el club`
+                    : "El pago se coordina con el organizador"}
               </p>
-              {hasPaid ? (
-                <p className="mt-0.5 text-xs font-semibold text-emerald-600">✓ Pagado</p>
-              ) : myPaymentStatus === "pending" || myPaymentStatus === "invited" ? (
-                <p className="mt-0.5 text-xs font-semibold text-amber-600">Pendiente de confirmación</p>
-              ) : myPaymentStatus === "expired" ? (
-                <p className="mt-0.5 text-xs font-semibold text-rose-600">Pago vencido</p>
-              ) : (
-                <p className="mt-0.5 text-xs font-semibold text-slate-500">Sin pago registrado</p>
-              )}
             </div>
           ) : null}
         </div>
@@ -847,13 +842,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             </p>
           </div>
           {needsPaymentRegenerate && paymentRowId ? (
-            <form action={regenerarLinkPago} className="mt-3">
-              <input type="hidden" name="payment_id" value={paymentRowId} />
-              <input type="hidden" name="match_id" value={id} />
-              <Button type="submit" variant="primary">
-                {PAYMENT_COPY.regenerateCta}
-              </Button>
-            </form>
+            <RegenerarPagoButton matchId={id} paymentId={paymentRowId} label={PAYMENT_COPY.regenerateCta} />
           ) : myPrefId ? (
             <MercadoPagoPayButton
               href={mercadoPagoPayHref}
@@ -885,10 +874,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             message={`Hola, soy ${userName}, me uní al partido del ${longDateAr} a las ${scheduledTimeStr} en ${detail.club_name ?? "el club"}. Transferí $${Math.round((detail.total_price ?? 0) / 4).toLocaleString("es-AR")} al alias ${bankAlias ?? bankCbu ?? ""}. Confirmo mi presencia.`}
           />
         </section>
-      ) : null}
-
-      {payRegenErr ? (
-        <Alert variant="error">No pudimos generar el nuevo link. Intentá de nuevo en un rato.</Alert>
       ) : null}
 
       {editErrorMessage ? (

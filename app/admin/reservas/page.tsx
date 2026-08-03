@@ -205,6 +205,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     payment_method: string | null;
     amount: number | null;
   }>;
+  const selectedPaymentsByUser = new Map(selectedPayments.map((p) => [p.user_id, p]));
 
   const { data: ownerProfileRow } =
     selectedMatch?.owner_id
@@ -640,39 +641,33 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             </div>
           </dl>
 
-          {selectedPayments.length > 0 ? (
-            <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
-              <p className={adminKicker}>Pagos registrados</p>
-              <ul className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
-                {selectedPayments.map((p, i) => (
-                  <li key={`${p.user_id}-${i}`} className="flex flex-wrap justify-between gap-2">
-                    <span className="font-medium">{p.payment_method ?? "—"}</span>
-                    <span>
-                      {String(p.status ?? "")} · ${Number(p.amount ?? 0).toFixed(2)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
           <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
-            <p className={adminKicker}>Jugadores</p>
+            <p className={adminKicker}>Jugadores y pagos</p>
             {selectedMatchParticipants.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--text-tertiary)]">Sin jugadores asignados aún.</p>
             ) : (
               <ul className="mt-2 space-y-2">
-                {selectedMatchParticipants.map((player) => (
-                  <li key={player.playerId} className="flex items-center gap-2">
-                    {player.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-                      <img src={player.avatarUrl} alt={player.name} className="h-8 w-8 rounded-full object-cover" />
-                    ) : (
-                      <PlayerAvatar name={player.name} />
-                    )}
-                    <span className="text-sm font-medium text-[var(--text-secondary)]">{player.name}</span>
-                  </li>
-                ))}
+                {selectedMatchParticipants.map((player) => {
+                  const payment = selectedPaymentsByUser.get(player.playerId);
+                  return (
+                    <li key={player.playerId} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {player.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+                          <img src={player.avatarUrl} alt={player.name} className="h-8 w-8 rounded-full object-cover" />
+                        ) : (
+                          <PlayerAvatar name={player.name} />
+                        )}
+                        <span className="text-sm font-medium text-[var(--text-secondary)]">{player.name}</span>
+                      </div>
+                      <span className="text-right text-xs text-[var(--text-tertiary)]">
+                        {payment
+                          ? `${payment.payment_method ?? "—"} · ${String(payment.status ?? "")} · $${Number(payment.amount ?? 0).toFixed(2)}`
+                          : "Sin pago registrado"}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

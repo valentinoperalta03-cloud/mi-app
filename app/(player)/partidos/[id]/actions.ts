@@ -11,6 +11,7 @@ import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { generateInviteToken } from "@/lib/invite-token";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
+import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { refundApprovedPayment } from "@/lib/payment-refund";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -625,6 +626,25 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   const playerName = (profileRow as { name?: string | null } | null)?.name?.trim() || "Un jugador";
   const locationLabel = String(m.location_name ?? "").trim() || "tu partido";
 
+  // Si este jugador tenía un pago de MP aprobado, se reembolsa ANTES de sacarlo
+  // del partido: si el reembolso falla, no le tocamos el lugar — queda
+  // reservado y el jugador puede reintentar, en vez de perder turno y plata.
+  const { data: myPaymentRow } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id")
+    .eq("match_id", matchId)
+    .eq("user_id", user.id)
+    .eq("status", "approved")
+    .maybeSingle();
+  const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
+  if (myPaymentId) {
+    const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
+    if (refundOutcome.kind === "failed") {
+      log.error({ event: "cancelParticipation.refund_failed", matchId, userId: user.id });
+      redirect(`/partidos/${matchId}?cancel_error=refund_failed`);
+    }
+  }
+
   const { data: leaveAtomic, error: leaveAtomicErr } = await supabase.rpc("leave_match_atomic", {
     p_match_id: matchId,
     p_player_id: user.id,
@@ -640,22 +660,6 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   const resultRow = Array.isArray(leaveAtomic) ? leaveAtomic[0] : null;
   const rpcCancelled = Boolean((resultRow as { cancelled?: boolean | null } | null)?.cancelled);
   let delegatedOwner = String((resultRow as { owner_after?: string | null } | null)?.owner_after ?? "").trim();
-
-  // Si este jugador tenía un pago de MP aprobado, se reembolsa de verdad (no solo se promete).
-  const { data: myPaymentRow } = await supabase
-    .from(DB_TABLES.payments)
-    .select("id")
-    .eq("match_id", matchId)
-    .eq("user_id", user.id)
-    .eq("status", "approved")
-    .maybeSingle();
-  const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
-  if (myPaymentId) {
-    const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
-    if (refundOutcome.kind === "failed") {
-      log.error({ event: "cancelParticipation.refund_failed", matchId, userId: user.id });
-    }
-  }
 
   const { count: remainingCount } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -831,9 +835,135 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   redirect(`/partidos/${matchId}?cancel_ok=1`);
 }
 
-export async function regenerarLinkPago(formData: FormData): Promise<void> {
+export async function regenerarLinkPago(
+  formData: FormData
+): Promise<{ error: string } | { mpUrl: string }> {
   const matchId = getField(formData, "match_id");
-  redirect(`/partidos/${matchId}?pay_regen_error=1`);
+  const paymentId = getField(formData, "payment_id");
+  if (!matchId || !paymentId) {
+    return { error: "Datos inválidos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Iniciá sesión para regenerar el link de pago." };
+  }
+
+  const { data: paymentRow, error: payErr } = await supabase
+    .from(DB_TABLES.payments)
+    .select("id, user_id, match_id, status")
+    .eq("id", paymentId)
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if (payErr || !paymentRow) {
+    return { error: "No encontramos ese pago." };
+  }
+  const payment = paymentRow as { id: string; user_id: string; status: string | null };
+  if (payment.user_id !== user.id) {
+    return { error: "No tenés permiso sobre este pago." };
+  }
+  if (String(payment.status ?? "").toLowerCase() !== "expired") {
+    return { error: "Este pago ya no está vencido." };
+  }
+
+  const { data: matchRow, error: mErr } = await supabase
+    .from(DB_TABLES.matches)
+    .select(
+      "owner_id, match_status, scheduled_date, total_price, amount_paid, amount_pending, court_id, courts(name, club_id, clubs(name))"
+    )
+    .eq("id", matchId)
+    .maybeSingle();
+  if (mErr || !matchRow) {
+    return { error: "Partido no encontrado." };
+  }
+
+  const m = matchRow as {
+    owner_id: string | null;
+    match_status: string | null;
+    scheduled_date: string | null;
+    total_price: number | null;
+    amount_paid: number | null;
+    amount_pending: number | null;
+    court_id: string | null;
+    courts:
+      | { name: string | null; club_id: string | null; clubs: { name: string | null } | { name: string | null }[] | null }
+      | { name: string | null; club_id: string | null; clubs: { name: string | null } | { name: string | null }[] | null }[]
+      | null;
+  };
+  const courtRel = Array.isArray(m.courts) ? m.courts[0] ?? null : m.courts;
+  const clubRel = courtRel?.clubs ?? null;
+  const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+  if (m.owner_id !== user.id) {
+    return { error: "Solo el organizador puede regenerar este link." };
+  }
+  const matchStatusNorm = String(m.match_status ?? "").toLowerCase();
+  if (matchStatusNorm === "cancelled") {
+    return { error: "Este partido ya fue cancelado." };
+  }
+
+  const totalPrice = Number(m.total_price ?? 0);
+  const amountPaid = Number(m.amount_paid ?? 0);
+  const amountPending = m.amount_pending != null ? Number(m.amount_pending) : totalPrice - amountPaid;
+  const amount = amountPending > 0 ? amountPending : totalPrice;
+  if (!(amount > 0)) {
+    return { error: "No hay ningún saldo pendiente para este partido." };
+  }
+
+  const clubId = String(courtRel?.club_id ?? "").trim();
+  // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+  const { data: clubMpRow } = clubId
+    ? await createServiceClient().from(DB_TABLES.clubs).select("mp_access_token").eq("id", clubId).maybeSingle()
+    : { data: null };
+  const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
+  if (!clubAccessToken) {
+    return { error: "Este club no tiene Mercado Pago configurado." };
+  }
+
+  const { data: payerProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+  const nameParts = payerName.split(" ");
+  const payerFirstName = nameParts[0] ?? "";
+  const payerLastName = nameParts.slice(1).join(" ") ?? "";
+
+  const mp = await createMPPreference({
+    matchId,
+    amount,
+    clubName: clubObj?.name ?? "Club",
+    courtName: courtRel?.name ?? "Cancha",
+    date: String(m.scheduled_date ?? ""),
+    userId: user.id,
+    externalReference: `${matchId}__${user.id}`,
+    payerEmail: user.email ?? "",
+    payerFirstName,
+    payerLastName,
+    clubAccessToken,
+  });
+  if ("error" in mp) {
+    return { error: mp.error };
+  }
+
+  const { error: updErr } = await supabase
+    .from(DB_TABLES.payments)
+    .update({
+      mp_preference_id: mp.prefId,
+      status: "pending",
+      amount: mp.total,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", paymentId);
+  if (updErr) {
+    return { error: "No se pudo actualizar el pago. Intentá de nuevo." };
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  return { mpUrl: mp.initPoint };
 }
 
 export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; error?: string }> {

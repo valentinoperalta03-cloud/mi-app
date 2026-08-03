@@ -177,9 +177,17 @@ export async function requestReservationRefundAction(formData: FormData): Promis
 
   await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
 
-  if (typed.owner_id) {
+  const { data: cancelledParticipants } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId);
+  const participantIds = new Set(
+    ((cancelledParticipants ?? []) as Array<{ player_id: string }>).map((p) => p.player_id)
+  );
+  if (typed.owner_id) participantIds.add(typed.owner_id);
+  for (const playerId of participantIds) {
     await createNotification(supabase, {
-      user_id: typed.owner_id,
+      user_id: playerId,
       type: "reservation_cancelled",
       title: "Reserva cancelada por el club",
       body:
@@ -229,9 +237,17 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
   await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
 
-  if (typed.owner_id) {
+  const { data: cancelledParticipants } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId);
+  const participantIds = new Set(
+    ((cancelledParticipants ?? []) as Array<{ player_id: string }>).map((p) => p.player_id)
+  );
+  if (typed.owner_id) participantIds.add(typed.owner_id);
+  for (const playerId of participantIds) {
     await createNotification(supabase, {
-      user_id: typed.owner_id,
+      user_id: playerId,
       type: "reservation_cancelled",
       title: "Reserva cancelada por el club",
       body:

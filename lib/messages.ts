@@ -38,4 +38,5 @@ export const CANCEL_ERROR_MESSAGES: Record<string, string> = {
   finalizado: "Este partido ya no admite cambios.",
   rpc: "No pudimos liberar tu lugar. Intentá de nuevo.",
   rate_limit: "Alcanzaste el límite de 5 cancelaciones en 30 días. Contactá soporte si es un error.",
+  refund_failed: "No se pudo procesar el reembolso. Tu lugar sigue reservado. Contactá a soporte.",
 };
