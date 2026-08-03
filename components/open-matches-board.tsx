@@ -161,14 +161,12 @@ export default async function OpenMatchesBoard({
     .order("date", { ascending: true });
 
   const rawMatches = (data ?? []) as unknown as MatchFeedRow[];
-  const matches = rawMatches
-    .filter((match) => {
-      if (!isMatchPrivate(match.visibility)) return true;
-      if (user?.id && match.owner_id && user.id === match.owner_id) return true;
-      if (!match.owner_id) return true;
-      return favoriteIds.includes(match.owner_id);
-    })
-    .filter((match) => (match.match_participants?.length ?? 0) > 0);
+  const matches = rawMatches.filter((match) => {
+    if (!isMatchPrivate(match.visibility)) return true;
+    if (user?.id && match.owner_id && user.id === match.owner_id) return true;
+    if (!match.owner_id) return true;
+    return favoriteIds.includes(match.owner_id);
+  });
 
   const cardData: MatchCardData[] = matches.map((match) => {
     const genderCategory = (match.gender_category ?? "mixto") as "masculino" | "femenino" | "mixto";

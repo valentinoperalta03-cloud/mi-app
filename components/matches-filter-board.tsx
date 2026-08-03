@@ -50,13 +50,17 @@ type StatusFilter = "todos" | "amistoso" | "competitivo" | "con_lugar";
 type GenderFilter = "todos" | "masculino" | "femenino" | "mixto";
 type CityFilter = "mi_ciudad" | "mi_provincia" | "todas";
 
+function normalizeForCompare(value: string): string {
+  return value.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
+
 const chip = (active: boolean) =>
   active
     ? "rounded-full bg-[color:var(--color-brand-mid)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
     : "rounded-full border border-slate-200 bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600";
 
 export default function MatchesFilterBoard({ matches, userId, userCity, userProvince }: Props) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("con_lugar");
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("todos");
   const [cityFilter, setCityFilter] = useState<CityFilter>("mi_ciudad");
 
@@ -65,8 +69,8 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
     if (statusFilter === "competitivo" && !m.is_competitive) return false;
     if (statusFilter === "con_lugar" && m.freeSlots <= 0) return false;
     if (genderFilter !== "todos" && m.gender_category !== genderFilter) return false;
-    if (cityFilter === "mi_ciudad" && m.clubCity !== userCity) return false;
-    if (cityFilter === "mi_provincia" && m.clubProvince.trim().toLowerCase() !== userProvince.trim().toLowerCase()) return false;
+    if (cityFilter === "mi_ciudad" && normalizeForCompare(m.clubCity) !== normalizeForCompare(userCity)) return false;
+    if (cityFilter === "mi_provincia" && normalizeForCompare(m.clubProvince) !== normalizeForCompare(userProvince)) return false;
     return true;
   });
 
@@ -260,7 +264,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                       href={`/partidos/${match.id}`}
                       className={`${PLAYER_PRIMARY_BUTTON} inline-flex items-center justify-center rounded-[2rem] px-4 py-2 text-sm`}
                     >
-                      Pagar y unirse
+                      Unirse al partido
                     </Link>
                   ) : match.genderRestrictionMessage ? (
                     <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
