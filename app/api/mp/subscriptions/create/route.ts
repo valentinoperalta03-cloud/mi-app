@@ -26,6 +26,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
   }
 
+  log.info({
+    event: "mp.subscription.create_user_resolved",
+    userId: user.id,
+    hasEmail: Boolean(user.email),
+    email: user.email ?? null,
+  });
+
+  // supabase.auth.getUser() puede devolver el user sin `email` poblado (ej.
+  // sesiones viejas, alta via OAuth donde el JWT no llevo el claim). auth.users
+  // es la fuente de verdad real: se consulta con el service client como
+  // fallback en vez de mandarle a MP un payer_email vacio.
+  let payerEmail = String(user.email ?? "").trim();
+  if (!payerEmail) {
+    const { data: authUser, error: authUserErr } = await createServiceClient().auth.admin.getUserById(user.id);
+    payerEmail = String(authUser?.user?.email ?? "").trim();
+    log.warn({
+      event: "mp.subscription.create_email_fallback",
+      userId: user.id,
+      recoveredEmail: Boolean(payerEmail),
+      err: authUserErr ?? undefined,
+    });
+  }
+  if (!payerEmail) {
+    log.error({ event: "mp.subscription.create_no_email", userId: user.id });
+    return NextResponse.json(
+      { error: "Tu cuenta no tiene un email valido. Contacta a soporte." },
+      { status: 400 }
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as { clubId?: string };
   const clubId = String(body.clubId ?? "").trim();
   if (!clubId) {
@@ -108,7 +138,7 @@ export async function POST(req: Request) {
       external_reference: clubId,
       // MP exige payer_email para crear el preapproval (sin él devuelve 400
       // "payer_email is required"); el dueño del club es quien la activa.
-      payer_email: user.email ?? "",
+      payer_email: payerEmail,
       ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
       auto_recurring: {
         frequency: 1,
@@ -119,6 +149,8 @@ export async function POST(req: Request) {
       },
       status: "pending",
     };
+
+    log.info({ event: "mp.subscription.create_request_body", clubId, body: preApprovalBody });
 
     const preApproval = await getPreApprovalClient().create({ body: preApprovalBody });
 
