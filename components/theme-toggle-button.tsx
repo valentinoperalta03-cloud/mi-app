@@ -30,25 +30,25 @@ export default function ThemeToggleButton() {
     <button
       type="button"
       onClick={cycleTheme}
-      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-[#0085FC]/20 hover:bg-[#0085FC]/5 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-[#0085FC]/20"
+      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4 transition hover:border-[var(--admin-brand-primary)]/20 hover:bg-[var(--admin-brand-primary)]/5"
     >
       <div className="flex items-center gap-3">
-        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition-all dark:bg-slate-700">
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-subtle)] transition-all">
           {isSystem ? (
-            <Monitor size={18} className="text-[#0085FC]" />
+            <Monitor size={18} className="text-[var(--admin-brand-primary)]" />
           ) : isDark ? (
-            <Moon size={18} className="text-[#0085FC]" />
+            <Moon size={18} className="text-[var(--admin-brand-primary)]" />
           ) : (
             <Sun size={18} className="text-amber-500" />
           )}
         </span>
         <div className="text-left">
-          <p className="text-sm font-semibold text-slate-800 dark:text-white">{label}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{sublabel}</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">{sublabel}</p>
         </div>
       </div>
       <div
-        className={`flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${isDark ? "bg-[#0085FC]" : isSystem ? "bg-[#0085FC]/50" : "bg-slate-200"}`}
+        className={`flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${isDark ? "bg-[var(--admin-brand-primary)]" : isSystem ? "bg-[var(--admin-brand-primary)]/50" : "bg-[var(--bg-subtle)]"}`}
       >
         <div
           className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${isDark ? "translate-x-5" : isSystem ? "translate-x-[0.625rem]" : "translate-x-0.5"}`}

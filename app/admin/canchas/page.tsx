@@ -101,17 +101,21 @@ export default async function AdminCanchasPage({
     <div className="flex flex-col gap-6">
       <AdminBackLink />
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0085FC]`}>Canchas</p>
+        <p className={adminKicker}>Canchas</p>
         <h1 className={adminTitle}>Mis canchas</h1>
         <p className={adminSubtitle}>Gestioná precios y horarios de cada cancha.</p>
       </header>
 
       {error ? (
-        <div className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800`}>
+        <div className="rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-5 text-sm font-medium text-[var(--text-error)]">
           {error.message}
         </div>
       ) : null}
-      {errorParam ? <div className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800`}>{errorParam}</div> : null}
+      {errorParam ? (
+        <div className="rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-5 text-sm font-medium text-[var(--text-error)]">
+          {errorParam}
+        </div>
+      ) : null}
 
       {mainClubId ? (
         <details className={`${adminCard} group`} open={clubDepositValue === 0}>

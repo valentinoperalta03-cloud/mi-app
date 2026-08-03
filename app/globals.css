@@ -88,10 +88,27 @@
   --admin-status-active-text: #5a7a00;
 
   /* Admin — cards con borde/sombra con tinte azul */
-  --admin-card-border: rgba(5, 133, 252, 0.12);
-  --admin-card-border-hover: rgba(5, 133, 252, 0.25);
-  --admin-card-shadow: 0 1px 3px rgba(5, 133, 252, 0.06), 0 8px 24px rgba(5, 133, 252, 0.08);
-  --admin-card-shadow-hover: 0 4px 20px rgba(5, 133, 252, 0.12);
+  --admin-card-bg: #ffffff;
+  --admin-card-border: rgba(0, 133, 252, 0.10);
+  --admin-card-border-hover: rgba(0, 133, 252, 0.30);
+  --admin-card-shadow: 0 2px 16px rgba(0, 0, 0, 0.05);
+  --admin-card-shadow-hover: 0 4px 24px rgba(0, 133, 252, 0.10);
+  --admin-card-radius: 16px;
+  --admin-btn-radius: 10px;
+  --admin-btn-shadow: 0 4px 14px rgba(0, 133, 252, 0.35);
+  --admin-btn-shadow-hover: 0 6px 20px rgba(0, 133, 252, 0.50);
+
+  /* Admin — fondo de pagina (distinto del --bg-app compartido con la app de jugador) */
+  --admin-bg-light: #F4F7FB;
+  --admin-bg-app: #F4F7FB;
+  --admin-bg-image: radial-gradient(ellipse 60% 40% at 100% 0%, rgba(0,133,252,0.07) 0%, transparent 70%);
+
+  /* Admin — alertas (sin marrones/ocres) */
+  --admin-alert-warning-bg: rgba(255, 140, 0, 0.08);
+  --admin-alert-warning-border: rgba(255, 140, 0, 0.60);
+  --admin-alert-warning-text: #E07B00;
+  --admin-alert-error-bg: rgba(255, 59, 59, 0.08);
+  --admin-alert-error-border: rgba(255, 59, 59, 0.50);
 
   /* Semantic status (success/error/warning) - fondos, bordes y texto sutiles */
   --bg-success-subtle: rgba(16, 185, 129, 0.08);
@@ -140,10 +157,22 @@
   --admin-status-active-text: #e4ff66;
 
   /* Admin — cards con borde/sombra (dark) */
-  --admin-card-border: rgba(255, 255, 255, 0.06);
-  --admin-card-border-hover: rgba(255, 255, 255, 0.14);
-  --admin-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
-  --admin-card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --admin-card-bg: rgba(255, 255, 255, 0.04);
+  --admin-card-border: rgba(255, 255, 255, 0.07);
+  --admin-card-border-hover: rgba(0, 133, 252, 0.30);
+  --admin-card-shadow: none;
+  --admin-card-shadow-hover: 0 4px 24px rgba(0, 133, 252, 0.10);
+
+  /* Admin — fondo de pagina (navy profundo, no negro puro) */
+  --admin-bg-app: #0C1829;
+  --admin-bg-image: linear-gradient(135deg, #0C1829 0%, #0A2540 100%);
+
+  /* Admin — alertas (dark) */
+  --admin-alert-warning-bg: rgba(255, 140, 0, 0.08);
+  --admin-alert-warning-border: rgba(255, 140, 0, 0.60);
+  --admin-alert-warning-text: #FFA500;
+  --admin-alert-error-bg: rgba(255, 59, 59, 0.10);
+  --admin-alert-error-border: rgba(255, 59, 59, 0.50);
 
   /* Semantic status (success/error/warning) - dark */
   --bg-success-subtle: rgba(16, 185, 129, 0.14);
@@ -283,6 +312,23 @@ html.capacitor-native svg {
 /* AdminMobileTopBar edge-to-edge: mismo fondo del header desktop, sin gap con la status bar */
 .admin-top-chrome {
   padding-top: var(--cap-safe-top, env(safe-area-inset-top, 0px));
+}
+
+/* Fondo premium del panel admin: navy profundo con gradiente en dark, azul muy
+   sutil en light. Separado de --bg-app (compartido con la app de jugador) para
+   no afectar el resto de la app. */
+.admin-shell-bg {
+  background-color: var(--admin-bg-app);
+  background-image: var(--admin-bg-image);
+}
+
+/* Detalle de marca en accesos rapidos: linea superior que aparece al hover */
+.admin-quick-card {
+  border-top: 2px solid transparent;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+.admin-quick-card:hover {
+  border-top-color: #0085FC;
 }
 
 .player-top-chrome-bar {

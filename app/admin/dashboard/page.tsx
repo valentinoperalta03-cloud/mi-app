@@ -438,7 +438,7 @@ export default async function AdminDashboardPage({
         </div>
 
         {totalAlerts === 0 ? (
-          <div className="rounded-2xl border-l-2 border-[var(--admin-accent-lima)] bg-[var(--admin-accent-lima-subtle)] p-4 text-sm font-semibold text-[var(--admin-status-active-text)]">
+          <div className="rounded-xl border-l-[3px] border-[var(--admin-accent-lima)] bg-[var(--admin-accent-lima-subtle)] p-4 text-sm font-semibold text-[var(--admin-status-active-text)]">
             ✅ Sin alertas pendientes. Todo en orden.
           </div>
         ) : (
@@ -447,7 +447,7 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-100 p-4 text-sm font-semibold text-rose-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
+                className="flex items-center justify-between gap-3 rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-4 text-sm font-semibold text-[var(--text-error)] transition hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <span>🔴 {a.text}</span>
                 {a.cta ? (
@@ -463,9 +463,9 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-100 p-4 text-sm font-semibold text-amber-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                className="flex items-center justify-between rounded-xl border-l-[3px] border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] p-4 text-sm font-semibold text-[var(--admin-alert-warning-text)] transition hover:-translate-y-0.5 hover:shadow-sm"
               >
-                <span>🟡 {a.text}</span>
+                <span>🟠 {a.text}</span>
                 <ChevronRight size={16} />
               </Link>
             ))}
@@ -473,7 +473,7 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-800 transition hover:-translate-y-0.5 hover:shadow-sm dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
+                className="flex items-center justify-between rounded-xl border-l-[3px] border-[#0085FC]/50 bg-[#0085FC]/5 p-4 text-sm font-semibold text-[#0461C4] transition hover:-translate-y-0.5 hover:shadow-sm dark:text-sky-300"
               >
                 <span>🔵 {a.text}</span>
                 <ChevronRight size={16} />
@@ -515,7 +515,7 @@ export default async function AdminDashboardPage({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`${adminCard} group`}
+                className={`${adminCard} group admin-quick-card`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <item.icon size={22} className="text-[#0085FC]" />

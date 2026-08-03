@@ -117,14 +117,14 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
             role="dialog"
             aria-modal="true"
             aria-label="Menú del panel"
-            className="fixed inset-x-0 bottom-0 z-[76] flex flex-col overflow-hidden border-t border-[var(--border-subtle)] bg-[var(--bg-card)] md:hidden"
+            className="fixed inset-x-0 bottom-0 z-[76] flex flex-col overflow-hidden border-t border-[var(--border-subtle)] bg-[var(--bg-card)] dark:bg-[linear-gradient(180deg,#0C1829_0%,#051c40_100%)] dark:border-white/10 md:hidden"
             style={{ top: "var(--admin-top-chrome-offset)" }}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-app)] px-5 py-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-app)] px-5 py-4 dark:border-white/10 dark:bg-transparent">
               <p className="text-base font-bold text-[var(--text-primary)]">Menú</p>
               <button
                 type="button"
@@ -137,8 +137,11 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
-              {GROUPS.map((group) => (
-                <div key={group.title} className="pt-3">
+              {GROUPS.map((group, groupIndex) => (
+                <div
+                  key={group.title}
+                  className={`pt-3 ${groupIndex > 0 ? "mt-2 border-t border-[rgba(204,255,0,0.12)]" : ""}`}
+                >
                   <p className={`px-3 pb-1.5 ${adminSectionLabel}`}>
                     {group.title}
                   </p>
@@ -151,10 +154,10 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
                           key={item.href}
                           href={item.href}
                           onClick={onClose}
-                          className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
                             active
                               ? "border-l-2 border-[var(--admin-accent-lima)] bg-[rgba(204,255,0,0.08)] text-[var(--text-primary)]"
-                              : "text-[var(--text-secondary)] hover:bg-[var(--bg-app)]"
+                              : "text-[var(--text-secondary)] hover:bg-[var(--bg-app)] dark:hover:bg-white/[0.07]"
                           }`}
                         >
                           <span

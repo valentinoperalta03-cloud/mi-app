@@ -6,7 +6,7 @@ import TrialBanner from "./trial-banner";
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-[var(--bg-app)]">
+    <div className="admin-shell-bg min-h-dvh">
       <AdminShellBody header={<AdminDesktopHeaderWrapper />} trialBanner={<TrialBanner />}>
         <AdminRouteTransition>{children}</AdminRouteTransition>
       </AdminShellBody>

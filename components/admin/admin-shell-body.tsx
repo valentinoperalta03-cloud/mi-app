@@ -30,9 +30,11 @@ export default function AdminShellBody({
   return (
     <LayoutGroup id="admin-app-chrome">
       {header}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-[var(--admin-top-chrome-offset)] sm:px-6 lg:px-8 md:pb-10 md:pt-8">
-        {trialBanner}
-        {children}
+      <div className="admin-shell-bg min-h-dvh px-4 pb-8 pt-[var(--admin-top-chrome-offset)] sm:px-6 lg:px-8 md:pb-10 md:pt-8">
+        <div className="mx-auto w-full max-w-7xl">
+          {trialBanner}
+          {children}
+        </div>
       </div>
     </LayoutGroup>
   );

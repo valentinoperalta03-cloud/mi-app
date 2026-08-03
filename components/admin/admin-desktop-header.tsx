@@ -67,13 +67,13 @@ function AdminDesktopHeaderInner({ logoUrl, clubName }: AdminDesktopHeaderProps)
                 key={item.href}
                 href={item.href}
                 prefetch
-                className="relative inline-flex items-center gap-0.5 rounded-xl px-1.5 py-1 text-[11px] font-semibold touch-manipulation transition-colors"
+                className="relative inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-semibold touch-manipulation transition-colors"
                 style={{ color: active ? "var(--admin-header-active-text)" : "var(--admin-header-text)" }}
               >
                 {active ? (
                   <motion.span
                     layoutId="admin-desktop-nav-pill"
-                    className="absolute inset-0 -z-10 rounded-xl"
+                    className="absolute inset-0 -z-10 rounded-full"
                     style={{ background: "var(--admin-header-active-bg)" }}
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />

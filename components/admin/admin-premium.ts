@@ -1,11 +1,11 @@
 export const adminCard =
-  "rounded-2xl border bg-[var(--bg-card)] p-5 " +
+  "rounded-[var(--admin-card-radius)] border bg-[var(--admin-card-bg)] p-5 " +
   "border-[var(--admin-card-border)] shadow-[var(--admin-card-shadow)] " +
   "transition-all duration-200 hover:border-[var(--admin-card-border-hover)] hover:shadow-[var(--admin-card-shadow-hover)]";
 
 export const adminKicker =
-  "font-admin-mono text-[11px] font-semibold uppercase tracking-[0.14em] " +
-  "text-[var(--text-tertiary)]";
+  "font-admin-mono text-[11px] font-semibold uppercase tracking-[0.12em] " +
+  "text-[var(--admin-brand-primary)] dark:text-[var(--admin-accent-lima)]";
 
 export const adminTitle =
   "font-admin-display text-2xl font-bold tracking-tight text-[var(--text-primary)] md:text-3xl";
@@ -26,9 +26,9 @@ export const adminButtonSecondary =
   "text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-subtle)]";
 
 export const adminCTAPrimary =
-  "bg-brand-gradient text-white font-semibold rounded-xl px-4 py-2.5 " +
-  "shadow-[0_2px_8px_rgba(5,133,252,0.3)] transition-all duration-200 " +
-  "hover:brightness-105 hover:shadow-[0_4px_16px_rgba(5,133,252,0.4)] active:scale-[0.98]";
+  "bg-brand-gradient text-white font-semibold rounded-[var(--admin-btn-radius)] px-4 py-2.5 border-none " +
+  "shadow-[var(--admin-btn-shadow)] transition-all duration-200 " +
+  "hover:brightness-105 hover:shadow-[var(--admin-btn-shadow-hover)] active:scale-[0.98]";
 
 /** Badge de estado positivo/activo/pagado */
 export const adminBadgeLima =
@@ -69,13 +69,13 @@ export const adminEmptyState =
 
 /** Badge/pill de acción destructiva */
 export const adminBadgeDanger =
-  "inline-flex items-center rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 " +
-  "dark:border-rose-800/40 dark:bg-rose-900/30 dark:text-rose-300";
+  "inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 " +
+  "border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)]";
 
 /** Badge/pill de acción de advertencia */
 export const adminBadgeWarning =
-  "inline-flex items-center rounded-lg border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 " +
-  "dark:border-amber-800/40 dark:bg-amber-900/30 dark:text-amber-200";
+  "inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold " +
+  "border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] text-[var(--admin-alert-warning-text)]";
 
 /** Badge/pill de acción de éxito */
 export const adminBadgeSuccess =
@@ -84,5 +84,5 @@ export const adminBadgeSuccess =
 
 /** Bloque "Consejo": tip informativo con acento lima */
 export const adminTip =
-  "rounded-2xl border border-[var(--admin-accent-lima-border)] bg-[var(--admin-accent-lima-subtle)] " +
+  "rounded-xl border-l-[3px] border-[var(--admin-accent-lima)] bg-[var(--admin-accent-lima-subtle)] " +
   "px-4 py-3 text-xs text-[var(--admin-status-active-text)] dark:text-[#d4e600]";

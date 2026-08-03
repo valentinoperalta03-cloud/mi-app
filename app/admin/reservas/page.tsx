@@ -286,7 +286,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0085FC]/10 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <p className={`${adminKicker} text-[#0085FC]`}>Agenda diaria</p>
+            <p className={adminKicker}>Agenda diaria</p>
             <h1 className={adminTitle}>Gestión de reservas</h1>
             <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
           </div>
@@ -418,7 +418,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                   {ctx.courts.map((court) => (
                     <div
                       key={court.id}
-                      className="border-r border-white/15 px-3 py-3 text-sm font-semibold text-white"
+                      className="rounded-t-lg border-r border-white/15 px-3 py-3 text-sm font-semibold text-white"
                       style={{ background: "var(--admin-brand-gradient)" }}
                     >
                       {court.name ?? "Cancha"}
