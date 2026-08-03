@@ -122,6 +122,118 @@ export async function createFixedSlot(formData: FormData) {
   return { ok: true };
 }
 
+export async function updateFixedSlot(formData: FormData): Promise<{ error?: string; ok?: boolean }> {
+  const fixedSlotId = getField(formData, "fixed_slot_id");
+  const title = getField(formData, "title");
+  const playerIdsPayload = getField(formData, "player_ids");
+
+  if (!fixedSlotId) return { error: "Turno inválido." };
+  if (!title) return { error: "Ponele un título al turno." };
+
+  let playerIds: string[] = [];
+  try {
+    const parsed = JSON.parse(playerIdsPayload || "[]") as string[];
+    playerIds = Array.from(new Set(parsed.filter(Boolean).map(String))).slice(0, 4);
+  } catch {
+    return { error: "Jugadores inválidos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+
+  const { data: slot } = await supabase
+    .from(DB_TABLES.fixedSlots)
+    .select("id,court_id,day_of_week,start_time")
+    .eq("id", fixedSlotId)
+    .maybeSingle();
+  const typedSlot = slot as { id: string; court_id: string; day_of_week: number; start_time: string } | null;
+  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) {
+    return { error: "El turno no pertenece a tu club." };
+  }
+  const court = ctx.courts.find((c) => c.id === typedSlot.court_id);
+
+  const { error: titleErr } = await supabase
+    .from(DB_TABLES.fixedSlots)
+    .update({ title })
+    .eq("id", fixedSlotId);
+  if (titleErr) return { error: "No se pudo actualizar el título." };
+
+  const { data: currentPlayersRaw } = await supabase
+    .from(DB_TABLES.fixedSlotPlayers)
+    .select("player_id")
+    .eq("fixed_slot_id", fixedSlotId);
+  const currentPlayerIds = ((currentPlayersRaw ?? []) as Array<{ player_id: string }>).map((p) => p.player_id);
+
+  const toAdd = playerIds.filter((id) => !currentPlayerIds.includes(id));
+  const toRemove = currentPlayerIds.filter((id) => !playerIds.includes(id));
+
+  if (toRemove.length > 0) {
+    await supabase
+      .from(DB_TABLES.fixedSlotPlayers)
+      .delete()
+      .eq("fixed_slot_id", fixedSlotId)
+      .in("player_id", toRemove);
+  }
+  if (toAdd.length > 0) {
+    await supabase.from(DB_TABLES.fixedSlotPlayers).insert(
+      toAdd.map((playerId) => ({ fixed_slot_id: fixedSlotId, player_id: playerId }))
+    );
+  }
+
+  // Sincronizar los partidos futuros ya generados con la nueva lista de jugadores
+  if (toAdd.length > 0 || toRemove.length > 0) {
+    const today = getArgentinaNow().toISOString().slice(0, 10);
+    const { data: futureMatchesRaw } = await supabase
+      .from(DB_TABLES.matches)
+      .select("id")
+      .eq("fixed_slot_id", fixedSlotId)
+      .eq("es_turno_fijo", true)
+      .neq("match_status", "cancelled")
+      .gte("scheduled_date", today);
+    const futureMatchIds = ((futureMatchesRaw ?? []) as Array<{ id: string }>).map((m) => m.id);
+
+    for (const matchId of futureMatchIds) {
+      if (toRemove.length > 0) {
+        await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", matchId).in("player_id", toRemove);
+        await supabase.from(DB_TABLES.payments).delete().eq("match_id", matchId).in("user_id", toRemove);
+      }
+      for (const playerId of toAdd) {
+        await supabase.from(DB_TABLES.matchParticipants).insert({ match_id: matchId, player_id: playerId });
+        await supabase.from(DB_TABLES.payments).insert({ match_id: matchId, user_id: playerId, status: "invited", amount: 0 });
+      }
+    }
+  }
+
+  const dayLabel = DAY_LABELS[typedSlot.day_of_week] ?? "";
+  const timeLabel = String(typedSlot.start_time).slice(0, 5);
+
+  await Promise.all(
+    toAdd.map((playerId) =>
+      createNotification(supabase, {
+        user_id: playerId,
+        type: "join_request",
+        title: "Te asignaron un turno fijo",
+        body: `El club te asignó al turno "${title}" los ${dayLabel} a las ${timeLabel} en ${court?.name ?? "Cancha"}.`,
+      })
+    )
+  );
+  await Promise.all(
+    toRemove.map((playerId) =>
+      createNotification(supabase, {
+        user_id: playerId,
+        type: "reservation_cancelled",
+        title: "Te removieron del turno fijo",
+        body: `El club te quitó del turno "${title}".`,
+      })
+    )
+  );
+
+  revalidatePath("/admin/turnos-fijos");
+  revalidatePath("/admin/dashboard");
+  return { ok: true };
+}
+
 export async function deleteFixedSlot(formData: FormData) {
   const fixedSlotId = getField(formData, "fixed_slot_id");
   if (!fixedSlotId) return;
