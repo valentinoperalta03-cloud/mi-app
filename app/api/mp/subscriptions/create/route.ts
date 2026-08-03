@@ -7,6 +7,16 @@ import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 const SUBSCRIPTION_PRICE_ARS = 50000;
 
+/**
+ * La API de preapproval de Mercado Pago rechaza `reason` con tildes/ñ (a veces
+ * con 400 "Parameters passed are invalid", a veces con 500 "Internal server
+ * error" — inconsistente pero siempre falla). Se remueven diacríticos antes
+ * de enviarlo; el nombre del club puede traer acentos.
+ */
+function toAsciiReason(value: string): string {
+  return value.normalize("NFD").replace(/[^\x00-\x7F]/g, "");
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient({ allowCookieWrites: true });
   const {
@@ -83,6 +93,7 @@ export async function POST(req: Request) {
     const preApprovalBody: {
       reason: string;
       external_reference: string;
+      payer_email: string;
       back_url?: string;
       auto_recurring: {
         frequency: number;
@@ -93,8 +104,11 @@ export async function POST(req: Request) {
       };
       status: string;
     } = {
-      reason: `Suscripción mensual PadeLibre - ${clubRow.name ?? "Club"}`,
+      reason: toAsciiReason(`Suscripcion mensual PadeLibre - ${clubRow.name ?? "Club"}`),
       external_reference: clubId,
+      // MP exige payer_email para crear el preapproval (sin él devuelve 400
+      // "payer_email is required"); el dueño del club es quien la activa.
+      payer_email: user.email ?? "",
       ...(base ? { back_url: `${base}/admin/facturacion/callback` } : {}),
       auto_recurring: {
         frequency: 1,
@@ -119,7 +133,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ subscriptionUrl: preApproval.init_point });
   } catch (e) {
-    log.error({ event: "mp.subscription.create_failed", clubId, err: e });
+    const mpStatus = e != null && typeof e === "object" && "status" in e ? (e as { status?: unknown }).status : undefined;
+    log.error({ event: "mp.subscription.create_failed", clubId, mpStatus, err: e });
     return NextResponse.json(
       { error: "No se pudo crear la suscripción. Intentá de nuevo." },
       { status: 502 }
