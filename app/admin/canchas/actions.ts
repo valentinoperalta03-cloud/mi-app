@@ -17,16 +17,16 @@ function redirectCanchasError(message: string): never {
 export type CreateCourtState = {
   ok: boolean;
   message: string;
-  court?: {
-    id: string;
-    name: string;
-    price: number;
-    surface: string | null;
-    indoor: boolean;
-    image_url: string | null;
-    club_id: string;
-  };
 };
+
+const MIN_COURT_QUANTITY = 1;
+const MAX_COURT_QUANTITY = 15;
+
+/** Sin numerar si es una sola cancha; si no, sufijo secuencial de 2 digitos ("Cancha 01", "Cancha 02", ...). */
+function buildCourtName(baseName: string, index: number, quantity: number): string {
+  if (quantity <= 1) return baseName;
+  return `${baseName} ${String(index + 1).padStart(2, "0")}`;
+}
 
 export async function createCourt(
   _prev: CreateCourtState,
@@ -39,6 +39,7 @@ export async function createCourt(
   const surface = getField(formData, "surface");
   const indoor = formData.get("indoor") === "on";
   const imageUrl = getField(formData, "image_url");
+  const quantityRaw = getField(formData, "quantity");
 
   if (!name || !clubId) {
     return { ok: false, message: "Completá nombre y club." };
@@ -46,6 +47,10 @@ export async function createCourt(
   const price = Number.parseInt(priceRaw, 10);
   if (!Number.isFinite(price) || price < 0) {
     return { ok: false, message: "Precio inválido." };
+  }
+  const quantity = Number.parseInt(quantityRaw, 10);
+  if (!Number.isInteger(quantity) || quantity < MIN_COURT_QUANTITY || quantity > MAX_COURT_QUANTITY) {
+    return { ok: false, message: "Cantidad de canchas inválida." };
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -57,84 +62,26 @@ export async function createCourt(
     return { ok: false, message: "Club no autorizado." };
   }
 
-  const { data, error } = await supabase
-    .from(DB_TABLES.courts)
-    .insert({
-      club_id: clubId,
-      name,
-      price,
-      surface: surface || null,
-      indoor,
-      image_url: imageUrl || null,
-    })
-    .select("id,name,price,surface,indoor,image_url,club_id")
-    .single();
-
-  if (error || !data) {
-    return { ok: false, message: error?.message ?? "No se pudo crear la cancha." };
-  }
-
-  revalidatePath("/admin/canchas");
-  return { ok: true, message: "", court: data as CreateCourtState["court"] };
-}
-
-export async function duplicateCourtAction(
-  sourceCourtId: string,
-  count: number
-): Promise<{ ok: boolean; error?: string }> {
-  if (!Number.isInteger(count) || count < 1 || count > 50) {
-    return { ok: false, error: "Cantidad inválida." };
-  }
-
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) {
-    return { ok: false, error: "Sesión requerida." };
-  }
-  if (!ctx.courtIds.includes(sourceCourtId)) {
-    return { ok: false, error: "Cancha no autorizada." };
-  }
-
-  const { data: source, error: sourceError } = await supabase
-    .from(DB_TABLES.courts)
-    .select("club_id,price,surface,indoor,image_url")
-    .eq("id", sourceCourtId)
-    .maybeSingle();
-
-  if (sourceError || !source) {
-    return { ok: false, error: sourceError?.message ?? "Cancha no encontrada." };
-  }
-
-  const sourceCourt = source as {
-    club_id: string;
-    price: number | null;
-    surface: string | null;
-    indoor: boolean | null;
-    image_url: string | null;
-  };
-
-  const { count: existingCount } = await supabase
-    .from(DB_TABLES.courts)
-    .select("id", { count: "exact", head: true })
-    .eq("club_id", sourceCourt.club_id);
-
-  const startNumber = (existingCount ?? 0) + 1;
-  const rows = Array.from({ length: count }, (_, i) => ({
-    club_id: sourceCourt.club_id,
-    name: `Cancha ${startNumber + i}`,
-    price: sourceCourt.price,
-    surface: sourceCourt.surface,
-    indoor: Boolean(sourceCourt.indoor),
-    image_url: sourceCourt.image_url,
+  const rows = Array.from({ length: quantity }, (_, i) => ({
+    club_id: clubId,
+    name: buildCourtName(name, i, quantity),
+    price,
+    surface: surface || null,
+    indoor,
+    image_url: imageUrl || null,
   }));
 
   const { error } = await supabase.from(DB_TABLES.courts).insert(rows);
+
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, message: error.message };
   }
 
   revalidatePath("/admin/canchas");
-  return { ok: true };
+  return {
+    ok: true,
+    message: quantity === 1 ? "Cancha creada." : `${quantity} canchas creadas.`,
+  };
 }
 
 export async function updateCourt(formData: FormData): Promise<void> {
