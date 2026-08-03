@@ -70,7 +70,7 @@
   --admin-brand-gradient: linear-gradient(135deg, #0085FC 0%, #0461C4 100%);
   --admin-brand-primary: #0085FC;
   --admin-brand-secondary: #0461C4;
-  --admin-accent-lima: #CCFF00;
+  --admin-accent-lima: #0085FC;
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
@@ -145,6 +145,7 @@
   /* Admin — colores de marca (dark) */
   --admin-brand-primary: #38bdf8;
   --admin-brand-secondary: #7dd3fc;
+  --admin-accent-lima: #CCFF00;
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.16);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
 

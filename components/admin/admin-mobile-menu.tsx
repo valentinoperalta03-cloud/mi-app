@@ -140,7 +140,7 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
               {GROUPS.map((group, groupIndex) => (
                 <div
                   key={group.title}
-                  className={`pt-3 ${groupIndex > 0 ? "mt-2 border-t border-[rgba(204,255,0,0.12)]" : ""}`}
+                  className={`pt-3 ${groupIndex > 0 ? "mt-2 border-t border-[rgba(0,133,252,0.15)] dark:border-[rgba(204,255,0,0.12)]" : ""}`}
                 >
                   <p className={`px-3 pb-1.5 ${adminSectionLabel}`}>
                     {group.title}
@@ -156,14 +156,14 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
                           onClick={onClose}
                           className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
                             active
-                              ? "border-l-2 border-[var(--admin-accent-lima)] bg-[rgba(204,255,0,0.08)] text-[var(--text-primary)]"
+                              ? "border-l-2 border-[var(--admin-accent-lima)] bg-[rgba(0,133,252,0.08)] text-[var(--text-primary)] dark:bg-[rgba(204,255,0,0.08)]"
                               : "text-[var(--text-secondary)] hover:bg-[var(--bg-app)] dark:hover:bg-white/[0.07]"
                           }`}
                         >
                           <span
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
                               active
-                                ? "bg-[rgba(204,255,0,0.08)] text-[var(--text-primary)]"
+                                ? "bg-[rgba(0,133,252,0.08)] text-[var(--text-primary)] dark:bg-[rgba(204,255,0,0.08)]"
                                 : "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
                             }`}
                           >
