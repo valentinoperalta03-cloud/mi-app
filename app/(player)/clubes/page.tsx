@@ -51,16 +51,15 @@ async function ClubesContent() {
       userProvince = typedProfile?.province?.trim() ?? "";
     }
 
-    const [{ data, error }, { data: availability }, { data: mpConnectedRaw }] = await Promise.all([
+    const [{ data, error }, { data: availability }] = await Promise.all([
       supabase
         .from(DB_TABLES.clubs)
         .select("id,name,location,cover_image_url,logo_url,description,business_hours,city,province")
         .eq("is_active", true)
         .order("name", { ascending: true }),
+      // get_clubs_availability ya combina subscription_status, onboarding_completed
+      // y mp_access_token en un solo booleano (columnas revocadas para anon/authenticated).
       supabase.rpc("get_clubs_availability"),
-      // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
-      // que solo expone el booleano de conexion, nunca el token.
-      supabase.rpc("get_clubs_mp_connected"),
     ]);
 
     if (error) {
@@ -73,17 +72,14 @@ async function ClubesContent() {
           a.is_available,
         ])
       );
-      const mpConnectedMap = Object.fromEntries(
-        ((mpConnectedRaw ?? []) as Array<{ club_id: string; mp_connected: boolean }>).map((m) => [
-          m.club_id,
-          m.mp_connected,
-        ])
-      );
-      clubs = ((data ?? []) as ClubRow[]).map((club) => ({
-        ...club,
-        isAvailable: availabilityMap[String(club.id)] ?? true,
-        mpConnected: mpConnectedMap[String(club.id)] ?? false,
-      }));
+      // get_clubs_availability ya excluye del WHERE los clubes en 'pending': si un
+      // club no aparece ahi, no debe listarse (no solo marcarse "no disponible").
+      clubs = ((data ?? []) as ClubRow[])
+        .filter((club) => String(club.id) in availabilityMap)
+        .map((club) => ({
+          ...club,
+          isAvailable: availabilityMap[String(club.id)],
+        }));
     }
   } catch (e) {
     console.error("[clubes] ClubesContent exception", e);

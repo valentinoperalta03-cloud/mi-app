@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import CapacitorShellReady from "@/components/capacitor-shell-ready";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
 import { AppleAuthForm, EmailAuthForm, GoogleAuthForm } from "./auth-forms";
@@ -69,6 +70,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <EmailAuthForm next={next} />
+
+          <div className="mt-7 border-t border-slate-200/70 pt-5 text-center dark:border-slate-700">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">¿Tenés un club de pádel?</p>
+            <Link
+              href="/registro-club"
+              className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-[#0085FC] hover:underline dark:text-sky-400"
+            >
+              Registrá tu club gratis <span aria-hidden>→</span>
+            </Link>
+          </div>
 
           <LegalFooterLinks variant="login" className="mt-6" />
         </div>

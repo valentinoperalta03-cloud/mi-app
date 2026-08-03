@@ -8,7 +8,6 @@ import { createNotification } from "@/lib/notifications";
 import { SUPERADMIN_COOKIE, SUPERADMIN_PIN } from "@/lib/superadmin/constants";
 import { requireSuperadminAction, requireSuperadminUser } from "@/lib/superadmin/guards";
 import { signSuperadminSession } from "@/lib/superadmin/session-cookie";
-import { createServiceClient } from "@/utils/supabase/server";
 
 export async function unlockSuperadminPinAction(formData: FormData) {
   const pin = String(formData.get("pin") ?? "").trim();
@@ -193,52 +192,6 @@ export async function toggleUserGlobalBlockAction(formData: FormData) {
   await s.from(DB_TABLES.profiles).update({ is_globally_blocked: blocked }).eq("user_id", userId);
   revalidatePath("/superadmin/usuarios");
   redirect("/superadmin/usuarios");
-}
-
-export async function createClubAction(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const location = String(formData.get("location") ?? "").trim();
-  const ownerEmail = String(formData.get("owner_email") ?? "").trim().toLowerCase();
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const isActive = formData.get("is_active") === "1";
-
-  if (!name || !location || !ownerEmail) {
-    redirect("/superadmin/clubes?error=datos");
-  }
-
-  const s = await svc();
-  const { data: ownerLookup, error: ownerErr } = await s.auth.admin.listUsers({ perPage: 1000 });
-  if (ownerErr) redirect("/superadmin/clubes?error=owner");
-
-  const owner = (ownerLookup?.users ?? []).find(
-    (u) => String(u.email ?? "").toLowerCase() === ownerEmail
-  );
-  if (!owner?.id) {
-    redirect(`/superadmin/clubes?error=owner&email=${encodeURIComponent(ownerEmail)}`);
-  }
-  const ownerId = owner.id;
-
-  const { data: created, error } = await s
-    .from(DB_TABLES.clubs)
-    .insert({
-      name,
-      location,
-      description,
-      owner_id: ownerId,
-      is_active: isActive,
-      onboarding_completed: false,
-    })
-    .select("id")
-    .single();
-
-  if (error || !created) {
-    redirect("/superadmin/clubes?error=create");
-  }
-
-  const clubId = String((created as { id: string }).id);
-  revalidatePath("/superadmin");
-  revalidatePath("/superadmin/clubes");
-  redirect(`/superadmin/clubes/${clubId}?created=1`);
 }
 
 const AVAILABILITY_WEEKDAYS = [1, 2, 3, 4, 5] as const;

@@ -36,6 +36,11 @@ export function isFacturacionPath(pathname: string): boolean {
   return pathname === "/admin/facturacion" || pathname.startsWith("/admin/facturacion/");
 }
 
+/** Activacion inicial (subscription_status = 'pending'): siempre accesible, igual que facturacion. */
+export function isActivacionPath(pathname: string): boolean {
+  return pathname === "/admin/activacion" || pathname.startsWith("/admin/activacion/");
+}
+
 export function isSuperadminPath(pathname: string): boolean {
   return pathname === "/superadmin" || pathname.startsWith("/superadmin/");
 }
@@ -61,6 +66,7 @@ export function isJugadorAppPath(pathname: string): boolean {
 
 export function isPublicAuthPath(pathname: string): boolean {
   if (pathname === "/login") return true;
+  if (pathname === "/registro-club") return true;
   if (pathname === "/verificar-email") return true;
   if (pathname === "/privacidad") return true;
   if (pathname.startsWith("/auth/")) return true;

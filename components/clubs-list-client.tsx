@@ -20,7 +20,6 @@ export type ClubRow = {
   description?: string | null;
   business_hours?: string | null;
   isAvailable?: boolean;
-  mpConnected?: boolean;
 };
 
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
@@ -167,9 +166,7 @@ export default function ClubsListClient({
         {filteredClubs.map((club) => {
           const thumb = clubThumbUrl(club);
           const descShort = shortDescription(club.description);
-          const isAvailable = club.isAvailable ?? true;
-          const mpConnected = club.mpConnected ?? false;
-          const isUnavailable = !isAvailable || !mpConnected;
+          const isUnavailable = !(club.isAvailable ?? true);
           return (
             <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
               <Link

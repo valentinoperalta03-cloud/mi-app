@@ -91,38 +91,38 @@ export default async function MpConnectPage() {
       <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Cómo funciona la conexión con Mercado Pago?
+          ¿Para qué necesitás conectar Mercado Pago?
           <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
           <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
         </summary>
         <div className="space-y-4 border-t border-sky-200/60 px-5 pb-5 pt-4 dark:border-sky-800/40">
-          {[
-            {
-              n: "1",
-              title: "El organizador paga la seña (si la configuraste)",
-              desc: "Si activaste seña para tu cancha, el organizador la paga al crear la reserva o el partido.",
-            },
-            {
-              n: "2",
-              title: "El 100% va a tu cuenta",
-              desc: "Mercado Pago envía el dinero directamente a tu cuenta. PadeLibre no cobra comisión por reserva.",
-            },
-            {
-              n: "3",
-              title: "Recibís el dinero",
-              desc: "El monto de la seña aparece en tu cuenta de MP sin intermediarios.",
-            },
-          ].map((step) => (
-            <div key={step.n} className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0085FC] text-xs font-bold text-white">
-                {step.n}
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{step.title}</p>
-                <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{step.desc}</p>
-              </div>
-            </div>
-          ))}
+          <p className="text-sm text-[var(--text-secondary)]">
+            PadeLibre genera un link de pago para que tus clientes te paguen la seña directamente a vos.
+          </p>
+
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">✓</span>
+            <p className="text-sm text-[var(--text-secondary)]">
+              El 100% del dinero va a tu cuenta de Mercado Pago — nosotros no nos quedamos nada.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">✓</span>
+            <p className="text-sm text-[var(--text-secondary)]">
+              PadeLibre solo le dice al jugador &quot;pagá por acá&quot; y el dinero va directo a tu cuenta.
+            </p>
+          </div>
+
+          <div className="border-t border-sky-200/60 pt-4 dark:border-sky-800/40">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              ¿Por qué usamos Mercado Pago para las transacciones?
+            </p>
+            <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
+              Es la billetera digital más usada del país, por ende le facilitamos al cliente pagar en
+              segundos sin tener que sacar efectivo, buscar un alias o hacer una transferencia manual —
+              con un solo toque desde su celular.
+            </p>
+          </div>
         </div>
       </details>
 

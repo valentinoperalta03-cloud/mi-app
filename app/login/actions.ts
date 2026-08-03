@@ -2,13 +2,46 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveHomePath, resolveSafeNextPath } from "@/lib/auth-redirect";
+import { resolveSafeNextPath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { getAuthSiteOrigin } from "@/lib/auth-site-url";
+import { DB_TABLES } from "@/lib/db-tables";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { sanitizeText } from "@/lib/sanitize";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Como resolveHomePath (usado por proxy.ts para decidir isAdmin), pero para
+ * el redirect post-login/signup: si el club recien registrado esta en
+ * subscription_status = 'pending', manda directo a /admin/activacion en vez
+ * de /admin/dashboard (que igual lo rebotaria ahi via el gate de suscripcion,
+ * pero esto evita el salto extra). Vive aca (server-only) y no en
+ * lib/auth-redirect.ts porque ese modulo tambien lo importa codigo cliente
+ * (lib/native-oauth.ts) y no puede arrastrar createServiceClient/next-headers.
+ */
+async function resolveLoginRedirectPath(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data: ownedClub } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("id")
+    .eq("owner_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  const clubId = String((ownedClub as { id?: string } | null)?.id ?? "").trim();
+  if (!clubId) return "/home";
+
+  // subscription_status esta revocada para authenticated: se lee con service client.
+  const { data: statusRow } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .select("subscription_status")
+    .eq("id", clubId)
+    .maybeSingle();
+  const status = (statusRow as { subscription_status?: string | null } | null)?.subscription_status;
+
+  return status === "pending" ? "/admin/activacion" : "/admin/dashboard";
+}
 
 function getStringField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -78,7 +111,7 @@ export async function signInWithEmail(
   }
 
   const next = resolveSafeNextPath(getStringField(formData, "next"));
-  redirect(next ?? (await resolveHomePath(supabase, user.id)));
+  redirect(next ?? (await resolveLoginRedirectPath(supabase, user.id)));
 }
 
 export type SignUpWithEmailResult =
@@ -145,7 +178,7 @@ export async function signUpWithEmail(formData: FormData): Promise<SignUpWithEma
     } = await supabase.auth.getUser();
     if (u) {
       const next = resolveSafeNextPath(getStringField(formData, "next"));
-      redirect(next ?? (await resolveHomePath(supabase, u.id)));
+      redirect(next ?? (await resolveLoginRedirectPath(supabase, u.id)));
     }
   }
 
@@ -219,7 +252,7 @@ export async function verifyOtpCode(formData: FormData): Promise<OtpActionResult
   }
 
   const next = resolveSafeNextPath(getStringField(formData, "next"));
-  redirect(next ?? (await resolveHomePath(supabase, user.id)));
+  redirect(next ?? (await resolveLoginRedirectPath(supabase, user.id)));
 }
 
 export async function resendOtpCode(formData: FormData): Promise<OtpActionResult> {

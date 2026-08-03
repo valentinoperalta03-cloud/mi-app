@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import {
   fetchIsGloballyBlocked,
   GLOBAL_BLOCK_LOGIN_MESSAGE,
+  isActivacionPath,
   isAdminPanelPath,
   isFacturacionPath,
   isGlobalBlockExemptPath,
@@ -142,7 +143,7 @@ export async function proxy(request: NextRequest) {
       return redirectPreservingSupabaseCookies(request, "/admin/dashboard", response);
     }
 
-    if (isAdminPanelPath(pathname) && !isFacturacionPath(pathname)) {
+    if (isAdminPanelPath(pathname) && !isFacturacionPath(pathname) && !isActivacionPath(pathname)) {
       const { data: ownedClub } = await supabase
         .from(DB_TABLES.clubs)
         .select("id")
@@ -158,11 +159,11 @@ export async function proxy(request: NextRequest) {
         );
 
         if (gate.blockReason) {
-          const blockedResponse = redirectPreservingSupabaseCookies(
-            request,
-            `/admin/facturacion?reason=${gate.blockReason}`,
-            response
-          );
+          const target =
+            gate.blockReason === "pending"
+              ? "/admin/activacion"
+              : `/admin/facturacion?reason=${gate.blockReason}`;
+          const blockedResponse = redirectPreservingSupabaseCookies(request, target, response);
           if (gate.refreshedCookieValue) {
             setSubscriptionCookie(blockedResponse, gate.refreshedCookieValue);
           }

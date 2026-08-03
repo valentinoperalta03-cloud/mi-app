@@ -122,6 +122,12 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
     items.datos_club && items.canchas && items.precios && items.horarios && items.metodos_pago
   );
 
+  const alreadyOnboarded = Boolean(c.onboarding_completed);
+  if (canReceiveReservations && !alreadyOnboarded) {
+    // Marca el club disponible para jugadores (get_clubs_availability) sin intervencion manual.
+    await createServiceClient().from(DB_TABLES.clubs).update({ onboarding_completed: true }).eq("id", clubId);
+  }
+
   return {
     items,
     completedCount,
@@ -130,6 +136,6 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
     canReceiveReservations,
     hasMpConnected,
     club: c,
-    onboardingCompleted: Boolean(c.onboarding_completed),
+    onboardingCompleted: alreadyOnboarded || canReceiveReservations,
   };
 }

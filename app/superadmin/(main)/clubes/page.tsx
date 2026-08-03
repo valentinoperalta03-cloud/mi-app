@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { toggleClubActiveAction } from "@/app/superadmin/actions";
-import CreateClubForm from "@/components/superadmin/create-club-form";
 import ClubHealthBadge from "@/components/superadmin/club-health-badge";
 import DeleteClubForm from "@/components/superadmin/delete-club-form";
 import SubscriptionBadge from "@/components/superadmin/subscription-badge";
@@ -17,16 +16,10 @@ const filterTabs: { key: Filter; label: string }[] = [
   { key: "problems", label: "Con problemas" },
 ];
 
-const errorMessages: Record<string, string> = {
-  datos: "Completá nombre, ubicación y email del dueño.",
-  owner: "No encontramos un usuario registrado con ese email.",
-  create: "No se pudo crear el club. Revisá los datos e intentá de nuevo.",
-};
-
 export default async function SuperadminClubesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string; error?: string; email?: string; created?: string; deleted?: string; delete_error?: string }>;
+  searchParams: Promise<{ f?: string; deleted?: string; delete_error?: string }>;
 }) {
   const { svc } = await requireSuperadminAction();
   const sp = await searchParams;
@@ -51,9 +44,6 @@ export default async function SuperadminClubesPage({
     revenueMonth: rows.reduce((a, r) => a + Number(r.revenue_paid_this_month), 0),
   };
 
-  const errKey = String(sp.error ?? "").trim();
-  const errMsg = errKey ? errorMessages[errKey] ?? "Ocurrió un error." : null;
-
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8">
       <header>
@@ -62,12 +52,6 @@ export default async function SuperadminClubesPage({
           Alta, baja, suscripción y salud operativa de cada club en la plataforma.
         </p>
       </header>
-
-      {sp.created === "1" ? (
-        <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
-          Club creado correctamente.
-        </p>
-      ) : null}
 
       {sp.deleted === "1" ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
@@ -80,15 +64,6 @@ export default async function SuperadminClubesPage({
           No se pudo eliminar el club.
         </p>
       ) : null}
-
-      {errMsg ? (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
-          {errMsg}
-          {sp.email ? ` (${sp.email})` : null}
-        </p>
-      ) : null}
-
-      <CreateClubForm />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
