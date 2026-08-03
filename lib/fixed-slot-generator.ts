@@ -83,22 +83,32 @@ export async function generateMatchForSlotOnDate(
     return { created: false, reason };
   }
 
-  // matches.owner_id tiene FK a profiles.user_id. Los jugadores siempre tienen
-  // fila en profiles (se buscan desde esa misma tabla), pero el dueño del club
+  // matches.owner_id tiene FK a profiles. Los jugadores siempre tienen fila en
+  // profiles (se buscan desde esa misma tabla), pero el dueño del club
   // (fallback cuando el turno no tiene jugadores todavía) puede no tenerla —
   // los admins no pasan necesariamente por el flujo que crea el profile de
   // jugador. Sin esto, el insert de abajo fallaba en silencio y la cancha
   // nunca quedaba bloqueada.
   if (!players[0]) {
+    if (!club?.owner_id) {
+      const reason = "owner_id es null";
+      console.error(`${logPrefix}: NO se creó el match — ${reason} (el club ${slot.club_id} no tiene owner_id)`);
+      return { created: false, reason };
+    }
+
     const { data: ownerProfile } = await supabase
       .from(DB_TABLES.profiles)
       .select("user_id")
       .eq("user_id", ownerId)
       .maybeSingle();
     if (!ownerProfile) {
+      // profiles.id es NOT NULL y no tiene default en la DB — hay que setearlo
+      // explícito. Sigue la convención estándar de Supabase: id = auth.users.id,
+      // igual que user_id (quedan duplicados a propósito, el resto del código
+      // lee por user_id).
       const { error: profileErr } = await supabase
         .from(DB_TABLES.profiles)
-        .insert({ user_id: ownerId, name: clubName });
+        .insert({ id: ownerId, user_id: ownerId, name: clubName });
       if (profileErr && profileErr.code !== "23505") {
         const reason = `no se pudo asegurar el profile del dueño del club: ${profileErr.message}`;
         console.error(`${logPrefix}: NO se creó el match — ${reason}`);
