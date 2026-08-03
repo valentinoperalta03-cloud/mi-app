@@ -9,6 +9,7 @@ import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { ChevronRight, MapPin, Search, Share2 } from "lucide-react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
@@ -355,9 +356,12 @@ export default function CrearPartidoForm({
       // Generar slots dinámicos desde la apertura del club seleccionado
       const allSlots = buildClubSlots(selectedClub?.openTime ?? "09:00", selectedClub?.closeTime);
 
+      const now = new Date();
       const available = allSlots.filter((slot) => {
         if (courtBlockStarts.has(normalizeSlotTime(slot.time))) return false;
         if (clubBlockedTimes.has(normalizeSlotTime(slot.time))) return false;
+        const slotDateTime = new Date(`${selectedDate}T${slot.time}:00-03:00`);
+        if (slotDateTime <= now) return false;
         const slotStart = clockToMinutes(slot.time);
         for (const match of matches) {
           const otherStart = clockToMinutes(String(match.scheduled_time ?? ""));
@@ -393,11 +397,11 @@ export default function CrearPartidoForm({
   const clubHasDeposit = Boolean(selectedClub?.depositValue && selectedClub.depositValue > 0);
 
   useEffect(() => {
-    if (currentStep !== "payment" || !selectedClub) return;
+    if (!selectedClub) return;
     if (selectedClub.mpConnected) setPayMethod("mercadopago");
     else if (!clubHasDeposit && selectedClub.acceptsCash) setPayMethod("cash");
     else if (!clubHasDeposit && selectedClub.acceptsTransfer) setPayMethod("transfer");
-  }, [currentStep, selectedClub, clubHasDeposit]);
+  }, [selectedClub, clubHasDeposit]);
 
   const payAvailable = Boolean(
     selectedClub &&
@@ -478,8 +482,10 @@ export default function CrearPartidoForm({
               if (result.shareUrl) setConfirmedShareUrl(result.shareUrl);
               setCurrentStep("confirmation");
             }
-          } catch {
-            // Si hay redirect del server action (Mercado Pago), Next resuelve fuera del cliente.
+          } catch (err) {
+            if (isRedirectError(err)) throw err;
+            console.error("[crear-partido] error en submit:", err);
+            setError("Hubo un error de conexión. Si ya reservaste, revisá tus partidos antes de reintentar.");
           }
         });
       }}
@@ -556,7 +562,8 @@ export default function CrearPartidoForm({
               const thumbFallback = club.imageUrl?.trim() || null;
               const isAvailable = club.isAvailable ?? true;
               const mpConnected = club.mpConnected ?? false;
-              const isUnavailable = !isAvailable || !mpConnected;
+              const hasOfflinePay = Boolean(club.acceptsCash || club.acceptsTransfer);
+              const isUnavailable = !isAvailable || (!mpConnected && !hasOfflinePay);
               return (
                 <div key={club.id} className="space-y-1.5">
                 <button
@@ -1069,8 +1076,11 @@ export default function CrearPartidoForm({
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Confirmá tu partido</h1>
             <StepHelpTooltip title="💳 Confirmá tu reserva" label="Ayuda: pago y confirmación">
-              <p>Pagás solo la seña ahora para asegurar la cancha.</p>
-              <p>El saldo restante lo abonás en el club el día del partido.</p>
+              <p>
+                {resumenPago.requiresDeposit
+                  ? `Pagás $${fmtAr(resumenPago.deposit)} de seña ahora. Saldo $${fmtAr(resumenPago.saldo)} en el club.`
+                  : `Pagás $${fmtAr(resumenPago.total)} ahora. Sin saldo pendiente.`}
+              </p>
               <p>Si pagás por Mercado Pago: la cancha se confirma automáticamente al acreditarse el pago.</p>
               <p>Si pagás en efectivo o transferencia: coordiná con el club para confirmar la reserva.</p>
             </StepHelpTooltip>

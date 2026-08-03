@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { parseCloseTimeToMinutes } from "@/lib/court-slots";
+import { courtBlockStartsFromRows, normalizeSlotTime, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
@@ -267,6 +267,38 @@ export async function crearPartido(
       if (slotStart < nowMinutesAr + 60) {
         return { error: "La fecha debe ser futura." };
       }
+    }
+
+    if (clubIdStr) {
+      const { data: closedDayRows } = await supabase
+        .from(DB_TABLES.clubClosedDays)
+        .select("id")
+        .eq("club_id", clubIdStr)
+        .eq("closed_date", scheduledDate)
+        .limit(1);
+      if (closedDayRows?.length) {
+        return { error: "El club está cerrado ese día." };
+      }
+    }
+
+    const [{ data: blockRowsModern }, { data: blockRowsLegacy }] = await Promise.all([
+      supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("blocked_time")
+        .eq("court_id", courtId)
+        .eq("blocked_date", scheduledDate),
+      supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("start_time")
+        .eq("court_id", courtId)
+        .eq("date", scheduledDate),
+    ]);
+    const blockedStarts = courtBlockStartsFromRows(
+      blockRowsModern as { blocked_time: string | null }[] | null,
+      blockRowsLegacy as { start_time: string | null }[] | null
+    );
+    if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
+      return { error: "Esa cancha está bloqueada en ese horario." };
     }
 
     const { data: duplicatedMatch } = await supabase
