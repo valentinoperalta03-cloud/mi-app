@@ -203,7 +203,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
           No se pudo completar el pago. Probá con otro medio o contactá a tu banco.
         </p>
         <Link
-          href={isReservation ? "/reservas/nueva" : "/crear-partido"}
+          href="/crear-partido"
           className={`mt-2 inline-flex justify-center ${PLAYER_PRIMARY_BUTTON} px-6 py-3 text-base`}
         >
           {isReservation ? "Reintentar reserva" : "Reintentar pago"}

@@ -423,7 +423,7 @@ export default async function ReservasPage({
           icon="calendar"
           title="Sin reservas todavía"
           subtitle="Reservá una cancha y aparecerá acá"
-          ctaHref="/reservas/nueva"
+          ctaHref="/crear-partido"
           ctaLabel="Hacer una reserva"
         />
       ) : null}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
+import type { ScheduleInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getUserLocationServer } from "@/lib/locations-server";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
@@ -45,6 +46,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     { data: clubsRaw, error: clubsError },
     { data: courtsRaw, error: courtsError },
     { data: slotPricesRaw },
+    { data: schedulesRaw },
     { data: availabilityRaw },
     { data: mpConnectedRaw },
   ] = await Promise.all([
@@ -57,7 +59,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .order("name", { ascending: true }),
     supabase
       .from(DB_TABLES.courts)
-      .select("id, club_id, name, price")
+      .select("id, club_id, name, price, surface, indoor")
       .order("name", { ascending: true }),
     supabase
       .from(DB_TABLES.courtSchedules)
@@ -65,6 +67,13 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .is("day_of_week", null)
       .not("start_time", "is", null)
       .not("price_override", "is", null),
+    // Horario semanal por cancha (apertura/cierre por dia_of_week) — usado por
+    // buildSlotsForDay para calcular disponibilidad respetando el horario propio
+    // de cada cancha, distinto de las filas de precio por franja de arriba.
+    supabase
+      .from(DB_TABLES.courtSchedules)
+      .select("court_id,day_of_week,open_time,close_time")
+      .not("day_of_week", "is", null),
     supabase.rpc("get_clubs_availability"),
     // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
     // que solo expone el booleano de conexion, nunca el token.
@@ -146,6 +155,8 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
           club_id: string;
           name: string | null;
           price: number | null;
+          surface: string | null;
+          indoor: boolean | null;
         }>
       ).map((row) => [row.id, row])
     ).values()
@@ -155,6 +166,19 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     clubId: court.club_id,
     name: court.name ?? "Cancha",
     price: court.price ?? 0,
+    surface: court.surface ?? null,
+    indoor: court.indoor ?? null,
+  }));
+  const schedules: ScheduleInput[] = ((schedulesRaw ?? []) as Array<{
+    court_id: string;
+    day_of_week: number | null;
+    open_time: string | null;
+    close_time: string | null;
+  }>).map((row) => ({
+    court_id: row.court_id,
+    day_of_week: row.day_of_week,
+    open_time: row.open_time,
+    close_time: row.close_time,
   }));
   const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
     court_id: string;
@@ -203,6 +227,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
         <CrearPartidoForm
           clubs={clubs}
           courts={courts}
+          schedules={schedules}
           slotPrices={slotPrices}
           defaultGender={defaultGender}
           friends={friends}

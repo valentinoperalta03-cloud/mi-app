@@ -4,14 +4,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { App } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
-import { ChevronRight, MapPin, Search, Share2 } from "lucide-react";
+import { CalendarClock, ChevronRight, Clock, MapPin, Search, Share2 } from "lucide-react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { courtBlockStartsFromRows, normalizeSlotTime } from "@/lib/court-slots";
+import {
+  buildSlotsForDay,
+  courtBlockStartsFromRows,
+  normalizeSlotTime,
+  type ScheduleInput,
+} from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { normalizeCity } from "@/lib/locations";
@@ -64,6 +69,8 @@ export type CourtOption = {
   clubId: string;
   name: string;
   price: number;
+  surface?: string | null;
+  indoor?: boolean | null;
 };
 export type SlotPriceOption = {
   courtId: string;
@@ -80,14 +87,16 @@ export type FriendOption = {
   technicalScore: number | null;
 };
 
-type MatchRow = {
-  scheduled_time: string | null;
-  duration_minutes: number | null;
-};
 type TurnSlot = {
   time: string;
-  endTime: string;
   duration: number;
+};
+type CourtAvailability = {
+  courtId: string;
+  courtName: string;
+  price: number;
+  surface: string | null;
+  indoor: boolean | null;
 };
 type Step = "clubs" | "club-detail" | "options" | "payment" | "confirmation";
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
@@ -116,30 +125,16 @@ function StepProgress({ step }: { step: Step }) {
   );
 }
 
-function buildClubSlots(openTime: string, closeTime?: string | null): TurnSlot[] {
-  const parseT = (hhmm: string) => {
-    const [h, m] = hhmm.split(":").map(Number);
-    return (h || 0) * 60 + (m || 0);
+function formatSurfaceLabel(raw: string | null | undefined): string {
+  if (!raw?.trim()) return "—";
+  const s = raw.trim().toLowerCase();
+  const map: Record<string, string> = {
+    cemento: "Cemento",
+    cristal: "Cristal",
+    "cesped sintetico": "Césped sintético",
+    moqueta: "Moqueta",
   };
-  const fmt = (min: number) => {
-    const h = Math.floor(min / 60) % 24;
-    const m = min % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  };
-  const openMin = parseT(openTime || "09:00");
-  // "00:00" significa que el club cierra a medianoche (sin restricción real).
-  const closeMinRaw = closeTime ? parseT(closeTime) : 24 * 60;
-  const closeMin = closeMinRaw === 0 ? 24 * 60 : closeMinRaw;
-  const slots: TurnSlot[] = [];
-  for (let t = openMin; t + 90 <= closeMin; t += 90) {
-    const end = t + 90;
-    slots.push({
-      time: fmt(t),
-      endTime: end >= 24 * 60 ? "00:00" : fmt(end),
-      duration: 90,
-    });
-  }
-  return slots;
+  return map[s] ?? raw.trim();
 }
 
 function clockToMinutes(clock: string): number {
@@ -164,6 +159,7 @@ function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): stri
 export default function CrearPartidoForm({
   clubs,
   courts,
+  schedules,
   slotPrices,
   defaultGender,
   friends,
@@ -173,6 +169,7 @@ export default function CrearPartidoForm({
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
+  schedules: ScheduleInput[];
   slotPrices: SlotPriceOption[];
   defaultGender: GenderCategory;
   friends: FriendOption[];
@@ -190,9 +187,10 @@ export default function CrearPartidoForm({
   const [selectedClubId, setSelectedClubId] = useState<string>(initialClubId);
   const [selectedCourtId, setSelectedCourtId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedSlot, setSelectedSlot] = useState<TurnSlot | null>(null);
-  const [slots, setSlots] = useState<TurnSlot[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, CourtAvailability[]>>({});
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [closedThisDay, setClosedThisDay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchType, setMatchType] = useState<"amistoso" | "competitivo">("amistoso");
   const [visibility, setVisibility] = useState<"publico" | "privado">("publico");
@@ -240,6 +238,7 @@ export default function CrearPartidoForm({
     const list = courts.filter((court) => court.clubId === selectedClubId);
     return Array.from(new Map(list.map((c) => [c.id, c])).values());
   }, [courts, selectedClubId]);
+  const availableCourtIds = useMemo(() => availableCourts.map((c) => c.id), [availableCourts]);
   const filteredClubs = useMemo(() => {
     return clubs.filter((club) => {
       if (!club.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -257,20 +256,6 @@ export default function CrearPartidoForm({
     }
     return map;
   }, [slotPrices]);
-  const minPriceByCourt = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const court of courts) {
-      map.set(court.id, court.price);
-    }
-    for (const row of slotPrices) {
-      const current = map.get(row.courtId);
-      if (current == null || row.price < current) {
-        map.set(row.courtId, row.price);
-      }
-    }
-    return map;
-  }, [courts, slotPrices]);
-
   const getTurnPrice = useCallback(
     (courtId: string, startTime: string): number => {
       const slotPrice = slotPriceMap.get(`${courtId}__${startTime}`);
@@ -284,106 +269,155 @@ export default function CrearPartidoForm({
     if (!selectedClubId) return;
     const foundClub = clubs.find((club) => club.id === selectedClubId) ?? null;
     setSelectedClub(foundClub);
-    const firstCourt = courts.find((court) => court.clubId === selectedClubId);
-    setSelectedCourtId(firstCourt?.id ?? "");
-    setSelectedSlot(null);
-    setSlots([]);
-  }, [courts, selectedClubId]);
+    setSelectedCourtId("");
+    setSelectedTime(null);
+    setAvailabilityMap({});
+    setClosedThisDay(false);
+  }, [clubs, selectedClubId]);
 
-  const loadSlots = useCallback(async () => {
-    if (!selectedCourtId || !selectedDate) return;
-    setLoadingSlots(true);
+  const loadAvailability = useCallback(async () => {
+    if (!selectedClubId || !selectedDate || availableCourtIds.length === 0) {
+      setAvailabilityMap({});
+      setClosedThisDay(false);
+      return;
+    }
+    setLoadingAvailability(true);
     setError(null);
-    setSelectedSlot(null);
+    setAvailabilityMap({});
+    setClosedThisDay(false);
     try {
       const supabase = createClient();
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
       const dayOfWeek = getDay(dayDate);
 
-      // Obtener club_id de la cancha seleccionada para filtrar bloques del club
-      const courtClubId = courts.find((c) => c.id === selectedCourtId)
-        ? selectedClub?.id ?? ""
-        : "";
-
       const [
+        { data: closedRows },
         { data: matchRows, error: matchError },
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
         { data: clubBlockRows },
       ] = await Promise.all([
         supabase
+          .from(DB_TABLES.clubClosedDays)
+          .select("id")
+          .eq("club_id", selectedClubId)
+          .eq("closed_date", selectedDate)
+          .limit(1),
+        supabase
           .from(DB_TABLES.matches)
-          .select("scheduled_time,duration_minutes")
-          .eq("court_id", selectedCourtId)
+          .select("court_id,scheduled_time,duration_minutes")
+          .in("court_id", availableCourtIds)
           .eq("scheduled_date", selectedDate)
           .neq("match_status", "cancelled"),
         supabase
           .from(DB_TABLES.courtBlocks)
-          .select("blocked_time")
-          .eq("court_id", selectedCourtId)
+          .select("court_id,blocked_time")
+          .in("court_id", availableCourtIds)
           .eq("blocked_date", selectedDate),
         supabase
           .from(DB_TABLES.courtBlocks)
-          .select("start_time")
-          .eq("court_id", selectedCourtId)
+          .select("court_id,start_time")
+          .in("court_id", availableCourtIds)
           .eq("date", selectedDate),
-        courtClubId
-          ? supabase
-              .from(DB_TABLES.clubScheduleBlocks)
-              .select("blocked_time")
-              .eq("club_id", courtClubId)
-              .eq("day_of_week", dayOfWeek)
-          : Promise.resolve({ data: [] }),
+        supabase
+          .from(DB_TABLES.clubScheduleBlocks)
+          .select("blocked_time")
+          .eq("club_id", selectedClubId)
+          .eq("day_of_week", dayOfWeek),
       ]);
 
+      if (closedRows?.length) {
+        setClosedThisDay(true);
+        return;
+      }
+
       if (matchError || blockErrModern || blockErrLegacy) {
-        setSlots([]);
         setError("No se pudieron cargar los horarios disponibles.");
         return;
       }
 
-      const matches = (matchRows ?? []) as MatchRow[];
-      const courtBlockStarts = courtBlockStartsFromRows(
-        blockRowsModern as { blocked_time: string | null }[] | null,
-        blockRowsLegacy as { start_time: string | null }[] | null
-      );
+      const matches = (matchRows ?? []) as Array<{
+        court_id: string;
+        scheduled_time: string | null;
+        duration_minutes: number | null;
+      }>;
+      const modernBlocks = (blockRowsModern ?? []) as Array<{
+        court_id: string;
+        blocked_time: string | null;
+      }>;
+      const legacyBlocks = (blockRowsLegacy ?? []) as Array<{
+        court_id: string;
+        start_time: string | null;
+      }>;
       const clubBlockedTimes = new Set(
         ((clubBlockRows ?? []) as Array<{ blocked_time: string }>).map((r) =>
           normalizeSlotTime(r.blocked_time)
         )
       );
-
-      // Generar slots dinámicos desde la apertura del club seleccionado
-      const allSlots = buildClubSlots(selectedClub?.openTime ?? "09:00", selectedClub?.closeTime);
+      const clubBounds = selectedClub
+        ? { open_time: selectedClub.openTime ?? null, close_time: selectedClub.closeTime ?? null }
+        : null;
 
       const now = new Date();
-      const available = allSlots.filter((slot) => {
-        if (courtBlockStarts.has(normalizeSlotTime(slot.time))) return false;
-        if (clubBlockedTimes.has(normalizeSlotTime(slot.time))) return false;
-        const slotDateTime = new Date(`${selectedDate}T${slot.time}:00-03:00`);
-        if (slotDateTime <= now) return false;
-        const slotStart = clockToMinutes(slot.time);
-        for (const match of matches) {
-          const otherStart = clockToMinutes(String(match.scheduled_time ?? ""));
-          const otherDur = match.duration_minutes && match.duration_minutes > 0 ? match.duration_minutes : 90;
-          if (overlapsSlot(slotStart, slot.duration, otherStart, otherDur)) return false;
-        }
-        return true;
-      });
+      const map: Record<string, CourtAvailability[]> = {};
 
-      setSlots(available);
+      for (const court of availableCourts) {
+        const courtMatches = matches.filter((m) => m.court_id === court.id);
+        const courtBlockStarts = courtBlockStartsFromRows(
+          modernBlocks.filter((b) => b.court_id === court.id),
+          legacyBlocks.filter((b) => b.court_id === court.id)
+        );
+        // Grilla propia de esta cancha: respeta court_schedules por día de semana
+        // (o el horario del club como fallback), a diferencia del viejo buildClubSlots.
+        const courtSlots = buildSlotsForDay([court.id], dayDate, schedules, clubBounds, 90);
+
+        for (const slot of courtSlots) {
+          const normTime = normalizeSlotTime(slot.time);
+          if (courtBlockStarts.has(normTime)) continue;
+          if (clubBlockedTimes.has(normTime)) continue;
+          const slotDateTime = new Date(`${selectedDate}T${slot.time}:00-03:00`);
+          if (slotDateTime <= now) continue;
+          const slotStart = clockToMinutes(slot.time);
+          const overlapping = courtMatches.some((m) => {
+            const otherStart = clockToMinutes(String(m.scheduled_time ?? ""));
+            const otherDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
+            return overlapsSlot(slotStart, slot.duration, otherStart, otherDur);
+          });
+          if (overlapping) continue;
+
+          if (!map[slot.time]) map[slot.time] = [];
+          map[slot.time].push({
+            courtId: court.id,
+            courtName: court.name,
+            price: getTurnPrice(court.id, slot.time),
+            surface: court.surface ?? null,
+            indoor: court.indoor ?? null,
+          });
+        }
+      }
+
+      setAvailabilityMap(map);
     } finally {
-      setLoadingSlots(false);
+      setLoadingAvailability(false);
     }
-  }, [selectedCourtId, selectedDate]);
+  }, [selectedClubId, selectedDate, availableCourtIds, availableCourts, schedules, selectedClub, getTurnPrice]);
 
   useEffect(() => {
-    if (selectedCourtId && selectedDate) {
-      void loadSlots();
+    if (selectedClubId && selectedDate) {
+      void loadAvailability();
     }
-  }, [loadSlots, selectedCourtId, selectedDate]);
+  }, [loadAvailability, selectedClubId, selectedDate]);
+
+  const sortedTimes = useMemo(
+    () => Object.keys(availabilityMap).sort((a, b) => clockToMinutes(a) - clockToMinutes(b)),
+    [availabilityMap]
+  );
 
   const selectedCourt = availableCourts.find((court) => court.id === selectedCourtId) ?? null;
+  const selectedSlot: TurnSlot | null = useMemo(
+    () => (selectedTime ? { time: selectedTime, duration: 90 } : null),
+    [selectedTime]
+  );
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
@@ -730,11 +764,11 @@ export default function CrearPartidoForm({
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Elegí tu cancha y horario</h2>
-              <StepHelpTooltip title="📅 Elegí fecha, cancha y horario" label="Ayuda: fecha y horario">
-                <p>Seleccioná el día y el horario que más te convenga.</p>
-                <p>Solo aparecen los horarios disponibles.</p>
-                <p>El precio que ves incluye la seña a pagar ahora.</p>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Elegí día, horario y cancha</h2>
+              <StepHelpTooltip title="📅 Elegí día, horario y cancha" label="Ayuda: día, horario y cancha">
+                <p>Seleccioná el día y luego el horario que más te convenga.</p>
+                <p>Solo aparecen los horarios con al menos una cancha libre.</p>
+                <p>El precio de cada cancha ya incluye lo que vas a pagar ahora.</p>
               </StepHelpTooltip>
             </div>
 
@@ -745,7 +779,8 @@ export default function CrearPartidoForm({
                   type="button"
                   onClick={() => {
                     setSelectedDate(date.key);
-                    setSelectedSlot(null);
+                    setSelectedTime(null);
+                    setSelectedCourtId("");
                   }}
                   className={`flex min-w-[4rem] shrink-0 flex-col items-center rounded-2xl border px-3 py-2.5 text-center transition-all ${
                     selectedDate === date.key
@@ -759,68 +794,126 @@ export default function CrearPartidoForm({
               ))}
             </div>
 
-            <div className="space-y-2">
-              {availableCourts.map((court) => (
-                <div
-                  key={court.id}
-                  className="rounded-2xl border border-black/[0.06] bg-white p-4 dark:border-white/[0.06]"
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-white">{court.name}</p>
-                      <p className="text-sm font-semibold text-[#0085FC]">
-                        Desde ${new Intl.NumberFormat("es-AR").format(minPriceByCourt.get(court.id) ?? court.price)}/turno
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">
-                      90 min
-                    </span>
+            {selectedDate ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Horario</p>
+                {loadingAvailability ? (
+                  <div className="grid grid-cols-4 gap-2">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="skeleton-shimmer h-14 rounded-[10px]" />
+                    ))}
                   </div>
+                ) : closedThisDay ? (
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                    <CalendarClock size={16} className="shrink-0" />
+                    El club está cerrado este día.
+                  </div>
+                ) : sortedTimes.length === 0 ? (
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                    <Clock size={16} className="shrink-0" />
+                    No hay horarios disponibles para este día.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {sortedTimes.map((time) => {
+                      const courtsForTime = availabilityMap[time] ?? [];
+                      const isSelected = selectedTime === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTime(time);
+                            setSelectedCourtId("");
+                          }}
+                          className={`flex flex-col items-center rounded-[10px] border px-2 py-2.5 text-center transition-all duration-200 ease-out ${
+                            isSelected
+                              ? "border-transparent bg-[#0085FC] text-white shadow-[0_4px_12px_rgba(0,133,252,0.35)]"
+                              : "border-[rgba(0,133,252,0.20)] bg-[rgba(0,133,252,0.08)] text-[#0085FC]"
+                          }`}
+                        >
+                          <span className="text-sm font-semibold">{time}</span>
+                          <span className={`mt-0.5 text-[10px] ${isSelected ? "text-white/80" : "text-slate-400"}`}>
+                            {courtsForTime.length} {courtsForTime.length === 1 ? "cancha" : "canchas"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
-                  {selectedDate && selectedCourtId === court.id ? (
-                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-                      {loadingSlots ? (
-                        <p className="col-span-3 py-2 text-center text-sm text-slate-400">Cargando horarios...</p>
-                      ) : slots.length === 0 ? (
-                        <p className="col-span-3 py-2 text-center text-sm text-slate-400">Sin horarios disponibles</p>
-                      ) : (
-                        slots.map((slot) => (
+            <AnimatePresence>
+              {selectedTime ? (
+                <motion.div
+                  key={selectedTime}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="space-y-2"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cancha</p>
+                  {(availabilityMap[selectedTime] ?? []).length === 0 ? (
+                    <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                      <Clock size={16} className="shrink-0" />
+                      No hay canchas disponibles para ese horario.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {(availabilityMap[selectedTime] ?? []).map((court) => {
+                        const isSelected = selectedCourtId === court.courtId;
+                        const deposit = resolveDepositCharge(
+                          court.price,
+                          selectedClub?.depositType ?? null,
+                          selectedClub?.depositValue ?? 0
+                        );
+                        const hasDeposit = deposit < court.price;
+                        return (
                           <button
-                            key={`${slot.time}-${slot.duration}`}
+                            key={court.courtId}
                             type="button"
-                            onClick={() => {
-                              setSelectedSlot(slot);
-                              setCurrentStep("options");
-                            }}
-                            className={`rounded-xl border py-2.5 text-center text-xs font-semibold transition-all ${
-                              selectedSlot?.time === slot.time
-                                ? "border-[#0085FC] bg-[#0085FC] text-white"
-                                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#0085FC]/30 dark:border-slate-700 dark:bg-slate-800"
+                            onClick={() => setSelectedCourtId(court.courtId)}
+                            className={`w-full rounded-2xl border bg-white p-4 text-left transition-all duration-200 ease-out dark:bg-white/[0.05] ${
+                              isSelected
+                                ? "border-2 border-[#0085FC] shadow-[0_4px_20px_rgba(0,133,252,0.15)]"
+                                : "border border-black/[0.08] hover:border-black/[0.16] hover:shadow-sm"
                             }`}
                           >
-                            <span className="block">{slot.time}</span>
-                            <span className="block opacity-60">{slot.duration}min</span>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 dark:text-white">{court.courtName}</p>
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                    {formatSurfaceLabel(court.surface)}
+                                  </span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                    {court.indoor ? "Techada" : "Descubierta"}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="font-bold text-[#0085FC]">${fmtAr(court.price)}</p>
+                                {hasDeposit ? (
+                                  <p className="mt-0.5 text-xs text-slate-400">Seña: ${fmtAr(deposit)}</p>
+                                ) : null}
+                              </div>
+                            </div>
                           </button>
-                        ))
-                      )}
+                        );
+                      })}
                     </div>
-                  ) : null}
+                  )}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
 
-                  {selectedCourtId !== court.id ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCourtId(court.id);
-                        setSelectedSlot(null);
-                      }}
-                      className="mt-2 w-full rounded-xl border border-[#0085FC]/20 bg-[#0085FC]/5 py-2 text-sm font-semibold text-[#0085FC] transition-colors hover:bg-[#0085FC]/10"
-                    >
-                      Ver horarios disponibles
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+            {selectedTime && selectedCourtId ? (
+              <Button type="button" variant="primary" size="md" onClick={() => setCurrentStep("options")}>
+                Continuar →
+              </Button>
+            ) : null}
           </div>
         </div>
       ) : null}
