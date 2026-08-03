@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { adminBadgeLima, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import OnboardingChecklist from "@/components/admin/onboarding-checklist";
+import FixedSlotTodayCard, { type TodayFixedSlotCard } from "./fixed-slot-today-card";
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
@@ -119,7 +120,9 @@ export default async function AdminDashboardPage({
   const { data: todayMatchesRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
-        .select("id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,courts(name)")
+        .select(
+          "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,fixed_slot_id,courts(name)"
+        )
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
     : { data: [] };
@@ -132,19 +135,70 @@ export default async function AdminDashboardPage({
     scheduled_date: string | null;
     match_status: string | null;
     es_turno_fijo: boolean | null;
+    fixed_slot_id: string | null;
     courts: { name: string | null } | { name: string | null }[] | null;
   }>;
   const todayMatchIds = todayMatches.map((m) => m.id);
+  const matchByFixedSlotId = new Map(
+    todayMatches
+      .filter((m) => m.es_turno_fijo && m.fixed_slot_id && String(m.match_status ?? "").toLowerCase() !== "cancelled")
+      .map((m) => [String(m.fixed_slot_id), m])
+  );
 
   const { data: fixedSlotsTodayRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.fixedSlots)
-        .select("id")
+        .select("id,court_id,title,start_time")
         .in("court_id", ctx.courtIds)
         .eq("is_active", true)
         .eq("day_of_week", new Date(`${today}T12:00:00`).getDay())
     : { data: [] };
-  const fixedSlotsTodayCount = (fixedSlotsTodayRaw ?? []).length;
+  const fixedSlotsToday = (fixedSlotsTodayRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    title: string | null;
+    start_time: string | null;
+  }>;
+  const fixedSlotsTodayCount = fixedSlotsToday.length;
+
+  const fixedSlotIdsToday = fixedSlotsToday.map((s) => s.id);
+  const { data: fixedExceptionsTodayRaw } = fixedSlotIdsToday.length
+    ? await supabase
+        .from(DB_TABLES.fixedSlotExceptions)
+        .select("fixed_slot_id")
+        .in("fixed_slot_id", fixedSlotIdsToday)
+        .eq("exception_date", today)
+    : { data: [] };
+  const exceptedFixedSlotIdsToday = new Set(
+    ((fixedExceptionsTodayRaw ?? []) as Array<{ fixed_slot_id: string }>).map((e) => e.fixed_slot_id)
+  );
+
+  const { data: fixedSlotPlayersTodayRaw } = fixedSlotIdsToday.length
+    ? await supabase
+        .from(DB_TABLES.fixedSlotPlayers)
+        .select("fixed_slot_id,player_id")
+        .in("fixed_slot_id", fixedSlotIdsToday)
+    : { data: [] };
+  const fixedSlotPlayersToday = (fixedSlotPlayersTodayRaw ?? []) as Array<{
+    fixed_slot_id: string;
+    player_id: string;
+  }>;
+  const fixedSlotPlayerIds = Array.from(new Set(fixedSlotPlayersToday.map((p) => p.player_id)));
+  const { data: fixedSlotPlayerProfilesRaw } = fixedSlotPlayerIds.length
+    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", fixedSlotPlayerIds)
+    : { data: [] };
+  const fixedSlotPlayerNameById = new Map(
+    ((fixedSlotPlayerProfilesRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
+      p.user_id,
+      p.name?.trim() || "Jugador",
+    ])
+  );
+  const fixedSlotPlayersById = new Map<string, Array<{ playerId: string; name: string }>>();
+  for (const p of fixedSlotPlayersToday) {
+    const list = fixedSlotPlayersById.get(p.fixed_slot_id) ?? [];
+    list.push({ playerId: p.player_id, name: fixedSlotPlayerNameById.get(p.player_id) ?? "Jugador" });
+    fixedSlotPlayersById.set(p.fixed_slot_id, list);
+  }
 
   const { data: refundRequestedRaw } = ctx.courtIds.length
     ? await supabase
@@ -207,10 +261,32 @@ export default async function AdminDashboardPage({
   const { data: participantsTodayRaw } = todayMatchIds.length
     ? await supabase
         .from(DB_TABLES.matchParticipants)
-        .select("match_id,player_id")
+        .select("match_id,player_id,attendance_status")
         .in("match_id", todayMatchIds)
     : { data: [] };
-  const participantsToday = (participantsTodayRaw ?? []) as Array<{ match_id: string; player_id: string }>;
+  const participantsToday = (participantsTodayRaw ?? []) as Array<{
+    match_id: string;
+    player_id: string;
+    attendance_status: string | null;
+  }>;
+
+  const todayFixedSlotCards: TodayFixedSlotCard[] = fixedSlotsToday.map((slot) => {
+    const match = matchByFixedSlotId.get(slot.id) ?? null;
+    const matchParticipants = match ? participantsToday.filter((p) => p.match_id === match.id) : [];
+    const allConfirmed =
+      matchParticipants.length > 0 && matchParticipants.every((p) => p.attendance_status === "confirmed");
+    return {
+      id: slot.id,
+      title: slot.title?.trim() || "Turno fijo",
+      courtName: ctx.courts.find((c) => c.id === slot.court_id)?.name ?? "Cancha",
+      time: String(slot.start_time ?? "").slice(0, 5),
+      matchId: match?.id ?? null,
+      players: fixedSlotPlayersById.get(slot.id) ?? [],
+      allConfirmed,
+      excepted: exceptedFixedSlotIdsToday.has(slot.id),
+      todayYmd: today,
+    };
+  });
 
   const participantIds = Array.from(new Set(participantsToday.map((p) => p.player_id)));
   const { data: participantPaymentsRaw } = participantIds.length && todayMatchIds.length
@@ -502,6 +578,17 @@ export default async function AdminDashboardPage({
           <p className="mt-2 text-sm font-semibold text-[var(--text-tertiary)]">No hay más turnos por hoy 🎾</p>
         )}
       </section>
+
+      {todayFixedSlotCards.length > 0 ? (
+        <section className="space-y-3">
+          <p className={adminKicker}>Turnos fijos hoy</p>
+          <div className="space-y-2">
+            {todayFixedSlotCards.map((card) => (
+              <FixedSlotTodayCard key={card.id} card={card} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <SuperadminEntryLink variant="admin" />

@@ -49,14 +49,20 @@ export async function generateMatchForSlotOnDate(
     .eq("fixed_slot_id", slot.id)
     .order("created_at", { ascending: true });
   const players = (playersRaw ?? []) as Array<{ player_id: string; created_at: string }>;
-  if (players.length === 0) return false;
 
   const { data: clubRow } = await supabase
     .from(DB_TABLES.clubs)
-    .select("name")
+    .select("name,owner_id")
     .eq("id", slot.club_id)
     .maybeSingle();
-  const clubName = String((clubRow as { name?: string | null } | null)?.name ?? "Club");
+  const club = clubRow as { name?: string | null; owner_id?: string | null } | null;
+  const clubName = String(club?.name ?? "Club");
+
+  // El turno bloquea la cancha aunque todavía no tenga jugadores asignados
+  // (título solo, sin gente). En ese caso el match queda a nombre del dueño
+  // del club — no hay ningún jugador real al que asignarle el owner_id.
+  const ownerId = players[0]?.player_id ?? club?.owner_id ?? null;
+  if (!ownerId) return false;
 
   // Los turnos fijos se cobran por fuera de la app (efectivo/transferencia directa
   // en el club) — no hay ningún flujo de cobro conectado todavía. total_price/
@@ -73,7 +79,7 @@ export async function generateMatchForSlotOnDate(
       scheduled_time: slotTime,
       duration_minutes: slot.duration_minutes || 90,
       court_id: slot.court_id,
-      owner_id: players[0].player_id,
+      owner_id: ownerId,
       location_name: clubName,
       date: new Date(`${targetDate}T${slotTime}:00`).toISOString(),
       es_turno_fijo: true,
@@ -85,9 +91,11 @@ export async function generateMatchForSlotOnDate(
 
   const matchId = String((matchInserted as { id: string }).id);
 
-  await supabase.from(DB_TABLES.matchParticipants).insert(
-    players.map((p) => ({ match_id: matchId, player_id: p.player_id }))
-  );
+  if (players.length > 0) {
+    await supabase.from(DB_TABLES.matchParticipants).insert(
+      players.map((p) => ({ match_id: matchId, player_id: p.player_id }))
+    );
+  }
 
   for (const player of players) {
     await supabase.from(DB_TABLES.payments).insert({

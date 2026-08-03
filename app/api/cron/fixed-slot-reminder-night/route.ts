@@ -81,6 +81,9 @@ export async function GET(req: NextRequest) {
     const deadlineMs = matchTimeAr ? matchTimeAr.getTime() - confirmationHours * 3_600_000 : 0;
     if (nowMs >= deadlineMs) continue; // plazo vencido, no avisar
 
+    // Los turnos fijos sin jugadores asignados no tienen filas en match_participants
+    // (ver lib/fixed-slot-generator.ts), así que esta query ya no devuelve nada para
+    // ellos y no se envía ningún recordatorio.
     const { data: unconfirmed } = await supabase
       .from(DB_TABLES.matchParticipants)
       .select("player_id")

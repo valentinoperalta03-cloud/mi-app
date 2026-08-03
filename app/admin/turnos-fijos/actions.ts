@@ -27,52 +27,24 @@ function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function enc(msg: string) {
-  return encodeURIComponent(msg);
-}
-
-export async function saveFixedSlotSettings(formData: FormData): Promise<void> {
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/turnos-fijos");
-
-  const clubId = ctx.clubIds[0];
-  const hoursRaw = getField(formData, "fixed_slot_confirmation_hours");
-  const hours = Number(hoursRaw);
-
-  if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
-    redirect(`/admin/turnos-fijos?fixed_error=${enc("Ingresá una cantidad válida de horas (1–168).")}`);
-  }
-
-  const { error } = await supabase
-    .from(DB_TABLES.clubs)
-    .update({ fixed_slot_confirmation_hours: hours })
-    .eq("id", clubId)
-    .eq("owner_id", ctx.userId);
-
-  if (error) {
-    redirect(`/admin/turnos-fijos?fixed_error=${enc(error.message)}`);
-  }
-
-  revalidatePath("/admin/turnos-fijos");
-  redirect("/admin/turnos-fijos?fixed_saved=1");
-}
-
 export async function createFixedSlot(formData: FormData) {
   const courtId = getField(formData, "court_id");
   const dayOfWeek = Number(getField(formData, "day_of_week"));
   const startTime = getField(formData, "start_time");
   const durationMinutes = Number(getField(formData, "duration_minutes") || "90");
+  const title = getField(formData, "title");
   const playersPayload = getField(formData, "players_payload");
 
   if (!courtId || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !startTime) {
     return { error: "Completá cancha, día y horario." };
   }
+  if (!title) {
+    return { error: "Ponele un título al turno." };
+  }
 
   let players: Array<{ playerId: string }> = [];
   try {
-    const parsed = JSON.parse(playersPayload) as Array<{ playerId: string }>;
+    const parsed = JSON.parse(playersPayload || "[]") as Array<{ playerId: string }>;
     players = parsed
       .filter((p) => p?.playerId)
       .slice(0, 4)
@@ -81,9 +53,6 @@ export async function createFixedSlot(formData: FormData) {
       }));
   } catch {
     return { error: "Jugadores inválidos." };
-  }
-  if (players.length === 0) {
-    return { error: "Seleccioná al menos un jugador." };
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -100,6 +69,7 @@ export async function createFixedSlot(formData: FormData) {
       day_of_week: dayOfWeek,
       start_time: startTime.slice(0, 5),
       duration_minutes: Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : 90,
+      title,
       created_by: ctx.userId,
     })
     .select("id")
@@ -110,27 +80,30 @@ export async function createFixedSlot(formData: FormData) {
   }
 
   const fixedSlotId = String((inserted as { id: string }).id);
-  const { error: playersErr } = await supabase.from(DB_TABLES.fixedSlotPlayers).insert(
-    players.map((p) => ({
-      fixed_slot_id: fixedSlotId,
-      player_id: p.playerId,
-    }))
-  );
-  if (playersErr) {
-    await supabase.from(DB_TABLES.fixedSlots).delete().eq("id", fixedSlotId);
-    return { error: "No se pudieron asignar los jugadores." };
-  }
 
-  await Promise.all(
-    players.map((p) =>
-      createNotification(supabase, {
-        user_id: p.playerId,
-        type: "join_request",
-        title: "Te asignaron un turno fijo",
-        body: `El club te asignó un turno fijo los ${DAY_LABELS[dayOfWeek]} a las ${startTime.slice(0, 5)} en ${court.name ?? "Cancha"}. Confirmás desde tu app cada semana.`,
-      })
-    )
-  );
+  if (players.length > 0) {
+    const { error: playersErr } = await supabase.from(DB_TABLES.fixedSlotPlayers).insert(
+      players.map((p) => ({
+        fixed_slot_id: fixedSlotId,
+        player_id: p.playerId,
+      }))
+    );
+    if (playersErr) {
+      await supabase.from(DB_TABLES.fixedSlots).delete().eq("id", fixedSlotId);
+      return { error: "No se pudieron asignar los jugadores." };
+    }
+
+    await Promise.all(
+      players.map((p) =>
+        createNotification(supabase, {
+          user_id: p.playerId,
+          type: "join_request",
+          title: "Te asignaron un turno fijo",
+          body: `El club te asignó al turno "${title}" los ${DAY_LABELS[dayOfWeek]} a las ${startTime.slice(0, 5)} en ${court.name ?? "Cancha"}.`,
+        })
+      )
+    );
+  }
 
   // Generar partidos para las próximas 2 semanas inmediatamente
   const serviceSupabase = createServiceClient();
@@ -204,8 +177,12 @@ export async function deleteFixedSlot(formData: FormData) {
   }
 
   revalidatePath("/admin/turnos-fijos");
+  revalidatePath("/admin/dashboard");
 }
 
+// Usada tanto desde la grilla de turnos fijos ("No viene esta semana", con la
+// próxima fecha del día) como desde el dashboard ("No vienen hoy", con la fecha
+// de hoy) — es la misma acción, solo cambia qué exception_date le pasa el caller.
 export async function addExceptionToFixedSlot(formData: FormData): Promise<void> {
   const fixedSlotId = getField(formData, "fixed_slot_id");
   const exceptionDate = getField(formData, "exception_date");
@@ -282,82 +259,7 @@ export async function addExceptionToFixedSlot(formData: FormData): Promise<void>
   }
 
   revalidatePath("/admin/turnos-fijos");
-}
-
-export async function addPlayerToFixedSlot(formData: FormData): Promise<void> {
-  const fixedSlotId = getField(formData, "fixed_slot_id");
-  const playerId = getField(formData, "player_id");
-  if (!fixedSlotId || !playerId) return;
-
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) redirect("/login");
-
-  const { data: slot } = await supabase
-    .from(DB_TABLES.fixedSlots)
-    .select("id,court_id")
-    .eq("id", fixedSlotId)
-    .maybeSingle();
-  const typedSlot = slot as { id: string; court_id: string } | null;
-  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
-
-  const { count } = await supabase
-    .from(DB_TABLES.fixedSlotPlayers)
-    .select("id", { count: "exact", head: true })
-    .eq("fixed_slot_id", fixedSlotId);
-  if ((count ?? 0) >= 4) return;
-
-  const { error } = await supabase.from(DB_TABLES.fixedSlotPlayers).insert({
-    fixed_slot_id: fixedSlotId,
-    player_id: playerId,
-  });
-  if (error && error.code !== "23505") return;
-
-  // Agregar al jugador a los partidos futuros ya generados
-  const today = getArgentinaNow().toISOString().slice(0, 10);
-  const { data: futureMatches } = await supabase
-    .from(DB_TABLES.matches)
-    .select("id")
-    .eq("fixed_slot_id", fixedSlotId)
-    .eq("es_turno_fijo", true)
-    .neq("match_status", "cancelled")
-    .gte("scheduled_date", today);
-
-  for (const match of (futureMatches ?? []) as Array<{ id: string }>) {
-    const { data: alreadyIn } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("player_id")
-      .eq("match_id", match.id)
-      .eq("player_id", playerId)
-      .maybeSingle();
-    if (alreadyIn) continue;
-
-    const { count } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("player_id", { count: "exact", head: true })
-      .eq("match_id", match.id);
-    if ((count ?? 0) >= 4) continue;
-
-    await supabase.from(DB_TABLES.matchParticipants).insert({
-      match_id: match.id,
-      player_id: playerId,
-    });
-    await supabase.from(DB_TABLES.payments).insert({
-      match_id: match.id,
-      user_id: playerId,
-      status: "invited",
-      amount: 0,
-    });
-  }
-
-  await createNotification(supabase, {
-    user_id: playerId,
-    type: "join_request",
-    title: "Te agregaron a un turno fijo",
-    body: "El club te agregó a un turno fijo. Revisá tu próxima confirmación en la app.",
-  });
-
-  revalidatePath("/admin/turnos-fijos");
+  revalidatePath("/admin/dashboard");
 }
 
 export async function removeException(formData: FormData): Promise<void> {
@@ -405,58 +307,31 @@ export async function removeException(formData: FormData): Promise<void> {
   revalidatePath("/admin/turnos-fijos");
 }
 
-export async function removePlayerFromFixedSlot(formData: FormData): Promise<void> {
-  const fixedSlotId = getField(formData, "fixed_slot_id");
-  const playerId = getField(formData, "player_id");
-  if (!fixedSlotId || !playerId) return;
+// Botón "✓ Vinieron" del dashboard — marca a todos los jugadores del turno de
+// hoy como confirmados. No tiene equivalente en la grilla (esa vista no opera
+// sobre partidos de un día puntual, sino sobre la configuración recurrente).
+export async function markFixedSlotAttendanceToday(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  if (!matchId) return;
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: slot } = await supabase
-    .from(DB_TABLES.fixedSlots)
-    .select("id,court_id")
-    .eq("id", fixedSlotId)
-    .maybeSingle();
-  const typedSlot = slot as { id: string; court_id: string } | null;
-  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
-
-  await supabase
-    .from(DB_TABLES.fixedSlotPlayers)
-    .delete()
-    .eq("fixed_slot_id", fixedSlotId)
-    .eq("player_id", playerId);
-
-  // Remover de los partidos futuros generados
-  const today = getArgentinaNow().toISOString().slice(0, 10);
-  const { data: futureMatches } = await supabase
+  const { data: match } = await supabase
     .from(DB_TABLES.matches)
-    .select("id")
-    .eq("fixed_slot_id", fixedSlotId)
-    .eq("es_turno_fijo", true)
-    .neq("match_status", "cancelled")
-    .gte("scheduled_date", today);
+    .select("id,court_id,es_turno_fijo")
+    .eq("id", matchId)
+    .maybeSingle();
+  const typedMatch = match as { id: string; court_id: string; es_turno_fijo: boolean | null } | null;
+  if (!typedMatch || !typedMatch.es_turno_fijo || !ctx.courtIds.includes(typedMatch.court_id)) return;
 
-  for (const match of (futureMatches ?? []) as Array<{ id: string }>) {
-    await supabase
-      .from(DB_TABLES.matchParticipants)
-      .delete()
-      .eq("match_id", match.id)
-      .eq("player_id", playerId);
-    await supabase
-      .from(DB_TABLES.payments)
-      .delete()
-      .eq("match_id", match.id)
-      .eq("user_id", playerId);
-  }
+  // usar serviceClient: los match_participants pertenecen a jugadores, no al admin
+  const serviceSupabase = createServiceClient();
+  await serviceSupabase
+    .from(DB_TABLES.matchParticipants)
+    .update({ attendance_status: "confirmed" })
+    .eq("match_id", matchId);
 
-  await createNotification(supabase, {
-    user_id: playerId,
-    type: "reservation_cancelled",
-    title: "Te removieron del turno fijo",
-    body: "El club te quitó de un turno fijo.",
-  });
-
-  revalidatePath("/admin/turnos-fijos");
+  revalidatePath("/admin/dashboard");
 }
