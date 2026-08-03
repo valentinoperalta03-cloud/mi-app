@@ -56,10 +56,10 @@ export default function TurnosFijosGrid({
             key={d.value}
             type="button"
             onClick={() => setActiveDay(d.value)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            className={`flex min-h-11 shrink-0 cursor-pointer items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-95 ${
               activeDay === d.value
-                ? "bg-brand-gradient text-white shadow-[var(--admin-btn-shadow)]"
-                : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                ? "bg-brand-gradient text-white shadow-[var(--admin-btn-shadow)] hover:brightness-105"
+                : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[#0085FC]/40 hover:bg-[var(--bg-subtle)]"
             }`}
           >
             {d.label}
@@ -110,7 +110,7 @@ export default function TurnosFijosGrid({
                             onClick={() =>
                               setModalCtx({ courtId: court.id, courtName: court.name, dayOfWeek: activeDay, time })
                             }
-                            className="flex h-full min-h-16 w-full items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-transparent text-[11px] font-medium text-[var(--text-tertiary)] transition hover:border-[#0085FC]/40 hover:bg-[#0085FC]/[0.04]"
+                            className="flex h-full min-h-16 w-full cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-transparent text-[11px] font-medium text-[var(--text-tertiary)] transition-all duration-200 hover:border-[#0085FC]/50 hover:bg-[#0085FC]/[0.06] hover:text-[#0461C4] active:scale-[0.97] dark:hover:text-sky-300"
                           >
                             + Turno fijo
                           </button>
@@ -158,7 +158,7 @@ function OccupiedCell({ cell }: { cell: GridCell }) {
             <input type="hidden" name="exception_date" value={cell.nextDateYmd} />
             <button
               type="submit"
-              className="rounded-md border border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--admin-alert-warning-text)]"
+              className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] px-2 py-1 text-[10px] font-semibold text-[var(--admin-alert-warning-text)] transition-all duration-200 hover:brightness-95 hover:shadow-sm active:scale-95 dark:hover:brightness-125"
             >
               No viene esta semana
             </button>
@@ -173,7 +173,7 @@ function OccupiedCell({ cell }: { cell: GridCell }) {
           <input type="hidden" name="fixed_slot_id" value={cell.fixedSlotId} />
           <button
             type="submit"
-            className="rounded-md border border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-300"
+            className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] px-2 py-1 text-[10px] font-semibold text-rose-700 transition-all duration-200 hover:brightness-95 hover:shadow-sm active:scale-95 dark:text-rose-300 dark:hover:brightness-125"
           >
             Dar de baja
           </button>
