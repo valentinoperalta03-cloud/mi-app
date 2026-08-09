@@ -187,7 +187,7 @@ export default async function AdminCanchasPage({
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Link href={`/admin/canchas/${c.id}/horarios`} className={adminButtonSecondary}>
-                    Precios
+                    Horarios y precios
                   </Link>
                 </div>
               </div>

@@ -1,0 +1,201 @@
+import { minutesToClock } from "@/lib/court-slots";
+
+const BASE_UNIT_PX = 56;
+const COLUMN_MIN_WIDTH = 116;
+const TIME_AXIS_WIDTH = 52;
+
+export type TimelineEventKind = "reserva" | "turno_fijo" | "entrenamiento";
+
+export type TimelineEvent = {
+  id: string;
+  courtId: string;
+  startMin: number;
+  durationMin: number;
+  kind: TimelineEventKind;
+  label: string;
+};
+
+export type TimelineOpenRange = { startMin: number; endMin: number };
+
+export type TimelineCourt = { id: string; name: string };
+
+const KIND_STYLE: Record<TimelineEventKind, { bg: string; border: string; color: string }> = {
+  turno_fijo: { bg: "rgba(0,133,252,0.15)", border: "#0085FC", color: "#0461C4" },
+  reserva: { bg: "rgba(34,197,94,0.15)", border: "#22C55E", color: "#15803D" },
+  entrenamiento: { bg: "rgba(139,92,246,0.15)", border: "#8B5CF6", color: "#6D28D9" },
+};
+
+// Prioridad de renderizado cuando dos eventos coinciden en el mismo horario:
+// reserva > turno fijo > entrenamiento (se dibujan en ese orden para que la
+// reserva quede arriba visualmente, sin necesitar z-index explícito).
+const KIND_PRIORITY: Record<TimelineEventKind, number> = {
+  entrenamiento: 0,
+  turno_fijo: 1,
+  reserva: 2,
+};
+
+function closedGapsForCourt(
+  ranges: TimelineOpenRange[],
+  gridStartMin: number,
+  gridEndMin: number
+): TimelineOpenRange[] {
+  const sorted = ranges.slice().sort((a, b) => a.startMin - b.startMin);
+  const gaps: TimelineOpenRange[] = [];
+  let cursor = gridStartMin;
+  for (const r of sorted) {
+    const s = Math.max(r.startMin, gridStartMin);
+    const e = Math.min(r.endMin, gridEndMin);
+    if (s > cursor) gaps.push({ startMin: cursor, endMin: Math.min(s, gridEndMin) });
+    cursor = Math.max(cursor, e);
+  }
+  if (cursor < gridEndMin) gaps.push({ startMin: cursor, endMin: gridEndMin });
+  return gaps;
+}
+
+function LegendSwatch({ bg, border, label }: { bg: string; border: string; label: string }) {
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <span
+        className="h-3 w-3 shrink-0 rounded-[3px] border"
+        style={{ background: bg, borderColor: border, borderWidth: bg === "transparent" ? 1 : 0, borderLeftWidth: 3 }}
+      />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+export default function TimelineGrid({
+  courts,
+  openRangesByCourtId,
+  events,
+}: {
+  courts: TimelineCourt[];
+  openRangesByCourtId: Record<string, TimelineOpenRange[]>;
+  events: TimelineEvent[];
+}) {
+  if (courts.length === 0) {
+    return <p className="text-sm text-[var(--text-tertiary)]">Todavía no tenés canchas configuradas.</p>;
+  }
+
+  const allRanges = courts.flatMap((c) => openRangesByCourtId[c.id] ?? []);
+  const minOpen = allRanges.length ? Math.min(...allRanges.map((r) => r.startMin)) : 9 * 60;
+  const maxClose = allRanges.length ? Math.max(...allRanges.map((r) => r.endMin)) : 22 * 60 + 30;
+  const gridStartMin = Math.floor(minOpen / 60) * 60;
+  const gridEndMin = Math.ceil((maxClose + 90) / 60) * 60;
+  const totalHeightPx = ((gridEndMin - gridStartMin) / 60) * BASE_UNIT_PX;
+
+  const hourTicks: number[] = [];
+  for (let t = gridStartMin; t <= gridEndMin; t += 60) hourTicks.push(t);
+
+  const pxFor = (min: number) => ((min - gridStartMin) / 60) * BASE_UNIT_PX;
+
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <div style={{ minWidth: TIME_AXIS_WIDTH + courts.length * COLUMN_MIN_WIDTH }}>
+          <div className="flex">
+            <div style={{ width: TIME_AXIS_WIDTH }} className="shrink-0" />
+            {courts.map((c) => (
+              <div
+                key={c.id}
+                className="min-w-0 flex-1 truncate px-1 pb-2 text-center text-xs font-semibold text-[var(--text-primary)]"
+                style={{ minWidth: COLUMN_MIN_WIDTH }}
+                title={c.name}
+              >
+                {c.name}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex">
+            <div className="relative shrink-0" style={{ width: TIME_AXIS_WIDTH, height: totalHeightPx }}>
+              {hourTicks.map((t) => (
+                <div
+                  key={t}
+                  className="absolute right-1.5 -translate-y-1/2 text-[10px] font-medium text-[var(--text-tertiary)]"
+                  style={{ top: pxFor(t) }}
+                >
+                  {minutesToClock(t)}
+                </div>
+              ))}
+            </div>
+
+            {courts.map((c) => {
+              const ranges = openRangesByCourtId[c.id] ?? [];
+              const gaps = closedGapsForCourt(ranges, gridStartMin, gridEndMin);
+              const courtEvents = events
+                .filter((e) => e.courtId === c.id)
+                .slice()
+                .sort((a, b) => KIND_PRIORITY[a.kind] - KIND_PRIORITY[b.kind]);
+
+              return (
+                <div
+                  key={c.id}
+                  className="relative min-w-0 flex-1 border-l border-[var(--border-subtle)]"
+                  style={{ minWidth: COLUMN_MIN_WIDTH, height: totalHeightPx }}
+                >
+                  {hourTicks.map((t) => (
+                    <div
+                      key={t}
+                      className="absolute inset-x-0 border-t border-[var(--border-subtle)]/50"
+                      style={{ top: pxFor(t) }}
+                    />
+                  ))}
+
+                  {gaps.map((g, i) => {
+                    const heightPx = Math.max(pxFor(g.endMin) - pxFor(g.startMin) - 1, 0);
+                    if (heightPx <= 0) return null;
+                    return (
+                      <div
+                        key={`gap-${i}`}
+                        className="absolute inset-x-0 flex items-center justify-center overflow-hidden text-[10px] font-semibold"
+                        style={{
+                          top: pxFor(g.startMin),
+                          height: heightPx,
+                          background: "rgba(185,28,28,0.15)",
+                          borderLeft: "3px solid #B91C1C",
+                          color: "#B91C1C",
+                        }}
+                      >
+                        {heightPx >= 24 ? "Cerrado" : ""}
+                      </div>
+                    );
+                  })}
+
+                  {courtEvents.map((ev) => {
+                    const style = KIND_STYLE[ev.kind];
+                    const heightPx = Math.max(pxFor(ev.startMin + ev.durationMin) - pxFor(ev.startMin) - 1, 14);
+                    return (
+                      <div
+                        key={ev.id}
+                        className="absolute inset-x-0.5 overflow-hidden rounded-md px-1.5 py-1 text-[10px] font-semibold leading-tight"
+                        style={{
+                          top: pxFor(ev.startMin),
+                          height: heightPx,
+                          background: style.bg,
+                          borderLeft: `3px solid ${style.border}`,
+                          color: style.color,
+                        }}
+                        title={ev.label}
+                      >
+                        {ev.label}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[var(--text-secondary)]">
+        <LegendSwatch bg={KIND_STYLE.turno_fijo.bg} border={KIND_STYLE.turno_fijo.border} label="Turno fijo" />
+        <LegendSwatch bg={KIND_STYLE.reserva.bg} border={KIND_STYLE.reserva.border} label="Reserva" />
+        <LegendSwatch bg={KIND_STYLE.entrenamiento.bg} border={KIND_STYLE.entrenamiento.border} label="Entrenamiento externo" />
+        <LegendSwatch bg="rgba(185,28,28,0.15)" border="#B91C1C" label="Cerrado" />
+        <LegendSwatch bg="transparent" border="var(--border-subtle)" label="Disponible" />
+      </div>
+    </div>
+  );
+}

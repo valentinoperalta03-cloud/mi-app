@@ -23,8 +23,10 @@ import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
+import { parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import CurrentArTime from "./current-ar-time";
+import TimelineGrid, { type TimelineEvent, type TimelineOpenRange } from "./timeline-grid";
 
 const quickActions: Array<{
   href: string;
@@ -102,12 +104,19 @@ export default async function AdminDashboardPage({
 
   const { data: clubInfoRaw } = await supabase
     .from(DB_TABLES.clubs)
-    .select("id,name,logo_url,onboarding_completed")
+    .select("id,name,logo_url,onboarding_completed,open_time,close_time")
     .in("id", ctx.clubIds)
     .order("name", { ascending: true })
     .limit(1);
   const club = ((clubInfoRaw ?? [])[0] ?? null) as
-    | { id: string; name: string | null; logo_url: string | null; onboarding_completed?: boolean | null }
+    | {
+        id: string;
+        name: string | null;
+        logo_url: string | null;
+        onboarding_completed?: boolean | null;
+        open_time?: string | null;
+        close_time?: string | null;
+      }
     | null;
   const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
   const clubInitials = clubName
@@ -121,7 +130,7 @@ export default async function AdminDashboardPage({
     ? await supabase
         .from(DB_TABLES.matches)
         .select(
-          "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,fixed_slot_id,courts(name)"
+          "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,fixed_slot_id,duration_minutes,courts(name)"
         )
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
@@ -136,8 +145,10 @@ export default async function AdminDashboardPage({
     match_status: string | null;
     es_turno_fijo: boolean | null;
     fixed_slot_id: string | null;
+    duration_minutes: number | null;
     courts: { name: string | null } | { name: string | null }[] | null;
   }>;
+  const todayDayOfWeek = new Date(`${today}T12:00:00`).getDay();
   const todayMatchIds = todayMatches.map((m) => m.id);
   const matchByFixedSlotId = new Map(
     todayMatches
@@ -148,16 +159,17 @@ export default async function AdminDashboardPage({
   const { data: fixedSlotsTodayRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.fixedSlots)
-        .select("id,court_id,title,start_time")
+        .select("id,court_id,title,start_time,duration_minutes")
         .in("court_id", ctx.courtIds)
         .eq("is_active", true)
-        .eq("day_of_week", new Date(`${today}T12:00:00`).getDay())
+        .eq("day_of_week", todayDayOfWeek)
     : { data: [] };
   const fixedSlotsToday = (fixedSlotsTodayRaw ?? []) as Array<{
     id: string;
     court_id: string;
     title: string | null;
     start_time: string | null;
+    duration_minutes: number | null;
   }>;
   const fixedSlotsTodayCount = fixedSlotsToday.length;
 
@@ -199,6 +211,54 @@ export default async function AdminDashboardPage({
     list.push({ playerId: p.player_id, name: fixedSlotPlayerNameById.get(p.player_id) ?? "Jugador" });
     fixedSlotPlayersById.set(p.fixed_slot_id, list);
   }
+
+  // Franjas horarias por cancha para hoy (vista cronológica) — sin franjas
+  // propias, cada cancha cae al horario global del club.
+  const { data: timeRangesTodayRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtTimeRanges)
+        .select("court_id,day_of_week,open_time,close_time")
+        .in("court_id", ctx.courtIds)
+        .eq("day_of_week", todayDayOfWeek)
+    : { data: [] };
+  const timeRangesToday = (timeRangesTodayRaw ?? []) as Array<{
+    court_id: string;
+    open_time: string;
+    close_time: string;
+  }>;
+
+  // Entrenamientos externos de hoy — bloquean cancha pero no son visibles
+  // para jugadores; se excluyen de cualquier análisis de ocupación por
+  // reason='entrenamiento_externo'.
+  const { data: trainingCourtBlocksTodayRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("id,court_id,blocked_time,reason")
+        .in("court_id", ctx.courtIds)
+        .eq("blocked_date", today)
+        .eq("reason", "entrenamiento_externo")
+    : { data: [] };
+  const trainingCourtBlocksToday = (trainingCourtBlocksTodayRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    blocked_time: string;
+  }>;
+
+  const { data: trainingBlocksActiveTodayRaw } = ctx.clubIds.length
+    ? await supabase
+        .from(DB_TABLES.trainingBlocks)
+        .select("court_id,title,coach,start_time,end_time")
+        .in("club_id", ctx.clubIds)
+        .eq("is_active", true)
+        .eq("day_of_week", todayDayOfWeek)
+    : { data: [] };
+  const trainingBlocksActiveToday = (trainingBlocksActiveTodayRaw ?? []) as Array<{
+    court_id: string;
+    title: string;
+    coach: string | null;
+    start_time: string;
+    end_time: string;
+  }>;
 
   const { data: refundRequestedRaw } = ctx.courtIds.length
     ? await supabase
@@ -244,7 +304,16 @@ export default async function AdminDashboardPage({
       return min >= arNow.minutes;
     }) ?? null;
 
-  const ownerIdsForNext = Array.from(new Set([nextMatch?.owner_id].filter((id): id is string => Boolean(id))));
+  // Owners de reservas de hoy (no turno fijo) — se necesitan para la grilla
+  // cronológica ("nombre del jugador" en cada bloque de reserva), además del
+  // owner del próximo turno.
+  const reservaOwnerIdsToday = todayMatches
+    .filter((m) => !m.es_turno_fijo && String(m.match_status ?? "").toLowerCase() !== "cancelled")
+    .map((m) => m.owner_id)
+    .filter((id): id is string => Boolean(id));
+  const ownerIdsForNext = Array.from(
+    new Set([nextMatch?.owner_id, ...reservaOwnerIdsToday].filter((id): id is string => Boolean(id)))
+  );
   const { data: nextOwnerProfileRaw } = ownerIdsForNext.length
     ? await supabase
         .from(DB_TABLES.profiles)
@@ -432,6 +501,89 @@ export default async function AdminDashboardPage({
         ? "Pendiente"
         : "Sin confirmar";
 
+  // --- Vista cronológica del día: franjas abiertas por cancha + eventos ---
+  const clubOpenMin = club?.open_time ? parseClockToMinutes(String(club.open_time).slice(0, 5)) : null;
+  const clubCloseMin = club?.close_time ? parseCloseTimeToMinutes(String(club.close_time).slice(0, 5)) : null;
+
+  const timeRangesByCourtToday = new Map<string, TimelineOpenRange[]>();
+  for (const r of timeRangesToday) {
+    const list = timeRangesByCourtToday.get(r.court_id) ?? [];
+    list.push({
+      startMin: parseClockToMinutes(String(r.open_time).slice(0, 5)),
+      endMin: parseCloseTimeToMinutes(String(r.close_time).slice(0, 5)),
+    });
+    timeRangesByCourtToday.set(r.court_id, list);
+  }
+
+  const openRangesByCourtId: Record<string, TimelineOpenRange[]> = {};
+  for (const court of ctx.courts) {
+    const custom = timeRangesByCourtToday.get(court.id);
+    if (custom && custom.length > 0) {
+      openRangesByCourtId[court.id] = custom;
+    } else if (clubOpenMin != null && clubCloseMin != null && clubCloseMin > clubOpenMin) {
+      openRangesByCourtId[court.id] = [{ startMin: clubOpenMin, endMin: clubCloseMin }];
+    } else {
+      openRangesByCourtId[court.id] = [{ startMin: 9 * 60, endMin: 22 * 60 + 30 }];
+    }
+  }
+
+  // Metadata de entrenamientos activos hoy (título/coach/duración real) por
+  // cancha+horario, para completar los court_blocks puntuales que no tienen
+  // esa info — si no matchea ninguno, es un entrenamiento puntual y se
+  // asume 90 min (mismo criterio que el resto de la app).
+  const trainingMetaByKey = new Map(
+    trainingBlocksActiveToday.map((t) => [
+      `${t.court_id}__${String(t.start_time).slice(0, 5)}`,
+      { title: t.title, coach: t.coach, endTime: String(t.end_time).slice(0, 5) },
+    ])
+  );
+
+  const timelineEvents: TimelineEvent[] = [];
+
+  for (const m of todayMatches) {
+    if (m.es_turno_fijo) continue;
+    if (String(m.match_status ?? "").toLowerCase() === "cancelled") continue;
+    const startMin = timeToMinutes(m.scheduled_time);
+    if (startMin < 0) continue;
+    timelineEvents.push({
+      id: `match-${m.id}`,
+      courtId: m.court_id,
+      startMin,
+      durationMin: m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90,
+      kind: "reserva",
+      label: m.owner_id ? ownerNameById.get(m.owner_id) ?? "Jugador" : "Jugador",
+    });
+  }
+
+  for (const slot of fixedSlotsToday) {
+    if (exceptedFixedSlotIdsToday.has(slot.id)) continue;
+    const startMin = timeToMinutes(slot.start_time);
+    if (startMin < 0) continue;
+    timelineEvents.push({
+      id: `fixed-${slot.id}`,
+      courtId: slot.court_id,
+      startMin,
+      durationMin: slot.duration_minutes && slot.duration_minutes > 0 ? slot.duration_minutes : 90,
+      kind: "turno_fijo",
+      label: slot.title?.trim() || "Turno fijo",
+    });
+  }
+
+  for (const b of trainingCourtBlocksToday) {
+    const startMin = timeToMinutes(b.blocked_time);
+    if (startMin < 0) continue;
+    const meta = trainingMetaByKey.get(`${b.court_id}__${String(b.blocked_time).slice(0, 5)}`);
+    const durationMin = meta ? Math.max(30, timeToMinutes(meta.endTime) - startMin) : 90;
+    timelineEvents.push({
+      id: `training-${b.id}`,
+      courtId: b.court_id,
+      startMin,
+      durationMin,
+      kind: "entrenamiento",
+      label: meta ? (meta.coach ? `${meta.title} · ${meta.coach}` : meta.title) : "Entrenamiento externo",
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {subscriptionActivated ? (
@@ -557,6 +709,14 @@ export default async function AdminDashboardPage({
             ))}
           </div>
         )}
+      </section>
+
+      <section className={adminCard}>
+        <p className={adminKicker}>Vista del día</p>
+        <p className="mb-3 mt-1 text-sm text-[var(--text-tertiary)]">
+          Estado de todas tus canchas hora por hora, hoy {todayDateLabel}.
+        </p>
+        <TimelineGrid courts={ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }))} openRangesByCourtId={openRangesByCourtId} events={timelineEvents} />
       </section>
 
       <section className={adminCard}>

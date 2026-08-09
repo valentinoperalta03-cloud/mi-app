@@ -6,6 +6,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { minutesToClock, parseClockToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import { saveCourtHourlyPrices } from "../precios/actions";
+import CourtTimeRangesClient, { type CourtTimeRange } from "./court-time-ranges-client";
 
 const SLOT_DURATION = 90;
 
@@ -56,6 +57,12 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
   const clubOpen = String((clubHours as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
   const clubClose = String((clubHours as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
 
+  const { data: timeRangesRaw } = await supabase
+    .from(DB_TABLES.courtTimeRanges)
+    .select("id,day_of_week,open_time,close_time")
+    .eq("court_id", courtId);
+  const timeRanges = (timeRangesRaw ?? []) as CourtTimeRange[];
+
   const { data: slotRows } = await supabase
     .from(DB_TABLES.courtSchedules)
     .select("start_time,price_override")
@@ -75,9 +82,9 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       <AdminBackLink href="/admin/canchas" />
 
       <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0085FC]`}>Precios</p>
+        <p className={`${adminKicker} text-[#0085FC]`}>Horarios y precios</p>
         <h1 className={adminTitle}>{(court as { name?: string | null }).name ?? "Cancha"}</h1>
-        <p className={adminSubtitle}>Configurá el precio de cada turno de 90 min.</p>
+        <p className={adminSubtitle}>Configurá franjas horarias y el precio de cada turno de 90 min.</p>
       </header>
 
       {clubOpen && clubClose ? (
@@ -95,6 +102,16 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
           </a>
         </div>
       )}
+
+      <section className={`${adminCard} ${adminAccentBar} space-y-5`}>
+        <div>
+          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Franjas horarias</h2>
+          <p className="text-sm text-[var(--text-tertiary)]">
+            Por defecto la cancha usa el horario del club. Personalizá franjas propias por día si necesitás abrir en otro horario (podés cargar más de una franja por día).
+          </p>
+        </div>
+        <CourtTimeRangesClient courtId={courtId} clubOpen={clubOpen} clubClose={clubClose} initialRanges={timeRanges} />
+      </section>
 
       <section className={`${adminCard} ${adminAccentBar} space-y-5`}>
         <div>

@@ -5,6 +5,10 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/generate-training-blocks",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/cron/expire-unpaid-matches",
       "schedule": "0 3 * * *"
     },

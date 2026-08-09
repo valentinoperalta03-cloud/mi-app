@@ -2,12 +2,13 @@
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { GraduationCap, Info, Plus } from "lucide-react";
+import { Dumbbell, GraduationCap, Info, Plus, X } from "lucide-react";
 import {
   adminAccentBar,
   adminBadgeNeutral,
   adminCard,
   adminCTAPrimary,
+  adminEmptyState,
   adminSectionLabel,
   adminSubtitle,
   adminTip,
@@ -15,10 +16,27 @@ import {
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
 import { createClient } from "@/utils/supabase/server";
+import { deactivateTrainingBlockAction, deleteExternalTrainingBlockRowAction } from "./actions";
+import TrainingBlockForm from "./training-block-form";
 
 export const dynamic = "force-dynamic";
+
+const DAY_LABELS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+type ExternalTrainingItem = {
+  key: string;
+  title: string;
+  courtName: string;
+  scheduleLabel: string;
+  coach: string | null;
+  modality: string | null;
+  formAction: (formData: FormData) => Promise<void>;
+  hiddenFieldName: string;
+  hiddenFieldValue: string;
+};
 
 export default async function AdminClasesPage() {
   const supabase = await createClient();
@@ -41,23 +59,136 @@ export default async function AdminClasesPage() {
     sessionsBy.set(s.practice_id, (sessionsBy.get(s.practice_id) ?? 0) + 1);
   }
 
+  const courtOptions = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
+  const courtNameById = new Map(courtOptions.map((c) => [c.id, c.name]));
+
+  const { data: trainingBlocksRaw } = await supabase
+    .from(DB_TABLES.trainingBlocks)
+    .select("id,court_id,title,coach,modality,day_of_week,start_time,end_time")
+    .in("club_id", ctx.clubIds)
+    .eq("is_active", true)
+    .order("day_of_week", { ascending: true })
+    .order("start_time", { ascending: true });
+  const trainingBlocks = (trainingBlocksRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    title: string;
+    coach: string | null;
+    modality: string | null;
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+  }>;
+
+  const today = getTodayYmdInArgentina();
+  const { data: externalCourtBlocksRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("id,court_id,blocked_date,blocked_time")
+        .in("court_id", ctx.courtIds)
+        .eq("reason", "entrenamiento_externo")
+        .gte("blocked_date", today)
+        .order("blocked_date", { ascending: true })
+    : { data: [] };
+  const externalCourtBlocks = (externalCourtBlocksRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    blocked_date: string;
+    blocked_time: string;
+  }>;
+
+  // Los court_blocks generados por un training_block recurrente comparten
+  // reason='entrenamiento_externo' con los puntuales (así los detecta el
+  // dashboard y loadAvailability por igual) — para no listarlos uno por
+  // ocurrencia acá, se excluyen los que matchean cancha+horario+día de semana
+  // de algún training_block activo, y ese training_block se muestra una sola vez.
+  const activeTrainingKeys = new Set(
+    trainingBlocks.map((t) => `${t.court_id}__${t.day_of_week}__${String(t.start_time).slice(0, 5)}`)
+  );
+  const punctualCourtBlocks = externalCourtBlocks.filter((b) => {
+    const dow = new Date(`${b.blocked_date}T12:00:00`).getDay();
+    const key = `${b.court_id}__${dow}__${String(b.blocked_time).slice(0, 5)}`;
+    return !activeTrainingKeys.has(key);
+  });
+
+  const externalTrainingItems: ExternalTrainingItem[] = [
+    ...trainingBlocks.map((t) => ({
+      key: `training-${t.id}`,
+      title: t.title,
+      courtName: courtNameById.get(t.court_id) ?? "Cancha",
+      scheduleLabel: `${DAY_LABELS[t.day_of_week]} · ${String(t.start_time).slice(0, 5)} - ${String(t.end_time).slice(0, 5)}`,
+      coach: t.coach,
+      modality: t.modality,
+      formAction: deactivateTrainingBlockAction,
+      hiddenFieldName: "training_block_id",
+      hiddenFieldValue: t.id,
+    })),
+    ...punctualCourtBlocks.map((b) => ({
+      key: `block-${b.id}`,
+      title: "Entrenamiento externo",
+      courtName: courtNameById.get(b.court_id) ?? "Cancha",
+      scheduleLabel: `${format(parseISO(b.blocked_date), "d MMM yyyy", { locale: es })} · ${String(b.blocked_time).slice(0, 5)} hs`,
+      coach: null as string | null,
+      modality: null as string | null,
+      formAction: deleteExternalTrainingBlockRowAction,
+      hiddenFieldName: "court_block_id",
+      hiddenFieldValue: b.id,
+    })),
+  ];
+
   return (
     <div className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className={adminTitle}>Clases</h1>
-          <p className={`mt-1 ${adminSubtitle}`}>Prácticas y entrenamientos de tu club.</p>
-        </div>
-        <Link
-          href="/admin/clases/nuevo"
-          className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
-        >
-          <Plus size={18} />
-          Crear
-        </Link>
+      <div>
+        <h1 className={adminTitle}>Clases y entrenamientos</h1>
+        <p className={`mt-1 ${adminSubtitle}`}>Prácticas, clases públicas y entrenamientos externos de tu club.</p>
       </div>
 
-      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
+      <section className="mt-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Dumbbell size={18} className="text-[#0085FC]" />
+            <div>
+              <h2 className={adminSectionLabel}>Entrenamientos externos</h2>
+              <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                Solo registro del club, no visible para jugadores.
+              </p>
+            </div>
+          </div>
+          <TrainingBlockForm courts={courtOptions} />
+        </div>
+
+        <ul className="mt-3 space-y-2">
+          {externalTrainingItems.length === 0 ? (
+            <li className={adminEmptyState}>Todavía no registraste entrenamientos externos.</li>
+          ) : null}
+          {externalTrainingItems.map((item) => (
+            <li key={item.key} className={`${adminCard} flex items-start justify-between gap-3`}>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">{item.title}</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  {item.courtName} · {item.scheduleLabel}
+                  {item.coach ? ` · Prof. ${item.coach}` : ""}
+                  {item.modality ? ` · ${item.modality}` : ""}
+                </p>
+              </div>
+              <form action={item.formAction}>
+                <input type="hidden" name={item.hiddenFieldName} value={item.hiddenFieldValue} />
+                <button
+                  type="submit"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+                >
+                  <X size={12} />
+                  Dar de baja
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <hr className="my-8 border-[var(--border-subtle)]" />
+
+      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
         <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
           <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
           ¿Cómo funciona la sección de clases?
@@ -121,9 +252,16 @@ export default async function AdminClasesPage() {
       </details>
 
       <section className="mt-8">
-        <h2 className={`mb-3 ${adminSectionLabel}`}>
-          Registro de clases
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className={adminSectionLabel}>Registro de clases</h2>
+          <Link
+            href="/admin/clases/nuevo"
+            className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
+          >
+            <Plus size={18} />
+            Crear entrenamiento público
+          </Link>
+        </div>
         <ul className="space-y-2">
           {((rows ?? []) as Array<{
             id: string;

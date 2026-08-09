@@ -14,6 +14,8 @@ export const DB_TABLES = {
   courts: "courts",
   courtSchedules: "court_schedules",
   courtBlocks: "court_blocks",
+  courtTimeRanges: "court_time_ranges",
+  trainingBlocks: "training_blocks",
   matches: "matches",
   matchPlayers: "match_players",
   matchParticipants: "match_participants",
