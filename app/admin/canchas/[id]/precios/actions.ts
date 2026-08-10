@@ -65,6 +65,7 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
     });
   }
 
+  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
   const { error: delErr } = await supabase
     .from(DB_TABLES.courtSchedules)
     .delete()

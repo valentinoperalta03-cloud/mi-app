@@ -63,6 +63,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
     .eq("court_id", courtId);
   const timeRanges = (timeRangesRaw ?? []) as CourtTimeRange[];
 
+  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
   const { data: slotRows } = await supabase
     .from(DB_TABLES.courtSchedules)
     .select("start_time,price_override")

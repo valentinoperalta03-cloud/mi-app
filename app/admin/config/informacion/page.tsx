@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminButtonSecondary, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -200,11 +200,6 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
         </p>
         {flash(hoursOk, hoursErr)}
         <ClubHoursForm defaultOpen={clubOpenDefault} />
-        <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
-          <a href="/admin/horarios" className={adminButtonSecondary}>
-            Gestionar horarios bloqueados →
-          </a>
-        </div>
       </section>
 
       <section className={`${adminCard} p-6`}>

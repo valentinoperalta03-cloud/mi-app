@@ -74,6 +74,7 @@ export default async function AdminCanchasPage({
     : { data: [] };
   const blockedCourtIds = new Set((blocksRaw ?? []).map((b: { court_id: string }) => b.court_id));
 
+  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
   const { data: schedulesRaw } = courtIds.length
     ? await supabase
         .from(DB_TABLES.courtSchedules)

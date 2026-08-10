@@ -229,6 +229,7 @@ export async function createManualReservationAction(
 
   // Precio: precio por franja si está configurado para esa hora, si no el
   // precio base de la cancha (mismo criterio que admin/canchas/page.tsx).
+  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
   const { data: courtRow } = await supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle();
   const { data: priceRows } = await supabase
     .from(DB_TABLES.courtSchedules)

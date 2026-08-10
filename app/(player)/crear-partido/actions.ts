@@ -199,6 +199,7 @@ export async function crearPartido(
     const invitedFriendIds = invitedFriendIdsRaw.filter((id) => allowedFriendIds.has(id));
 
     const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+    // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
     const { data: slotPriceRows } = await supabase
       .from(DB_TABLES.courtSchedules)
       .select("start_time,price_override")

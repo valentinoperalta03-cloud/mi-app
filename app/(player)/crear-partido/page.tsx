@@ -61,6 +61,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .from(DB_TABLES.courts)
       .select("id, club_id, name, price, surface, indoor")
       .order("name", { ascending: true }),
+    // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
     supabase
       .from(DB_TABLES.courtSchedules)
       .select("court_id,start_time,price_override")

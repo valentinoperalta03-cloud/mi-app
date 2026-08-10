@@ -4,7 +4,7 @@ import { format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { buildSlotsForDay, type GeneratedSlot, type ScheduleInput } from "@/lib/court-slots";
+import { buildSlotsForDay, type CourtTimeRangeInput, type GeneratedSlot } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { normalizeMatchVisibility, type MatchVisibility } from "@/lib/match-visibility";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
@@ -132,16 +132,16 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
       const dow = getDay(dayDate);
 
       const [
-        { data: schedRows, error: schedErr },
+        { data: timeRangeRows, error: timeRangeErr },
         { data: matchRows, error: matchErr },
         { data: blockRows, error: blockErr },
         { data: courtRow },
       ] = await Promise.all([
         supabase
-          .from(DB_TABLES.courtSchedules)
+          .from(DB_TABLES.courtTimeRanges)
           .select("court_id,day_of_week,open_time,close_time")
           .eq("court_id", courtId)
-          .not("day_of_week", "is", null),
+          .eq("day_of_week", dow),
         supabase
           .from(DB_TABLES.matches)
           .select("id,scheduled_time,duration_minutes")
@@ -160,34 +160,24 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
           .maybeSingle(),
       ]);
 
-      if (schedErr || matchErr || blockErr) {
+      if (timeRangeErr || matchErr || blockErr) {
         setSlots([]);
         setSlotsError(
-          schedErr?.message ?? matchErr?.message ?? blockErr?.message ?? "No se pudieron cargar los horarios."
+          timeRangeErr?.message ?? matchErr?.message ?? blockErr?.message ?? "No se pudieron cargar los horarios."
         );
         return;
       }
 
       const clubId = (courtRow as { club_id?: string } | null)?.club_id ?? null;
 
-      const [{ data: clubRow }, { data: clubBlockRows }] = clubId
-        ? await Promise.all([
-            supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle(),
-            supabase.from(DB_TABLES.clubScheduleBlocks).select("blocked_time").eq("club_id", clubId).eq("day_of_week", dow),
-          ])
-        : [{ data: null }, { data: [] }];
+      const { data: clubRow } = clubId
+        ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle()
+        : { data: null };
 
       const clubBounds = (clubRow as { open_time: string | null; close_time: string | null } | null) ?? null;
-      const clubBlockedTimes = new Set(
-        ((clubBlockRows ?? []) as Array<{ blocked_time: string }>).map((r) =>
-          String(r.blocked_time ?? "").trim().slice(0, 5)
-        )
-      );
 
-      const schedules = (schedRows ?? []).filter(
-        (r) => Number((r as ScheduleInput).day_of_week) === dow
-      ) as ScheduleInput[];
-      const built = buildSlotsForDay([courtId], dayDate, schedules, clubBounds);
+      const timeRanges = (timeRangeRows ?? []) as CourtTimeRangeInput[];
+      const built = buildSlotsForDay([courtId], dayDate, timeRanges, clubBounds);
       const matches = (matchRows ?? []) as MatchRow[];
       const blocks = (blockRows ?? []) as BlockRow[];
       const blockStarts = new Set(blocks.map((b) => normalizeDbTime(b.start_time)));
@@ -196,7 +186,6 @@ export default function EditMatchForm({ matchId, courtId, initialData, onCancel 
         const slotStart = clockToMinutes(slot.time);
         const slotDur = slot.duration;
         if (blockStarts.has(normalizeDbTime(slot.time))) return false;
-        if (clubBlockedTimes.size > 0 && clubBlockedTimes.has(slot.time)) return false;
         for (const row of matches) {
           if (row.id === matchId) continue;
           const otherStart = clockToMinutes(normalizeDbTime(row.scheduled_time));

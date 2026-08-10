@@ -50,29 +50,37 @@ export default async function AdminAnalyticsPage() {
   const since30 = subDays(now, 30);
   const since30Ymd = format(since30, "yyyy-MM-dd");
 
-  const [{ data: matchesRaw }, { data: participantsRaw }, { data: schedulesRaw }] = await Promise.all([
-    ctx.courtIds.length > 0
-      ? supabase
-          .from(DB_TABLES.matches)
-          .select("id,court_id,owner_id,scheduled_date,scheduled_time,match_status")
-          .in("court_id", ctx.courtIds)
-          .gte("scheduled_date", since30Ymd)
-          .neq("match_status", "cancelled")
-      : { data: [] },
-    ctx.courtIds.length > 0
-      ? supabase
-          .from(DB_TABLES.matchParticipants)
-          .select("match_id,player_id,matches!inner(court_id,scheduled_date)")
-          .in("matches.court_id", ctx.courtIds)
-          .gte("matches.scheduled_date", since30Ymd)
-      : { data: [] },
-    ctx.courtIds.length > 0
-      ? supabase
-          .from(DB_TABLES.courtSchedules)
-          .select("court_id,day_of_week,open_time,close_time")
-          .in("court_id", ctx.courtIds)
-      : { data: [] },
-  ]);
+  const mainClubId = ctx.clubIds[0] ?? "";
+
+  const [{ data: matchesRaw }, { data: participantsRaw }, { data: timeRangesRaw }, { data: clubRow }] =
+    await Promise.all([
+      ctx.courtIds.length > 0
+        ? supabase
+            .from(DB_TABLES.matches)
+            .select("id,court_id,owner_id,scheduled_date,scheduled_time,match_status")
+            .in("court_id", ctx.courtIds)
+            .gte("scheduled_date", since30Ymd)
+            .neq("match_status", "cancelled")
+        : { data: [] },
+      ctx.courtIds.length > 0
+        ? supabase
+            .from(DB_TABLES.matchParticipants)
+            .select("match_id,player_id,matches!inner(court_id,scheduled_date)")
+            .in("matches.court_id", ctx.courtIds)
+            .gte("matches.scheduled_date", since30Ymd)
+        : { data: [] },
+      // Franjas horarias propias por cancha — court_time_ranges es la única
+      // fuente de horarios ahora (reemplaza court_schedules rama día-de-semana).
+      ctx.courtIds.length > 0
+        ? supabase
+            .from(DB_TABLES.courtTimeRanges)
+            .select("court_id,day_of_week,open_time,close_time")
+            .in("court_id", ctx.courtIds)
+        : { data: [] },
+      mainClubId
+        ? supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", mainClubId).maybeSingle()
+        : { data: null },
+    ]);
 
   const matches = (matchesRaw ?? []) as Array<{
     id: string;
@@ -87,12 +95,15 @@ export default async function AdminAnalyticsPage() {
     player_id: string;
     matches: { court_id: string; scheduled_date: string | null } | { court_id: string; scheduled_date: string | null }[] | null;
   }>;
-  const schedules = (schedulesRaw ?? []) as Array<{
+  const timeRanges = (timeRangesRaw ?? []) as Array<{
     court_id: string;
     day_of_week: number | null;
     open_time: string | null;
     close_time: string | null;
   }>;
+  const clubBounds = clubRow as { open_time: string | null; close_time: string | null } | null;
+  const clubOpenMin = clubBounds?.open_time ? toMinutes(String(clubBounds.open_time).slice(0, 5)) : -1;
+  const clubCloseMin = clubBounds?.close_time ? toMinutes(String(clubBounds.close_time).slice(0, 5)) : -1;
 
   const participantCountByMatch = new Map<string, number>();
   for (const row of participants) {
@@ -101,13 +112,33 @@ export default async function AdminAnalyticsPage() {
 
   const totalReservations = matches.length;
 
-  const scheduleByCourtDay = new Map<string, { open: string; close: string }>();
-  for (const s of schedules) {
-    if (s.day_of_week == null || !s.open_time || !s.close_time) continue;
-    scheduleByCourtDay.set(`${s.court_id}__${s.day_of_week}`, {
-      open: String(s.open_time).slice(0, 5),
-      close: String(s.close_time).slice(0, 5),
-    });
+  // Una cancha puede tener varias franjas no contiguas el mismo día — se
+  // agrupan todas por court+día para sumar sus slots (no se pisan entre sí
+  // porque /admin/canchas/[id]/horarios ya valida que no se solapen).
+  const rangesByCourtDay = new Map<string, Array<{ open: number; close: number }>>();
+  for (const r of timeRanges) {
+    if (r.day_of_week == null || !r.open_time || !r.close_time) continue;
+    const key = `${r.court_id}__${r.day_of_week}`;
+    const list = rangesByCourtDay.get(key) ?? [];
+    list.push({ open: toMinutes(String(r.open_time).slice(0, 5)), close: toMinutes(String(r.close_time).slice(0, 5)) });
+    rangesByCourtDay.set(key, list);
+  }
+
+  /** Slots de 90min para una cancha en un día: sus franjas propias, o el horario del club si no tiene franjas ese día. */
+  function slotsForCourtDay(courtId: string, jsDay: number): number {
+    const ranges = rangesByCourtDay.get(`${courtId}__${jsDay}`);
+    const effectiveRanges =
+      ranges && ranges.length > 0
+        ? ranges
+        : clubOpenMin >= 0 && clubCloseMin > clubOpenMin
+          ? [{ open: clubOpenMin, close: clubCloseMin }]
+          : [];
+    let total = 0;
+    for (const r of effectiveRanges) {
+      if (r.close <= r.open) continue;
+      total += Math.floor((r.close - r.open) / SLOT_MINUTES);
+    }
+    return total;
   }
 
   let totalAvailableSlots = 0;
@@ -115,12 +146,7 @@ export default async function AdminAnalyticsPage() {
     const day = subDays(now, i);
     const jsDay = day.getDay();
     for (const court of ctx.courts) {
-      const schedule = scheduleByCourtDay.get(`${court.id}__${jsDay}`);
-      if (!schedule) continue;
-      const openMin = toMinutes(schedule.open);
-      const closeMin = toMinutes(schedule.close);
-      if (openMin < 0 || closeMin <= openMin) continue;
-      totalAvailableSlots += Math.max(0, Math.floor((closeMin - openMin) / SLOT_MINUTES));
+      totalAvailableSlots += slotsForCourtDay(court.id, jsDay);
     }
   }
   const globalOccupancy = totalAvailableSlots > 0 ? Math.round((totalReservations / totalAvailableSlots) * 100) : 0;
@@ -164,13 +190,8 @@ export default async function AdminAnalyticsPage() {
     const day = subDays(now, i);
     const jsDay = day.getDay();
     for (const court of ctx.courts) {
-      const schedule = scheduleByCourtDay.get(`${court.id}__${jsDay}`);
-      if (!schedule) continue;
-      const openMin = toMinutes(schedule.open);
-      const closeMin = toMinutes(schedule.close);
-      if (openMin < 0 || closeMin <= openMin) continue;
-      const slots = Math.max(0, Math.floor((closeMin - openMin) / SLOT_MINUTES));
-      availableSlotsByCourt.set(court.id, (availableSlotsByCourt.get(court.id) ?? 0) + slots);
+      const slots = slotsForCourtDay(court.id, jsDay);
+      if (slots > 0) availableSlotsByCourt.set(court.id, (availableSlotsByCourt.get(court.id) ?? 0) + slots);
     }
   }
 

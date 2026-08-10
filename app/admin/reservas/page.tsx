@@ -190,20 +190,14 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     .filter((t) => Object.values(courtSlotTimes).some((times) => times.includes(minutesToClock(t))))
     .map((t) => minutesToClock(t));
 
-  const [{ data: courtBlocksRaw }, { data: scheduleBlocksRaw }] = await Promise.all([
-    ctx.courtIds.length
-      ? supabase
-          .from(DB_TABLES.courtBlocks)
-          .select("court_id,blocked_time,reason")
-          .in("court_id", ctx.courtIds)
-          .eq("blocked_date", selectedDate)
-      : Promise.resolve({ data: [] }),
-    supabase.from(DB_TABLES.clubScheduleBlocks).select("blocked_time").eq("club_id", mainClubId).eq("day_of_week", dayOfWeek),
-  ]);
+  const { data: courtBlocksRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtBlocks)
+        .select("court_id,blocked_time,reason")
+        .in("court_id", ctx.courtIds)
+        .eq("blocked_date", selectedDate)
+    : { data: [] };
   const courtBlocks = (courtBlocksRaw ?? []) as Array<{ court_id: string; blocked_time: string | null; reason: string | null }>;
-  const scheduleBlockedTimes = new Set(
-    ((scheduleBlocksRaw ?? []) as Array<{ blocked_time: string | null }>).map((b) => String(b.blocked_time ?? "").slice(0, 5))
-  );
 
   const { data: matchesRaw, error: matchesError } = await supabase
     .from(DB_TABLES.matches)
@@ -236,16 +230,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     if (!slotMap.has(key)) slotMap.set(key, m);
   }
 
-  // Capas, de menos a más prioridad: bloqueos recurrentes del club (todas las
-  // canchas) → bloqueos puntuales por cancha → reservas/turnos fijos reales
-  // (una reserva real siempre gana sobre un bloqueo, por si llegaran a
-  // coincidir en datos inconsistentes).
+  // Capas, de menos a más prioridad: bloqueos puntuales por cancha →
+  // reservas/turnos fijos reales (una reserva real siempre gana sobre un
+  // bloqueo, por si llegaran a coincidir en datos inconsistentes).
   const cells: Record<string, GridCellData> = {};
-  for (const court of ctx.courts) {
-    for (const time of scheduleBlockedTimes) {
-      cells[`${court.id}__${time}`] = { kind: "external", label: "Bloqueado" };
-    }
-  }
   for (const b of courtBlocks) {
     const time = String(b.blocked_time ?? "").slice(0, 5);
     if (!time) continue;

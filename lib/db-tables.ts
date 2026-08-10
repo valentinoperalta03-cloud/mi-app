@@ -10,8 +10,13 @@ export const DB_TABLES = {
   profiles: "profiles",
   clubs: "clubs",
   clubClosedDays: "club_closed_days",
+  // Deprecada: ya no hay código que lea/escriba esta tabla (bloqueos
+  // recurrentes por día de semana). No se dropeó de la DB por si hay datos
+  // históricos que revisar. Reemplazada por court_time_ranges + court_blocks.
   clubScheduleBlocks: "club_schedule_blocks",
   courts: "courts",
+  // Solo se usa la rama de precios (day_of_week IS NULL). La rama de horarios
+  // (day_of_week != null) está deprecada — reemplazada por court_time_ranges.
   courtSchedules: "court_schedules",
   courtBlocks: "court_blocks",
   courtTimeRanges: "court_time_ranges",

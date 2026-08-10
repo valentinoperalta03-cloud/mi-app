@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { addDays, format, getDay, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
 import { App } from "@capacitor/app";
@@ -288,14 +288,12 @@ export default function CrearPartidoForm({
     try {
       const supabase = createClient();
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
-      const dayOfWeek = getDay(dayDate);
 
       const [
         { data: closedRows },
         { data: matchRows, error: matchError },
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
-        { data: clubBlockRows },
       ] = await Promise.all([
         // club_closed_days ya se respeta acá (se gestiona desde
         // /admin/canchas): si hay fila para este club+fecha, closedThisDay
@@ -325,11 +323,6 @@ export default function CrearPartidoForm({
           .select("court_id,start_time")
           .in("court_id", availableCourtIds)
           .eq("date", selectedDate),
-        supabase
-          .from(DB_TABLES.clubScheduleBlocks)
-          .select("blocked_time")
-          .eq("club_id", selectedClubId)
-          .eq("day_of_week", dayOfWeek),
       ]);
 
       if (closedRows?.length) {
@@ -355,11 +348,6 @@ export default function CrearPartidoForm({
         court_id: string;
         start_time: string | null;
       }>;
-      const clubBlockedTimes = new Set(
-        ((clubBlockRows ?? []) as Array<{ blocked_time: string }>).map((r) =>
-          normalizeSlotTime(r.blocked_time)
-        )
-      );
       const clubBounds = selectedClub
         ? { open_time: selectedClub.openTime ?? null, close_time: selectedClub.closeTime ?? null }
         : null;
@@ -381,7 +369,6 @@ export default function CrearPartidoForm({
         for (const slot of courtSlots) {
           const normTime = normalizeSlotTime(slot.time);
           if (courtBlockStarts.has(normTime)) continue;
-          if (clubBlockedTimes.has(normTime)) continue;
           const slotDateTime = new Date(`${selectedDate}T${slot.time}:00-03:00`);
           if (slotDateTime <= now) continue;
           const slotStart = clockToMinutes(slot.time);
