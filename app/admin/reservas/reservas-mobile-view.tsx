@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import ManualReservationModal from "./manual-reservation-modal";
 
-export type MobileSlotKind = "available" | "fixed" | "reservation";
+export type MobileSlotKind = "available" | "fixed" | "reservation" | "external";
 
 export type MobileSlot = {
   time: string;
@@ -37,21 +37,35 @@ function SlotCard({
     return (
       <Link
         href={`/admin/reservas?date=${date}&selected=${slot.matchId}`}
-        className="block rounded-2xl px-4 py-3.5 shadow-sm transition active:scale-[0.99]"
-        style={{
-          background: isFixed ? "rgba(0,133,252,0.15)" : "rgba(34,197,94,0.15)",
-          borderLeft: `3px solid ${isFixed ? "#0085FC" : "#22C55E"}`,
-          color: isFixed ? "#0461C4" : "#15803D",
-        }}
+        className={`block rounded-[10px] px-4 py-3.5 shadow-sm transition-colors duration-200 active:scale-[0.99] ${
+          isFixed ? "bg-[rgba(0,133,252,0.12)]" : "bg-[rgba(34,197,94,0.12)]"
+        }`}
+        style={{ borderLeft: `3px solid ${isFixed ? "#0085FC" : "#22C55E"}` }}
       >
         <div className="flex items-center justify-between gap-3">
-          <span className="shrink-0 text-sm font-semibold">{slot.time}</span>
+          <span className={`shrink-0 text-sm font-semibold ${isFixed ? "text-[#0461C4]" : "text-[#15803D]"}`}>
+            {slot.time}
+          </span>
           <div className="min-w-0 flex-1 text-right">
-            <p className="truncate text-sm font-semibold">{slot.label}</p>
-            <p className="text-xs opacity-80">{isFixed ? "Turno fijo" : "Reserva"}</p>
+            <p className={`truncate text-sm font-bold ${isFixed ? "text-[#0461C4]" : "text-[#15803D]"}`}>
+              {slot.label}
+            </p>
+            <p className="text-xs text-[var(--text-tertiary)]">{isFixed ? "Turno fijo" : "Reserva"}</p>
           </div>
         </div>
       </Link>
+    );
+  }
+
+  if (slot.kind === "external") {
+    return (
+      <div
+        className="flex cursor-default items-center justify-between gap-3 rounded-[10px] px-4 py-3.5"
+        style={{ background: "rgba(239,68,68,0.08)", borderLeft: "3px solid #EF4444" }}
+      >
+        <span className="text-sm font-semibold text-[#EF4444]">{slot.time}</span>
+        <span className="text-sm font-bold text-[#EF4444]">{slot.label}</span>
+      </div>
     );
   }
 
@@ -60,7 +74,7 @@ function SlotCard({
     <button
       type="button"
       onClick={() => onOpenCreate(courtId, courtName, slot.time)}
-      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 text-left shadow-sm transition-colors duration-200 hover:border-[#0085FC]/40 hover:bg-[rgba(0,133,252,0.06)]"
+      className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-dashed border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] px-4 py-3.5 text-left transition-colors duration-200 hover:border-[rgba(0,133,252,0.25)] hover:bg-[rgba(0,133,252,0.08)]"
     >
       <span className="text-sm font-semibold text-[var(--text-secondary)]">{slot.time}</span>
       <span className="text-lg font-medium text-[var(--text-tertiary)]">+</span>

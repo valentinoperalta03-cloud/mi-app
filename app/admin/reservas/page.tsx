@@ -24,6 +24,15 @@ import DateNav from "./date-nav";
 import ReservasGridClient, { type GridCellData } from "./reservas-grid-client";
 import AdminReservasMobileView, { type MobileCourtData, type MobileSlot } from "./reservas-mobile-view";
 
+function externalLabelFromReason(reason: string | null | undefined): string {
+  const r = String(reason ?? "").trim();
+  if (!r) return "Bloqueado";
+  if (r === "entrenamiento_externo") return "Entrenamiento";
+  const firstWord = r.split(/\s+/)[0];
+  const capitalized = firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+  return capitalized.length > 14 ? `${capitalized.slice(0, 13)}…` : capitalized;
+}
+
 type CourtEmbed = { id: string; name: string | null };
 type MatchRow = {
   id: string;
@@ -80,15 +89,12 @@ function reservationMethodLabel(paymentStatus: string | null | undefined) {
   return s || "—";
 }
 
-/** Genera slots de 90min dentro de cada franja (puede haber más de una por día). */
-function slotsForRanges(ranges: Array<{ startMin: number; endMin: number }>, durationMinutes = 90): string[] {
-  const times = new Set<string>();
-  for (const r of ranges) {
-    for (let t = r.startMin; t + durationMinutes <= r.endMin; t += durationMinutes) {
-      times.add(minutesToClock(t));
-    }
-  }
-  return Array.from(times);
+/**
+ * ¿Cae `t` (minutos desde medianoche) dentro de alguna franja, con el turno
+ * completo (t + 90) sin pasarse del cierre?
+ */
+function fitsSomeRange(t: number, ranges: Array<{ startMin: number; endMin: number }>, durationMinutes = 90): boolean {
+  return ranges.some((r) => t >= r.startMin && t + durationMinutes <= r.endMin);
 }
 
 export default async function AdminReservasPage({ searchParams }: PageProps) {
@@ -106,7 +112,8 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     );
   }
 
-  const selectedDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : getTodayYmdInArgentina();
+  const today = getTodayYmdInArgentina();
+  const selectedDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today;
   const selectedMatchId = sp.selected?.trim() ?? "";
   const mainClubId = ctx.clubIds[0];
   const dayOfWeek = new Date(`${selectedDate}T12:00:00`).getDay();
@@ -148,19 +155,54 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   // Franjas por cancha (court_time_ranges) — si la cancha no tiene franjas
   // propias hoy, cae al horario global del club como fallback.
-  const courtSlotTimes: Record<string, string[]> = {};
+  const rangesByCourt: Record<string, Array<{ startMin: number; endMin: number }>> = {};
   for (const court of ctx.courts) {
     const custom = timeRangesByCourt.get(court.id);
-    const ranges =
+    rangesByCourt[court.id] =
       custom && custom.length > 0
         ? custom
         : clubOpenMin != null && clubCloseMin != null && clubCloseMin > clubOpenMin
           ? [{ startMin: clubOpenMin, endMin: clubCloseMin }]
           : [{ startMin: 9 * 60, endMin: 22 * 60 + 30 }];
-    courtSlotTimes[court.id] = slotsForRanges(ranges);
   }
-  const slots = Array.from(new Set(Object.values(courtSlotTimes).flat())).sort(
-    (a, b) => parseClockToMinutes(a) - parseClockToMinutes(b)
+
+  // Grilla maestra anclada a la apertura más temprana entre TODAS las
+  // canchas: antes cada cancha generaba su propia secuencia de 90min desde
+  // su propia apertura, y dos canchas con horarios de apertura distintos casi
+  // nunca coincidían en los mismos horarios de reloj (ej. cancha que abre
+  // 08:30 → .../14:30/16:00/17:30..., cancha que cae al fallback 08:00 →
+  // .../14:00/15:30/17:00... — el "16:00" de la primera nunca existía para la
+  // segunda, y se pintaba como no disponible aunque estuviera abierta). Con
+  // una única grilla de referencia, todas las canchas comparten los mismos
+  // horarios de reloj; una celda vacía ahora significa que esa cancha
+  // realmente no tiene franja ahí, no un desalineamiento de cálculo.
+  const allRanges = Object.values(rangesByCourt).flat();
+  const gridStartMin = allRanges.length ? Math.min(...allRanges.map((r) => r.startMin)) : 9 * 60;
+  const masterMinutes: number[] = [];
+  for (let t = gridStartMin; t < 24 * 60; t += 90) masterMinutes.push(t);
+
+  const courtSlotTimes: Record<string, string[]> = {};
+  for (const court of ctx.courts) {
+    const ranges = rangesByCourt[court.id];
+    courtSlotTimes[court.id] = masterMinutes.filter((t) => fitsSomeRange(t, ranges)).map((t) => minutesToClock(t));
+  }
+  const slots = masterMinutes
+    .filter((t) => Object.values(courtSlotTimes).some((times) => times.includes(minutesToClock(t))))
+    .map((t) => minutesToClock(t));
+
+  const [{ data: courtBlocksRaw }, { data: scheduleBlocksRaw }] = await Promise.all([
+    ctx.courtIds.length
+      ? supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("court_id,blocked_time,reason")
+          .in("court_id", ctx.courtIds)
+          .eq("blocked_date", selectedDate)
+      : Promise.resolve({ data: [] }),
+    supabase.from(DB_TABLES.clubScheduleBlocks).select("blocked_time").eq("club_id", mainClubId).eq("day_of_week", dayOfWeek),
+  ]);
+  const courtBlocks = (courtBlocksRaw ?? []) as Array<{ court_id: string; blocked_time: string | null; reason: string | null }>;
+  const scheduleBlockedTimes = new Set(
+    ((scheduleBlocksRaw ?? []) as Array<{ blocked_time: string | null }>).map((b) => String(b.blocked_time ?? "").slice(0, 5))
   );
 
   const { data: matchesRaw, error: matchesError } = await supabase
@@ -194,7 +236,21 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     if (!slotMap.has(key)) slotMap.set(key, m);
   }
 
+  // Capas, de menos a más prioridad: bloqueos recurrentes del club (todas las
+  // canchas) → bloqueos puntuales por cancha → reservas/turnos fijos reales
+  // (una reserva real siempre gana sobre un bloqueo, por si llegaran a
+  // coincidir en datos inconsistentes).
   const cells: Record<string, GridCellData> = {};
+  for (const court of ctx.courts) {
+    for (const time of scheduleBlockedTimes) {
+      cells[`${court.id}__${time}`] = { kind: "external", label: "Bloqueado" };
+    }
+  }
+  for (const b of courtBlocks) {
+    const time = String(b.blocked_time ?? "").slice(0, 5);
+    if (!time) continue;
+    cells[`${b.court_id}__${time}`] = { kind: "external", label: externalLabelFromReason(b.reason) };
+  }
   for (const [key, m] of slotMap) {
     cells[key] = { matchId: m.id, kind: m.es_turno_fijo ? "fixed" : "reservation", label: labelForMatch(m) };
   }
@@ -297,7 +353,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       </header>
 
       <section className={adminCard}>
-        <DateNav selectedDate={selectedDate} />
+        <DateNav selectedDate={selectedDate} today={today} />
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

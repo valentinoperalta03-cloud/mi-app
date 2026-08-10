@@ -13,12 +13,13 @@ function shiftDate(ymd: string, days: number): string {
 }
 
 const arrowClass =
-  "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-[var(--text-secondary)] " +
+  "flex h-10 w-10 shrink-0 items-center justify-center text-[var(--text-secondary)] " +
   "transition-colors duration-200 hover:bg-[rgba(0,133,252,0.10)]";
 
-export default function DateNav({ selectedDate }: { selectedDate: string }) {
+export default function DateNav({ selectedDate, today }: { selectedDate: string; today: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const isToday = selectedDate <= today;
 
   function goTo(ymd: string) {
     router.push(`/admin/reservas?date=${ymd}`);
@@ -31,9 +32,10 @@ export default function DateNav({ selectedDate }: { selectedDate: string }) {
     <div className="flex items-center justify-center gap-1">
       <button
         type="button"
+        disabled={isToday}
         onClick={() => goTo(shiftDate(selectedDate, -1))}
         aria-label="Día anterior"
-        className={arrowClass}
+        className={`${arrowClass} ${isToday ? "cursor-not-allowed opacity-50 hover:bg-transparent" : "cursor-pointer"}`}
         style={{ borderRadius: 8 }}
       >
         <ChevronLeft size={20} />
@@ -56,6 +58,7 @@ export default function DateNav({ selectedDate }: { selectedDate: string }) {
         ref={inputRef}
         type="date"
         value={selectedDate}
+        min={today}
         onChange={(e) => e.target.value && goTo(e.target.value)}
         className="sr-only"
         tabIndex={-1}

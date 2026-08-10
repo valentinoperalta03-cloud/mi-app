@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { refundReservationPayment } from "@/lib/payment-refund";
@@ -187,6 +188,9 @@ export async function createManualReservationAction(
   ).slice(0, 4);
 
   if (!courtId || !date || !time) return { ok: false, message: "Datos incompletos." };
+  if (date < getTodayYmdInArgentina()) {
+    return { ok: false, message: "No se pueden crear reservas en fechas pasadas." };
+  }
   if (!reference) return { ok: false, message: "Completá un nombre o referencia." };
   if (!["unpaid", "partially_paid", "fully_paid"].includes(financialStatusRaw)) {
     return { ok: false, message: "Elegí el estado de pago." };
