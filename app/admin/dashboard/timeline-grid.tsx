@@ -1,4 +1,5 @@
 import { minutesToClock } from "@/lib/court-slots";
+import NowLine from "./now-line";
 
 const BASE_UNIT_PX = 56;
 const COLUMN_MIN_WIDTH = 116;
@@ -81,7 +82,11 @@ export default function TimelineGrid({
   const minOpen = allRanges.length ? Math.min(...allRanges.map((r) => r.startMin)) : 9 * 60;
   const maxClose = allRanges.length ? Math.max(...allRanges.map((r) => r.endMin)) : 22 * 60 + 30;
   const gridStartMin = Math.floor(minOpen / 60) * 60;
-  const gridEndMin = Math.ceil((maxClose + 90) / 60) * 60;
+  // Sin buffer extra: el grid termina exactamente en el cierre más tardío
+  // (redondeado hacia arriba a la hora), nunca más allá. Un buffer de +90min
+  // acá era lo que antes empujaba el cierre a la madrugada del día siguiente
+  // cuando algún club cierra a "23:59"/medianoche (se normaliza a 1440min).
+  const gridEndMin = Math.max(Math.ceil(maxClose / 60) * 60, gridStartMin + 60);
   const totalHeightPx = ((gridEndMin - gridStartMin) / 60) * BASE_UNIT_PX;
 
   const hourTicks: number[] = [];
@@ -107,7 +112,9 @@ export default function TimelineGrid({
             ))}
           </div>
 
-          <div className="flex">
+          <div className="relative flex">
+            <NowLine gridStartMin={gridStartMin} gridEndMin={gridEndMin} pxPerHour={BASE_UNIT_PX} axisWidth={TIME_AXIS_WIDTH} />
+
             <div className="relative shrink-0" style={{ width: TIME_AXIS_WIDTH, height: totalHeightPx }}>
               {hourTicks.map((t) => (
                 <div
@@ -134,6 +141,12 @@ export default function TimelineGrid({
                   className="relative min-w-0 flex-1 border-l border-[var(--border-subtle)]"
                   style={{ minWidth: COLUMN_MIN_WIDTH, height: totalHeightPx }}
                 >
+                  {/* Fondo "disponible": capa base visible en toda la columna. Los
+                     bloques de cerrado y los eventos se dibujan encima y la tapan
+                     donde corresponda — sin esto, un rango abierto sin eventos se
+                     veía indistinguible de una cancha rota/sin datos. */}
+                  <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.02)" }} />
+
                   {hourTicks.map((t) => (
                     <div
                       key={t}
@@ -152,7 +165,7 @@ export default function TimelineGrid({
                         style={{
                           top: pxFor(g.startMin),
                           height: heightPx,
-                          background: "rgba(185,28,28,0.15)",
+                          background: "rgba(185,28,28,0.12)",
                           borderLeft: "3px solid #B91C1C",
                           color: "#B91C1C",
                         }}
@@ -193,7 +206,7 @@ export default function TimelineGrid({
         <LegendSwatch bg={KIND_STYLE.turno_fijo.bg} border={KIND_STYLE.turno_fijo.border} label="Turno fijo" />
         <LegendSwatch bg={KIND_STYLE.reserva.bg} border={KIND_STYLE.reserva.border} label="Reserva" />
         <LegendSwatch bg={KIND_STYLE.entrenamiento.bg} border={KIND_STYLE.entrenamiento.border} label="Entrenamiento externo" />
-        <LegendSwatch bg="rgba(185,28,28,0.15)" border="#B91C1C" label="Cerrado" />
+        <LegendSwatch bg="rgba(185,28,28,0.12)" border="#B91C1C" label="Cerrado" />
         <LegendSwatch bg="transparent" border="var(--border-subtle)" label="Disponible" />
       </div>
     </div>
