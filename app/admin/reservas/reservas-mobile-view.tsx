@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { adminCTAPrimary } from "@/components/admin/admin-premium";
+import ManualReservationModal from "./manual-reservation-modal";
 
-export type MobileSlotKind = "available" | "blocked" | "fixed" | "reservation";
+export type MobileSlotKind = "available" | "fixed" | "reservation";
 
 export type MobileSlot = {
   time: string;
   kind: MobileSlotKind;
-  player?: string;
-  statusText?: string;
-  financialStatus?: string | null;
-  blockedReason?: string | null;
-  href?: string;
+  matchId?: string;
+  label?: string;
 };
 
 export type MobileCourtData = {
@@ -22,125 +19,65 @@ export type MobileCourtData = {
   slots: MobileSlot[];
 };
 
-type BlockAction = (formData: FormData) => void | Promise<void>;
-
-function finAccentClass(financialStatus?: string | null): string {
-  if (financialStatus === "partially_paid") return "border-l-[3px] border-l-[var(--admin-accent-lima)]";
-  if (financialStatus === "fully_paid") return "border-l-[3px] border-l-emerald-500";
-  return "";
-}
-
 function SlotCard({
   slot,
   courtId,
+  courtName,
   date,
-  blockAction,
+  onOpenCreate,
 }: {
   slot: MobileSlot;
   courtId: string;
+  courtName: string;
   date: string;
-  blockAction: BlockAction;
+  onOpenCreate: (courtId: string, courtName: string, time: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   if (slot.kind === "reservation" || slot.kind === "fixed") {
     const isFixed = slot.kind === "fixed";
     return (
       <Link
-        href={slot.href ?? "#"}
-        className={`block rounded-2xl px-4 py-3.5 shadow-sm transition active:scale-[0.99] ${
-          isFixed ? "border" : finAccentClass(slot.financialStatus)
-        }`}
-        style={
-          isFixed
-            ? { background: "var(--admin-accent-lima-subtle)", borderColor: "var(--admin-accent-lima-border)" }
-            : { background: "var(--admin-brand-gradient)" }
-        }
+        href={`/admin/reservas?date=${date}&selected=${slot.matchId}`}
+        className="block rounded-2xl px-4 py-3.5 shadow-sm transition active:scale-[0.99]"
+        style={{
+          background: isFixed ? "rgba(0,133,252,0.15)" : "rgba(34,197,94,0.15)",
+          borderLeft: `3px solid ${isFixed ? "#0085FC" : "#22C55E"}`,
+          color: isFixed ? "#0461C4" : "#15803D",
+        }}
       >
         <div className="flex items-center justify-between gap-3">
-          <span className={`shrink-0 text-sm font-semibold ${isFixed ? "text-[var(--text-primary)]" : "text-white"}`}>
-            {slot.time}
-          </span>
+          <span className="shrink-0 text-sm font-semibold">{slot.time}</span>
           <div className="min-w-0 flex-1 text-right">
-            <p className={`truncate text-sm font-semibold ${isFixed ? "text-[var(--text-primary)]" : "text-white"}`}>
-              {slot.player}
-            </p>
-            {isFixed ? (
-              <span
-                className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold text-[#031733]"
-                style={{ backgroundColor: "var(--admin-accent-lima)" }}
-              >
-                Turno fijo
-              </span>
-            ) : (
-              <p className="text-xs text-white/90">{slot.statusText}</p>
-            )}
+            <p className="truncate text-sm font-semibold">{slot.label}</p>
+            <p className="text-xs opacity-80">{isFixed ? "Turno fijo" : "Reserva"}</p>
           </div>
         </div>
       </Link>
     );
   }
 
-  if (slot.kind === "blocked") {
-    return (
-      <form
-        action={blockAction}
-        className="rounded-2xl border border-[var(--border-subtle)] px-4 py-3.5 shadow-sm"
-        style={{
-          backgroundColor: "var(--bg-app)",
-          backgroundImage:
-            "repeating-linear-gradient(45deg, var(--border-subtle) 0, var(--border-subtle) 1px, transparent 1px, transparent 8px)",
-        }}
-      >
-        <input type="hidden" name="court_id" value={courtId} />
-        <input type="hidden" name="date" value={date} />
-        <input type="hidden" name="time" value={slot.time} />
-        <button type="submit" className="flex w-full items-center justify-between gap-3">
-          <span className="text-sm font-semibold text-[var(--text-tertiary)]">{slot.time}</span>
-          <span className="text-sm font-medium text-[var(--text-tertiary)]">{slot.blockedReason || "Bloqueado"}</span>
-        </button>
-      </form>
-    );
-  }
-
   // available
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 shadow-sm">
-      <button type="button" onClick={() => setExpanded((v) => !v)} className="flex w-full items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-[var(--text-secondary)]">{slot.time}</span>
-        <span className="text-sm font-medium text-[var(--text-tertiary)]">Disponible</span>
-      </button>
-      {expanded ? (
-        <form action={blockAction} className="mt-3 space-y-2 border-t border-[var(--border-subtle)] pt-3">
-          <input type="hidden" name="court_id" value={courtId} />
-          <input type="hidden" name="date" value={date} />
-          <input type="hidden" name="time" value={slot.time} />
-          <input
-            type="text"
-            name="reason"
-            placeholder="Motivo (opcional)"
-            className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
-          />
-          <button type="submit" className={`w-full ${adminCTAPrimary}`}>
-            Bloquear horario
-          </button>
-        </form>
-      ) : null}
-    </div>
+    <button
+      type="button"
+      onClick={() => onOpenCreate(courtId, courtName, slot.time)}
+      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 text-left shadow-sm transition-colors duration-200 hover:border-[#0085FC]/40 hover:bg-[rgba(0,133,252,0.06)]"
+    >
+      <span className="text-sm font-semibold text-[var(--text-secondary)]">{slot.time}</span>
+      <span className="text-lg font-medium text-[var(--text-tertiary)]">+</span>
+    </button>
   );
 }
 
 export default function AdminReservasMobileView({
   courts,
   selectedDate,
-  blockAction,
 }: {
   courts: MobileCourtData[];
   selectedDate: string;
-  blockAction: BlockAction;
 }) {
   const [selectedCourtId, setSelectedCourtId] = useState(courts[0]?.id ?? "");
   const activeCourt = courts.find((c) => c.id === selectedCourtId) ?? courts[0];
+  const [modalCell, setModalCell] = useState<{ courtId: string; courtName: string; time: string } | null>(null);
 
   if (!activeCourt) return null;
 
@@ -167,11 +104,34 @@ export default function AdminReservasMobileView({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        {activeCourt.slots.map((slot) => (
-          <SlotCard key={slot.time} slot={slot} courtId={activeCourt.id} date={selectedDate} blockAction={blockAction} />
-        ))}
-      </div>
+      {activeCourt.slots.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">
+          No hay horarios configurados para hoy.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {activeCourt.slots.map((slot) => (
+            <SlotCard
+              key={slot.time}
+              slot={slot}
+              courtId={activeCourt.id}
+              courtName={activeCourt.name}
+              date={selectedDate}
+              onOpenCreate={(courtId, courtName, time) => setModalCell({ courtId, courtName, time })}
+            />
+          ))}
+        </div>
+      )}
+
+      {modalCell ? (
+        <ManualReservationModal
+          courtId={modalCell.courtId}
+          courtName={modalCell.courtName}
+          date={selectedDate}
+          time={modalCell.time}
+          onClose={() => setModalCell(null)}
+        />
+      ) : null}
     </div>
   );
 }

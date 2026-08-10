@@ -171,6 +171,59 @@ export async function updateClubDeposit(formData: FormData): Promise<void> {
   redirect("/admin/canchas");
 }
 
+// ---------------------------------------------------------------------------
+// Días cerrados del club (movido acá desde /admin/reservas): el club no
+// ofrece turnos en esas fechas — crear-partido-form.tsx ya respeta
+// club_closed_days en loadAvailability (ver comentario ahí).
+// ---------------------------------------------------------------------------
+
+export async function addClubClosedDayAction(formData: FormData): Promise<void> {
+  const closedDate = getField(formData, "closed_date");
+  const reason = getField(formData, "reason");
+  if (!closedDate || !/^\d{4}-\d{2}-\d{2}$/.test(closedDate)) {
+    redirect("/admin/canchas");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !ctx.clubIds.length) redirect("/login");
+
+  const clubId = ctx.clubIds[0];
+  const { error } = await supabase.from(DB_TABLES.clubClosedDays).insert({
+    club_id: clubId,
+    closed_date: closedDate,
+    reason: reason || null,
+  });
+  if (error) {
+    redirectCanchasError(error.message);
+  }
+
+  revalidatePath("/admin/canchas");
+  redirect("/admin/canchas");
+}
+
+export async function removeClubClosedDayAction(formData: FormData): Promise<void> {
+  const id = getField(formData, "closed_day_id");
+  if (!id) redirect("/admin/canchas");
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !ctx.clubIds.length) redirect("/login");
+
+  const clubId = ctx.clubIds[0];
+  const { data: row } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("id", id)
+    .eq("club_id", clubId)
+    .maybeSingle();
+  if (!row) redirect("/admin/canchas");
+
+  await supabase.from(DB_TABLES.clubClosedDays).delete().eq("id", id).eq("club_id", clubId);
+  revalidatePath("/admin/canchas");
+  redirect("/admin/canchas");
+}
+
 export async function deleteCourt(formData: FormData): Promise<void> {
   const courtId = getField(formData, "court_id");
   if (!courtId) {

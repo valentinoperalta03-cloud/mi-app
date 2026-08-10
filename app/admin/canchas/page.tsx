@@ -1,5 +1,7 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import {
   adminBadgeError,
@@ -14,9 +16,10 @@ import {
 } from "@/components/admin/admin-premium";
 import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { deleteCourt, updateClubDeposit, updateCourt } from "./actions";
+import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
 import CourtImageUploader from "./court-image-uploader";
 import NewCourtForm from "./new-court-form";
 
@@ -96,6 +99,16 @@ export default async function AdminCanchasPage({
     if (!slots || slots.length === 0) return "Sin precios por horario";
     return slots.map((s) => `${s.time}: $${new Intl.NumberFormat("es-AR").format(s.price)}`).join(" · ");
   }
+
+  const { data: closedDaysRaw } = mainClubId
+    ? await supabase
+        .from(DB_TABLES.clubClosedDays)
+        .select("id,closed_date,reason")
+        .eq("club_id", mainClubId)
+        .gte("closed_date", getTodayYmdInArgentina())
+        .order("closed_date", { ascending: true })
+    : { data: [] };
+  const closedDays = (closedDaysRaw ?? []) as Array<{ id: string; closed_date: string; reason: string | null }>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -247,6 +260,66 @@ export default async function AdminCanchasPage({
           ))}
         </ul>
       )}
+
+      {mainClubId ? (
+        <section className={`${adminCard} flex flex-col gap-4`}>
+          <div>
+            <p className={adminKicker}>Días cerrados del club</p>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+              El club no ofrecerá turnos en esas fechas (jugadores verán el día cerrado al reservar).
+            </p>
+          </div>
+          <form action={addClubClosedDayAction} className="flex flex-wrap items-end gap-3">
+            <label className={`flex flex-col gap-1 ${adminKicker}`}>
+              Fecha
+              <input
+                type="date"
+                name="closed_date"
+                required
+                min={getTodayYmdInArgentina()}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
+              />
+            </label>
+            <label className={`flex min-w-[200px] flex-1 flex-col gap-1 ${adminKicker}`}>
+              Motivo (opcional)
+              <input
+                name="reason"
+                type="text"
+                placeholder="Ej: feriado, torneo interno"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
+              />
+            </label>
+            <button type="submit" className={adminCTAPrimary}>
+              Marcar como cerrado
+            </button>
+          </form>
+          {closedDays.length === 0 ? (
+            <p className={adminEmptyState}>No hay días cerrados futuros cargados.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)]">
+              {closedDays.map((row) => (
+                <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <div>
+                    <p className="font-semibold text-[var(--text-primary)]">
+                      {format(parseISO(`${row.closed_date}T12:00:00`), "EEEE d MMM yyyy", { locale: es })}
+                    </p>
+                    {row.reason ? <p className="text-[var(--text-tertiary)]">{row.reason}</p> : null}
+                  </div>
+                  <form action={removeClubClosedDayAction}>
+                    <input type="hidden" name="closed_day_id" value={row.id} />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-rose-200 bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                    >
+                      Eliminar
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }

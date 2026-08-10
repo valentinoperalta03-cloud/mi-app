@@ -298,6 +298,9 @@ export default function CrearPartidoForm({
         { data: clubBlockRows },
         { data: timeRangeRows },
       ] = await Promise.all([
+        // club_closed_days ya se respeta acá (se gestiona desde
+        // /admin/canchas): si hay fila para este club+fecha, closedThisDay
+        // se marca más abajo y ni se calculan los slots.
         supabase
           .from(DB_TABLES.clubClosedDays)
           .select("id")
