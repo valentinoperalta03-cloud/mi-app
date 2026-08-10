@@ -15,7 +15,7 @@ import {
   buildSlotsForDay,
   courtBlockStartsFromRows,
   normalizeSlotTime,
-  type ScheduleInput,
+  type CourtTimeRangeInput,
 } from "@/lib/court-slots";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
@@ -159,7 +159,7 @@ function resolveInitialClubId(clubs: ClubOption[], defaultClubId?: string): stri
 export default function CrearPartidoForm({
   clubs,
   courts,
-  schedules,
+  timeRanges,
   slotPrices,
   defaultGender,
   friends,
@@ -169,7 +169,7 @@ export default function CrearPartidoForm({
 }: {
   clubs: ClubOption[];
   courts: CourtOption[];
-  schedules: ScheduleInput[];
+  timeRanges: CourtTimeRangeInput[];
   slotPrices: SlotPriceOption[];
   defaultGender: GenderCategory;
   friends: FriendOption[];
@@ -296,7 +296,6 @@ export default function CrearPartidoForm({
         { data: blockRowsModern, error: blockErrModern },
         { data: blockRowsLegacy, error: blockErrLegacy },
         { data: clubBlockRows },
-        { data: timeRangeRows },
       ] = await Promise.all([
         // club_closed_days ya se respeta acá (se gestiona desde
         // /admin/canchas): si hay fila para este club+fecha, closedThisDay
@@ -330,11 +329,6 @@ export default function CrearPartidoForm({
           .from(DB_TABLES.clubScheduleBlocks)
           .select("blocked_time")
           .eq("club_id", selectedClubId)
-          .eq("day_of_week", dayOfWeek),
-        supabase
-          .from(DB_TABLES.courtTimeRanges)
-          .select("court_id,open_time,close_time")
-          .in("court_id", availableCourtIds)
           .eq("day_of_week", dayOfWeek),
       ]);
 
@@ -370,23 +364,6 @@ export default function CrearPartidoForm({
         ? { open_time: selectedClub.openTime ?? null, close_time: selectedClub.closeTime ?? null }
         : null;
 
-      // Franjas horarias propias por cancha (court_time_ranges): si la cancha
-      // tiene franjas cargadas para este día, un slot solo es válido si cae
-      // dentro de al menos una. Sin franjas propias, no se filtra acá y se
-      // respeta el fallback existente al horario del club (ya resuelto por
-      // buildSlotsForDay más abajo vía clubBounds).
-      const timeRangesByCourtId = new Map<string, Array<{ openMin: number; closeMin: number }>>();
-      for (const row of (timeRangeRows ?? []) as Array<{
-        court_id: string;
-        open_time: string | null;
-        close_time: string | null;
-      }>) {
-        if (!row.open_time || !row.close_time) continue;
-        const list = timeRangesByCourtId.get(row.court_id) ?? [];
-        list.push({ openMin: clockToMinutes(row.open_time), closeMin: clockToMinutes(row.close_time) });
-        timeRangesByCourtId.set(row.court_id, list);
-      }
-
       const now = new Date();
       const map: Record<string, CourtAvailability[]> = {};
 
@@ -396,11 +373,10 @@ export default function CrearPartidoForm({
           modernBlocks.filter((b) => b.court_id === court.id),
           legacyBlocks.filter((b) => b.court_id === court.id)
         );
-        // Grilla propia de esta cancha: respeta court_schedules por día de semana
-        // (o el horario del club como fallback), a diferencia del viejo buildClubSlots.
-        const courtSlots = buildSlotsForDay([court.id], dayDate, schedules, clubBounds, 90);
-
-        const courtTimeRanges = timeRangesByCourtId.get(court.id);
+        // Grilla propia de esta cancha: respeta court_time_ranges por día de
+        // semana (o el horario del club como fallback) — buildSlotsForDay ya
+        // filtra por franja propia, no hace falta un filtro adicional acá.
+        const courtSlots = buildSlotsForDay([court.id], dayDate, timeRanges, clubBounds, 90);
 
         for (const slot of courtSlots) {
           const normTime = normalizeSlotTime(slot.time);
@@ -409,12 +385,6 @@ export default function CrearPartidoForm({
           const slotDateTime = new Date(`${selectedDate}T${slot.time}:00-03:00`);
           if (slotDateTime <= now) continue;
           const slotStart = clockToMinutes(slot.time);
-          if (courtTimeRanges && courtTimeRanges.length > 0) {
-            const fitsSomeRange = courtTimeRanges.some(
-              (r) => slotStart >= r.openMin && slotStart + slot.duration <= r.closeMin
-            );
-            if (!fitsSomeRange) continue;
-          }
           const overlapping = courtMatches.some((m) => {
             const otherStart = clockToMinutes(String(m.scheduled_time ?? ""));
             const otherDur = m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
@@ -437,7 +407,7 @@ export default function CrearPartidoForm({
     } finally {
       setLoadingAvailability(false);
     }
-  }, [selectedClubId, selectedDate, availableCourtIds, availableCourts, schedules, selectedClub, getTurnPrice]);
+  }, [selectedClubId, selectedDate, availableCourtIds, availableCourts, timeRanges, selectedClub, getTurnPrice]);
 
   useEffect(() => {
     if (selectedClubId && selectedDate) {

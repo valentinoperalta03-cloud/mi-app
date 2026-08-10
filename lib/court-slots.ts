@@ -1,12 +1,20 @@
 import { getDay } from "date-fns";
 
-export type ScheduleInput = {
+/** Fila de court_time_ranges: franja horaria propia de una cancha para un día de semana. */
+export interface CourtTimeRangeInput {
   court_id: string;
-  /** null en filas solo de precio por franja; se ignoran al armar la grilla. */
-  day_of_week: number | null;
-  open_time: string | null;
-  close_time: string | null;
-};
+  day_of_week: number;
+  open_time: string;
+  close_time: string;
+}
+
+/**
+ * Alias legacy: mismo shape que CourtTimeRangeInput. Lo mantenemos porque
+ * edit-match-form.tsx todavía arma sus filas desde court_schedules (rama
+ * día-de-semana) y las castea `as ScheduleInput[]` — no se toca ese archivo
+ * en este cambio, así que el tipo tiene que seguir existiendo con este nombre.
+ */
+export type ScheduleInput = CourtTimeRangeInput;
 
 export type GeneratedSlot = { time: string; duration: number };
 
@@ -15,20 +23,6 @@ export type CourtBlockLegacyRow = { start_time: string | null };
 
 /** Horario base del club (`clubs.open_time` / `clubs.close_time`), opcional. */
 export type ClubHoursBounds = { open_time: string | null; close_time: string | null };
-
-/**
- * Genera una grilla de slots desde openMin hasta que el inicio del turno
- * alcanza closeMin. El último slot puede terminar después de closeMin
- * (ej. 23:00→00:30 cuando closeMin=1440), lo que es correcto: el club
- * indicó que abre a X y los turnos van hasta cruzar medianoche.
- */
-function buildGrid(openMin: number, closeMin: number, durationMinutes: number): GeneratedSlot[] {
-  const slots: GeneratedSlot[] = [];
-  for (let t = openMin; t < closeMin; t += durationMinutes) {
-    slots.push({ time: minutesToClock(t), duration: durationMinutes });
-  }
-  return slots;
-}
 
 /** Normaliza HH:MM desde columnas `blocked_time` o `start_time`. */
 export function normalizeSlotTime(t: string | null | undefined): string {
@@ -74,11 +68,6 @@ export function parseCloseTimeToMinutes(clock: string): number {
   return m;
 }
 
-function scheduleMatchesDay(dayOfWeekRaw: number | null | undefined, dow: number): boolean {
-  if (dayOfWeekRaw == null) return false;
-  return Number(dayOfWeekRaw) === dow;
-}
-
 export function minutesToClock(total: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;
@@ -97,57 +86,51 @@ function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: nu
 }
 
 /**
- * Genera los slots disponibles para el día según apertura/cierre de la cancha o del club.
+ * Genera los slots disponibles para el día a partir de las franjas propias de
+ * cada cancha (`court_time_ranges`). Una cancha puede tener varias franjas no
+ * contiguas el mismo día (ej. 08:00–12:30 y 16:00–22:00) — se generan slots
+ * por franja y se devuelve la unión, sin puentear el hueco entre franjas.
  *
- * Para 90 min usa la grilla fija histórica (backward compat con reservas existentes).
- * Para otros valores genera la grilla dinámicamente desde la apertura.
- *
- * Si no hay ningún horario configurado, devuelve una grilla de fallback 09:00–22:30.
+ * Si la cancha no tiene ninguna franja propia para ese día de semana, cae al
+ * horario del club (`clubBounds`) como una única franja. Si tampoco hay
+ * horario de club configurado, fallback hardcodeado 09:00–22:30.
  */
 export function buildSlotsForDay(
   courtIds: string[],
   dayDate: Date,
-  schedules: ScheduleInput[],
+  timeRanges: CourtTimeRangeInput[],
   clubBounds?: ClubHoursBounds | null,
   slotDurationMinutes = 90
 ): GeneratedSlot[] {
   const dow = getDay(dayDate);
   const cb = clubBoundsMinutes(clubBounds ?? null);
-
-  let minM = 24 * 60;
-  let maxM = 0;
-
-  for (const cid of courtIds) {
-    const daySchedules = schedules.filter(
-      (x) => String(x.court_id) === String(cid) && scheduleMatchesDay(x.day_of_week, dow)
-    );
-
-    if (!daySchedules.length) {
-      // Sin horario propio → usar horario del club como fallback
-      if (cb) {
-        minM = Math.min(minM, cb.lo);
-        maxM = Math.max(maxM, cb.hi);
-      }
-      continue;
-    }
-
-    for (const s of daySchedules) {
-      if (!s.open_time || !s.close_time) continue;
-      const o = parseClockToMinutes(String(s.open_time));
-      const c = parseCloseTimeToMinutes(String(s.close_time));
-      if (!(c > o)) continue;
-      minM = Math.min(minM, o);
-      maxM = Math.max(maxM, c);
-    }
-  }
-
   const fallbackOpen = cb?.lo ?? 9 * 60;
   const fallbackClose = cb?.hi ?? 22 * 60 + 30;
 
-  if (maxM <= minM) {
-    return buildGrid(fallbackOpen, fallbackClose, slotDurationMinutes);
+  const times = new Set<string>();
+
+  for (const cid of courtIds) {
+    const dayRanges = timeRanges.filter(
+      (r) => String(r.court_id) === String(cid) && Number(r.day_of_week) === dow
+    );
+
+    const ranges = dayRanges
+      .map((r) => ({
+        open: parseClockToMinutes(String(r.open_time)),
+        close: parseCloseTimeToMinutes(String(r.close_time)),
+      }))
+      .filter((r) => r.close > r.open);
+
+    const effectiveRanges = ranges.length ? ranges : [{ open: fallbackOpen, close: fallbackClose }];
+
+    for (const r of effectiveRanges) {
+      for (let t = r.open; t + slotDurationMinutes <= r.close; t += slotDurationMinutes) {
+        times.add(minutesToClock(t));
+      }
+    }
   }
 
-  const slots = buildGrid(minM, maxM, slotDurationMinutes);
-  return slots.length ? slots : buildGrid(fallbackOpen, fallbackClose, slotDurationMinutes);
+  return Array.from(times)
+    .sort((a, b) => parseClockToMinutes(a) - parseClockToMinutes(b))
+    .map((time) => ({ time, duration: slotDurationMinutes }));
 }

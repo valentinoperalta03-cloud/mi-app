@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
-import type { ScheduleInput } from "@/lib/court-slots";
+import type { CourtTimeRangeInput } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getUserLocationServer } from "@/lib/locations-server";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
@@ -46,7 +46,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     { data: clubsRaw, error: clubsError },
     { data: courtsRaw, error: courtsError },
     { data: slotPricesRaw },
-    { data: schedulesRaw },
+    { data: timeRangesRaw },
     { data: availabilityRaw },
     { data: mpConnectedRaw },
   ] = await Promise.all([
@@ -67,13 +67,10 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .is("day_of_week", null)
       .not("start_time", "is", null)
       .not("price_override", "is", null),
-    // Horario semanal por cancha (apertura/cierre por dia_of_week) — usado por
-    // buildSlotsForDay para calcular disponibilidad respetando el horario propio
-    // de cada cancha, distinto de las filas de precio por franja de arriba.
-    supabase
-      .from(DB_TABLES.courtSchedules)
-      .select("court_id,day_of_week,open_time,close_time")
-      .not("day_of_week", "is", null),
+    // Franjas horarias propias por cancha — usado por buildSlotsForDay para
+    // calcular disponibilidad respetando el horario propio de cada cancha,
+    // distinto de las filas de precio por franja de arriba (court_schedules).
+    supabase.from(DB_TABLES.courtTimeRanges).select("court_id,day_of_week,open_time,close_time"),
     supabase.rpc("get_clubs_availability"),
     // mp_access_token esta revocada para anon/authenticated: se pregunta via RPC
     // que solo expone el booleano de conexion, nunca el token.
@@ -169,17 +166,19 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     surface: court.surface ?? null,
     indoor: court.indoor ?? null,
   }));
-  const schedules: ScheduleInput[] = ((schedulesRaw ?? []) as Array<{
+  const timeRanges: CourtTimeRangeInput[] = ((timeRangesRaw ?? []) as Array<{
     court_id: string;
     day_of_week: number | null;
     open_time: string | null;
     close_time: string | null;
-  }>).map((row) => ({
-    court_id: row.court_id,
-    day_of_week: row.day_of_week,
-    open_time: row.open_time,
-    close_time: row.close_time,
-  }));
+  }>)
+    .filter((row) => row.day_of_week != null && row.open_time && row.close_time)
+    .map((row) => ({
+      court_id: row.court_id,
+      day_of_week: Number(row.day_of_week),
+      open_time: String(row.open_time),
+      close_time: String(row.close_time),
+    }));
   const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
     court_id: string;
     start_time: string | null;
@@ -227,7 +226,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
         <CrearPartidoForm
           clubs={clubs}
           courts={courts}
-          schedules={schedules}
+          timeRanges={timeRanges}
           slotPrices={slotPrices}
           defaultGender={defaultGender}
           friends={friends}

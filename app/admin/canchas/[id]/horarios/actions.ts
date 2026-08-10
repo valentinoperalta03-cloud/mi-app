@@ -39,6 +39,7 @@ export async function addCourtTimeRange(
     .eq("court_id", courtId)
     .eq("day_of_week", dayOfWeek);
   const existing = (existingRaw ?? []) as Array<{ open_time: string; close_time: string }>;
+  if (existing.length >= 4) return { ok: false, message: "Máximo 4 franjas por día." };
   const overlaps = existing.some((r) => {
     const rOpen = parseClockToMinutes(String(r.open_time).slice(0, 5));
     const rClose = parseClockToMinutes(String(r.close_time).slice(0, 5));
@@ -79,5 +80,48 @@ export async function removeCourtTimeRange(rangeId: string): Promise<CourtTimeRa
   if (error) return { ok: false, message: error.message };
 
   revalidatePath(`/admin/canchas/${range.court_id}/horarios`);
+  return { ok: true };
+}
+
+export async function applyTimeRangesToAllDays(courtId: string, dayOfWeek: number): Promise<CourtTimeRangeState> {
+  if (!courtId || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    return { ok: false, message: "Datos inválidos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) return { ok: false, message: "Sesión requerida." };
+  if (!ctx.courtIds.includes(courtId)) return { ok: false, message: "Cancha no autorizada." };
+
+  const { data: sourceRaw, error: sourceErr } = await supabase
+    .from(DB_TABLES.courtTimeRanges)
+    .select("open_time,close_time")
+    .eq("court_id", courtId)
+    .eq("day_of_week", dayOfWeek);
+  if (sourceErr) return { ok: false, message: sourceErr.message };
+  const sourceRanges = (sourceRaw ?? []) as Array<{ open_time: string; close_time: string }>;
+  if (sourceRanges.length === 0) return { ok: false, message: "No hay franjas cargadas para ese día." };
+
+  const otherDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== dayOfWeek);
+
+  const { error: delErr } = await supabase
+    .from(DB_TABLES.courtTimeRanges)
+    .delete()
+    .eq("court_id", courtId)
+    .in("day_of_week", otherDays);
+  if (delErr) return { ok: false, message: delErr.message };
+
+  const rows = otherDays.flatMap((day) =>
+    sourceRanges.map((r) => ({
+      court_id: courtId,
+      day_of_week: day,
+      open_time: r.open_time,
+      close_time: r.close_time,
+    }))
+  );
+  const { error: insErr } = await supabase.from(DB_TABLES.courtTimeRanges).insert(rows);
+  if (insErr) return { ok: false, message: insErr.message };
+
+  revalidatePath(`/admin/canchas/${courtId}/horarios`);
   return { ok: true };
 }
