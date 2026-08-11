@@ -35,7 +35,7 @@ function AdminShellContent({
     <LayoutGroup id="admin-app-chrome">
       {chrome}
       <div
-        className={`admin-shell-bg min-h-dvh px-4 pb-8 pt-[var(--admin-top-chrome-offset)] transition-[margin-left] duration-300 ease-in-out sm:px-6 lg:px-8 md:pb-10 md:pt-8 ${
+        className={`admin-shell-bg min-h-dvh px-4 pb-8 pt-[var(--admin-top-chrome-offset)] transition-[margin-left] duration-300 ease-in-out md:px-8 md:pb-8 md:pt-0 ${
           showSidebarMargin ? "ml-0 md:ml-[var(--admin-current-sidebar-w)]" : "ml-0"
         }`}
         style={
@@ -48,7 +48,7 @@ function AdminShellContent({
             : undefined
         }
       >
-        <div className="mx-auto w-full max-w-7xl">
+        <div className="w-full">
           {trialBanner}
           {children}
         </div>

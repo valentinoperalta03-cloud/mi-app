@@ -75,10 +75,16 @@
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
   /* Admin — sidebar vertical */
-  --admin-sidebar-width: 240px;
-  --admin-sidebar-collapsed-width: 64px;
+  --admin-sidebar-width: 280px;
+  --admin-sidebar-collapsed-width: 72px;
   --admin-sidebar-bg-dark: #0C1829;
   --admin-sidebar-bg-light: #FFFFFF;
+  --admin-sidebar-hover-bg: rgba(0, 0, 0, 0.04);
+  --admin-sidebar-hover-bg-strong: rgba(0, 0, 0, 0.06);
+  --admin-sidebar-border-subtle: rgba(0, 0, 0, 0.08);
+  --admin-sidebar-text-muted: rgba(0, 0, 0, 0.45);
+  --admin-sidebar-logo-border: rgba(0, 0, 0, 0.15);
+  --admin-sidebar-group-label: rgba(0, 0, 0, 0.35);
 
   /* Admin — header/topbar: fondo sigue el tema, contenido siempre azul de marca, linea lima fija */
   --admin-header-bg: #FFFFFF;
@@ -154,6 +160,14 @@
   --admin-accent-lima: #CCFF00;
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.16);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
+
+  /* Admin — sidebar vertical (dark) */
+  --admin-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --admin-sidebar-hover-bg-strong: rgba(255, 255, 255, 0.10);
+  --admin-sidebar-border-subtle: rgba(255, 255, 255, 0.08);
+  --admin-sidebar-text-muted: rgba(255, 255, 255, 0.50);
+  --admin-sidebar-logo-border: rgba(255, 255, 255, 0.15);
+  --admin-sidebar-group-label: rgba(255, 255, 255, 0.35);
 
   /* Admin — header/topbar: fondo negro en modo oscuro (contenido y linea lima se heredan de :root) */
   --admin-header-bg: #0A0A0A;
@@ -334,6 +348,7 @@ html.capacitor-native svg {
 .admin-sidebar {
   background: var(--admin-sidebar-bg-light);
   border-right: 1px solid rgba(0, 133, 252, 0.10);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
 }
 .dark .admin-sidebar {
   background: var(--admin-sidebar-bg-dark);
