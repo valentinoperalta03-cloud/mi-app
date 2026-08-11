@@ -38,7 +38,7 @@ const quickActions: Array<{
   { href: "/admin/clases", label: "Clases", description: "Prácticas y entrenamientos", icon: GraduationCap },
   { href: "/admin/reservas", label: "Reservas", description: "Gestioná agenda y pagos", icon: CalendarDays },
   { href: "/admin/finanzas", label: "Finanzas", description: "Controlá ingresos y egresos", icon: Wallet },
-  { href: "/admin/agenda", label: "Ocupación", description: "Estado de canchas y horarios", icon: SquareChartGantt },
+  { href: "/admin/analytics", label: "Ocupación", description: "Estado de canchas y horarios", icon: SquareChartGantt },
   { href: "/admin/jugadores", label: "Jugadores", description: "Actividad y retención", icon: Users },
   { href: "/admin/canchas", label: "Canchas", description: "Configuración de canchas", icon: Building2 },
   { href: "/admin/club", label: "Club", description: "Datos y branding del club", icon: CircleDollarSign },

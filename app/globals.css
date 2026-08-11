@@ -74,6 +74,12 @@
   --admin-accent-lima-subtle: rgba(204, 255, 0, 0.12);
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
+  /* Admin — sidebar vertical */
+  --admin-sidebar-width: 240px;
+  --admin-sidebar-collapsed-width: 64px;
+  --admin-sidebar-bg-dark: #0C1829;
+  --admin-sidebar-bg-light: #FFFFFF;
+
   /* Admin — header/topbar: fondo sigue el tema, contenido siempre azul de marca, linea lima fija */
   --admin-header-bg: #FFFFFF;
   --admin-header-text: #0085FC;
@@ -321,6 +327,17 @@ html.capacitor-native svg {
 .admin-shell-bg {
   background-color: var(--admin-bg-app);
   background-image: var(--admin-bg-image);
+}
+
+/* Sidebar vertical del admin: fondo claro con borde derecho sutil, fondo navy
+   profundo en dark (sin borde — coincide con el fondo del panel en ese modo). */
+.admin-sidebar {
+  background: var(--admin-sidebar-bg-light);
+  border-right: 1px solid rgba(0, 133, 252, 0.10);
+}
+.dark .admin-sidebar {
+  background: var(--admin-sidebar-bg-dark);
+  border-right: none;
 }
 
 /* Detalle de marca en accesos rapidos: linea superior que aparece al hover */

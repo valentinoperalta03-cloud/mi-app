@@ -3,74 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Activity,
-  Banknote,
-  Building2,
-  ClipboardList,
-  CreditCard,
-  DollarSign,
-  GraduationCap,
-  SquareChartGantt,
-  Trophy,
-  Users,
-  Clock3,
-  Settings,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { adminSectionLabel } from "@/components/admin/admin-premium";
-
-type DrawerItem = { href: string; label: string; icon: LucideIcon };
-type DrawerGroup = { title: string; items: DrawerItem[] };
-
-const GROUPS: DrawerGroup[] = [
-  {
-    title: "Gestión",
-    items: [
-      { href: "/admin/reservas", label: "Reservas", icon: SquareChartGantt },
-      { href: "/admin/agenda", label: "Agenda", icon: Activity },
-      { href: "/admin/cobros", label: "Cobros", icon: Banknote },
-      { href: "/admin/turnos-fijos", label: "Turnos fijos", icon: Clock3 },
-    ],
-  },
-  {
-    title: "Club",
-    items: [
-      { href: "/admin/canchas", label: "Canchas", icon: Building2 },
-      { href: "/admin/jugadores", label: "Jugadores", icon: Users },
-      { href: "/admin/clases", label: "Clases", icon: GraduationCap },
-      { href: "/admin/torneos", label: "Torneos", icon: Trophy },
-    ],
-  },
-  {
-    title: "Análisis",
-    items: [
-      { href: "/admin/finanzas", label: "Finanzas", icon: DollarSign },
-      { href: "/admin/analytics", label: "Ocupación", icon: Activity },
-      { href: "/admin/pagos", label: "Pagos", icon: CreditCard },
-    ],
-  },
-  {
-    title: "Configuración",
-    items: [
-      { href: "/admin/config", label: "Configuración", icon: Settings },
-      { href: "/admin/config/suscripcion", label: "Mi suscripción", icon: ClipboardList },
-    ],
-  },
-];
-
-function isItemActive(pathname: string, href: string): boolean {
-  if (href === "/admin/config") {
-    return (
-      pathname === "/admin/config" ||
-      (pathname.startsWith("/admin/config/") && !pathname.startsWith("/admin/config/suscripcion"))
-    );
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { ADMIN_NAV_GROUPS, ADMIN_NAV_HOME, isAdminNavItemActive } from "@/lib/admin/nav-groups";
 
 export default function AdminMobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
@@ -137,10 +74,38 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
-              {GROUPS.map((group, groupIndex) => (
+              <div className="pt-3">
+                {(() => {
+                  const Icon = ADMIN_NAV_HOME.icon;
+                  const active = isAdminNavItemActive(pathname, ADMIN_NAV_HOME.href);
+                  return (
+                    <Link
+                      href={ADMIN_NAV_HOME.href}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                        active
+                          ? "border-l-2 border-[var(--admin-accent-lima)] bg-[rgba(0,133,252,0.08)] text-[var(--text-primary)] dark:bg-[rgba(204,255,0,0.08)]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-app)] dark:hover:bg-white/[0.07]"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                          active
+                            ? "bg-[rgba(0,133,252,0.08)] text-[var(--text-primary)] dark:bg-[rgba(204,255,0,0.08)]"
+                            : "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
+                        }`}
+                      >
+                        <Icon size={18} aria-hidden />
+                      </span>
+                      {ADMIN_NAV_HOME.label}
+                    </Link>
+                  );
+                })()}
+              </div>
+              {ADMIN_NAV_GROUPS.map((group) => (
                 <div
-                  key={group.title}
-                  className={`pt-3 ${groupIndex > 0 ? "mt-2 border-t border-[rgba(0,133,252,0.15)] dark:border-[rgba(204,255,0,0.12)]" : ""}`}
+                  key={group.key}
+                  className="mt-2 border-t border-[rgba(0,133,252,0.15)] pt-3 dark:border-[rgba(204,255,0,0.12)]"
                 >
                   <p className={`px-3 pb-1.5 ${adminSectionLabel}`}>
                     {group.title}
@@ -148,7 +113,7 @@ export default function AdminMobileMenu({ open, onClose }: { open: boolean; onCl
                   <div className="flex flex-col gap-0.5">
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const active = isItemActive(pathname, item.href);
+                      const active = isAdminNavItemActive(pathname, item.href);
                       return (
                         <Link
                           key={item.href}
