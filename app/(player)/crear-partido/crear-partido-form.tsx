@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { addDays, format, parseISO } from "date-fns";
+import { addDays, format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
 import { App } from "@capacitor/app";
@@ -74,6 +74,8 @@ export type CourtOption = {
 };
 export type SlotPriceOption = {
   courtId: string;
+  /** null = precio legacy, fallback para cuando no hay precio específico de ese día. */
+  dayOfWeek: number | null;
   startTime: string;
   price: number;
 };
@@ -249,20 +251,30 @@ export default function CrearPartidoForm({
       return true;
     });
   }, [clubs, searchQuery, locationFilter, userCity, userProvince]);
-  const slotPriceMap = useMemo(() => {
-    const map = new Map<string, number>();
+  // Dos mapas: precio específico del día (courtId__dayOfWeek__startTime) y el
+  // legacy sin día (courtId__startTime), que actúa de fallback para cuando el
+  // club nunca guardó un precio explícito para ese día de semana.
+  const { specificPriceMap, legacyPriceMap } = useMemo(() => {
+    const specific = new Map<string, number>();
+    const legacy = new Map<string, number>();
     for (const row of slotPrices) {
-      map.set(`${row.courtId}__${row.startTime}`, row.price);
+      if (row.dayOfWeek == null) {
+        legacy.set(`${row.courtId}__${row.startTime}`, row.price);
+      } else {
+        specific.set(`${row.courtId}__${row.dayOfWeek}__${row.startTime}`, row.price);
+      }
     }
-    return map;
+    return { specificPriceMap: specific, legacyPriceMap: legacy };
   }, [slotPrices]);
   const getTurnPrice = useCallback(
-    (courtId: string, startTime: string): number => {
-      const slotPrice = slotPriceMap.get(`${courtId}__${startTime}`);
-      if (slotPrice != null) return slotPrice;
+    (courtId: string, startTime: string, dayOfWeek: number): number => {
+      const specificPrice = specificPriceMap.get(`${courtId}__${dayOfWeek}__${startTime}`);
+      if (specificPrice != null) return specificPrice;
+      const legacyPrice = legacyPriceMap.get(`${courtId}__${startTime}`);
+      if (legacyPrice != null) return legacyPrice;
       return courts.find((c) => c.id === courtId)?.price ?? 0;
     },
-    [courts, slotPriceMap]
+    [courts, specificPriceMap, legacyPriceMap]
   );
 
   useEffect(() => {
@@ -288,6 +300,7 @@ export default function CrearPartidoForm({
     try {
       const supabase = createClient();
       const dayDate = parseISO(`${selectedDate}T12:00:00`);
+      const dayOfWeek = getDay(dayDate);
 
       const [
         { data: closedRows },
@@ -383,7 +396,7 @@ export default function CrearPartidoForm({
           map[slot.time].push({
             courtId: court.id,
             courtName: court.name,
-            price: getTurnPrice(court.id, slot.time),
+            price: getTurnPrice(court.id, slot.time, dayOfWeek),
             surface: court.surface ?? null,
             indoor: court.indoor ?? null,
           });
@@ -415,11 +428,14 @@ export default function CrearPartidoForm({
   const canSubmit = Boolean(selectedClubId && selectedCourtId && selectedDate && selectedSlot);
 
   const resumenPago = useMemo(() => {
-    if (!selectedCourt || !selectedSlot) return { total: 0, requiresDeposit: false, deposit: 0, saldo: 0 };
-    const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time);
+    if (!selectedCourt || !selectedSlot || !selectedDate) {
+      return { total: 0, requiresDeposit: false, deposit: 0, saldo: 0 };
+    }
+    const dayOfWeek = getDay(parseISO(`${selectedDate}T12:00:00`));
+    const turnPrice = getTurnPrice(selectedCourt.id, selectedSlot.time, dayOfWeek);
     const deposit = resolveDepositCharge(turnPrice, selectedClub?.depositType ?? null, selectedClub?.depositValue ?? 0);
     return { total: turnPrice, requiresDeposit: deposit < turnPrice, deposit, saldo: turnPrice - deposit };
-  }, [getTurnPrice, selectedClub, selectedCourt, selectedSlot]);
+  }, [getTurnPrice, selectedClub, selectedCourt, selectedSlot, selectedDate]);
 
   /** Si el club configuró seña, el pago inicial es obligatorio por MP: no se ofrece efectivo/transferencia. */
   const clubHasDeposit = Boolean(selectedClub?.depositValue && selectedClub.depositValue > 0);

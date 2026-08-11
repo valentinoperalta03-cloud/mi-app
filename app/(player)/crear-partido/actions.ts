@@ -199,20 +199,30 @@ export async function crearPartido(
     const invitedFriendIds = invitedFriendIdsRaw.filter((id) => allowedFriendIds.has(id));
 
     const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
-    // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
+    // Precio: específico de ese día de semana → legacy (day_of_week IS NULL,
+    // previo a precios por día) → precio base de la cancha. Mismo criterio
+    // que CourtPricesClient (admin) y getTurnPrice (crear-partido-form.tsx) —
+    // tiene que coincidir con lo que el jugador vio antes de pagar.
+    const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
     const { data: slotPriceRows } = await supabase
       .from(DB_TABLES.courtSchedules)
-      .select("start_time,price_override")
+      .select("day_of_week,start_time,price_override")
       .eq("court_id", courtId)
-      .is("day_of_week", null)
       .not("start_time", "is", null)
       .not("price_override", "is", null);
-    const matchedSlotPrice = ((slotPriceRows ?? []) as Array<{
+    const slotPriceRowsTyped = (slotPriceRows ?? []) as Array<{
+      day_of_week: number | null;
       start_time: string | null;
       price_override: number | null;
-    }>).find((row) => String(row.start_time ?? "").slice(0, 5) === timeNorm);
+    }>;
+    const specificPrice = slotPriceRowsTyped.find(
+      (row) => row.day_of_week === dayOfWeek && String(row.start_time ?? "").slice(0, 5) === timeNorm
+    )?.price_override;
+    const legacyPrice = slotPriceRowsTyped.find(
+      (row) => row.day_of_week === null && String(row.start_time ?? "").slice(0, 5) === timeNorm
+    )?.price_override;
     const totalPrice = Number(
-      matchedSlotPrice?.price_override ?? (courtData as { price: number | null }).price ?? 0
+      specificPrice ?? legacyPrice ?? (courtData as { price: number | null }).price ?? 0
     );
     const clubDepositType =
       (courtData as { clubs?: { deposit_type?: "percentage" | "fixed" | null } | null }).clubs?.deposit_type ?? null;

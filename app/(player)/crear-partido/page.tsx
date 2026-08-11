@@ -61,11 +61,12 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
       .from(DB_TABLES.courts)
       .select("id, club_id, name, price, surface, indoor")
       .order("name", { ascending: true }),
-    // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
+    // Rama precios de court_schedules: filas con day_of_week de un día
+    // específico y filas legacy con day_of_week IS NULL (fallback previo a
+    // precios por día). Los horarios de apertura/cierre están en court_time_ranges.
     supabase
       .from(DB_TABLES.courtSchedules)
-      .select("court_id,start_time,price_override")
-      .is("day_of_week", null)
+      .select("court_id,day_of_week,start_time,price_override")
       .not("start_time", "is", null)
       .not("price_override", "is", null),
     // Franjas horarias propias por cancha — usado por buildSlotsForDay para
@@ -182,12 +183,14 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     }));
   const slotPrices: SlotPriceOption[] = ((slotPricesRaw ?? []) as Array<{
     court_id: string;
+    day_of_week: number | null;
     start_time: string | null;
     price_override: number | null;
   }>)
     .filter((row) => row.start_time && row.price_override != null)
     .map((row) => ({
       courtId: row.court_id,
+      dayOfWeek: row.day_of_week,
       startTime: String(row.start_time).slice(0, 5),
       price: Number(row.price_override ?? 0),
     }));
