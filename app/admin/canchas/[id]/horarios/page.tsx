@@ -3,20 +3,59 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import { adminAccentBar, adminCTAPrimary, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { minutesToClock, parseClockToMinutes } from "@/lib/court-slots";
+import { minutesToClock, parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import { saveCourtHourlyPrices } from "../precios/actions";
 import CourtTimeRangesClient, { type CourtTimeRange } from "./court-time-ranges-client";
 
 const SLOT_DURATION = 90;
 
-function buildCourtTurns(openTime: string) {
-  const rawOpen = parseClockToMinutes(openTime || "09:00");
-  const turns: { start: string; end: string }[] = [];
-  for (let t = rawOpen; t < 24 * 60; t += SLOT_DURATION) {
-    turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
+/** Dedup por par open/close — para cuando las franjas varían día a día y no hay lunes cargado. */
+function uniqueRanges(ranges: CourtTimeRange[]): CourtTimeRange[] {
+  const seen = new Set<string>();
+  const out: CourtTimeRange[] = [];
+  for (const r of ranges) {
+    const key = `${r.open_time}__${r.close_time}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
   }
-  return turns;
+  return out;
+}
+
+/**
+ * Turnos de 90 min para la grilla de precios. Como el precio es el mismo
+ * todos los días, se usan las franjas del lunes como referencia (o la unión
+ * de franjas únicas de todos los días si el lunes no tiene ninguna cargada).
+ * Sin franjas propias en absoluto, cae al horario global del club —
+ * comportamiento idéntico al que había antes de que existiera court_time_ranges.
+ */
+function buildCourtTurns(timeRanges: CourtTimeRange[], clubOpenTime: string): { start: string; end: string }[] {
+  const mondayRanges = timeRanges.filter((r) => r.day_of_week === 1);
+  const referenceRanges = mondayRanges.length > 0 ? mondayRanges : uniqueRanges(timeRanges);
+
+  if (referenceRanges.length === 0) {
+    const rawOpen = parseClockToMinutes(clubOpenTime || "09:00");
+    const turns: { start: string; end: string }[] = [];
+    for (let t = rawOpen; t < 24 * 60; t += SLOT_DURATION) {
+      turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
+    }
+    return turns;
+  }
+
+  const seenStarts = new Set<string>();
+  const turns: { start: string; end: string }[] = [];
+  for (const r of referenceRanges) {
+    const openMin = parseClockToMinutes(String(r.open_time).slice(0, 5));
+    const closeMin = parseCloseTimeToMinutes(String(r.close_time).slice(0, 5));
+    for (let t = openMin; t + SLOT_DURATION <= closeMin; t += SLOT_DURATION) {
+      const start = minutesToClock(t);
+      if (seenStarts.has(start)) continue;
+      seenStarts.add(start);
+      turns.push({ start, end: minutesToClock(t + SLOT_DURATION) });
+    }
+  }
+  return turns.sort((a, b) => parseClockToMinutes(a.start) - parseClockToMinutes(b.start));
 }
 
 type PageProps = {
@@ -76,7 +115,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
       .map((r) => [String(r.start_time).slice(0, 5), Number(r.price_override ?? 0)])
   );
   const basePrice = Number((court as { price: number | null }).price ?? 0);
-  const turns = buildCourtTurns(clubOpen || "09:00");
+  const turns = buildCourtTurns(timeRanges, clubOpen || "09:00");
 
   return (
     <div className="flex flex-col gap-6">
