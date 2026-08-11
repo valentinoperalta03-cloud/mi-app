@@ -1,25 +1,18 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  Building2,
-  CalendarDays,
+  CalendarCheck,
   ChevronRight,
-  CircleDollarSign,
-  Clock3,
-  LayoutGrid,
-  Settings,
-  ShieldAlert,
-  SquareChartGantt,
-  Trophy,
-  GraduationCap,
-  Users,
-  Wallet,
+  Clock,
+  DollarSign,
+  MapPin,
 } from "lucide-react";
-import { adminBadgeLima, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminCard, adminKicker } from "@/components/admin/admin-premium";
+import { PaymentStatusPill } from "@/components/admin/admin-status-pills";
 import OnboardingChecklist from "@/components/admin/onboarding-checklist";
 import FixedSlotTodayCard, { type TodayFixedSlotCard } from "./fixed-slot-today-card";
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
-import { formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { formatDateInArgentina, getTodayYmdInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -28,23 +21,9 @@ import { createClient } from "@/utils/supabase/server";
 import CurrentArTime from "./current-ar-time";
 import TimelineGrid, { type TimelineEvent, type TimelineOpenRange } from "./timeline-grid";
 
-const quickActions: Array<{
-  href: string;
-  label: string;
-  description: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-}> = [
-  { href: "/admin/torneos", label: "Torneos", description: "Americanos, llaves y peñas", icon: Trophy },
-  { href: "/admin/clases", label: "Clases", description: "Prácticas y entrenamientos", icon: GraduationCap },
-  { href: "/admin/reservas", label: "Reservas", description: "Gestioná agenda y pagos", icon: CalendarDays },
-  { href: "/admin/finanzas", label: "Finanzas", description: "Controlá ingresos y egresos", icon: Wallet },
-  { href: "/admin/analytics", label: "Ocupación", description: "Estado de canchas y horarios", icon: SquareChartGantt },
-  { href: "/admin/jugadores", label: "Jugadores", description: "Actividad y retención", icon: Users },
-  { href: "/admin/canchas", label: "Canchas", description: "Configuración de canchas", icon: Building2 },
-  { href: "/admin/club", label: "Club", description: "Datos y branding del club", icon: CircleDollarSign },
-  { href: "/admin/turnos-fijos", label: "Turnos Fijos", description: "Gestión semanal fija", icon: Clock3 },
-  { href: "/admin/config", label: "Config", description: "Preferencias y permisos", icon: Settings },
-];
+/** Kicker de las 4 métricas: azul #0085FC en claro, lima #CCFF00 en oscuro (token --admin-accent-lima). */
+const metricKicker =
+  "font-admin-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--admin-accent-lima)]";
 
 function getArgentinaNow() {
   const now = new Date();
@@ -92,12 +71,12 @@ export default async function AdminDashboardPage({
 
   const today = getTodayYmdInArgentina();
   const arNow = getArgentinaNow();
-  const todayDateLabel = formatDateInArgentina(`${today}T12:00:00`, {
+  const weekdayDateLabelRaw = formatDateInArgentina(`${today}T12:00:00`, {
     weekday: "long",
     day: "2-digit",
     month: "long",
-    year: "numeric",
   });
+  const weekdayDateLabel = weekdayDateLabelRaw.charAt(0).toUpperCase() + weekdayDateLabelRaw.slice(1);
   const weekAgoDate = new Date(`${today}T12:00:00`);
   weekAgoDate.setDate(weekAgoDate.getDate() - 7);
   const weekAgo = weekAgoDate.toISOString().slice(0, 10);
@@ -119,18 +98,12 @@ export default async function AdminDashboardPage({
       }
     | null;
   const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
-  const clubInitials = clubName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
 
   const { data: todayMatchesRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
         .select(
-          "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,es_turno_fijo,fixed_slot_id,duration_minutes,courts(name)"
+          "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,match_type,es_turno_fijo,fixed_slot_id,duration_minutes,courts(name)"
         )
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
@@ -143,6 +116,7 @@ export default async function AdminDashboardPage({
     scheduled_time: string | null;
     scheduled_date: string | null;
     match_status: string | null;
+    match_type: string | null;
     es_turno_fijo: boolean | null;
     fixed_slot_id: string | null;
     duration_minutes: number | null;
@@ -279,6 +253,28 @@ export default async function AdminDashboardPage({
     : { data: [] };
   const cancelledTodayCount = (cancelledTodayRaw ?? []).length;
 
+  // Pagos confirmados hoy — límite de "hoy" anclado a medianoche ART (no a
+  // medianoche del huso del server), igual criterio que el resto de la página.
+  const todayStartIso = new Date(utcMsForArgentinaWallClock(today, "00:00")).toISOString();
+  const { data: paymentsTodayRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.payments)
+        .select("id,amount,status,matches!inner(court_id)")
+        .in("matches.court_id", ctx.courtIds)
+        .gte("created_at", todayStartIso)
+    : { data: [] };
+  const paymentsToday = (paymentsTodayRaw ?? []) as Array<{
+    id: string;
+    amount: number | null;
+    status: string | null;
+  }>;
+  const approvedPaymentsToday = paymentsToday.filter((p) => String(p.status ?? "").toLowerCase() === "approved");
+  const paidAmountToday = approvedPaymentsToday.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+  const paidCountToday = approvedPaymentsToday.length;
+  const pendingPaymentsCountToday = paymentsToday.filter(
+    (p) => String(p.status ?? "").toLowerCase() === "pending"
+  ).length;
+
   const { data: nextMatchRaw } = ctx.courtIds.length
     ? await supabase
         .from(DB_TABLES.matches)
@@ -388,9 +384,12 @@ export default async function AdminDashboardPage({
   const totalCourts = ctx.courtIds.length;
   const occupiedPct = totalCourts > 0 ? Math.round((occupiedNowCount / totalCourts) * 100) : 0;
 
-  const reservasHoy = todayMatches.filter((m) => !Boolean(m.es_turno_fijo)).length;
-  const reservasPagadas = todayMatches.filter(
-    (m) => !Boolean(m.es_turno_fijo) && String(m.payment_status ?? "").toLowerCase() === "paid"
+  const reservationMatchesToday = todayMatches.filter(
+    (m) => m.match_type === "reservation" && String(m.match_status ?? "").toLowerCase() !== "cancelled"
+  );
+  const reservasHoy = reservationMatchesToday.length;
+  const reservasPagadas = reservationMatchesToday.filter(
+    (m) => String(m.payment_status ?? "").toLowerCase() === "paid"
   ).length;
   const reservasPendientes = Math.max(0, reservasHoy - reservasPagadas);
 
@@ -600,84 +599,72 @@ export default async function AdminDashboardPage({
           allCompleted={onboardingStatus.allCompleted}
         />
       ) : null}
-      <section className="overflow-hidden rounded-2xl bg-brand-gradient p-4 shadow-[0_10px_30px_rgba(3,23,51,0.35)] md:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:gap-4">
-          <div className="flex items-center gap-3 md:gap-4">
-            {club?.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-              <img
-                src={club.logo_url}
-                alt={clubName}
-                className="h-12 w-12 rounded-full border border-white/20 object-cover md:h-16 md:w-16 md:rounded-2xl"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0085FC] text-base font-bold text-white md:h-16 md:w-16 md:rounded-2xl md:text-xl">
-                {clubInitials || "CL"}
-              </div>
-            )}
-            <div>
-              <h1 className="font-admin-display text-lg font-bold text-white md:text-2xl">{clubName}</h1>
-              <p className="text-xs text-white/70 md:text-sm">{todayDateLabel}</p>
-              <CurrentArTime className="text-[11px] text-white/50 md:text-xs" />
-            </div>
-          </div>
-          <div
-            className={
-              totalAlerts > 0
-                ? "inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold bg-rose-500/20 text-rose-100 ring-1 ring-rose-300/40"
-                : `inline-flex w-fit items-center ${adminBadgeLima}`
-            }
-          >
-            {totalAlerts > 0 ? `🔴 ${totalAlerts} alertas pendientes` : "🟢 Todo en orden"}
-          </div>
+      <section className="px-1 pt-2">
+        <h1 className="font-admin-display text-[28px] font-bold text-[var(--text-primary)]">Hola, {clubName} 👋</h1>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+          <span>{weekdayDateLabel}</span>
+          <span aria-hidden="true">·</span>
+          <CurrentArTime />
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
-          <p className={adminKicker}>Canchas ocupadas ahora</p>
-          <p className="text-3xl font-bold text-[var(--text-primary)]">
+          <div className="flex items-start justify-between gap-3">
+            <p className={metricKicker}>Canchas ocupadas ahora</p>
+            <MapPin size={20} className="shrink-0 text-[#0085FC]" />
+          </div>
+          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">
             {occupiedNowCount} <span className="text-base font-semibold text-[var(--text-secondary)]">de {totalCourts}</span>
           </p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-            <div className="h-full rounded-full bg-[#0085FC]" style={{ width: `${Math.max(0, Math.min(100, occupiedPct))}%` }} />
-          </div>
+          <p className="text-sm text-[var(--text-secondary)]">canchas en uso ahora</p>
         </Link>
         <Link href="/admin/reservas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
-          <p className={adminKicker}>Reservas hoy</p>
-          <p className="text-3xl font-bold text-[var(--text-primary)]">{reservasHoy}</p>
-          <p className="text-sm text-[var(--text-tertiary)]">
+          <div className="flex items-start justify-between gap-3">
+            <p className={metricKicker}>Reservas hoy</p>
+            <CalendarCheck size={20} className="shrink-0 text-[#0085FC]" />
+          </div>
+          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">{reservasHoy}</p>
+          <p className="text-sm text-[var(--text-secondary)]">
             {reservasPagadas} pagadas · {reservasPendientes} pendientes
           </p>
         </Link>
         <Link href="/admin/turnos-fijos" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
-          <p className={adminKicker}>Turnos fijos hoy</p>
-          <p className="text-3xl font-bold text-[var(--text-primary)]">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
-          <p className="text-sm text-[var(--text-tertiary)]">
+          <div className="flex items-start justify-between gap-3">
+            <p className={metricKicker}>Turnos fijos hoy</p>
+            <Clock size={20} className="shrink-0 text-[#0085FC]" />
+          </div>
+          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
+          <p className="text-sm text-[var(--text-secondary)]">
             {turnosFijosConfirmados} confirmados · {turnosFijosSinConfirmar} sin confirmar
+          </p>
+        </Link>
+        <Link href="/admin/finanzas" className={`${adminCard} space-y-2 transition hover:-translate-y-0.5 hover:shadow-md`}>
+          <div className="flex items-start justify-between gap-3">
+            <p className={metricKicker}>Pagos confirmados hoy</p>
+            <DollarSign size={20} className="shrink-0 text-[#0085FC]" />
+          </div>
+          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">
+            ${paidAmountToday.toLocaleString("es-AR")}
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {paidCountToday} aprobados · {pendingPaymentsCountToday} pendientes
           </p>
         </Link>
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <ShieldAlert size={17} className="text-rose-500" />
-          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Alertas urgentes</h2>
-        </div>
-
-        {totalAlerts === 0 ? (
-          <div className="rounded-xl border-l-[3px] border-[var(--admin-accent-lima)] bg-[var(--admin-accent-lima-subtle)] p-4 text-sm font-semibold text-[var(--admin-status-active-text)]">
-            ✅ Sin alertas pendientes. Todo en orden.
-          </div>
-        ) : (
+      {totalAlerts > 0 ? (
+        <section className="space-y-3">
+          <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Alertas</h2>
           <div className="space-y-2">
             {criticalAlerts.map((a) => (
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between gap-3 rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-4 text-sm font-semibold text-[var(--text-error)] transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex items-center justify-between gap-3 rounded-xl p-4 text-sm font-semibold text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:shadow-sm"
+                style={{ borderLeft: "3px solid #EF4444", backgroundColor: "rgba(239,68,68,0.06)" }}
               >
-                <span>🔴 {a.text}</span>
+                <span>{a.text}</span>
                 {a.cta ? (
                   <span className="shrink-0 rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white">
                     {a.cta}
@@ -691,9 +678,10 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-xl border-l-[3px] border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] p-4 text-sm font-semibold text-[var(--admin-alert-warning-text)] transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex items-center justify-between rounded-xl p-4 text-sm font-semibold text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:shadow-sm"
+                style={{ borderLeft: "3px solid #F59E0B", backgroundColor: "rgba(245,158,11,0.06)" }}
               >
-                <span>🟠 {a.text}</span>
+                <span>{a.text}</span>
                 <ChevronRight size={16} />
               </Link>
             ))}
@@ -701,43 +689,38 @@ export default async function AdminDashboardPage({
               <Link
                 key={a.key}
                 href={a.href}
-                className="flex items-center justify-between rounded-xl border-l-[3px] border-[#0085FC]/50 bg-[#0085FC]/5 p-4 text-sm font-semibold text-[#0461C4] transition hover:-translate-y-0.5 hover:shadow-sm dark:text-sky-300"
+                className="flex items-center justify-between rounded-xl p-4 text-sm font-semibold text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:shadow-sm"
+                style={{ borderLeft: "3px solid #0085FC", backgroundColor: "rgba(0,133,252,0.06)" }}
               >
-                <span>🔵 {a.text}</span>
+                <span>{a.text}</span>
                 <ChevronRight size={16} />
               </Link>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       <section className={adminCard}>
         <p className={adminKicker}>Vista del día</p>
-        <p className="mb-3 mt-1 text-sm text-[var(--text-tertiary)]">
-          Estado de todas tus canchas hora por hora, hoy {todayDateLabel}.
-        </p>
+        <p className="mb-3 mt-1 font-admin-display text-lg font-bold text-[var(--text-primary)]">Estado de tus canchas</p>
         <TimelineGrid courts={ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }))} openRangesByCourtId={openRangesByCourtId} events={timelineEvents} />
       </section>
 
-      <section className={adminCard}>
-        <p className={adminKicker}>Próximo turno</p>
-        {nextMatch ? (
-          <div className="mt-3 space-y-1">
-            <p className="font-admin-display text-2xl font-bold text-[var(--text-primary)]">{String(nextMatch.scheduled_time ?? "").slice(0, 5)} hs</p>
-            <p className="text-sm text-[var(--text-secondary)]">Cancha: {nextCourtRel?.name ?? "Cancha"}</p>
-            <p className="text-sm text-[var(--text-secondary)]">Jugador: {nextOwnerName}</p>
-            <p
-              className={`text-sm font-semibold ${
-                nextPayLabel === "Pagado" ? "text-[var(--admin-status-active-text)]" : "text-amber-700 dark:text-amber-400"
-              }`}
-            >
-              Estado de pago: {nextPayLabel}
-            </p>
+      {nextMatch ? (
+        <section className={`${adminCard} flex flex-wrap items-center justify-between gap-4`}>
+          <div>
+            <p className={adminKicker}>Próximo turno</p>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="font-admin-display text-2xl font-bold text-[var(--text-primary)]">
+                {String(nextMatch.scheduled_time ?? "").slice(0, 5)} hs
+              </p>
+              <p className="text-sm text-[var(--text-secondary)]">{nextCourtRel?.name ?? "Cancha"}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{nextOwnerName}</p>
+            </div>
           </div>
-        ) : (
-          <p className="mt-2 text-sm font-semibold text-[var(--text-tertiary)]">No hay más turnos por hoy 🎾</p>
-        )}
-      </section>
+          <PaymentStatusPill status={nextPayStatus} />
+        </section>
+      ) : null}
 
       {todayFixedSlotCards.length > 0 ? (
         <section className="space-y-3">
@@ -750,31 +733,7 @@ export default async function AdminDashboardPage({
         </section>
       ) : null}
 
-      <section className="space-y-3">
-        <SuperadminEntryLink variant="admin" />
-        <div className="hidden md:block">
-          <div className="flex items-center gap-2">
-            <LayoutGrid size={16} className="text-[#0085FC]" />
-            <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Accesos rápidos</h2>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {quickActions.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${adminCard} group admin-quick-card`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <item.icon size={22} className="text-[#0085FC]" />
-                  <ChevronRight size={16} className="text-[var(--text-tertiary)] transition group-hover:text-[#0085FC]" />
-                </div>
-                <p className="mt-3 text-base font-bold text-[var(--text-primary)]">{item.label}</p>
-                <p className="mt-1 text-sm text-[var(--text-tertiary)]">{item.description}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <SuperadminEntryLink variant="admin" />
     </div>
   );
 }
