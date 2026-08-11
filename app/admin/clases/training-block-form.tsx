@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
-import { adminButtonSecondary, adminCTAPrimary, adminCard } from "@/components/admin/admin-premium";
+import { Plus, X } from "lucide-react";
+import { adminButtonSecondary, adminCTAPrimary } from "@/components/admin/admin-premium";
 import { createTrainingBlockAction, type TrainingBlockState } from "./actions";
 
 const initial: TrainingBlockState = { ok: false, message: "" };
@@ -33,19 +33,40 @@ function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: ()
   }, [state.ok, onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 backdrop-blur-sm sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="training-block-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className={`${adminCard} max-h-[90vh] w-full max-w-md overflow-y-auto`}>
-        <h2 id="training-block-title" className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">
-          Registrar entrenamiento externo
-        </h2>
+    <>
+      <div
+        className="fixed inset-0 z-50 backdrop-blur-sm"
+        style={{ background: "rgba(0,0,0,0.70)" }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="fixed max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl"
+        style={{
+          zIndex: 51,
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "min(480px, 90vw)",
+          background: "var(--bg-card)",
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="training-block-title"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="training-block-title" className="font-admin-display text-lg font-bold text-[var(--text-primary)]">
+            Registrar entrenamiento externo
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="shrink-0 rounded-lg p-1 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+          >
+            <X size={18} />
+          </button>
+        </div>
         <p className="mt-1 text-sm font-medium text-[var(--text-tertiary)]">
           Solo bloquea la cancha para tu registro interno. Los jugadores de PadeLibre no lo ven.
         </p>
@@ -154,7 +175,7 @@ function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: ()
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 }
 
