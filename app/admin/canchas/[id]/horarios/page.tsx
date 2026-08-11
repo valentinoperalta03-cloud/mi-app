@@ -1,62 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminCTAPrimary, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { minutesToClock, parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
-import { saveCourtHourlyPrices } from "../precios/actions";
+import CourtPricesClient, { type CourtPriceRow } from "./court-prices-client";
 import CourtTimeRangesClient, { type CourtTimeRange } from "./court-time-ranges-client";
-
-const SLOT_DURATION = 90;
-
-/** Dedup por par open/close — para cuando las franjas varían día a día y no hay lunes cargado. */
-function uniqueRanges(ranges: CourtTimeRange[]): CourtTimeRange[] {
-  const seen = new Set<string>();
-  const out: CourtTimeRange[] = [];
-  for (const r of ranges) {
-    const key = `${r.open_time}__${r.close_time}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(r);
-  }
-  return out;
-}
-
-/**
- * Turnos de 90 min para la grilla de precios. Como el precio es el mismo
- * todos los días, se usan las franjas del lunes como referencia (o la unión
- * de franjas únicas de todos los días si el lunes no tiene ninguna cargada).
- * Sin franjas propias en absoluto, cae al horario global del club —
- * comportamiento idéntico al que había antes de que existiera court_time_ranges.
- */
-function buildCourtTurns(timeRanges: CourtTimeRange[], clubOpenTime: string): { start: string; end: string }[] {
-  const mondayRanges = timeRanges.filter((r) => r.day_of_week === 1);
-  const referenceRanges = mondayRanges.length > 0 ? mondayRanges : uniqueRanges(timeRanges);
-
-  if (referenceRanges.length === 0) {
-    const rawOpen = parseClockToMinutes(clubOpenTime || "09:00");
-    const turns: { start: string; end: string }[] = [];
-    for (let t = rawOpen; t < 24 * 60; t += SLOT_DURATION) {
-      turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
-    }
-    return turns;
-  }
-
-  const seenStarts = new Set<string>();
-  const turns: { start: string; end: string }[] = [];
-  for (const r of referenceRanges) {
-    const openMin = parseClockToMinutes(String(r.open_time).slice(0, 5));
-    const closeMin = parseCloseTimeToMinutes(String(r.close_time).slice(0, 5));
-    for (let t = openMin; t + SLOT_DURATION <= closeMin; t += SLOT_DURATION) {
-      const start = minutesToClock(t);
-      if (seenStarts.has(start)) continue;
-      seenStarts.add(start);
-      turns.push({ start, end: minutesToClock(t + SLOT_DURATION) });
-    }
-  }
-  return turns.sort((a, b) => parseClockToMinutes(a.start) - parseClockToMinutes(b.start));
-}
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -102,20 +51,24 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
     .eq("court_id", courtId);
   const timeRanges = (timeRangesRaw ?? []) as CourtTimeRange[];
 
-  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
-  const { data: slotRows } = await supabase
+  // Rama precios de court_schedules: incluye filas con day_of_week de un día
+  // específico y filas legacy con day_of_week IS NULL (fallback global previo
+  // a precios por día).
+  const { data: priceRowsRaw } = await supabase
     .from(DB_TABLES.courtSchedules)
-    .select("start_time,price_override")
+    .select("day_of_week,start_time,price_override")
     .eq("court_id", courtId)
-    .is("day_of_week", null)
     .not("start_time", "is", null);
-  const byTurnStart = new Map(
-    ((slotRows ?? []) as Array<{ start_time: string | null; price_override: number | null }>)
-      .filter((r) => r.start_time)
-      .map((r) => [String(r.start_time).slice(0, 5), Number(r.price_override ?? 0)])
-  );
+  const priceRows: CourtPriceRow[] = (
+    (priceRowsRaw ?? []) as Array<{ day_of_week: number | null; start_time: string | null; price_override: number | null }>
+  )
+    .filter((r) => r.start_time)
+    .map((r) => ({
+      dayOfWeek: r.day_of_week,
+      startTime: String(r.start_time).slice(0, 5),
+      price: Number(r.price_override ?? 0),
+    }));
   const basePrice = Number((court as { price: number | null }).price ?? 0);
-  const turns = buildCourtTurns(timeRanges, clubOpen || "09:00");
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,34 +122,13 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
           </div>
         ) : null}
 
-        {turns.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">
-            No hay turnos disponibles con el horario actual del club. Revisá la configuración de horarios.
-          </p>
-        ) : (
-          <form action={saveCourtHourlyPrices} className="space-y-4">
-            <input type="hidden" name="court_id" value={courtId} />
-            <input type="hidden" name="slot_duration_minutes" value={SLOT_DURATION} />
-            {turns.map((turn) => (
-              <label key={`${turn.start}-${turn.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/70 px-4 py-3">
-                <span className="text-sm font-semibold text-[var(--text-secondary)]">
-                  {turn.start} - {turn.end}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step="1"
-                  name={`price_${turn.start}`}
-                  defaultValue={byTurnStart.get(turn.start) ?? basePrice}
-                  className="w-36 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-right text-sm font-medium text-[var(--text-secondary)] outline-none focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-                />
-              </label>
-            ))}
-            <button type="submit" className={`w-full ${adminCTAPrimary}`}>
-              Guardar precios
-            </button>
-          </form>
-        )}
+        <CourtPricesClient
+          courtId={courtId}
+          clubOpen={clubOpen}
+          basePrice={basePrice}
+          timeRanges={timeRanges}
+          priceRows={priceRows}
+        />
       </section>
     </div>
   );

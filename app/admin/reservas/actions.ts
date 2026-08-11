@@ -227,18 +227,26 @@ export async function createManualReservationAction(
     .maybeSingle();
   if (existingBlock) return { ok: false, message: "Ese horario está bloqueado." };
 
-  // Precio: precio por franja si está configurado para esa hora, si no el
-  // precio base de la cancha (mismo criterio que admin/canchas/page.tsx).
-  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
+  // Precio: precio del día específico si está configurado para esa hora, si
+  // no el precio legacy (day_of_week IS NULL, previo a precios por día), si
+  // no el precio base de la cancha (mismo criterio que CourtPricesClient).
+  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
   const { data: courtRow } = await supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle();
   const { data: priceRows } = await supabase
     .from(DB_TABLES.courtSchedules)
-    .select("start_time,price_override")
+    .select("day_of_week,start_time,price_override")
     .eq("court_id", courtId)
-    .is("day_of_week", null);
-  const override = ((priceRows ?? []) as Array<{ start_time: string | null; price_override: number | null }>).find(
-    (r) => String(r.start_time ?? "").slice(0, 5) === time
-  )?.price_override;
+    .not("start_time", "is", null);
+  const priceRowsTyped = (priceRows ?? []) as Array<{
+    day_of_week: number | null;
+    start_time: string | null;
+    price_override: number | null;
+  }>;
+  const override =
+    priceRowsTyped.find((r) => r.day_of_week === dayOfWeek && String(r.start_time ?? "").slice(0, 5) === time)
+      ?.price_override ??
+    priceRowsTyped.find((r) => r.day_of_week === null && String(r.start_time ?? "").slice(0, 5) === time)
+      ?.price_override;
   const basePrice = Number((courtRow as { price: number | null } | null)?.price ?? 0);
   const totalPrice = typeof override === "number" ? override : basePrice;
 

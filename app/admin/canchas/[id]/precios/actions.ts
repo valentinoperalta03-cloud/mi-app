@@ -19,6 +19,11 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
   const courtId = getField(formData, "court_id");
   if (!courtId) redirect("/admin/canchas");
 
+  const dayOfWeek = Number(getField(formData, "day_of_week"));
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    redirectPreciosError(courtId, "Día inválido.");
+  }
+
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -30,7 +35,7 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
 
   type SlotPriceRow = {
     court_id: string;
-    day_of_week: null;
+    day_of_week: number;
     start_time: string;
     end_time: string;
     price_override: number;
@@ -55,7 +60,7 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
     const endTime = minutesToClock(Math.min(endMin, 24 * 60));
     rows.push({
       court_id: courtId,
-      day_of_week: null,
+      day_of_week: dayOfWeek,
       start_time: startTime,
       end_time: endTime,
       price_override: price,
@@ -65,12 +70,15 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
     });
   }
 
-  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
+  // Solo rama precios de court_schedules. Se borra/reinserta solo el día
+  // seleccionado — las filas con day_of_week IS NULL (precio legacy, previo a
+  // precios por día) no se tocan y siguen actuando como fallback para los
+  // días que todavía no se guardaron explícitamente.
   const { error: delErr } = await supabase
     .from(DB_TABLES.courtSchedules)
     .delete()
     .eq("court_id", courtId)
-    .is("day_of_week", null);
+    .eq("day_of_week", dayOfWeek);
 
   if (delErr) redirectPreciosError(courtId, delErr.message);
 
@@ -82,4 +90,56 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
   revalidatePath(`/admin/canchas/${courtId}/horarios`);
   revalidatePath("/admin/canchas");
   redirect(`/admin/canchas/${courtId}/horarios?price_saved=1`);
+}
+
+export type ApplyPricesState = { ok: boolean; message?: string };
+
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+export async function applyCourtPricesToAllDays(courtId: string, dayOfWeek: number): Promise<ApplyPricesState> {
+  if (!courtId || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    return { ok: false, message: "Datos inválidos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) return { ok: false, message: "Sesión requerida." };
+  if (!ctx.courtIds.includes(courtId)) return { ok: false, message: "Cancha no autorizada." };
+
+  const { data: sourceRaw, error: sourceErr } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .select("start_time,end_time,price_override")
+    .eq("court_id", courtId)
+    .eq("day_of_week", dayOfWeek);
+  if (sourceErr) return { ok: false, message: sourceErr.message };
+  const source = (sourceRaw ?? []) as Array<{ start_time: string; end_time: string; price_override: number }>;
+  if (source.length === 0) return { ok: false, message: "No hay precios guardados para ese día." };
+
+  const otherDays = ALL_DAYS.filter((d) => d !== dayOfWeek);
+
+  const { error: delErr } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .delete()
+    .eq("court_id", courtId)
+    .in("day_of_week", otherDays);
+  if (delErr) return { ok: false, message: delErr.message };
+
+  const rows = otherDays.flatMap((day) =>
+    source.map((r) => ({
+      court_id: courtId,
+      day_of_week: day,
+      start_time: r.start_time,
+      end_time: r.end_time,
+      price_override: r.price_override,
+      range_name: null,
+      open_time: null,
+      close_time: null,
+    }))
+  );
+  const { error: insErr } = await supabase.from(DB_TABLES.courtSchedules).insert(rows);
+  if (insErr) return { ok: false, message: insErr.message };
+
+  revalidatePath(`/admin/canchas/${courtId}/horarios`);
+  revalidatePath("/admin/canchas");
+  return { ok: true };
 }
