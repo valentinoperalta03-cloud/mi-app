@@ -44,7 +44,7 @@ function NavLink({
           transition={{ type: "spring", stiffness: 420, damping: 34 }}
         />
       ) : null}
-      <Icon size={16} className="shrink-0" />
+      <Icon size={16} className="shrink-0 text-[#0085FC] dark:text-[#CCFF00]" />
       {!collapsed ? <span className="truncate">{item.label}</span> : null}
       {collapsed ? (
         <span className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-lg bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)] transition-opacity duration-150 group-hover:opacity-100">
@@ -150,7 +150,7 @@ export default function AdminSidebar({
       style={{
         width: collapsed ? "var(--admin-sidebar-collapsed-width)" : "var(--admin-sidebar-width)",
         transition: "width 300ms ease",
-        borderTop: "2px solid var(--admin-header-lima-line)",
+        borderTop: "2px solid var(--admin-accent-lima)",
       }}
     >
       {/* Header */}

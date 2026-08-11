@@ -4,7 +4,9 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminBadgeBrand, adminBadgeDanger, adminBadgeSuccess, adminCard, adminEmptyState, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminInputClass } from "@/components/admin/admin-form-input";
+import AdminPageHeader from "@/components/admin/admin-page-header";
+import { adminAccentBar, adminBadgeBrand, adminCTADanger, adminBadgeSuccess, adminCard, adminEmptyState, adminKicker } from "@/components/admin/admin-premium";
 import { AdminPressableSurface } from "@/components/admin/admin-pressable";
 import { PlayerAvatar, PlayerSegmentPill } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -270,11 +272,11 @@ export default async function AdminJugadoresPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0085FC]`}>CRM</p>
-        <h1 className={adminTitle}>Jugadores</h1>
-        <p className={adminSubtitle}>Historial de jugadores que reservaron o participaron en partidos de tu club.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Análisis"
+        title="Jugadores"
+        subtitle="Actividad y retención de tu comunidad"
+      />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className={adminCard}>
@@ -407,12 +409,9 @@ export default async function AdminJugadoresPage() {
                           <input
                             name="reason"
                             placeholder="Motivo (opcional)"
-                            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                            className={`${adminInputClass} w-auto text-xs`}
                           />
-                          <button
-                            type="submit"
-                            className={adminBadgeDanger}
-                          >
+                          <button type="submit" className={adminCTADanger}>
                             Bloquear
                           </button>
                         </form>

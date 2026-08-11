@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeError,
   adminBadgeLima,
   adminBadgeNeutral,
   adminCard,
-  adminKicker,
-  adminSubtitle,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -34,10 +32,7 @@ export default async function AdminConfigSuscripcionPage() {
     return (
       <div className="flex flex-col gap-6">
         <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-        <header className="space-y-2">
-          <p className={adminKicker}>Configuración</p>
-          <h1 className={adminTitle}>Mi suscripción</h1>
-        </header>
+        <AdminPageHeader kicker="Configuración" title="Mi suscripción" />
         <div className={`${adminCard} p-6 text-sm font-medium text-amber-800`}>
           No encontramos un club asociado a tu cuenta. Contactá a soporte.
         </div>
@@ -71,11 +66,11 @@ export default async function AdminConfigSuscripcionPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-      <header className="space-y-2">
-        <p className={adminKicker}>Configuración</p>
-        <h1 className={adminTitle}>Mi suscripción</h1>
-        <p className={adminSubtitle}>Plan, estado y facturación.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="Mi suscripción"
+        subtitle="Estado y gestión de tu plan PadeLibre"
+      />
 
       {status === "pending" ? (
         <section

@@ -1,16 +1,15 @@
 ﻿import { redirect } from "next/navigation";
-import { AlertCircle, CheckCircle, CreditCard, ExternalLink, Info } from "lucide-react";
+import { AlertCircle, CheckCircle, CreditCard, ExternalLink } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeLima,
   adminBadgePending,
   adminCard,
   adminCTAPrimary,
-  adminKicker,
   adminPressable,
-  adminSubtitle,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -51,13 +50,11 @@ export default async function MpConnectPage() {
     <div className="flex flex-col gap-6">
       <AdminBackLink />
 
-      <header className="space-y-2">
-        <p className={adminKicker}>Configuración · Cobros</p>
-        <h1 className={adminTitle}>Mercado Pago</h1>
-        <p className={adminSubtitle}>
-          Conectá tu cuenta para recibir los pagos de las reservas directamente.
-        </p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="Conectar Mercado Pago"
+        subtitle="Vinculá tu cuenta para recibir señas de los jugadores"
+      />
 
       <div className={`${adminCard} ${adminAccentBar} flex items-start gap-4`}>
         <div
@@ -88,14 +85,7 @@ export default async function MpConnectPage() {
         </div>
       </div>
 
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
-        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
-          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Para qué necesitás conectar Mercado Pago?
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
-          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
-        </summary>
-        <div className="space-y-4 border-t border-sky-200/60 px-5 pb-5 pt-4 dark:border-sky-800/40">
+      <AdminGuideBox title="¿Para qué necesitás conectar Mercado Pago?">
           <p className="text-sm text-[var(--text-secondary)]">
             PadeLibre genera un link de pago para que tus clientes te paguen la seña directamente a vos.
           </p>
@@ -123,8 +113,7 @@ export default async function MpConnectPage() {
               con un solo toque desde su celular.
             </p>
           </div>
-        </div>
-      </details>
+      </AdminGuideBox>
 
       {oauthUrl ? (
         <div className="space-y-3">

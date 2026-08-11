@@ -6,7 +6,7 @@ import TrialBanner from "./trial-banner";
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   return (
-    <div className="admin-shell-bg min-h-dvh">
+    <div className="admin-shell-bg min-h-dvh" style={{ borderTop: "2px solid var(--admin-accent-lima)" }}>
       <AdminShellBody chrome={<AdminSidebarWrapper />} trialBanner={<TrialBanner />}>
         <AdminRouteTransition>{children}</AdminRouteTransition>
       </AdminShellBody>

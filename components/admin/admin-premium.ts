@@ -30,6 +30,11 @@ export const adminCTAPrimary =
   "shadow-[var(--admin-btn-shadow)] transition-all duration-200 " +
   "hover:brightness-105 hover:shadow-[var(--admin-btn-shadow-hover)] active:scale-[0.98]";
 
+/** CTA destructivo (eliminar, dar de baja, desactivar) */
+export const adminCTADanger =
+  "inline-flex items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors " +
+  "border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.10)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.16)]";
+
 /** Badge de estado positivo/activo/pagado */
 export const adminBadgeLima =
   "inline-flex items-center bg-[var(--admin-accent-lima-subtle)] border border-[var(--admin-accent-lima-border)] " +

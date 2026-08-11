@@ -1,15 +1,15 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Info, Plus, Trophy } from "lucide-react";
+import { Plus, Trophy } from "lucide-react";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeNeutral,
   adminCard,
   adminCTAPrimary,
   adminSectionLabel,
-  adminSubtitle,
   adminTip,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -47,31 +47,23 @@ export default async function AdminTorneosPage() {
   const typeLabel = (t: string) => TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === t)?.badge ?? t;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className={adminTitle}>Torneos</h1>
-          <p className={`mt-1 ${adminSubtitle}`}>Creá y gestioná torneos para tu club.</p>
-        </div>
-        <Link
-          href="/admin/torneos/nuevo"
-          className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
-        >
-          <Plus size={18} />
-          Crear
-        </Link>
-      </div>
+    <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        kicker="Gestión de juego"
+        title="Torneos"
+        subtitle="Americanos, llaves y peñas"
+        action={
+          <Link
+            href="/admin/torneos/nuevo"
+            className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
+          >
+            <Plus size={18} />
+            Crear
+          </Link>
+        }
+      />
 
-      {/* Sección de información */}
-      <details className="group mt-6 overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
-        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
-          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Cómo funciona la sección de torneos?
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 hidden group-open:inline">Cerrar</span>
-        </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)] dark:border-sky-800/40">
-
+      <AdminGuideBox title="¿Cómo funciona la sección de torneos?">
           <div>
             <p className="font-bold text-[var(--text-primary)]">¿Qué es un torneo en PadeLibre?</p>
             <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
@@ -123,10 +115,9 @@ export default async function AdminTorneosPage() {
           <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Para eliminación directa, asegurate de tener exactamente 4, 8, 16 o 32 parejas pagadas antes de iniciar. Si tenés más inscriptos esperando, podés pedirles que completen el pago.
           </div>
-        </div>
-      </details>
+      </AdminGuideBox>
 
-      <section className="mt-8">
+      <section>
         <h2 className={`mb-3 ${adminSectionLabel}`}>Listado</h2>
         <ul className="space-y-2">
           {((rows ?? []) as Array<{

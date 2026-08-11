@@ -1,8 +1,9 @@
 import { addDays, format } from "date-fns";
 import { redirect } from "next/navigation";
-import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminCard, adminKicker, adminSubtitle, adminTip, adminTitle } from "@/components/admin/admin-premium";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
+import AdminPageHeader from "@/components/admin/admin-page-header";
+import { adminCard, adminTip } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -127,45 +128,37 @@ export default async function AdminTurnosFijosPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={`${adminKicker} text-[#0085FC]`}>Operación semanal</p>
-        <h1 className={adminTitle}>Turnos fijos</h1>
-        <p className={adminSubtitle}>Tocá una celda libre para crear un turno fijo recurrente.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Gestión de juego"
+        title="Turnos fijos"
+        subtitle="Configurá los turnos semanales de tus canchas"
+      />
 
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
-        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
-          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Cómo funcionan los turnos fijos?
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
-          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
-        </summary>
-        <div className="space-y-4 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)] dark:border-sky-800/40">
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">¿Qué es un turno fijo?</p>
-            <p className="mt-1 leading-relaxed">
-              Un horario recurrente que se repite todas las semanas en el mismo día y hora. Tocá una celda libre en
-              la grilla, ponele un título (ej. el apellido del grupo) y, si querés, asignale hasta 4 jugadores.
-            </p>
-          </div>
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">No viene esta semana</p>
-            <p className="mt-1 leading-relaxed">
-              Libera la cancha solo para la próxima fecha de ese turno, sin afectar las semanas siguientes.
-            </p>
-          </div>
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Dar de baja</p>
-            <p className="mt-1 leading-relaxed">
-              Termina el turno fijo para siempre y cancela todos los partidos futuros ya generados.
-            </p>
-          </div>
-          <div className={adminTip}>
-            <span className="font-bold">Consejo:</span> los turnos con jugadores asignados les avisan a los
-            jugadores y les recuerdan confirmar asistencia. Los turnos sin jugadores solo reservan la cancha.
-          </div>
+      <AdminGuideBox title="¿Cómo funcionan los turnos fijos?">
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">¿Qué es un turno fijo?</p>
+          <p className="mt-1 leading-relaxed">
+            Un horario recurrente que se repite todas las semanas en el mismo día y hora. Tocá una celda libre en
+            la grilla, ponele un título (ej. el apellido del grupo) y, si querés, asignale hasta 4 jugadores.
+          </p>
         </div>
-      </details>
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">No viene esta semana</p>
+          <p className="mt-1 leading-relaxed">
+            Libera la cancha solo para la próxima fecha de ese turno, sin afectar las semanas siguientes.
+          </p>
+        </div>
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">Dar de baja</p>
+          <p className="mt-1 leading-relaxed">
+            Termina el turno fijo para siempre y cancela todos los partidos futuros ya generados.
+          </p>
+        </div>
+        <div className={adminTip}>
+          <span className="font-bold">Consejo:</span> los turnos con jugadores asignados les avisan a los
+          jugadores y les recuerdan confirmar asistencia. Los turnos sin jugadores solo reservan la cancha.
+        </div>
+      </AdminGuideBox>
 
       <section className={adminCard}>
         <TurnosFijosGrid courts={gridCourts} times={times} cells={cells} initialDay={initialDay} />

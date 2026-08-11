@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { Mail, MessageCircle } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import ThemeToggleButton from "@/components/theme-toggle-button";
-import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { createClient } from "@/utils/supabase/server";
 
@@ -16,11 +17,11 @@ export default async function AdminConfigGeneralPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-      <header className="space-y-2">
-        <p className={adminKicker}>Configuración</p>
-        <h1 className={adminTitle}>General</h1>
-        <p className={adminSubtitle}>Apariencia y soporte.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="General"
+        subtitle="Preferencias de la aplicación"
+      />
 
       <section className={`${adminCard} ${adminAccentBar} p-6`}>
         <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Apariencia</h2>

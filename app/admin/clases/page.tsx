@@ -2,7 +2,9 @@
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Dumbbell, GraduationCap, Info, Plus, X } from "lucide-react";
+import { Dumbbell, GraduationCap, Plus, X } from "lucide-react";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeNeutral,
@@ -10,9 +12,7 @@ import {
   adminCTAPrimary,
   adminEmptyState,
   adminSectionLabel,
-  adminSubtitle,
   adminTip,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -137,13 +137,14 @@ export default async function AdminClasesPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
-      <div>
-        <h1 className={adminTitle}>Clases y entrenamientos</h1>
-        <p className={`mt-1 ${adminSubtitle}`}>Prácticas, clases públicas y entrenamientos externos de tu club.</p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        kicker="Gestión de juego"
+        title="Clases y entrenamientos"
+        subtitle="Clases públicas y entrenamientos externos de tu club"
+      />
 
-      <section className="mt-6">
+      <section>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <Dumbbell size={18} className="text-[#0085FC]" />
@@ -186,17 +187,7 @@ export default async function AdminClasesPage() {
         </ul>
       </section>
 
-      <hr className="my-8 border-[var(--border-subtle)]" />
-
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
-        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
-          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Cómo funciona la sección de clases?
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
-          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
-        </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)] dark:border-sky-800/40">
-
+      <AdminGuideBox title="¿Cómo funciona la sección de clases?">
           <div>
             <p className="font-bold text-[var(--text-primary)]">¿Qué es una clase en PadeLibre?</p>
             <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
@@ -248,10 +239,9 @@ export default async function AdminClasesPage() {
           <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Publicá la clase con suficiente anticipación para que los jugadores puedan inscribirse. Para clases semanales, publicá al inicio de la semana o con una semana de adelanto.
           </div>
-        </div>
-      </details>
+      </AdminGuideBox>
 
-      <section className="mt-8">
+      <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className={adminSectionLabel}>Registro de clases</h2>
           <Link

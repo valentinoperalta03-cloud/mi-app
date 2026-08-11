@@ -3,16 +3,17 @@ import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import { adminInputClass } from "@/components/admin/admin-form-input";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminBadgeError,
   adminBadgeLima,
   adminButtonSecondary,
+  adminCTADanger,
   adminCTAPrimary,
   adminCard,
   adminEmptyState,
   adminKicker,
-  adminSubtitle,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -114,11 +115,11 @@ export default async function AdminCanchasPage({
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={adminKicker}>Canchas</p>
-        <h1 className={adminTitle}>Mis canchas</h1>
-        <p className={adminSubtitle}>Gestioná precios y horarios de cada cancha.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="Mis canchas"
+        subtitle="Gestioná precios, horarios y configuración de cada cancha"
+      />
 
       {error ? (
         <div className="rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-5 text-sm font-medium text-[var(--text-error)]">
@@ -216,7 +217,7 @@ export default async function AdminCanchasPage({
                     type="text"
                     required
                     defaultValue={c.name ?? ""}
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                    className={adminInputClass}
                   />
                   <input
                     name="price"
@@ -224,12 +225,12 @@ export default async function AdminCanchasPage({
                     min={0}
                     required
                     defaultValue={c.price ?? 0}
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                    className={adminInputClass}
                   />
                   <select
                     name="surface"
                     defaultValue={c.surface ?? "cemento"}
-                    className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                    className={adminInputClass}
                   >
                     <option value="cemento">Cemento</option>
                     <option value="cristal">Cristal</option>
@@ -250,7 +251,7 @@ export default async function AdminCanchasPage({
                       formAction={deleteCourt}
                       name="court_id"
                       value={c.id}
-                      className="rounded-xl border border-rose-300 bg-rose-100 px-4 py-2 text-sm font-semibold text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+                      className={adminCTADanger}
                     >
                       Eliminar
                     </button>
@@ -278,7 +279,7 @@ export default async function AdminCanchasPage({
                 name="closed_date"
                 required
                 min={getTodayYmdInArgentina()}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
+                className={adminInputClass}
               />
             </label>
             <label className={`flex min-w-[200px] flex-1 flex-col gap-1 ${adminKicker}`}>
@@ -287,7 +288,7 @@ export default async function AdminCanchasPage({
                 name="reason"
                 type="text"
                 placeholder="Ej: feriado, torneo interno"
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
+                className={adminInputClass}
               />
             </label>
             <button type="submit" className={adminCTAPrimary}>

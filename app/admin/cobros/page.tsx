@@ -1,7 +1,9 @@
 ﻿import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Info } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminFlashMessage from "@/components/admin/admin-flash-message";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeError,
@@ -10,9 +12,7 @@ import {
   adminCTAPrimary,
   adminEmptyState,
   adminKicker,
-  adminSubtitle,
   adminTip,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
@@ -283,48 +283,26 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   const saldoOk = sp.saldo === "1";
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pb-28 pt-6 md:max-w-3xl md:px-8">
+    <div className="flex flex-col gap-5">
       <AdminBackLink />
-      <header className="space-y-1">
-        <p className={adminKicker}>Operaciones</p>
-        <h1 className={adminTitle}>Cobros del día</h1>
-        <p className={adminSubtitle}>Confirmá los pagos pendientes de efectivo y transferencia</p>
-      </header>
+      <AdminPageHeader
+        kicker="Registro diario"
+        title="Cobros pendientes"
+        subtitle="Confirmá los pagos en efectivo y transferencia"
+      />
 
-      {ok ? (
-        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Actualizado correctamente.
-        </p>
-      ) : null}
-      {saldoOk ? (
-        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Saldo registrado correctamente.
-        </p>
-      ) : null}
+      {ok ? <AdminFlashMessage type="success" message="Actualizado correctamente." /> : null}
+      {saldoOk ? <AdminFlashMessage type="success" message="Saldo registrado correctamente." /> : null}
       {pendingBalanceErr ? (
-        <p className="text-sm text-rose-600">No se pudieron cargar los saldos pendientes: {pendingBalanceErr.message}</p>
+        <AdminFlashMessage type="error" message={`No se pudieron cargar los saldos pendientes: ${pendingBalanceErr.message}`} />
       ) : null}
-      {err ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
-          {err}
-        </p>
-      ) : null}
-      {pendErr ? (
-        <p className="text-sm text-rose-600">No se pudieron cargar los pendientes: {pendErr.message}</p>
-      ) : null}
+      {err ? <AdminFlashMessage type="error" message={err} /> : null}
+      {pendErr ? <AdminFlashMessage type="error" message={`No se pudieron cargar los pendientes: ${pendErr.message}`} /> : null}
       {practicePendErr ? (
-        <p className="text-sm text-rose-600">No se pudieron cargar clases pendientes: {practicePendErr.message}</p>
+        <AdminFlashMessage type="error" message={`No se pudieron cargar clases pendientes: ${practicePendErr.message}`} />
       ) : null}
 
-      <details className="group overflow-hidden rounded-3xl border border-sky-200 bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/25">
-        <summary className="flex cursor-pointer select-none items-center gap-2.5 px-5 py-4 text-sm font-semibold text-sky-900 marker:content-none dark:text-sky-100">
-          <Info size={18} className="shrink-0 text-sky-600 dark:text-sky-400" />
-          ¿Cómo funciona la sección de cobros?
-          <span className="ml-auto text-xs font-normal text-sky-600 dark:text-sky-400 group-open:hidden">Ver guía</span>
-          <span className="ml-auto hidden text-xs font-normal text-sky-600 dark:text-sky-400 group-open:inline">Cerrar</span>
-        </summary>
-        <div className="space-y-5 border-t border-sky-200/60 px-5 pb-5 pt-4 text-sm text-[var(--text-secondary)]">
-
+      <AdminGuideBox title="¿Cómo funciona la sección de cobros?">
           <div>
             <p className="font-bold text-[var(--text-primary)]">¿Qué aparece acá?</p>
             <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
@@ -359,8 +337,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
           <div className={adminTip}>
             <span className="font-bold">Consejo:</span> Si activás los métodos de pago en <strong>Configuración → Métodos de pago</strong>, podés habilitar o deshabilitar efectivo y transferencia para controlar qué opciones ven los jugadores al reservar.
           </div>
-        </div>
-      </details>
+      </AdminGuideBox>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={adminCard}>

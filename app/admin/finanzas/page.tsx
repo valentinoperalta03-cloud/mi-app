@@ -1,7 +1,7 @@
 ﻿import { redirect } from "next/navigation";
 import Link from "next/link";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -38,11 +38,11 @@ export default async function AdminFinanzasPage({ searchParams }: PageProps) {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={`${adminKicker} text-emerald-600`}>Finanzas</p>
-        <h1 className={adminTitle}>Reportes e ingresos</h1>
-        <p className={adminSubtitle}>Ingresos calculados sobre los turnos ya cobrados.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Análisis"
+        title="Finanzas"
+        subtitle="Ingresos y egresos del club"
+      />
       <Link
         href="/admin/finanzas/reembolsos"
         className="inline-flex w-fit rounded-2xl border border-emerald-200 bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"

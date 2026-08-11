@@ -2,6 +2,7 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeDanger,
@@ -9,8 +10,6 @@ import {
   adminButtonSecondary,
   adminCard,
   adminKicker,
-  adminSubtitle,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { PaymentStatusPill, PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -329,16 +328,11 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     <div className="flex flex-col gap-6">
       <AdminBackLink />
 
-      <header className={`${adminCard} relative overflow-hidden`}>
-        <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#0085FC]/10 blur-2xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <p className={adminKicker}>Agenda diaria</p>
-            <h1 className={adminTitle}>Gestión de reservas</h1>
-            <p className={adminSubtitle}>Vista calendario por canchas para operar el día sin fricción.</p>
-          </div>
-        </div>
-      </header>
+      <AdminPageHeader
+        kicker="Agenda diaria"
+        title="Gestión de reservas"
+        subtitle="Vista por canchas para operar el día sin fricción"
+      />
 
       <section className={adminCard}>
         <DateNav selectedDate={selectedDate} today={today} />

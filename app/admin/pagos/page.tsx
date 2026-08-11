@@ -2,6 +2,8 @@ import { format, parseISO, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import { adminInputClass, adminLabelClass } from "@/components/admin/admin-form-input";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeBrand,
@@ -13,8 +15,6 @@ import {
   adminCTAPrimary,
   adminEmptyState,
   adminKicker,
-  adminSubtitle,
-  adminTitle,
 } from "@/components/admin/admin-premium";
 import { PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -168,11 +168,11 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={`${adminKicker} text-emerald-600`}>Operación</p>
-        <h1 className={adminTitle}>Control de pagos</h1>
-        <p className={adminSubtitle}>Verificá quién pagó en los últimos 5 días</p>
-      </header>
+      <AdminPageHeader
+        kicker="Registro diario"
+        title="Control de pagos"
+        subtitle="Verificá quién pagó en los últimos 5 días"
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className={adminCard}>
@@ -191,13 +191,9 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
 
       <section className={adminCard}>
         <form className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <label className="text-sm font-semibold text-[var(--text-secondary)]">
-            Cancha
-            <select
-              name="court"
-              defaultValue={selectedCourt}
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
-            >
+          <label>
+            <span className={adminLabelClass}>Cancha</span>
+            <select name="court" defaultValue={selectedCourt} className={adminInputClass}>
               <option value="all">Todas las canchas</option>
               {ctx.courts.map((court) => (
                 <option key={court.id} value={court.id}>
@@ -207,13 +203,9 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
             </select>
           </label>
 
-          <label className="text-sm font-semibold text-[var(--text-secondary)]">
-            Estado
-            <select
-              name="status"
-              defaultValue={selectedStatus}
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm"
-            >
+          <label>
+            <span className={adminLabelClass}>Estado</span>
+            <select name="status" defaultValue={selectedStatus} className={adminInputClass}>
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}

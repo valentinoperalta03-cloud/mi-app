@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import AdminFlashMessage from "@/components/admin/admin-flash-message";
+import AdminPageHeader from "@/components/admin/admin-page-header";
+import { adminAccentBar, adminCard } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -11,20 +13,8 @@ export const dynamic = "force-dynamic";
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 
 function flash(ok: boolean, err: string) {
-  if (ok) {
-    return (
-      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-        Cambios guardados correctamente.
-      </p>
-    );
-  }
-  if (err) {
-    return (
-      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
-        {err}
-      </p>
-    );
-  }
+  if (ok) return <AdminFlashMessage type="success" message="Cambios guardados correctamente." />;
+  if (err) return <AdminFlashMessage type="error" message={err} />;
   return null;
 }
 
@@ -42,10 +32,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
     return (
       <div className="flex flex-col gap-6">
         <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-        <header className="space-y-2">
-          <p className={adminKicker}>Configuración</p>
-          <h1 className={adminTitle}>Métodos de pago</h1>
-        </header>
+        <AdminPageHeader kicker="Configuración" title="Métodos de pago" />
         <div className={`${adminCard} p-6 text-sm font-medium text-amber-800`}>{NO_CLUB_MSG}</div>
       </div>
     );
@@ -64,10 +51,7 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
     return (
       <div className="flex flex-col gap-6">
         <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-        <header className="space-y-2">
-          <p className={adminKicker}>Configuración</p>
-          <h1 className={adminTitle}>Métodos de pago</h1>
-        </header>
+        <AdminPageHeader kicker="Configuración" title="Métodos de pago" />
         <div className={`${adminCard} p-6 text-sm font-medium text-rose-700`}>
           {clubErr?.message ?? "No se pudo cargar el club."}
         </div>
@@ -93,11 +77,11 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-      <header className="space-y-2">
-        <p className={adminKicker}>Configuración</p>
-        <h1 className={adminTitle}>Métodos de pago</h1>
-        <p className={adminSubtitle}>Mercado Pago, efectivo y transferencia bancaria.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="Métodos de pago"
+        subtitle="Configurá cómo recibís los pagos de tus jugadores"
+      />
 
       <section className={`${adminCard} ${adminAccentBar} p-6`}>
         {flash(paymentsOk, paymentsErr)}

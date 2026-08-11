@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import AdminFlashMessage from "@/components/admin/admin-flash-message";
+import AdminPageHeader from "@/components/admin/admin-page-header";
+import { adminAccentBar, adminCard, adminKicker, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -19,20 +21,8 @@ const CLUB_ADMIN_COLUMNS_FALLBACK =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id" as const;
 
 function flash(ok: boolean, err: string) {
-  if (ok) {
-    return (
-      <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-        Cambios guardados correctamente.
-      </p>
-    );
-  }
-  if (err) {
-    return (
-      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
-        {err}
-      </p>
-    );
-  }
+  if (ok) return <AdminFlashMessage type="success" message="Cambios guardados correctamente." />;
+  if (err) return <AdminFlashMessage type="error" message={err} />;
   return null;
 }
 
@@ -68,10 +58,7 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
     return (
       <div className="flex flex-col gap-6">
         <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-        <header className="space-y-2">
-          <p className={adminKicker}>Configuración</p>
-          <h1 className={adminTitle}>Información del club</h1>
-        </header>
+        <AdminPageHeader kicker="Configuración" title="Información del club" />
         <div className={`${adminCard} p-6 text-sm font-medium text-amber-800`}>{NO_CLUB_MSG}</div>
       </div>
     );
@@ -105,10 +92,7 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
     return (
       <div className="flex flex-col gap-6">
         <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-        <header className="space-y-2">
-          <p className={adminKicker}>Configuración</p>
-          <h1 className={adminTitle}>Información del club</h1>
-        </header>
+        <AdminPageHeader kicker="Configuración" title="Información del club" />
         <div className={`${adminCard} p-6 text-sm font-medium text-rose-700`}>
           {clubErr?.message ?? "No se pudo cargar el club."}
         </div>
@@ -167,14 +151,15 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink href="/admin/config" label="Volver a Configuración" />
-      <header className="space-y-2">
-        <p className={adminKicker}>Configuración</p>
-        <h1 className={adminTitle}>Información del club</h1>
-        <p className={adminSubtitle}>Datos, horarios, ubicación, fotos, cuenta y cancelación.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Configuración"
+        title="Información del club"
+        subtitle="Datos, horarios y fotos de tu club"
+      />
 
       <section className={`${adminCard} ${adminAccentBar} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Cuenta</h2>
+        <p className={adminKicker}>Cuenta</p>
+        <h2 className={adminTitle}>Cuenta</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Datos principales de tu club y sesión.</p>
         <div className="mt-4 flex items-center gap-4 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/10 p-4 dark:border-sky-700/40 dark:bg-sky-950/30">
           {club.logo_url ? (
@@ -194,7 +179,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Horarios del club</h2>
+        <p className={adminKicker}>Horarios</p>
+        <h2 className={adminTitle}>Horarios del club</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Seleccioná la apertura y el cierre del club. Todos los turnos son de 90 minutos y se aplican a todas las canchas automáticamente.
         </p>
@@ -203,7 +189,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Datos del club</h2>
+        <p className={adminKicker}>Datos</p>
+        <h2 className={adminTitle}>Datos del club</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Nombre, descripción, dirección y contacto.</p>
         {flash(dataOk, dataErr)}
         <div className="mt-4">
@@ -222,7 +209,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ubicación del club</h2>
+        <p className={adminKicker}>Ubicación</p>
+        <h2 className={adminTitle}>Ubicación del club</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Ciudad donde opera el club. Los jugadores solo verán tu club si están en la misma ciudad.
         </p>
@@ -240,7 +228,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Fotos</h2>
+        <p className={adminKicker}>Fotos</p>
+        <h2 className={adminTitle}>Fotos</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Logo, portada y galería visible para jugadores.</p>
         {flash(photosOk, photosErr)}
         <div className="mt-4">
@@ -259,7 +248,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
       </section>
 
       <section className={`${adminCard} p-6`}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Política de cancelación</h2>
+        <p className={adminKicker}>Cancelación</p>
+        <h2 className={adminTitle}>Política de cancelación</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Definí hasta cuándo los jugadores pueden cancelar con reembolso.</p>
         {flash(policyOk, policyErr)}
         <div className="mt-4">

@@ -1,7 +1,8 @@
 ﻿import { format, subDays } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
+import AdminPageHeader from "@/components/admin/admin-page-header";
+import { adminAccentBar, adminCard, adminKicker, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -230,11 +231,11 @@ export default async function AdminAnalyticsPage() {
   return (
     <div className="flex flex-col gap-6">
       <AdminBackLink />
-      <header className="space-y-2">
-        <p className={`${adminKicker} text-violet-600`}>Analytics</p>
-        <h1 className={adminTitle}>Uso y ocupación del club</h1>
-        <p className={adminSubtitle}>Estadísticas puras de ocupación y demanda de los últimos 30 días.</p>
-      </header>
+      <AdminPageHeader
+        kicker="Análisis"
+        title="Uso y ocupación del club"
+        subtitle="Estadísticas de los últimos 30 días"
+      />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={`${adminCard} ${adminAccentBar}`}>
@@ -269,7 +270,8 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ocupación por hora (30 días)</h2>
+        <p className={adminKicker}>Detalle</p>
+        <h2 className={adminTitle}>Ocupación por hora (30 días)</h2>
         <div className="mt-4 space-y-2">
           {SLOT_LABELS.map((slot) => {
             const count = slotCounts.get(slot) ?? 0;
@@ -291,7 +293,8 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Ocupación por día de semana</h2>
+        <p className={adminKicker}>Detalle</p>
+        <h2 className={adminTitle}>Ocupación por día de semana</h2>
         <div className="mt-4 space-y-2">
           {WEEKDAY_LABELS.map((day, idx) => {
             const count = dayCounts[idx];
@@ -316,7 +319,8 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Tasa de ocupación por cancha</h2>
+        <p className={adminKicker}>Detalle</p>
+        <h2 className={adminTitle}>Tasa de ocupación por cancha</h2>
         <ul className="mt-4 flex flex-col gap-2">
           {ctx.courts.map((court) => {
             const reservations = reservationsByCourt.get(court.id) ?? 0;
@@ -346,7 +350,8 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section className={adminCard}>
-        <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Tendencia semanal (últimas 4 semanas)</h2>
+        <p className={adminKicker}>Tendencia</p>
+        <h2 className={adminTitle}>Tendencia semanal (últimas 4 semanas)</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {weekBuckets.map((value, idx) => (
             <div key={idx} className="rounded-xl border border-[var(--border-subtle)] p-3 text-center">
@@ -374,7 +379,8 @@ export default async function AdminAnalyticsPage() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className={adminCard}>
-          <h2 className="font-admin-display text-base font-bold text-[var(--text-primary)]">Jugadores únicos vs recurrentes</h2>
+          <p className={adminKicker}>Jugadores</p>
+          <h2 className={adminTitle}>Jugadores únicos vs recurrentes</h2>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-[var(--border-subtle)] p-3 text-center">
               <p className="text-xs font-semibold text-[var(--text-tertiary)]">1 sola vez</p>
