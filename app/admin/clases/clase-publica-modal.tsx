@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { adminCTAPrimary } from "@/components/admin/admin-premium";
+import AddCoachForm from "./add-coach-form";
 import ClaseForm from "./clase-form";
 
 type Court = { id: string; name: string };
@@ -57,6 +58,7 @@ function ClasePublicaDialog({
           </button>
         </div>
 
+        <AddCoachForm clubId={clubId} />
         <ClaseForm clubId={clubId} courts={courts} coaches={coaches} onSuccess={onClose} />
       </div>
     </>

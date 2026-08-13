@@ -125,7 +125,6 @@ export async function createPracticeCoachAction(
   const { error } = await supabase.from(DB_TABLES.practiceCoaches).insert({ club_id: clubId, name });
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/clases");
-  revalidatePath("/admin/clases/nuevo");
   return { ok: true, message: "Profesor agregado." };
 }
 
