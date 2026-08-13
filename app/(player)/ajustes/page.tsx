@@ -10,17 +10,6 @@ import { createClient } from "@/utils/supabase/server";
 
 type ActionState = { ok: boolean; message: string };
 
-function levelFromCategory(category: string): number {
-  if (category.includes("1ra")) return 7.5;
-  if (category.includes("2da")) return 6.5;
-  if (category.includes("3ra")) return 5.5;
-  if (category.includes("4ta")) return 4.5;
-  if (category.includes("5ta")) return 3.5;
-  if (category.includes("6ta")) return 2.5;
-  if (category.includes("7ma")) return 1.5;
-  return 0.5;
-}
-
 export default async function AjustesPage({
   searchParams,
 }: {
@@ -139,15 +128,9 @@ export default async function AjustesPage({
     if (idx > 0) {
       const newIdx = idx - 1;
       const newCategory = LEVEL_HIERARCHY[newIdx];
-      const newLevel = levelFromCategory(newCategory);
       await supabase
         .from(DB_TABLES.profiles)
-        .update({
-          category: newCategory,
-          level: newLevel,
-          level_of_play: newCategory,
-          technical_score: newLevel,
-        })
+        .update({ category: newCategory })
         .eq("user_id", user.id);
     }
     revalidatePath("/ajustes");

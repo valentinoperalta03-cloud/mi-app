@@ -1,10 +1,7 @@
 /**
- * Cálculo de nivel inicial del nuevo onboarding (8 preguntas, distinto del
- * quiz de /nivelacion que sigue viviendo en lib/level-quiz-logic.ts sin
- * cambios). Devuelve una categoría corta ('8va'..'4ta') — nunca ELO numérico
- * directo, por eso `levelCodeToNumeric` + `classifyCategory` (existente) se
- * usan para persistir en profiles.level/level_of_play sin tocar el sistema
- * de ELO.
+ * Cálculo de categoría inicial del onboarding (8 preguntas). Devuelve
+ * directamente una categoría corta ('8va'..'4ta') — fuente de verdad de
+ * `profiles.category`.
  */
 
 export type OnboardingAnswers = {
@@ -104,28 +101,10 @@ export function calculatePlayerLevel(answers: OnboardingAnswers): PlayerLevelCod
   score += p7Scores[answers.p7] ?? 0;
   score += p8Scores[answers.p8] ?? 0;
 
-  // Mapeo a nivel (máximo 22 → 4ta)
+  // Mapeo a categoría (máximo 22 → 4ta)
   if (score <= 4) return "8va";
   if (score <= 8) return "7ma";
   if (score <= 12) return "6ta";
   if (score <= 16) return "5ta";
   return "4ta";
-}
-
-/**
- * profiles.level es double precision en escala 0–8 (misma escala que usa
- * todo el sistema de ELO — ver lib/level-quiz-logic.ts classifyCategory).
- * Acá se mapea la categoría corta al centro de su banda para no inventar
- * una escala paralela.
- */
-const LEVEL_CODE_TO_NUMERIC: Record<PlayerLevelCode, number> = {
-  "8va": 0.5,
-  "7ma": 1.5,
-  "6ta": 2.5,
-  "5ta": 3.5,
-  "4ta": 4.5,
-};
-
-export function levelCodeToNumeric(code: PlayerLevelCode): number {
-  return LEVEL_CODE_TO_NUMERIC[code];
 }

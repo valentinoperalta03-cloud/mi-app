@@ -2,10 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   Ban,
   Clock,
-  HeartHandshake,
   HelpCircle,
   Ticket,
-  Trophy,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -140,30 +138,6 @@ export function FinancialStatusPill({
     );
   }
   return <Pill Icon={Clock} label="Pendiente" variant="warning" className="" />;
-}
-
-export function MatchTypePill({ isCompetitive }: { isCompetitive: boolean | null }) {
-  if (isCompetitive === null || isCompetitive === undefined) {
-    return null;
-  }
-  if (isCompetitive) {
-    return (
-      <Pill
-        Icon={Trophy}
-        label="Competitivo"
-        variant="brand"
-        className=""
-      />
-    );
-  }
-  return (
-    <Pill
-      Icon={HeartHandshake}
-      label="Amistoso"
-      variant="brand"
-      className=""
-    />
-  );
 }
 
 export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente" }) {

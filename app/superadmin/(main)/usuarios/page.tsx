@@ -20,8 +20,7 @@ type ProfileOv = {
   avatar_url: string | null;
   profile_created_at: string | null;
   matches_played: number | null;
-  technical_score: number | null;
-  level_of_play: string | null;
+  category: string | null;
   is_globally_blocked: boolean;
 };
 
@@ -144,7 +143,7 @@ export default async function SuperadminUsuariosPage({
                   </td>
                   <td className="px-4 py-3">{r.matches_played ?? 0}</td>
                   <td className="px-4 py-3 text-slate-400">
-                    {r.technical_score ?? "—"} · {r.level_of_play ?? "—"}
+                    {r.category ?? "—"}
                   </td>
                   <td className="px-4 py-3">
                     <span

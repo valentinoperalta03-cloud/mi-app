@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { HomeSuggestionPlus } from "@/components/home-suggestion-plus";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { fetchSuggestedPlayers } from "@/lib/suggested-players";
 import { createClient } from "@/utils/supabase/server";
 
@@ -67,8 +67,6 @@ export async function HomeSuggestionsSection({
     <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:thin]">
       {list.map((p) => {
         const label = p.name?.trim() || "Jugador";
-        const nivelLine = formatProfileNivelFromRow(p);
-        const nivelParts = splitOfficialCategoryLine(nivelLine);
         return (
           <div
             key={p.user_id}
@@ -85,10 +83,7 @@ export async function HomeSuggestionsSection({
               </div>
               <p className="mt-2 line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">{label}</p>
               <p className="mt-0.5 line-clamp-1 text-xs text-[#0461C4]">
-                <span className="font-bold">{nivelParts.category || "—"}</span>
-                {nivelParts.description ? (
-                  <span className="font-medium">{" - "}{nivelParts.description}</span>
-                ) : null}
+                <span className="font-bold">{formatPlayerCategory(p.category)}</span>
               </p>
             </Link>
             <div className="mt-3 flex justify-center">

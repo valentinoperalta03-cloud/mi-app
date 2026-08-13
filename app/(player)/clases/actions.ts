@@ -7,6 +7,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
 import { createPracticeMercadoPagoPreference } from "@/lib/mp-practice-preference";
 import { isClubMercadoPagoConnected } from "@/lib/club-mp";
+import { getLevelIndex } from "@/lib/match-level";
 import { practicePriceBreakdown } from "@/lib/practice-pricing";
 import { practiceRegistrationBlocksRetry, practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { normalizePlayerPaymentMethod } from "@/lib/offline-payments";
@@ -65,12 +66,12 @@ async function loadSessionForRegister(sessionId: string, userId: string) {
     return { error: "La fecha ya pasó." as const };
   }
 
-  const { data: me } = await supabase.from(DB_TABLES.profiles).select("level, name").eq("user_id", userId).maybeSingle();
-  const myLevel = (me as { level?: number | null; name?: string | null } | null)?.level;
-  if (practice.level_min != null && myLevel != null && myLevel < practice.level_min) {
+  const { data: me } = await supabase.from(DB_TABLES.profiles).select("category, name").eq("user_id", userId).maybeSingle();
+  const myLevelIndex = getLevelIndex((me as { category?: string | null; name?: string | null } | null)?.category ?? null);
+  if (practice.level_min != null && myLevelIndex !== -1 && myLevelIndex < practice.level_min) {
     return { error: "Tu nivel está por debajo del mínimo de la clase." as const };
   }
-  if (practice.level_max != null && myLevel != null && myLevel > practice.level_max) {
+  if (practice.level_max != null && myLevelIndex !== -1 && myLevelIndex > practice.level_max) {
     return { error: "Tu nivel supera el máximo de la clase." as const };
   }
 

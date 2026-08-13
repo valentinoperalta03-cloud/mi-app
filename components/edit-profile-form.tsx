@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { splitOfficialCategoryLine } from "@/lib/profile-display";
 import {
   type EditProfileState,
   deleteMyAccount,
@@ -52,7 +51,6 @@ export function EditProfileForm({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const levelParts = splitOfficialCategoryLine(competitiveLevelLine);
 
   async function handleImageUpload(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -248,17 +246,10 @@ export function EditProfileForm({
 
         <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
-            Nivel competitivo
+            Categoría
           </p>
           <p className="mt-1 text-sm text-[#0461C4]">
-            <span className="font-bold">{levelParts.category || "—"}</span>
-            {levelParts.description ? (
-              <span className="font-medium">{" - "}{levelParts.description}</span>
-            ) : null}
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-            Se actualiza solo con resultados de partidos y la nivelación inicial. No se puede editar
-            acá.
+            <span className="font-bold">{competitiveLevelLine || "—"}</span>
           </p>
         </div>
 

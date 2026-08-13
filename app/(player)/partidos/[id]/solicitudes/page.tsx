@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { getLevelIndex } from "@/lib/match-level";
 import { createClient } from "@/utils/supabase/server";
 import { voteOnRequest } from "./actions";
 
@@ -50,7 +51,7 @@ export default async function MatchRequestsPage({ params }: PageProps) {
     ownerAndRequesterIds.length > 0
       ? await supabase
           .from(DB_TABLES.profiles)
-          .select("user_id,name,category,avatar_url,level")
+          .select("user_id,name,category,avatar_url")
           .in("user_id", ownerAndRequesterIds)
       : { data: [] };
   const votesData =
@@ -65,11 +66,10 @@ export default async function MatchRequestsPage({ params }: PageProps) {
     name: string | null;
     category: string | null;
     avatar_url: string | null;
-    level: number | null;
   }>;
   const votes = (votesData.data ?? []) as Array<{ request_id: string; vote: boolean; voter_id: string }>;
   const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
-  const ownerLevel = Number((profileMap.get(ownerId)?.level ?? 0) || 0);
+  const ownerLevelIndex = getLevelIndex(profileMap.get(ownerId)?.category ?? null);
   const yesVotesByRequest = new Map<string, number>();
   const myVoteByRequest = new Map<string, "approve" | "reject">();
   for (const vote of votes) {
@@ -104,8 +104,11 @@ export default async function MatchRequestsPage({ params }: PageProps) {
             const yesVotes = yesVotesByRequest.get(request.id) ?? 0;
             const participantsNeeded = Math.ceil(totalParticipants / 2) + 1;
             const myVote = myVoteByRequest.get(request.id);
-            const requesterLevel = Number((profile?.level ?? 0) || 0);
-            const levelDiff = ownerLevel > 0 && requesterLevel > 0 ? Math.abs(ownerLevel - requesterLevel) : null;
+            const requesterLevelIndex = getLevelIndex(profile?.category ?? null);
+            const levelDiff =
+              ownerLevelIndex !== -1 && requesterLevelIndex !== -1
+                ? Math.abs(ownerLevelIndex - requesterLevelIndex)
+                : null;
 
             return (
               <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -113,9 +116,7 @@ export default async function MatchRequestsPage({ params }: PageProps) {
                   <ProfileAvatar avatarUrl={profile?.avatar_url ?? null} name={name} size={42} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-                    <p className="text-xs text-slate-500">
-                      Nivel: {profile?.level ?? "?"} · Categoría: {category}
-                    </p>
+                    <p className="text-xs text-slate-500">Categoría: {category}</p>
                   </div>
                 </div>
 

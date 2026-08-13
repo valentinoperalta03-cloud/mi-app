@@ -7,7 +7,7 @@ import { invitePlayerToMatch } from "./actions";
 type FriendRow = {
   user_id: string;
   name: string;
-  technical_score: number | null;
+  category: string | null;
 };
 
 export default function InviteFriendsSection({
@@ -52,16 +52,12 @@ export default function InviteFriendsSection({
         <h2 className="text-base font-semibold tracking-tight text-slate-950">Invitar amigos</h2>
         <ul className="mt-3 space-y-2">
           {friends.map((friend) => {
-            const scoreLabel =
-              friend.technical_score != null && Number.isFinite(friend.technical_score)
-                ? friend.technical_score.toFixed(2)
-                : "s/d";
             const sent = sentIds.has(friend.user_id);
             return (
               <li key={friend.user_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900">{friend.name}</p>
-                  <p className="text-xs text-slate-500">Technical score: {scoreLabel}</p>
+                  <p className="text-xs text-slate-500">Categoría: {friend.category?.trim() || "s/d"}</p>
                 </div>
                 <button
                   type="button"

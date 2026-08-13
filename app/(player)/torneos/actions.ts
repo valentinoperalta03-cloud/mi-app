@@ -5,7 +5,7 @@ import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createTournamentMercadoPagoPreference } from "@/lib/mp-tournament-preference";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
-import { playerLevelInTournamentBounds } from "@/lib/tournament-utils";
+import { categoryToTournamentLevel, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 
 export async function beginTournamentCheckoutAction(formData: FormData): Promise<{ ok: boolean; message: string; url?: string }> {
@@ -53,8 +53,8 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     return { ok: false, message: "Cerró la fecha límite de inscripción." };
   }
 
-  const { data: me } = await supabase.from(DB_TABLES.profiles).select("level").eq("user_id", user.id).maybeSingle();
-  const myLevel = (me as { level?: number | null } | null)?.level;
+  const { data: me } = await supabase.from(DB_TABLES.profiles).select("category").eq("user_id", user.id).maybeSingle();
+  const myLevel = categoryToTournamentLevel((me as { category?: string | null } | null)?.category);
   if (!playerLevelInTournamentBounds(myLevel, tour.category_min, tour.category_max)) {
     return { ok: false, message: "Tu nivel no está dentro del rango permitido para este torneo." };
   }
@@ -65,8 +65,8 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   if (!isIndividual && partnerId === user.id) return { ok: false, message: "Elegí otro jugador como compañero/a." };
 
   if (!isIndividual) {
-    const { data: op } = await supabase.from(DB_TABLES.profiles).select("level").eq("user_id", partnerId).maybeSingle();
-    const ol = (op as { level?: number | null } | null)?.level;
+    const { data: op } = await supabase.from(DB_TABLES.profiles).select("category").eq("user_id", partnerId).maybeSingle();
+    const ol = categoryToTournamentLevel((op as { category?: string | null } | null)?.category);
     if (!playerLevelInTournamentBounds(ol, tour.category_min, tour.category_max)) {
       return { ok: false, message: "El nivel de tu compañero/a no entra en el rango del torneo." };
     }

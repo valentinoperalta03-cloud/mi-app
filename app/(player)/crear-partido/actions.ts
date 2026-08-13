@@ -21,7 +21,6 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
-type MatchType = "amistoso" | "competitivo";
 type GenderCategory = "masculino" | "femenino" | "mixto";
 
 type ConflictRow = {
@@ -42,10 +41,6 @@ function parseFriendIds(raw: string, max = 3): string[] {
       .filter((x) => x.length > 0)
   );
   return [...unique].slice(0, max);
-}
-
-function normalizeMatchType(raw: string): MatchType {
-  return raw.toLowerCase().trim() === "competitivo" ? "competitivo" : "amistoso";
 }
 
 function normalizeGenderCategory(raw: string): GenderCategory {
@@ -99,7 +94,6 @@ export async function crearPartido(
   const scheduledDate = getField(formData, "scheduled_date");
   const scheduledTime = getField(formData, "scheduled_time");
   const durationMinutesRaw = getField(formData, "duration_minutes");
-  const matchType = normalizeMatchType(getField(formData, "match_type"));
   const visibility: MatchVisibility = normalizeMatchVisibility(getField(formData, "visibility"));
   const genderCategory = normalizeGenderCategory(getField(formData, "gender_category"));
   const levelRestricted = getField(formData, "level_restricted") === "true";
@@ -377,8 +371,8 @@ export async function crearPartido(
         amount_pending: amountPending,
         financial_status: financialStatus,
         match_status: "scheduled",
-        match_type: matchType,
-        is_competitive: matchType === "competitivo",
+        match_type: "amistoso",
+        is_competitive: false,
         visibility,
         gender_category: genderCategory,
         level_restricted: levelRestricted,
@@ -428,7 +422,6 @@ export async function crearPartido(
     // que crea el chat y notifica a partir de matches.invited_friend_ids.
     if (paymentMethod === "cash" || paymentMethod === "transfer") {
       const friendlyDate = scheduledDate.split("-").reverse().join("/");
-      const competitiveLabel = matchType === "competitivo" ? "Partido competitivo" : "Partido amistoso";
       const genderLabel =
         genderCategory === "femenino"
           ? "Partido femenino"
@@ -439,7 +432,7 @@ export async function crearPartido(
         supabase,
         user.id,
         `Partido en ${clubName} el ${friendlyDate}`,
-        `• ${competitiveLabel}\n• ${genderLabel}`,
+        `• ${genderLabel}`,
         [],
         data.id
       );

@@ -8,7 +8,7 @@ import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refr
 import { calculateDepositAmount } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
-import { formatCategoryRange, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
+import { categoryToTournamentLevel, formatCategoryRange, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 import TournamentRegisterForm from "../tournament-register-form";
 
@@ -71,8 +71,8 @@ export default async function TorneoDetallePage({ params }: PageProps) {
       : null,
   };
 
-  const { data: me } = await supabase.from(DB_TABLES.profiles).select("level").eq("user_id", user.id).maybeSingle();
-  const myLevel = (me as { level?: number | null } | null)?.level;
+  const { data: me } = await supabase.from(DB_TABLES.profiles).select("category").eq("user_id", user.id).maybeSingle();
+  const myLevel = categoryToTournamentLevel((me as { category?: string | null } | null)?.category);
   const levelOk = playerLevelInTournamentBounds(myLevel, tour.category_min, tour.category_max);
 
   const { data: regs } = await supabase

@@ -81,7 +81,8 @@ export async function GET(req: Request) {
         user_id: p.player_id,
         type: "result_pending",
         title: "¡Cargá el resultado!",
-        body: "Tu partido terminó. Entrá a cargarlo para actualizar tu nivel.",
+        // TODO: reemplazar por lógica de feedback post-partido (pantalla de estrellas).
+        body: "Tu partido terminó. Entrá a cargarlo.",
         match_id: match.id,
       });
     }

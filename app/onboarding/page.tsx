@@ -9,11 +9,10 @@ import { AppleToast } from "@/components/apple-toast";
 import { ONBOARDING_QUESTIONS } from "@/lib/onboarding-quiz-data";
 import {
   calculatePlayerLevel,
-  levelCodeToNumeric,
   type OnboardingAnswers,
   type PlayerLevelCode,
 } from "@/lib/onboarding-level-calculator";
-import { classifyCategory } from "@/lib/level-quiz-logic";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { completeOnboarding } from "./actions";
 import { createClient } from "@/utils/supabase/client";
 
@@ -394,10 +393,9 @@ export default function OnboardingPage() {
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-lima">Tu nivel inicial</p>
             <h1 className={`${spaceGrotesk.className} mt-3 text-4xl font-bold text-white`}>{computedLevel}</h1>
-            <p className="mt-2 text-sm text-white/60">{classifyCategory(levelCodeToNumeric(computedLevel))}</p>
+            <p className="mt-2 text-sm text-white/60">{formatPlayerCategory(computedLevel)}</p>
             <p className="mx-auto mt-5 max-w-xs text-sm leading-relaxed text-white/50">
-              Calculamos tu nivel inicial con tus respuestas. A partir de ahora, tu ELO se ajusta solo después de cada
-              partido que juegues.
+              Calculamos tu categoría inicial con tus respuestas.
             </p>
             <button
               type="button"

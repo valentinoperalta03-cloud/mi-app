@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
+import { isLevelCompatible } from "@/lib/match-level";
 import { isMatchPrivate } from "@/lib/match-visibility";
 import { createNotification } from "@/lib/notifications";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { data: joinerProfile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("gender, level")
+    .select("gender, category")
     .eq("user_id", user.id)
     .maybeSingle();
   const joinerGender = String((joinerProfile as { gender?: string | null } | null)?.gender ?? "")
@@ -96,12 +97,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (m.level_restricted && m.owner_id) {
     const { data: ownerProfile } = await supabase
       .from(DB_TABLES.profiles)
-      .select("level")
+      .select("category")
       .eq("user_id", m.owner_id)
       .maybeSingle();
-    const ownerLevel = Number((ownerProfile as { level?: number | null } | null)?.level ?? 0);
-    const joinerLevel = Number((joinerProfile as { level?: number | null } | null)?.level ?? 0);
-    if (Math.abs(ownerLevel - joinerLevel) > 1) {
+    const ownerCategory = (ownerProfile as { category?: string | null } | null)?.category ?? null;
+    const joinerCategory = (joinerProfile as { category?: string | null } | null)?.category ?? null;
+    if (!isLevelCompatible(joinerCategory, ownerCategory)) {
       return NextResponse.json({ error: "Tu nivel no coincide con el requerido." }, { status: 403 });
     }
   }

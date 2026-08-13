@@ -2,19 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
-import { classifyCategory } from "@/lib/level-quiz-logic";
-import { computeEloDelta, eloKForExperience } from "@/lib/level-evolution-elo";
 import { createNotification } from "@/lib/notifications";
 import { validateBestOfThreeSets } from "@/lib/padel-set-score";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createClient, createServiceClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type RecordMatchResultState = { ok: boolean; message: string };
 
 const initialState: RecordMatchResultState = { ok: false, message: "" };
 const LOCK_MINUTES = 30;
-/** ELO por defecto (0–8) si falta dato en perfil. */
-const DEFAULT_LEVEL = 3.0;
 
 function parseScore(raw: FormDataEntryValue | null): number | null {
   const n = Number.parseInt(String(raw ?? "").trim(), 10);
@@ -60,244 +56,26 @@ type ResultRow = {
   status: "pending_confirmation" | "confirmed" | "disputed" | null;
   team_a_score: number | null;
   team_b_score: number | null;
-  elo_applied_at: string | null;
+  result_processed_at: string | null;
 };
 
-function setsWonLostFromStored(
-  sets: unknown,
-  teamASetsWon: number,
-  teamBSetsWon: number
-): { teamA: { won: number; lost: number }; teamB: { won: number; lost: number } } {
-  if (Array.isArray(sets) && sets.length > 0) {
-    let aWon = 0;
-    let bWon = 0;
-    for (const raw of sets as { a?: number; b?: number }[]) {
-      const a = Number(raw?.a ?? 0);
-      const b = Number(raw?.b ?? 0);
-      if (a > b) aWon += 1;
-      else if (b > a) bWon += 1;
-    }
-    return {
-      teamA: { won: aWon, lost: bWon },
-      teamB: { won: bWon, lost: aWon },
-    };
-  }
-  return {
-    teamA: { won: teamASetsWon, lost: teamBSetsWon },
-    teamB: { won: teamBSetsWon, lost: teamASetsWon },
-  };
-}
-
-function eloChangeNotificationBody(prev: number, next: number): { title: string; body: string } {
-  const prevCat = classifyCategory(prev);
-  const nextCat = classifyCategory(next);
-  const d = next - prev;
-  const deltaStr = `${d >= 0 ? "+" : ""}${d.toFixed(2)}`;
-  if (prevCat !== nextCat && d > 0) {
-    return { title: "Nivel actualizado", body: `🎉 ¡Subiste a ${nextCat}!` };
-  }
-  if (prevCat !== nextCat && d < 0) {
-    return { title: "Nivel actualizado", body: `↓ Bajaste a ${nextCat}` };
-  }
-  if (d > 0) {
-    return {
-      title: "Nivel actualizado",
-      body: `↑ ${deltaStr} → seguís en ${nextCat} (${next.toFixed(1)})`,
-    };
-  }
-  if (d < 0) {
-    return {
-      title: "Nivel actualizado",
-      body: `↓ ${deltaStr} → seguís en ${nextCat} (${next.toFixed(1)})`,
-    };
-  }
-  return { title: "Nivel actualizado", body: `Tu nivel se mantuvo en ${nextCat} (${next.toFixed(1)})` };
-}
-
-async function applyEloForConfirmedMatch(params: {
-  matchId: string;
-  teamAIds: string[];
-  teamBIds: string[];
-  teamAScore: number;
-  teamBScore: number;
-}): Promise<RecordMatchResultState> {
-  const { matchId, teamAIds, teamBIds, teamAScore, teamBScore } = params;
-  const supabase = await createClient({ allowCookieWrites: true });
-
-  const { data: already } = await supabase
-    .from(DB_TABLES.matchResults)
-    .select("elo_applied_at, sets")
-    .eq("match_id", matchId)
-    .maybeSingle();
-  if ((already as { elo_applied_at?: string | null } | null)?.elo_applied_at) {
-    return { ok: true, message: "Resultado confirmado." };
-  }
-
-  const setsStored = (already as { sets?: unknown } | null)?.sets;
-  const { teamA: aSets, teamB: bSets } = setsWonLostFromStored(setsStored, teamAScore, teamBScore);
-
-  const ids = [...teamAIds, ...teamBIds];
-  const { data: profiles, error: pErr } = await supabase
-    .from(DB_TABLES.profiles)
-    .select("user_id, level")
-    .in("user_id", ids);
-  if (pErr) return { ok: false, message: pErr.message };
-
-  const levelById = new Map<string, number>();
-  for (const p of (profiles ?? []) as { user_id: string; level?: number | null }[]) {
-    levelById.set(
-      p.user_id,
-      p.level != null && Number.isFinite(Number(p.level)) ? Number(p.level) : DEFAULT_LEVEL
-    );
-  }
-  for (const id of ids) if (!levelById.has(id)) levelById.set(id, DEFAULT_LEVEL);
-
-  const { data: mpRows } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id, match_id")
-    .in("player_id", ids);
-  const matchIds = [...new Set((mpRows ?? []).map((r: { match_id: string }) => r.match_id))];
-  const { data: matchMetaRows } =
-    matchIds.length > 0
-      ? await supabase
-          .from(DB_TABLES.matches)
-          .select("id, match_type, result_status")
-          .in("id", matchIds)
-      : { data: [] };
-  const competitiveConfirmedIds = new Set(
-    (matchMetaRows ?? [])
-      .filter(
-        (m: { match_type?: string | null; result_status?: string | null }) =>
-          String(m.match_type ?? "").toLowerCase() === "competitivo" &&
-          String(m.result_status ?? "").toLowerCase() === "confirmed"
-      )
-      .map((m: { id: string }) => m.id)
-  );
-  const countByPlayer = new Map<string, number>(ids.map((id) => [id, 0]));
-  for (const row of (mpRows ?? []) as { player_id: string; match_id: string }[]) {
-    if (!competitiveConfirmedIds.has(row.match_id)) continue;
-    countByPlayer.set(row.player_id, (countByPlayer.get(row.player_id) ?? 0) + 1);
-  }
-
-  const snapshot = new Map(levelById);
-  const avgA = (snapshot.get(teamAIds[0]!)! + snapshot.get(teamAIds[1]!)!) / 2;
-  const avgB = (snapshot.get(teamBIds[0]!)! + snapshot.get(teamBIds[1]!)!) / 2;
-  const aWon = teamAScore > teamBScore;
-
-  const partnerOf = (team: readonly [string, string], self: string) =>
-    team[0] === self ? team[1]! : team[0]!;
-
-  async function applyForPlayer(opts: {
-    playerId: string;
-    partnerId: string;
-    opponentAvg: number;
-    outcome: "win" | "loss";
-    setsWon: number;
-    setsLost: number;
-  }) {
-    const { playerId, partnerId, opponentAvg, outcome, setsWon, setsLost } = opts;
-    const prev = snapshot.get(playerId) ?? DEFAULT_LEVEL;
-    const partnerLevel = snapshot.get(partnerId) ?? DEFAULT_LEVEL;
-    const totalMatchesPlayed = countByPlayer.get(playerId) ?? 0;
-    const delta = computeEloDelta({
-      playerLevel: prev,
-      partnerLevel,
-      opponentAvgLevel: opponentAvg,
-      outcome,
-      setsWon,
-      setsLost,
-      totalMatchesPlayed,
-    });
-    const next = Number(Math.max(0, Math.min(8, prev + delta)).toFixed(3));
-    const kUsed = eloKForExperience(totalMatchesPlayed);
-
-    const { error: upErr } = await createServiceClient()
-      .from(DB_TABLES.profiles)
-      .update({ level: next, level_of_play: classifyCategory(next) })
-      .eq("user_id", playerId);
-    if (upErr) return { ok: false as const, message: upErr.message };
-
-    const { error: evErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
-      user_id: playerId,
-      score: next,
-      category: classifyCategory(next),
-      old_level: prev,
-      new_level: next,
-      source: "match_result",
-      result: outcome,
-      opponent_avg_level: opponentAvg,
-      k_factor: kUsed,
-      delta,
-      previous_score: prev,
-      new_score: next,
-    });
-    if (evErr) return { ok: false as const, message: evErr.message };
-
-    const { title, body } = eloChangeNotificationBody(prev, next);
-    await createNotification(supabase, {
-      user_id: playerId,
-      type: "level_up",
-      title,
-      body,
-      match_id: matchId,
-    });
-
-    return { ok: true as const };
-  }
-
-  for (const playerId of teamAIds) {
-    const partnerId = partnerOf([teamAIds[0]!, teamAIds[1]!], playerId);
-    const outcome = aWon ? "win" : "loss";
-    const res = await applyForPlayer({
-      playerId,
-      partnerId,
-      opponentAvg: avgB,
-      outcome,
-      setsWon: aSets.won,
-      setsLost: aSets.lost,
-    });
-    if (!res.ok) return res;
-  }
-
-  for (const playerId of teamBIds) {
-    const partnerId = partnerOf([teamBIds[0]!, teamBIds[1]!], playerId);
-    const outcome = aWon ? "loss" : "win";
-    const res = await applyForPlayer({
-      playerId,
-      partnerId,
-      opponentAvg: avgA,
-      outcome,
-      setsWon: bSets.won,
-      setsLost: bSets.lost,
-    });
-    if (!res.ok) return res;
-  }
-
-  const { error: markErr } = await supabase
-    .from(DB_TABLES.matchResults)
-    .update({ elo_applied_at: nowIso() })
-    .eq("match_id", matchId);
-  if (markErr) return { ok: false, message: markErr.message };
-
-  return { ok: true, message: "Resultado confirmado y ranking actualizado." };
-}
-
-async function finalizeFriendlyResult(matchId: string): Promise<RecordMatchResultState> {
+// TODO: reemplazar por lógica de feedback post-partido (pantalla de estrellas).
+async function finalizeMatchResult(matchId: string): Promise<RecordMatchResultState> {
   const supabase = await createClient({ allowCookieWrites: true });
   const { data: already } = await supabase
     .from(DB_TABLES.matchResults)
-    .select("elo_applied_at")
+    .select("result_processed_at")
     .eq("match_id", matchId)
     .maybeSingle();
-  if ((already as { elo_applied_at?: string | null } | null)?.elo_applied_at) {
+  if ((already as { result_processed_at?: string | null } | null)?.result_processed_at) {
     return { ok: true, message: "Resultado confirmado." };
   }
   const { error: markErr } = await supabase
     .from(DB_TABLES.matchResults)
-    .update({ elo_applied_at: nowIso() })
+    .update({ result_processed_at: nowIso() })
     .eq("match_id", matchId);
   if (markErr) return { ok: false, message: markErr.message };
-  return { ok: true, message: "Resultado amistoso confirmado." };
+  return { ok: true, message: "Resultado confirmado." };
 }
 
 export async function recordMatchResultAction(
@@ -349,9 +127,7 @@ export async function recordMatchResultAction(
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select(
-      "owner_id, match_type, result_status, result_locked_by, result_locked_team, result_lock_expires_at"
-    )
+    .select("owner_id, result_status, result_locked_by, result_locked_team, result_lock_expires_at")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr) return { ok: false, message: mErr.message };
@@ -359,7 +135,6 @@ export async function recordMatchResultAction(
   const matchMeta = (matchRow ?? null) as
     | {
         owner_id?: string | null;
-        match_type?: string | null;
         result_status?: string | null;
         result_locked_by?: string | null;
         result_locked_team?: string | null;
@@ -367,7 +142,6 @@ export async function recordMatchResultAction(
       }
     | null;
   const ownerId = matchMeta?.owner_id;
-  const isCompetitive = String(matchMeta?.match_type ?? "").toLowerCase() === "competitivo";
   const allowed = ids.includes(user.id) || ownerId === user.id;
   if (!allowed) {
     return { ok: false, message: "No podés cargar el resultado de este partido." };
@@ -375,7 +149,7 @@ export async function recordMatchResultAction(
 
   const { data: resultRow, error: rErr } = await supabase
     .from(DB_TABLES.matchResults)
-    .select("id, status, team_a_score, team_b_score, elo_applied_at")
+    .select("id, status, team_a_score, team_b_score, result_processed_at")
     .eq("match_id", matchId)
     .maybeSingle();
   if (rErr) return { ok: false, message: rErr.message };
@@ -583,25 +357,14 @@ export async function recordMatchResultAction(
           user_id: pid,
           type: "result_confirmed",
           title: "Resultado confirmado",
-          body: "Los 4 jugadores confirmaron el resultado. Tu nivel fue actualizado.",
+          body: "Los 4 jugadores confirmaron el resultado.",
           match_id: matchId,
         })
       )
     );
 
-    let eloRes: RecordMatchResultState;
-    if (isCompetitive) {
-      eloRes = await applyEloForConfirmedMatch({
-        matchId,
-        teamAIds,
-        teamBIds,
-        teamAScore: baseA,
-        teamBScore: baseB,
-      });
-    } else {
-      eloRes = await finalizeFriendlyResult(matchId);
-    }
-    if (!eloRes.ok) return eloRes;
+    const finalizeRes = await finalizeMatchResult(matchId);
+    if (!finalizeRes.ok) return finalizeRes;
 
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
@@ -655,27 +418,7 @@ export async function autoConfirmExpiredResults(): Promise<void> {
     const teamBIds = rows.filter((r) => r.team === 2).map((r) => r.player_id);
 
     if (teamAIds.length === 2 && teamBIds.length === 2) {
-      const { data: matchRow } = await supabase
-        .from(DB_TABLES.matches)
-        .select("match_type")
-        .eq("id", result.match_id)
-        .maybeSingle();
-
-      const isCompetitive =
-        String((matchRow as { match_type?: string } | null)?.match_type ?? "").toLowerCase() ===
-        "competitivo";
-
-      if (isCompetitive) {
-        await applyEloForConfirmedMatch({
-          matchId: result.match_id,
-          teamAIds,
-          teamBIds,
-          teamAScore: result.team_a_score,
-          teamBScore: result.team_b_score,
-        });
-      } else {
-        await finalizeFriendlyResult(result.match_id);
-      }
+      await finalizeMatchResult(result.match_id);
 
       const allIds = [...teamAIds, ...teamBIds];
       for (const playerId of allIds) {

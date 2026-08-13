@@ -7,9 +7,6 @@ export type ComunidadPlayerRow = {
   avatar_url: string | null;
   bio?: string | null;
   category?: string | null;
-  level?: number | null;
-  level_of_play?: string | null;
-  technical_score?: number | null;
 };
 
 export async function fetchComunidadPlayersData(
@@ -22,7 +19,7 @@ export async function fetchComunidadPlayersData(
 }> {
   const { data: rows } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, bio, category, level, level_of_play, technical_score")
+    .select("user_id, name, avatar_url, bio, category")
     .neq("user_id", userId)
     .order("name", { ascending: true })
     .limit(300);

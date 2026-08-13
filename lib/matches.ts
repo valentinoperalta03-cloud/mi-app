@@ -28,8 +28,7 @@ export const matchListSelect = `
       name,
       avatar_url,
       gender,
-      level_of_play,
-      technical_score
+      category
     )
   )
 `;

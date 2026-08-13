@@ -103,7 +103,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   const { data: friendProfilesRaw } = favoriteIds.length
     ? await supabase
         .from(DB_TABLES.profiles)
-        .select("user_id, name, avatar_url, level, level_of_play, technical_score")
+        .select("user_id, name, avatar_url, category")
         .in("user_id", favoriteIds)
     : { data: [] };
 
@@ -198,16 +198,12 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
     user_id: string;
     name: string | null;
     avatar_url: string | null;
-    level?: number | null;
-    level_of_play?: string | null;
-    technical_score?: number | null;
+    category?: string | null;
   }>).map((friend) => ({
     userId: friend.user_id,
     name: friend.name?.trim() || "Jugador",
     avatarUrl: friend.avatar_url ?? null,
-    level: friend.level ?? null,
-    levelOfPlay: friend.level_of_play ?? null,
-    technicalScore: friend.technical_score ?? null,
+    category: friend.category ?? null,
   }));
 
   return (

@@ -23,7 +23,7 @@ import { normalizeCity } from "@/lib/locations";
 import { MpLoadingNotice } from "@/components/mp-loading-notice";
 import { nativeOpenUrl } from "@/lib/native-open";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { StepHelpTooltip } from "@/components/step-help-tooltip";
@@ -84,9 +84,7 @@ export type FriendOption = {
   userId: string;
   name: string;
   avatarUrl: string | null;
-  level: number | null;
-  levelOfPlay: string | null;
-  technicalScore: number | null;
+  category: string | null;
 };
 
 type TurnSlot = {
@@ -194,7 +192,6 @@ export default function CrearPartidoForm({
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [closedThisDay, setClosedThisDay] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matchType, setMatchType] = useState<"amistoso" | "competitivo">("amistoso");
   const [visibility, setVisibility] = useState<"publico" | "privado">("publico");
   const [genderCategory, setGenderCategory] = useState<GenderCategory>(defaultGender);
   const [levelRestricted, setLevelRestricted] = useState(false);
@@ -972,34 +969,6 @@ export default function CrearPartidoForm({
           </div>
 
           <section className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tipo de partido</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setMatchType("amistoso")}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-                  matchType === "amistoso"
-                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                }`}
-              >
-                Amistoso
-              </button>
-              <button
-                type="button"
-                onClick={() => setMatchType("competitivo")}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-                  matchType === "competitivo"
-                    ? "border-[#0085FC] bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)]"
-                    : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                }`}
-              >
-                Competitivo
-              </button>
-            </div>
-          </section>
-
-          <section className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Visibilidad</p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -1115,11 +1084,6 @@ export default function CrearPartidoForm({
                 <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {friends.map((friend) => {
                     const selected = selectedFriendIds.includes(friend.userId);
-                    const nivelParts = splitOfficialCategoryLine(
-                      formatProfileNivelFromRow({
-                        level: friend.level,
-                      })
-                    );
                     return (
                       <button
                         key={friend.userId}
@@ -1143,7 +1107,7 @@ export default function CrearPartidoForm({
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{friend.name}</p>
-                            <p className="mt-1 text-xs font-medium text-[#0461C4]">{nivelParts.category || "Sin nivel"}</p>
+                            <p className="mt-1 text-xs font-medium text-[#0461C4]">{formatPlayerCategory(friend.category)}</p>
                           </div>
                         </div>
                       </button>
@@ -1215,7 +1179,6 @@ export default function CrearPartidoForm({
                 },
                 { label: "Hora", value: selectedSlot?.time },
                 { label: "Duración", value: `${selectedSlot?.duration ?? "—"} minutos` },
-                { label: "Tipo", value: matchType === "competitivo" ? "Competitivo" : "Amistoso" },
                 { label: "Categoría", value: genderCategory },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-sm">
@@ -1431,7 +1394,6 @@ export default function CrearPartidoForm({
       <input type="hidden" name="scheduled_date" value={selectedDate} />
       <input type="hidden" name="scheduled_time" value={selectedSlot?.time ?? ""} />
       <input type="hidden" name="duration_minutes" value={String(selectedSlot?.duration ?? "")} />
-      <input type="hidden" name="match_type" value={matchType} />
       <input type="hidden" name="visibility" value={visibility} />
       <input type="hidden" name="gender_category" value={genderCategory} />
       <input type="hidden" name="level_restricted" value={levelRestricted ? "true" : "false"} />

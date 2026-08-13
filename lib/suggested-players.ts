@@ -5,27 +5,22 @@ export type SuggestedPlayer = {
   user_id: string;
   name: string | null;
   avatar_url: string | null;
-  level?: number | null;
-  level_of_play: string | null;
-  technical_score?: number | null;
+  category: string | null;
 };
 
-/**
- * Jugadores de un tramo similar de nivel (mismo entero en escala 0–7 o mismo `level_of_play` legacy).
- */
+/** Jugadores de la misma categoría. */
 export async function fetchSuggestedPlayers(
   supabase: SupabaseClient,
   userId: string
 ): Promise<SuggestedPlayer[]> {
   const { data: me } = await supabase
     .from(DB_TABLES.profiles)
-    .select("level, level_of_play, technical_score")
+    .select("category")
     .eq("user_id", userId)
     .maybeSingle();
 
-  const row = me as { level?: number | null; level_of_play?: string | null; technical_score?: number | null } | null;
-  const tech = row?.technical_score != null ? Number(row.technical_score) : NaN;
-  const legacyBand = row?.level_of_play?.trim() ?? "";
+  const category = (me as { category?: string | null } | null)?.category?.trim() ?? "";
+  if (!category) return [];
 
   const { data: favs } = await supabase
     .from(DB_TABLES.userFavorites)
@@ -36,23 +31,12 @@ export async function fetchSuggestedPlayers(
     (favs ?? []).map((f: { favorite_user_id: string }) => f.favorite_user_id)
   );
 
-  let query = supabase
+  const { data: rows, error } = await supabase
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level, level_of_play, technical_score")
+    .select("user_id, name, avatar_url, category")
     .neq("user_id", userId)
+    .eq("category", category)
     .limit(48);
-
-  if (Number.isFinite(tech)) {
-    const lo = Math.floor(tech);
-    const hi = lo + 1;
-    query = query.gte("technical_score", lo).lt("technical_score", hi);
-  } else if (legacyBand) {
-    query = query.eq("level_of_play", legacyBand);
-  } else {
-    return [];
-  }
-
-  const { data: rows, error } = await query;
 
   if (error || !rows?.length) return [];
 

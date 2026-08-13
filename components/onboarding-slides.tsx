@@ -515,7 +515,7 @@ function SlideContent({
               de verdad
             </h2>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 28 }}>
-              Sistema ELO partido a partido. Ganás contra rivales difíciles → subís. Cada partido competitivo cuenta.
+              Jugás en tu categoría real, de 8va a 1ra. Elegís tu nivel al empezar y jugás partidos parejos.
             </p>
           </motion.div>
 
@@ -533,9 +533,9 @@ function SlideContent({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 4 }}>Tu nivel actual</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 4 }}>Tu categoría actual</div>
                 <div style={{ fontSize: 36, fontWeight: 800, color: "#fff", fontFamily: "'Outfit',sans-serif", letterSpacing: "-0.04em" }}>
-                  5.4 <span style={{ fontSize: 14, color: BLUE, fontWeight: 600 }}>↑ +0.3</span>
+                  5ta
                 </div>
               </div>
               <div

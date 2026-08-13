@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { sanitizeText } from "@/lib/sanitize";
-import { classifyCategory } from "@/lib/level-quiz-logic";
-import { calculatePlayerLevel, levelCodeToNumeric, type OnboardingAnswers } from "@/lib/onboarding-level-calculator";
+import { calculatePlayerLevel, type OnboardingAnswers } from "@/lib/onboarding-level-calculator";
 import { ensureProfileRowExists } from "@/lib/profiles";
 import { updateMyProfile } from "@/app/(player)/perfil/edit/actions";
 import { createClient } from "@/utils/supabase/server";
@@ -98,31 +97,12 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<Co
     return { ok: false, message: "Ya completaste el onboarding." };
   }
 
-  const levelCode = calculatePlayerLevel(answers);
-  const numericLevel = levelCodeToNumeric(levelCode);
-  const category = classifyCategory(numericLevel);
-
-  const { error: evoErr } = await supabase.from(DB_TABLES.levelEvolution).insert({
-    user_id: user.id,
-    score: numericLevel,
-    category,
-    old_level: null,
-    new_level: numericLevel,
-    source: "quiz",
-    previous_score: null,
-    new_score: numericLevel,
-    delta: numericLevel,
-  });
-  if (evoErr) return { ok: false, message: evoErr.message };
+  const category = calculatePlayerLevel(answers);
 
   const { error } = await supabase
     .from(DB_TABLES.profiles)
     .update({
-      level: numericLevel,
-      level_of_play: category,
       category,
-      technical_score: numericLevel,
-      is_leveled: true,
       phone,
       onboarding_completed: true,
     })
@@ -132,5 +112,5 @@ export async function completeOnboarding(payload: OnboardingPayload): Promise<Co
   revalidatePath("/home");
   revalidatePath("/onboarding");
   revalidatePath(`/jugador/${user.id}`);
-  return { ok: true, message: "Onboarding completado.", level: levelCode };
+  return { ok: true, message: "Onboarding completado.", level: category };
 }

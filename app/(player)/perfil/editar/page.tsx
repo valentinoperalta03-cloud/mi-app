@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { EditProfileForm } from "@/components/edit-profile-form";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function EditarPerfilPage() {
@@ -16,7 +16,7 @@ export default async function EditarPerfilPage() {
 
   const { data: profile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("name, age, bio, avatar_url, level, level_of_play, technical_score, gender, preferred_hand, court_position, preferred_schedule")
+    .select("name, age, bio, avatar_url, category, gender, preferred_hand, court_position, preferred_schedule")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -25,9 +25,7 @@ export default async function EditarPerfilPage() {
     age?: number | null;
     bio?: string | null;
     avatar_url?: string | null;
-    level?: number | null;
-    level_of_play?: string | null;
-    technical_score?: number | null;
+    category?: string | null;
     gender?: "masculino" | "femenino" | null;
     preferred_hand?: string | null;
     court_position?: string | null;
@@ -36,7 +34,7 @@ export default async function EditarPerfilPage() {
 
   const emailLocal = user.email?.split("@")[0] ?? "Jugador";
   const defaultName = row?.name?.trim() || emailLocal;
-  const competitiveLevelLine = formatProfileNivelFromRow(row);
+  const competitiveLevelLine = formatPlayerCategory(row?.category);
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-24 pt-6">

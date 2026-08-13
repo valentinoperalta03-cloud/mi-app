@@ -1,5 +1,5 @@
 import { DB_TABLES } from "@/lib/db-tables";
-import { classifyCategory } from "@/lib/level-quiz-logic";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { getAdminClient } from "@/utils/supabase/server";
 
 export type WeeklyTopPlayer = {
@@ -7,7 +7,6 @@ export type WeeklyTopPlayer = {
   wins: number;
   name: string | null;
   avatar_url: string | null;
-  level: number | null;
   categoryLabel: string;
 };
 
@@ -89,7 +88,7 @@ export async function fetchWeeklyTopWinners(limit = 10): Promise<WeeklyTopPlayer
   const ids = sorted.map(([id]) => id);
   const { data: profiles } = await admin
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level, level_of_play")
+    .select("user_id, name, avatar_url, category")
     .in("user_id", ids);
 
   const byId = new Map(
@@ -98,26 +97,21 @@ export async function fetchWeeklyTopWinners(limit = 10): Promise<WeeklyTopPlayer
         user_id: string;
         name: string | null;
         avatar_url: string | null;
-        level: number | null;
-        level_of_play: string | null;
+        category: string | null;
       }) => [p.user_id, p]
     )
   );
 
   return sorted.map(([user_id, wins]) => {
     const p = byId.get(user_id) as
-      | { name: string | null; avatar_url: string | null; level: number | null; level_of_play: string | null }
+      | { name: string | null; avatar_url: string | null; category: string | null }
       | undefined;
-    const lv = p?.level != null && Number.isFinite(Number(p.level)) ? Number(p.level) : null;
-    const categoryLabel =
-      (p?.level_of_play && String(p.level_of_play).trim()) || (lv != null ? classifyCategory(lv) : "—");
     return {
       user_id,
       wins,
       name: p?.name ?? null,
       avatar_url: p?.avatar_url ?? null,
-      level: lv,
-      categoryLabel,
+      categoryLabel: formatPlayerCategory(p?.category ?? null),
     };
   });
 }
@@ -145,7 +139,7 @@ export async function fetchTopByMatchesPlayed(limit = 10): Promise<TopMatchesRow
   const ids = sorted.map(([id]) => id);
   const { data: profiles } = await admin
     .from(DB_TABLES.profiles)
-    .select("user_id, name, avatar_url, level, level_of_play")
+    .select("user_id, name, avatar_url, category")
     .in("user_id", ids);
 
   const byId = new Map(
@@ -154,25 +148,21 @@ export async function fetchTopByMatchesPlayed(limit = 10): Promise<TopMatchesRow
         user_id: string;
         name: string | null;
         avatar_url: string | null;
-        level: number | null;
-        level_of_play: string | null;
+        category: string | null;
       }) => [p.user_id, p]
     )
   );
 
   return sorted.map(([user_id, matches_played]) => {
     const p = byId.get(user_id) as
-      | { name: string | null; avatar_url: string | null; level: number | null; level_of_play: string | null }
+      | { name: string | null; avatar_url: string | null; category: string | null }
       | undefined;
-    const lv = p?.level != null && Number.isFinite(Number(p.level)) ? Number(p.level) : null;
-    const categoryLabel =
-      (p?.level_of_play && String(p.level_of_play).trim()) || (lv != null ? classifyCategory(lv) : "—");
     return {
       user_id,
       matches_played,
       name: p?.name ?? null,
       avatar_url: p?.avatar_url ?? null,
-      categoryLabel,
+      categoryLabel: formatPlayerCategory(p?.category ?? null),
     };
   });
 }

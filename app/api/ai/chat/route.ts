@@ -134,7 +134,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "onboarding_perfil",
     category: "Inconvenientes",
     label: "No me deja unirme ni crear partidos",
-    answer: `Para poder crear o unirte a partidos necesitás **completar tu perfil**.\n\nQué necesitás:\n✅ Nombre\n✅ Género\n✅ Quiz de nivel (para tu ranking ELO)\n\nCómo completarlo:\n1. Andá al menú (☰) → Editar perfil\n2. O desde la pantalla del partido → el sistema te va a guiar automáticamente\n\nSolo toma 2 minutos y te habilita todas las funciones de la app.`,
+    answer: `Para poder crear o unirte a partidos necesitás **completar tu perfil**.\n\nQué necesitás:\n✅ Nombre\n✅ Género\n✅ Quiz de nivel (para tu categoría)\n\nCómo completarlo:\n1. Andá al menú (☰) → Editar perfil\n2. O desde la pantalla del partido → el sistema te va a guiar automáticamente\n\nSolo toma 2 minutos y te habilita todas las funciones de la app.`,
   },
 ];
 

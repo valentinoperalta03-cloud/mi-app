@@ -2,8 +2,6 @@ import { Building2, User } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
-import { LevelEvolutionChart } from "@/components/profile/level-evolution-chart";
-import { ProfileLevelingWizard } from "@/components/profile/profile-leveling-wizard";
 import {
   ProfileMotionSection,
   ProfileMotionSurface,
@@ -14,10 +12,9 @@ import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow, getProfileLevelParts } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { fetchFinishedMatchActivity } from "@/lib/player-match-history";
 import {
-  fetchLevelEvolutionSeries,
   fetchProfileMatchCards,
   fetchTopClubsByReservations,
   fetchTopCoplayers,
@@ -29,7 +26,7 @@ import { createClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 const PROFILE_SELECT =
-  "name, bio, level, level_of_play, technical_score, age, avatar_url, category, is_leveled, onboarding_completed, preferred_hand, court_position, preferred_schedule" as const;
+  "name, bio, age, avatar_url, category, onboarding_completed, preferred_hand, court_position, preferred_schedule" as const;
 
 const USER_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -120,7 +117,6 @@ export default async function PerfilPage() {
 
   const row = profile as ProfileRow & {
     category?: string | null;
-    is_leveled?: boolean | null;
     onboarding_completed?: boolean | null;
     preferred_hand?: string | null;
     court_position?: string | null;
@@ -129,26 +125,11 @@ export default async function PerfilPage() {
   if (row.onboarding_completed !== true) {
     redirect("/onboarding");
   }
-  const isLeveled =
-    (row?.level != null && Number.isFinite(Number(row.level))) ||
-    Boolean(row?.level_of_play?.trim()) ||
-    row?.is_leveled === true;
   const displayName = row?.name?.trim() || "Tu perfil";
-  const levelParts = getProfileLevelParts(row);
-  const nivelLine = formatProfileNivelFromRow(row);
+  const categoryLabel = formatPlayerCategory(row?.category);
 
-  if (!isLeveled) {
-    return (
-      <MotionPage className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-2 bg-[var(--bg-app)] px-4 pb-24 pt-6">
-        <ProfileLevelingWizard />
-        <ProfileSessionFooter />
-      </MotionPage>
-    );
-  }
-
-  const [activities, evolution, matchCards, coplayers, clubs] = await Promise.all([
+  const [activities, matchCards, coplayers, clubs] = await Promise.all([
     fetchFinishedMatchActivity(supabase, user.id),
-    fetchLevelEvolutionSeries(supabase, user.id),
     fetchProfileMatchCards(supabase, user.id, 3),
     fetchTopCoplayers(supabase, user.id, 5),
     fetchTopClubsByReservations(supabase, user.id, 5),
@@ -180,16 +161,12 @@ export default async function PerfilPage() {
               />
               <div>
                 <h1 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">{displayName}</h1>
-                {levelParts ? (
-                  <span
-                    className="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest"
-                    style={{ background: "#CCFF00", color: "#000" }}
-                  >
-                    {levelParts.category}
-                  </span>
-                ) : (
-                  <p className="mt-0.5 text-sm font-semibold text-[var(--text-secondary)]">{nivelLine}</p>
-                )}
+                <span
+                  className="mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest"
+                  style={{ background: "#CCFF00", color: "#000" }}
+                >
+                  {categoryLabel}
+                </span>
               </div>
             </div>
             <Link
@@ -203,21 +180,6 @@ export default async function PerfilPage() {
               </svg>
             </Link>
           </div>
-
-          {/* Barra de progreso */}
-          {levelParts ? (
-            <div className="mt-5 space-y-1.5">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
-                <div
-                  className="h-full rounded-full transition-[width]"
-                  style={{ width: `${levelParts.progressInEloUnit}%`, background: "#CCFF00" }}
-                />
-              </div>
-              <p className="text-[11px] text-[var(--text-tertiary)]">
-                {levelParts.progressInEloUnit}% hacia la siguiente categoría
-              </p>
-            </div>
-          ) : null}
 
           {/* Bio */}
           {row?.bio?.trim() ? (
@@ -264,13 +226,6 @@ export default async function PerfilPage() {
           </div>
         </section>
       ) : null}
-
-      <ProfileMotionSection
-        title="Evolución de nivel"
-        description="Progreso según nivelación inicial y partidos jugados."
-      >
-        <LevelEvolutionChart points={evolution} />
-      </ProfileMotionSection>
 
       <ProfileMotionSection title="Partidos" description="Tus últimos resultados.">
         <ProfileMatchCardsPremium cards={matchCards} showViewAll />

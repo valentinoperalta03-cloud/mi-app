@@ -4,7 +4,7 @@ import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatProfileNivelFromRow, getProfileLevelParts } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 import ProfileSocialActions from "@/components/profile-social-actions";
 
@@ -21,7 +21,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
     .select(
-      "user_id, name, gender, level, level_of_play, technical_score, age, bio, avatar_url, preferred_hand, court_position, preferred_schedule"
+      "user_id, name, gender, category, age, bio, avatar_url, preferred_hand, court_position, preferred_schedule"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -33,9 +33,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const row = profile as {
     name: string | null;
     gender?: "masculino" | "femenino" | null;
-    level?: number | null;
-    level_of_play?: string | null;
-    technical_score?: number | null;
+    category?: string | null;
     age: number | null;
     bio: string | null;
     avatar_url: string | null;
@@ -68,8 +66,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     followsBack = Boolean(followsBackRow);
     isMutual = favorited && followsBack;
   }
-  const nivelLine = formatProfileNivelFromRow(row);
-  const levelParts = getProfileLevelParts(row);
+  const categoryLabel = formatPlayerCategory(row.category);
 
   const [{ count: followersCount }, { count: followingCount }] = await Promise.all([
     supabase
@@ -248,22 +245,9 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
         {row.bio?.trim() ? (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
         ) : null}
-        {levelParts ? (
-          <div className="mt-2 space-y-2">
-            <p className="text-sm font-bold text-[#0461C4]">{levelParts.category}</p>
-            <p className="text-xs font-medium text-slate-500">ELO {levelParts.elo}</p>
-            <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-[#0461C4]"
-                style={{ width: `${levelParts.progressInEloUnit}%` }}
-              />
-            </div>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-[#0461C4]">
-            <span className="font-bold">{nivelLine}</span>
-          </p>
-        )}
+        <p className="mt-2 text-sm text-[#0461C4]">
+          <span className="font-bold">{categoryLabel}</span>
+        </p>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
             <p className="text-[10px] uppercase tracking-wide text-slate-400">Partidos</p>

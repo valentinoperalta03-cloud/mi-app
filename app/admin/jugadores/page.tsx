@@ -128,7 +128,7 @@ export default async function AdminJugadoresPage() {
   const { data: profilesRaw } = userIds.length
     ? await supabase
         .from(DB_TABLES.profiles)
-        .select("user_id,name,avatar_url,level,category,preferred_hand,court_position,preferred_schedule")
+        .select("user_id,name,avatar_url,category,preferred_hand,court_position,preferred_schedule")
         .in("user_id", userIds)
     : { data: [] };
 
@@ -137,7 +137,6 @@ export default async function AdminJugadoresPage() {
       user_id: string;
       name: string | null;
       avatar_url: string | null;
-      level: number | null;
       category: string | null;
       preferred_hand: string | null;
       court_position: string | null;
@@ -147,7 +146,6 @@ export default async function AdminJugadoresPage() {
       {
         name: p.name ?? "Jugador",
         avatarUrl: p.avatar_url ?? null,
-        level: p.level ?? null,
         category: p.category ?? null,
         preferredHand: p.preferred_hand ?? null,
         courtPosition: p.court_position ?? null,
@@ -194,11 +192,7 @@ export default async function AdminJugadoresPage() {
       const cancellationRate = totalForCancellation > 0 ? Math.round((pay.cancelled / totalForCancellation) * 100) : 0;
       const profile = profileData.get(uid);
       const category = String(profile?.category ?? "").trim();
-      const level = Number(profile?.level ?? 0);
-      const levelBadge =
-        category || level > 0
-          ? [category || null, level > 0 ? `Nivel ${level}` : null].filter(Boolean).join(" · ")
-          : "Sin nivelar";
+      const levelBadge = category ? `${category} categoría` : "Sin nivelar";
       return {
         uid,
         name: profile?.name ?? "Jugador",

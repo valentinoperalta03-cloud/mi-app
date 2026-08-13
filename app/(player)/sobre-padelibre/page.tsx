@@ -50,7 +50,7 @@ export default function SobrePadelibrePage() {
             {
               emoji: "🎯",
               title: "Encontrá partidos de tu nivel",
-              desc: "Sistema de ranking ELO que mide tu progreso real y te conecta con jugadores compatibles.",
+              desc: "Elegí tu categoría (8va a 1ra) y te conectamos con jugadores compatibles.",
             },
             {
               emoji: "👥",

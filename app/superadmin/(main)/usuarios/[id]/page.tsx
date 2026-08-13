@@ -27,8 +27,7 @@ export default async function SuperadminUsuarioDetailPage({ params }: PageProps)
     profile_created_at: string | null;
     matches_played: number | null;
     wins: number | null;
-    technical_score: number | null;
-    level_of_play: string | null;
+    category: string | null;
     is_globally_blocked: boolean;
   };
 
@@ -117,12 +116,8 @@ export default async function SuperadminUsuarioDetailPage({ params }: PageProps)
             <dd className="text-slate-200">{p.wins ?? 0}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">ELO técnico</dt>
-            <dd className="text-slate-200">{p.technical_score ?? "—"}</dd>
-          </div>
-          <div>
             <dt className="text-slate-500">Categoría</dt>
-            <dd className="text-slate-200">{p.level_of_play ?? "—"}</dd>
+            <dd className="text-slate-200">{p.category ?? "—"}</dd>
           </div>
         </dl>
       </section>

@@ -25,6 +25,7 @@ export function getLevelIndex(category: string | null | undefined): number {
   return -1;
 }
 
+/** El jugador puede unirse a partidos de su misma categoría ±1. */
 export function isLevelCompatible(
   playerCategory: string | null | undefined,
   creatorCategory: string | null | undefined

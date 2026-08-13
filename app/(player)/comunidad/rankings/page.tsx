@@ -56,7 +56,6 @@ export default async function RankingsPage() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-bold text-[#0085FC]">{row.wins} victorias</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">ELO {row.level?.toFixed(1) ?? "—"}</p>
                 </div>
               </li>
             ))

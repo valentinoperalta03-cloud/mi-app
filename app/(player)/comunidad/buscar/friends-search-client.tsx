@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { setUserFavorite } from "@/app/(player)/jugador/[userId]/actions";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { AppleToast } from "@/components/apple-toast";
 
 type PlayerCard = {
@@ -14,9 +14,6 @@ type PlayerCard = {
   avatar_url: string | null;
   bio?: string | null;
   category?: string | null;
-  level?: number | null;
-  level_of_play?: string | null;
-  technical_score?: number | null;
 };
 
 type FriendsSearchClientProps = {
@@ -44,7 +41,7 @@ export default function FriendsSearchClient({
     if (q.length < 2) return players;
     return players.filter((player) => {
       const label = (player.name ?? "Jugador").toLowerCase();
-      const nivelLine = formatProfileNivelFromRow(player).toLowerCase();
+      const nivelLine = formatPlayerCategory(player.category).toLowerCase();
       const bio = (player.bio ?? "").toLowerCase();
       return label.includes(q) || nivelLine.includes(q) || bio.includes(q);
     });
@@ -70,7 +67,6 @@ export default function FriendsSearchClient({
         <ul className="space-y-3">
           {filtered.map((player) => {
             const label = player.name?.trim() || "Jugador";
-            const nivelParts = splitOfficialCategoryLine(formatProfileNivelFromRow(player));
             return (
               <li key={player.user_id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-sm">
                 <div className="flex items-center gap-3">
@@ -78,7 +74,7 @@ export default function FriendsSearchClient({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{label}</p>
                     <span className="mt-1 inline-flex rounded-full border border-[#0085FC]/20 bg-[#0085FC]/5 px-2.5 py-1 text-[11px] font-semibold text-[#0461C4]">
-                      {player.category ? `Nivel ${player.category}` : nivelParts.category || "Sin nivel"}
+                      {formatPlayerCategory(player.category)}
                     </span>
                     {player.bio?.trim() ? (
                       <p className="mt-1 line-clamp-2 text-xs text-[var(--text-tertiary)]">{player.bio.trim()}</p>

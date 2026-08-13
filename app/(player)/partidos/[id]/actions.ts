@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isLevelCompatible } from "@/lib/match-level";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { log } from "@/lib/logger";
 import { pickTeamForMatch } from "@/lib/match-teams";
@@ -216,7 +217,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,visibility,match_status,level_restricted,level,gender_category")
+    .select("id,owner_id,visibility,match_status,level_restricted,gender_category")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -290,30 +291,30 @@ export async function requestToJoin(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?invite=${inviteToken}&join_sent=1`);
   }
 
-  let levelDiff = 0;
+  let isCompatibleLevel = true;
   if (isLevelRestricted) {
     const { data: ownerProfile } = await supabase
       .from(DB_TABLES.profiles)
-      .select("level, category")
+      .select("category")
       .eq("user_id", m.owner_id ?? "")
       .maybeSingle();
 
     const { data: userProfile } = await supabase
       .from(DB_TABLES.profiles)
-      .select("level, category")
+      .select("category")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const ownerLevel = Number((ownerProfile as { level?: number | null } | null)?.level ?? 0);
-    const userLevel = Number((userProfile as { level?: number | null } | null)?.level ?? 0);
-    levelDiff = Math.abs(ownerLevel - userLevel);
+    const ownerCategory = (ownerProfile as { category?: string | null } | null)?.category ?? null;
+    const userCategory = (userProfile as { category?: string | null } | null)?.category ?? null;
+    isCompatibleLevel = isLevelCompatible(userCategory, ownerCategory);
 
-    if (levelDiff > 1 && !levelOverride) {
+    if (!isCompatibleLevel && !levelOverride) {
       redirect(`/partidos/${matchId}?join_error=nivel`);
     }
   }
 
-  const needsVotingRequest = isPrivate || (isLevelRestricted && levelDiff > 1 && levelOverride);
+  const needsVotingRequest = isPrivate || (isLevelRestricted && !isCompatibleLevel && levelOverride);
   if (needsVotingRequest) {
     const { error: insErr } = await supabase.from(DB_TABLES.matchJoinRequests).upsert(
       {

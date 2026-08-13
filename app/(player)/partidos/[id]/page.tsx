@@ -14,7 +14,8 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { buildMatchShareUrl, verifyInviteToken } from "@/lib/invite-token";
 import { isMatchPrivate } from "@/lib/match-visibility";
 import { isOnboardingComplete } from "@/lib/onboarding-check";
-import { formatProfileNivelFromRow, splitOfficialCategoryLine } from "@/lib/profile-display";
+import { isLevelCompatible } from "@/lib/match-level";
+import { formatPlayerCategory } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
@@ -123,8 +124,6 @@ type ParticipantRow = {
   name: string | null;
   avatar_url: string | null;
   category: string | null;
-  level: number | null;
-  technical_score: number | null;
 };
 
 export default async function PartidoDetailPage({ params, searchParams }: PageProps) {
@@ -232,7 +231,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const { data: participantsRows } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id, team, profiles(name,avatar_url,category,level,technical_score)")
+    .select("player_id, team, profiles(name,avatar_url,category)")
     .eq("match_id", id);
 
   const participants = ((participantsRows ?? []) as Array<{
@@ -243,15 +242,11 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           name: string | null;
           avatar_url: string | null;
           category: string | null;
-          level: number | null;
-          technical_score: number | null;
         }
       | {
           name: string | null;
           avatar_url: string | null;
           category: string | null;
-          level: number | null;
-          technical_score: number | null;
         }[]
       | null;
   }>).map((row) => {
@@ -262,8 +257,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       name: profile?.name ?? null,
       avatar_url: profile?.avatar_url ?? null,
       category: profile?.category ?? null,
-      level: profile?.level ?? null,
-      technical_score: profile?.technical_score ?? null,
     } satisfies ParticipantRow;
   });
 
@@ -451,19 +444,20 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     matchStatusNorm !== "cancelled" &&
     matchStatusNorm !== "finished";
   const isLevelRestricted = Boolean(match.level_restricted);
-  let userLevelDiff = 0;
+  let userCategoryCompatible = true;
 
   if (isLevelRestricted && !isOwner && !isParticipant && canJoinAsNewPlayer) {
-    const [{ data: ownerLvl }, { data: userLvl }] = await Promise.all([
-      supabase.from(DB_TABLES.profiles).select("level").eq("user_id", match.owner_id ?? "").maybeSingle(),
-      supabase.from(DB_TABLES.profiles).select("level").eq("user_id", user.id).maybeSingle(),
+    const [{ data: ownerCat }, { data: userCat }] = await Promise.all([
+      supabase.from(DB_TABLES.profiles).select("category").eq("user_id", match.owner_id ?? "").maybeSingle(),
+      supabase.from(DB_TABLES.profiles).select("category").eq("user_id", user.id).maybeSingle(),
     ]);
-    const oLevel = Number((ownerLvl as { level?: number | null } | null)?.level ?? 0);
-    const uLevel = Number((userLvl as { level?: number | null } | null)?.level ?? 0);
-    userLevelDiff = Math.abs(oLevel - uLevel);
+    userCategoryCompatible = isLevelCompatible(
+      (userCat as { category?: string | null } | null)?.category ?? null,
+      (ownerCat as { category?: string | null } | null)?.category ?? null
+    );
   }
 
-  const userOutOfLevel = isLevelRestricted && userLevelDiff > 1;
+  const userOutOfLevel = isLevelRestricted && !userCategoryCompatible;
   const typeLabel = detail.match_type === "competitivo" ? "Competitivo" : "Amistoso";
   const categoryLabel =
     detail.gender_category === "masculino"
@@ -507,9 +501,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const partyUrl = buildMatchShareUrl(id, match.visibility);
   const sharePath = partyUrl;
   const ownerParticipant = participants.find((p) => p.player_id === (match.owner_id ?? ""));
-  const ownerLevelLabel = formatProfileNivelFromRow(
-    ownerParticipant ? { level: ownerParticipant.level } : null
-  );
+  const ownerLevelLabel = formatPlayerCategory(ownerParticipant?.category ?? null);
   const genderLabel =
     match.gender_category === "femenino"
       ? "Femenino"
@@ -524,9 +516,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const sharePlayerLines = Array.from({ length: 4 }, (_, i) => {
     const p = participants[i];
     if (p) {
-      const category =
-        splitOfficialCategoryLine(formatProfileNivelFromRow(p)).category || "Sin nivel";
-      return `*${p.name ?? "Jugador"}* _(${category})_`;
+      return `*${p.name ?? "Jugador"}* _(${formatPlayerCategory(p.category)})_`;
     }
     return "Falta 1 jugador";
   });
@@ -585,7 +575,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   );
                 }
                 const name = participant.name?.trim() || "Jugador";
-                const level = formatProfileNivelFromRow(participant);
+                const level = formatPlayerCategory(participant.category);
                 return (
                   <div
                     key={participant.player_id}
@@ -648,7 +638,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                   );
                 }
                 const name = participant.name?.trim() || "Jugador";
-                const level = formatProfileNivelFromRow(participant);
+                const level = formatPlayerCategory(participant.category);
                 return (
                   <div
                     key={participant.player_id}

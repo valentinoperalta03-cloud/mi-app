@@ -10,10 +10,8 @@ export type ProfileRow = {
   name: string | null;
   gender?: "masculino" | "femenino" | null;
   avatar_url: string | null;
-  level?: number | null;
-  level_of_play: string | null;
-  /** Escala competitiva 0.0–7.0 (fuente de verdad del nivel). */
-  technical_score?: number | null;
+  /** Categoría del jugador, '8va'..'1ra' — fuente de verdad del nivel. */
+  category?: string | null;
   age: number | null;
   bio: string | null;
 };
@@ -89,7 +87,7 @@ export type MatchRow = {
   gender_category?: "masculino" | "femenino" | "mixto" | null;
   owner_id?: Uuid | null;
   is_competitive?: boolean | null;
-  /** `amistoso` | `competitivo` (minúsculas). Solo competitivo afecta `technical_score`. */
+  /** `amistoso` | `competitivo` (minúsculas). */
   match_type?: string | null;
   /** `publico` | `privado` */
   visibility?: "publico" | "privado" | null;
@@ -102,8 +100,8 @@ export type MatchPlayerRow = {
 
 export type MatchPlayerWithProfile = Pick<MatchPlayerRow, "player_id"> & {
   profiles:
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">[]
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category">
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category">[]
     | null;
 };
 
@@ -114,8 +112,8 @@ export type MatchParticipantRow = {
 
 export type MatchParticipantWithProfile = Pick<MatchParticipantRow, "player_id"> & {
   profiles:
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">
-    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "level_of_play" | "technical_score">[]
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category">
+    | Pick<ProfileRow, "user_id" | "name" | "avatar_url" | "category">[]
     | null;
 };
 

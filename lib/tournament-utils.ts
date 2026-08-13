@@ -1,4 +1,4 @@
-import { LEVEL_HIERARCHY } from "@/lib/match-level";
+import { LEVEL_HIERARCHY, getLevelIndex } from "@/lib/match-level";
 
 /** Índice 0 = 8va … 7 = 1ra; devuelve el centro de banda [i, i+1) en ELO 0–8. */
 export function eloCenterForCategoryIndex(index: number): number {
@@ -16,6 +16,11 @@ export function eloBandMin(index: number): number {
 export function eloBandMax(index: number): number {
   if (index >= 7) return 8;
   return index + 1;
+}
+
+/** Convierte `profiles.category` al centro de banda ELO 0–8 que usan los bounds del torneo. */
+export function categoryToTournamentLevel(category: string | null | undefined): number {
+  return eloCenterForCategoryIndex(getLevelIndex(category));
 }
 
 export function playerLevelInTournamentBounds(

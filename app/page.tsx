@@ -30,8 +30,8 @@ const features = [
   },
   {
     icon: BarChart2,
-    title: "Nivel ELO real",
-    description: "Tu nivel se actualiza con cada partido competitivo. De Principiante a Elite, medido en serio.",
+    title: "Jugá con tu categoría",
+    description: "Elegí tu categoría (8va a 1ra) y encontrá partidos con jugadores de tu nivel.",
   },
   {
     icon: MessageCircle,

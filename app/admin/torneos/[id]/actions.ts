@@ -6,7 +6,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createNotification } from "@/lib/notifications";
-import { propagateBracket, saveTournamentMatchResultAndElo } from "@/lib/tournament-elo-apply";
+import { propagateBracket, saveTournamentMatchResult } from "@/lib/tournament-match-result";
 import {
   buildAmericanoMatches,
   buildEliminationFixture,
@@ -275,11 +275,10 @@ export async function saveTournamentMatchAction(
       if (em.winner_pair_id !== winnerPairId) {
         await propagateBracket(service, matchId, winnerPairId);
       }
-      // ELO no se recalcula en ediciones (level_evolution no almacena match_id para poder revertir el delta anterior)
       res = { ok: true, message: "Resultado actualizado." };
     }
   } else {
-    res = await saveTournamentMatchResultAndElo({
+    res = await saveTournamentMatchResult({
       admin: service,
       matchId,
       pair1Score: s1,
