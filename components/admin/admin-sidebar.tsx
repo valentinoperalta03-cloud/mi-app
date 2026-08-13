@@ -337,10 +337,8 @@ export default function AdminSidebar({
             </div>
 
             {ADMIN_NAV_GROUPS.map((group, idx) => (
-              <div
-                key={group.key}
-                className={idx > 0 ? "mx-4 border-t border-[var(--admin-sidebar-border-subtle)]" : ""}
-              >
+              <div key={group.key}>
+                {idx > 0 ? <div className="mx-4 border-t border-[var(--admin-sidebar-border-subtle)]" /> : null}
                 <GroupBlock
                   group={group}
                   open={Boolean(openGroups[group.key])}
