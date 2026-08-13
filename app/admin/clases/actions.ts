@@ -94,7 +94,7 @@ export async function createPracticeAction(
       level_min,
       level_max,
       created_by: ctx.userId,
-      status: "draft",
+      status: "open",
     })
     .select("id")
     .single();
@@ -102,7 +102,7 @@ export async function createPracticeAction(
   if (error || !inserted) return { ok: false, message: error?.message ?? "No se pudo crear la clase." };
 
   revalidatePath("/admin/clases");
-  redirect(`/admin/clases/${(inserted as { id: string }).id}`);
+  return { ok: true, message: "Clase publicada.", id: (inserted as { id: string }).id };
 }
 
 export type CoachState = { ok: boolean; message: string };

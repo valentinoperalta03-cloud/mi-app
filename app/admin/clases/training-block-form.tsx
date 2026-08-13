@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { adminButtonSecondary, adminCTAPrimary } from "@/components/admin/admin-premium";
+import { adminInputClass } from "@/components/admin/admin-form-input";
+import { adminButtonGhost, adminButtonOutlineBrand, adminCTAPrimary } from "@/components/admin/admin-premium";
 import { createTrainingBlockAction, type TrainingBlockState } from "./actions";
 
 const initial: TrainingBlockState = { ok: false, message: "" };
@@ -19,10 +20,7 @@ const DAY_OPTIONS = [
 
 type Court = { id: string; name: string };
 
-const fieldClass =
-  "w-full rounded-xl border border-[var(--border-subtle)] bg-transparent px-4 py-3 text-sm transition-colors " +
-  "placeholder:text-[var(--text-tertiary)] focus:border-blue-500 focus:outline-none focus:ring-2 " +
-  "focus:ring-blue-500/20 dark:focus:border-blue-400 dark:focus:ring-blue-400/20";
+const fieldClass = adminInputClass;
 
 function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: () => void }) {
   const [state, formAction, pending] = useActionState(createTrainingBlockAction, initial);
@@ -36,7 +34,7 @@ function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: ()
     <>
       <div
         className="fixed inset-0 z-50 backdrop-blur-sm"
-        style={{ background: "rgba(0,0,0,0.70)" }}
+        style={{ background: "rgba(0,0,0,0.60)" }}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -62,7 +60,7 @@ function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: ()
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="shrink-0 rounded-lg p-1 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+            className="shrink-0 cursor-pointer rounded-lg p-1 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
           >
             <X size={18} />
           </button>
@@ -166,7 +164,7 @@ function TrainingBlockDialog({ courts, onClose }: { courts: Court[]; onClose: ()
           ) : null}
 
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className={`flex-1 ${adminButtonSecondary}`}>
+            <button type="button" onClick={onClose} className={`flex-1 ${adminButtonGhost}`}>
               Cancelar
             </button>
             <button type="submit" disabled={pending} className={`flex-1 ${adminCTAPrimary} disabled:opacity-60`}>
@@ -193,7 +191,7 @@ export default function TrainingBlockForm({ courts }: { courts: Court[] }) {
           setDialogKey((k) => k + 1);
           setOpen(true);
         }}
-        className={`inline-flex shrink-0 items-center gap-1.5 ${adminButtonSecondary}`}
+        className={`inline-flex shrink-0 items-center gap-1.5 ${adminButtonOutlineBrand}`}
       >
         <Plus size={16} />
         Registrar entrenamiento externo

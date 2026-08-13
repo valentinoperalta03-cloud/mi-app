@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import {
   PRACTICE_MODALITY_OPTIONS,
@@ -18,13 +18,19 @@ export default function ClaseForm({
   clubId,
   courts,
   coaches,
+  onSuccess,
 }: {
   clubId: string;
   courts: Court[];
   coaches: Coach[];
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createPracticeAction, initial);
   const [recurrence, setRecurrence] = useState<"once" | "weekly">("once");
+
+  useEffect(() => {
+    if (state.ok) onSuccess?.();
+  }, [state.ok, onSuccess]);
 
   return (
     <form action={formAction} className="mt-4 space-y-4 text-sm">
@@ -200,9 +206,8 @@ export default function ClaseForm({
         disabled={pending}
         className={`w-full text-center ${adminCTAPrimary} disabled:opacity-60`}
       >
-        {pending ? "Guardando…" : "Crear borrador"}
+        {pending ? "Publicando…" : "Publicar clase"}
       </button>
-      <p className="text-center text-xs text-[var(--text-tertiary)]">Después publicá la clase para que los jugadores la vean.</p>
     </form>
   );
 }

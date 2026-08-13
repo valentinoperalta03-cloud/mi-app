@@ -35,6 +35,21 @@ export const adminCTADanger =
   "inline-flex items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors " +
   "border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.10)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.16)]";
 
+/** Versión compacta de adminCTADanger para acciones dentro de listas/filas (ej. "Dar de baja") */
+export const adminCTADangerCompact =
+  "inline-flex shrink-0 items-center rounded-lg border px-3 py-1 text-[13px] font-semibold transition-colors " +
+  "border-[rgba(239,68,68,0.30)] bg-[rgba(239,68,68,0.10)] text-[#EF4444] hover:bg-[rgba(239,68,68,0.16)]";
+
+/** Botón outline con acento de marca (azul) — acciones secundarias que abren un modal/formulario */
+export const adminButtonOutlineBrand =
+  "inline-flex items-center justify-center gap-1.5 rounded-[10px] border px-4 py-2 text-sm font-semibold transition-colors " +
+  "border-[rgba(0,133,252,0.30)] bg-[rgba(0,133,252,0.08)] text-[#0085FC] hover:border-[rgba(0,133,252,0.50)] hover:bg-[rgba(0,133,252,0.15)]";
+
+/** Botón "fantasma" para cancelar dentro de modales/forms */
+export const adminButtonGhost =
+  "inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-[var(--border-subtle)] bg-transparent " +
+  "px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)]";
+
 /** Badge de estado positivo/activo/pagado */
 export const adminBadgeLima =
   "inline-flex items-center bg-[var(--admin-accent-lima-subtle)] border border-[var(--admin-accent-lima-border)] " +

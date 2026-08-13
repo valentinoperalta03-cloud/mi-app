@@ -2,14 +2,14 @@
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Dumbbell, GraduationCap, Plus, X } from "lucide-react";
+import { Dumbbell, GraduationCap } from "lucide-react";
 import AdminGuideBox from "@/components/admin/admin-guide-box";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeNeutral,
   adminCard,
-  adminCTAPrimary,
+  adminCTADangerCompact,
   adminEmptyState,
   adminSectionLabel,
   adminTip,
@@ -20,6 +20,7 @@ import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
 import { createClient } from "@/utils/supabase/server";
 import { deactivateTrainingBlockAction, deleteExternalTrainingBlockRowAction } from "./actions";
+import ClasePublicaModal from "./clase-publica-modal";
 import TrainingBlockForm from "./training-block-form";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,14 @@ export default async function AdminClasesPage() {
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
   if (ctx.clubIds.length === 0) redirect("/admin/club");
+  const clubId = ctx.clubIds[0]!;
+
+  const { data: coachesRaw } = await supabase
+    .from(DB_TABLES.practiceCoaches)
+    .select("id, name")
+    .eq("club_id", clubId)
+    .order("name");
+  const coachOptions = ((coachesRaw ?? []) as { id: string; name: string }[]);
 
   const { data: rows } = await supabase
     .from(DB_TABLES.practices)
@@ -174,11 +183,7 @@ export default async function AdminClasesPage() {
               </div>
               <form action={item.formAction}>
                 <input type="hidden" name={item.hiddenFieldName} value={item.hiddenFieldValue} />
-                <button
-                  type="submit"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-rose-100 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
-                >
-                  <X size={12} />
+                <button type="submit" className={adminCTADangerCompact}>
                   Dar de baja
                 </button>
               </form>
@@ -244,13 +249,7 @@ export default async function AdminClasesPage() {
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className={adminSectionLabel}>Registro de clases</h2>
-          <Link
-            href="/admin/clases/nuevo"
-            className={`inline-flex shrink-0 items-center gap-1.5 ${adminCTAPrimary}`}
-          >
-            <Plus size={18} />
-            Crear entrenamiento público
-          </Link>
+          <ClasePublicaModal clubId={clubId} courts={courtOptions} coaches={coachOptions} />
         </div>
         <ul className="space-y-2">
           {((rows ?? []) as Array<{
