@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isFacturacionPath } from "@/lib/auth-redirect";
 import {
   ADMIN_NAV_GROUPS,
@@ -17,32 +17,26 @@ import {
 import { AdminSignOutLink } from "./admin-sign-out-link";
 import { useAdminSidebar } from "./admin-sidebar-context";
 
-function NavLink({
-  item,
-  collapsed,
-  active,
-}: {
-  item: AdminNavItem;
-  collapsed: boolean;
-  active: boolean;
-}) {
+const EASE: [number, number, number, number] = [0.4, 0, 0.2, 1];
+// Deben coincidir con --admin-sidebar-width / --admin-sidebar-collapsed-width
+// en globals.css — Framer no puede interpolar numéricamente una var() CSS.
+const WIDTH_EXPANDED = 340;
+const WIDTH_COLLAPSED = 88;
+
+/** Sub-item dentro de un grupo expandido, o dentro de un flyout en modo colapsado. */
+function SubItem({ item, active }: { item: AdminNavItem; active: boolean }) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
-      className={`group relative flex items-center gap-3 rounded-lg text-sm font-semibold transition-colors duration-150 ease-out ${
+      className={`flex items-center gap-2.5 rounded-lg py-[7px] pl-11 pr-3 text-[13px] transition-colors duration-150 ease-out ${
         active
-          ? "border-l-[3px] border-[#0085FC] bg-[rgba(0,133,252,0.15)] pl-[9px] pr-3 text-[#0085FC]"
-          : "border-l-[3px] border-transparent px-3 text-[var(--text-secondary)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
-      } ${collapsed ? "h-11 w-11 justify-center px-0" : "py-2"}`}
+          ? "bg-[rgba(0,133,252,0.12)] text-[#0085FC]"
+          : "text-[var(--admin-sidebar-text-soft)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
+      }`}
     >
-      <Icon size={18} className="shrink-0 text-[#0085FC] dark:text-[#CCFF00]" />
-      {!collapsed ? <span className="truncate">{item.label}</span> : null}
-      {collapsed ? (
-        <span className="pointer-events-none fixed left-[80px] z-50 whitespace-nowrap rounded-lg bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)] transition-opacity duration-150 group-hover:opacity-100">
-          {item.label}
-        </span>
-      ) : null}
+      <Icon size={22} className={`shrink-0 ${active ? "text-[#0085FC] dark:text-[#CCFF00]" : "text-[var(--text-tertiary)]"}`} />
+      <span className="truncate">{item.label}</span>
     </Link>
   );
 }
@@ -52,32 +46,35 @@ function GroupBlock({
   open,
   active,
   onToggle,
+  pathname,
 }: {
   group: AdminNavGroup;
   open: boolean;
   active: boolean;
   onToggle: () => void;
+  pathname: string;
 }) {
   const Icon = group.icon;
-  const pathname = usePathname();
   return (
     <div>
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-4 pb-1.5 pt-4 text-left transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg)]"
+        className="group flex w-full cursor-pointer items-center gap-2.5 px-4 pb-1.5 pt-5 text-left"
       >
-        <Icon size={16} className="shrink-0" style={{ color: active ? "#0085FC" : "var(--text-tertiary)" }} />
+        <Icon size={22} className={`shrink-0 ${active ? "text-[#0085FC]" : "text-[var(--admin-sidebar-group-label)]"}`} />
         <span
-          className="font-admin-mono flex-1 truncate text-[10px] font-semibold uppercase"
-          style={{ letterSpacing: "0.12em", color: active ? "#0085FC" : "var(--admin-sidebar-group-label)" }}
+          className={`font-admin-mono flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors duration-150 ease-out ${
+            active ? "text-[#0085FC]" : "text-[var(--admin-sidebar-group-label)] group-hover:text-[var(--admin-sidebar-text-strong)]"
+          }`}
         >
           {group.title}
         </span>
-        <ChevronDown
-          size={14}
-          className={`shrink-0 text-[var(--text-tertiary)] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
+        {open ? (
+          <ChevronDown size={14} className="shrink-0 text-[var(--admin-sidebar-group-label)]" />
+        ) : (
+          <ChevronRight size={14} className="shrink-0 text-[var(--admin-sidebar-group-label)]" />
+        )}
       </button>
       <AnimatePresence initial={false}>
         {open ? (
@@ -88,14 +85,87 @@ function GroupBlock({
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-0.5 px-2 py-1">
+            <div className="flex flex-col gap-0.5 py-1">
               {group.items.map((item) => (
-                <NavLink key={item.href} item={item} collapsed={false} active={isAdminNavItemActive(pathname, item.href)} />
+                <SubItem key={item.href} item={item} active={isAdminNavItemActive(pathname, item.href)} />
               ))}
             </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/** Ícono único de 44x44 en modo colapsado: item "Hoy" o un grupo (con flyout). */
+function CollapsedIcon({
+  icon: Icon,
+  href,
+  active,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  icon: AdminNavItem["icon"];
+  href?: string;
+  active: boolean;
+  onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}) {
+  const inner = (
+    <div
+      className={`flex h-11 w-11 items-center justify-center rounded-[10px] border transition-colors duration-150 ease-out ${
+        active
+          ? "border-[rgba(0,133,252,0.30)] bg-[rgba(0,133,252,0.15)]"
+          : "border-transparent hover:bg-[var(--admin-sidebar-hover-bg)]"
+      }`}
+    >
+      <Icon size={28} className="text-[#0085FC] dark:text-[#CCFF00]" />
+    </div>
+  );
+  const rowProps = {
+    className: "mx-auto my-1 block cursor-pointer",
+    onMouseEnter,
+    onMouseLeave,
+    onClick,
+  };
+  return href ? (
+    <Link href={href} {...rowProps}>
+      {inner}
+    </Link>
+  ) : (
+    <div {...rowProps}>{inner}</div>
+  );
+}
+
+/** Panel flotante con los items de un grupo, al hover de su ícono en modo colapsado. */
+function GroupFlyout({
+  group,
+  pathname,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  group: AdminNavGroup;
+  pathname: string;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  return (
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className="fixed z-50 w-60 rounded-xl border border-black/10 bg-white p-2 shadow-[0_8px_32px_rgba(0,0,0,0.30)] dark:border-white/10 dark:bg-[#0C1829]"
+      style={{ left: "calc(var(--admin-sidebar-collapsed-width) + 8px)" }}
+    >
+      <p className="font-admin-mono px-2 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--admin-sidebar-group-label)]">
+        {group.title}
+      </p>
+      <div className="flex flex-col gap-0.5">
+        {group.items.map((item) => (
+          <SubItem key={item.href} item={item} active={isAdminNavItemActive(pathname, item.href)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -117,6 +187,8 @@ export default function AdminSidebar({
     Object.fromEntries(ADMIN_NAV_GROUPS.map((g) => [g.key, g.defaultOpen]))
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [flyoutGroup, setFlyoutGroup] = useState<string | null>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // El grupo que contiene la ruta activa se abre solo, aunque esté cerrado por default.
   useEffect(() => {
@@ -124,6 +196,23 @@ export default function AdminSidebar({
     if (!activeKey) return;
     setOpenGroups((prev) => (prev[activeKey] ? prev : { ...prev, [activeKey]: true }));
   }, [pathname]);
+
+  useEffect(() => () => {
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+  }, []);
+
+  function openFlyout(key: string) {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setFlyoutGroup(key);
+  }
+
+  function scheduleCloseFlyout() {
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = setTimeout(() => setFlyoutGroup(null), 150);
+  }
 
   if (isFacturacionPath(pathname)) return null;
 
@@ -135,133 +224,169 @@ export default function AdminSidebar({
       .slice(0, 2)
       .map((w) => w[0]?.toUpperCase() ?? "")
       .join("") || "D";
+  const homeActive = isAdminNavItemActive(pathname, ADMIN_NAV_HOME.href);
+  const HomeIcon = ADMIN_NAV_HOME.icon;
 
   return (
-    <aside
-      className="admin-sidebar fixed bottom-0 left-0 top-0 z-40 hidden flex-col md:flex"
-      style={{
-        width: collapsed ? "var(--admin-sidebar-collapsed-width)" : "var(--admin-sidebar-width)",
-        transition: "width 300ms ease",
-        borderTop: "2px solid var(--admin-accent-lima)",
-      }}
+    <motion.aside
+      className="admin-sidebar fixed bottom-0 left-0 top-0 z-40 hidden flex-col overflow-hidden md:flex"
+      initial={false}
+      animate={{ width: collapsed ? WIDTH_COLLAPSED : WIDTH_EXPANDED }}
+      transition={{ duration: 0.25, ease: EASE }}
+      style={{ borderTop: "2px solid var(--admin-accent-lima)" }}
     >
       {/* Header */}
       <div
-        className={`flex shrink-0 flex-col border-b border-[var(--admin-sidebar-border-subtle)] px-4 py-5 ${
-          collapsed ? "items-center" : ""
+        className={`flex h-[72px] shrink-0 items-center border-b border-[var(--admin-sidebar-border-subtle)] ${
+          collapsed ? "justify-center px-2" : "justify-between px-5"
         }`}
       >
-        <div className={`flex w-full items-center ${collapsed ? "justify-center" : "justify-between gap-2.5"}`}>
-          <Link href="/admin/dashboard" className={`flex min-w-0 items-center gap-2.5 ${collapsed ? "" : "flex-1"}`}>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-              <img
-                src={logoUrl}
-                alt={clubName ?? "Club"}
-                className="h-10 w-10 shrink-0 rounded-[10px] border-2 object-cover"
-                style={{ borderColor: "var(--admin-sidebar-logo-border)" }}
-              />
-            ) : (
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border-2 bg-[#0085FC] text-sm font-bold text-white"
-                style={{ borderColor: "var(--admin-sidebar-logo-border)" }}
-              >
-                {(clubName ?? "Club").slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            {!collapsed ? (
-              <div className="min-w-0">
-                <p className="font-admin-display truncate text-sm font-bold text-[var(--text-primary)]">
-                  {clubName ?? "Mi club"}
-                </p>
-                <p className="truncate text-[11px]" style={{ color: "var(--admin-sidebar-text-muted)" }}>
-                  Panel de administración
-                </p>
-              </div>
-            ) : null}
-          </Link>
-          {!collapsed ? (
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              aria-label="Colapsar menú"
-              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-tertiary)] transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
+        <Link href="/admin/dashboard" className="flex min-w-0 items-center">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+            <img
+              src={logoUrl}
+              alt={clubName ?? "Club"}
+              className="h-11 w-11 shrink-0 rounded-xl border-2 object-cover"
+              style={{ borderColor: "var(--admin-sidebar-logo-border)" }}
+            />
+          ) : (
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 bg-[#0085FC] text-sm font-bold text-white"
+              style={{ borderColor: "var(--admin-sidebar-logo-border)" }}
             >
-              <ChevronLeft size={18} />
-            </button>
-          ) : null}
-        </div>
-        {collapsed ? (
+              {(clubName ?? "Club").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <motion.div
+            className="ml-3 min-w-0 overflow-hidden"
+            animate={{ opacity: collapsed ? 0 : 1 }}
+            transition={{ duration: 0.15, delay: collapsed ? 0 : 0.1 }}
+          >
+            <p className="font-admin-display truncate text-[15px] font-bold text-[var(--text-primary)]">
+              {clubName ?? "Mi club"}
+            </p>
+            <p className="truncate text-[11px] text-[var(--admin-sidebar-text-muted)]">Panel de administración</p>
+          </motion.div>
+        </Link>
+        {!collapsed ? (
           <button
             type="button"
-            onClick={() => setCollapsed(false)}
-            aria-label="Expandir menú"
-            className="mt-2 flex cursor-pointer items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg-strong)]"
-            style={{ background: "var(--admin-sidebar-hover-bg)", padding: "6px" }}
+            onClick={() => setCollapsed(true)}
+            aria-label="Colapsar menú"
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-[rgba(0,133,252,0.08)] text-[var(--text-tertiary)] transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg-strong)] hover:text-[var(--text-primary)]"
           >
-            <ChevronRight size={18} />
+            <ChevronLeft size={18} />
           </button>
         ) : null}
       </div>
 
       {/* Nav */}
-      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">
-        <div className={`flex flex-col gap-0.5 ${collapsed ? "items-center" : ""}`}>
-          <NavLink item={ADMIN_NAV_HOME} collapsed={collapsed} active={isAdminNavItemActive(pathname, ADMIN_NAV_HOME.href)} />
-        </div>
-
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {collapsed ? (
-          ADMIN_NAV_GROUPS.map((group, idx) => (
-            <div key={group.key} className="flex flex-col items-center gap-0.5">
-              {idx > 0 ? (
-                <div
-                  className="w-full"
-                  style={{ borderTop: "1px solid var(--admin-sidebar-border-subtle)", margin: "6px 12px" }}
-                />
-              ) : null}
-              {group.items.map((item) => (
-                <NavLink key={item.href} item={item} collapsed active={isAdminNavItemActive(pathname, item.href)} />
-              ))}
-            </div>
-          ))
-        ) : (
-          ADMIN_NAV_GROUPS.map((group, idx) => (
-            <div
-              key={group.key}
-              className={idx > 0 ? "border-t border-[var(--admin-sidebar-border-subtle)]" : ""}
+          <div className="flex flex-col items-center pt-3">
+            <CollapsedIcon icon={HomeIcon} href={ADMIN_NAV_HOME.href} active={homeActive} />
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              aria-label="Expandir menú"
+              className="mx-auto my-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-[var(--admin-sidebar-hover-bg)] text-[var(--text-secondary)] transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg-strong)]"
             >
-              <GroupBlock
-                group={group}
-                open={Boolean(openGroups[group.key])}
-                active={findActiveGroupKey(pathname) === group.key}
-                onToggle={() => setOpenGroups((prev) => ({ ...prev, [group.key]: !prev[group.key] }))}
-              />
+              <ChevronRight size={18} />
+            </button>
+            {ADMIN_NAV_GROUPS.map((group, idx) => {
+              const groupActive = findActiveGroupKey(pathname) === group.key;
+              return (
+                <div key={group.key} className="w-full">
+                  {idx > 0 ? (
+                    <div
+                      className="mx-3"
+                      style={{ borderTop: "1px solid var(--admin-sidebar-border-subtle)", margin: "6px 12px" }}
+                    />
+                  ) : null}
+                  <CollapsedIcon
+                    icon={group.icon}
+                    active={groupActive}
+                    onMouseEnter={() => openFlyout(group.key)}
+                    onMouseLeave={scheduleCloseFlyout}
+                  />
+                  {flyoutGroup === group.key ? (
+                    <GroupFlyout
+                      group={group}
+                      pathname={pathname}
+                      onMouseEnter={() => openFlyout(group.key)}
+                      onMouseLeave={scheduleCloseFlyout}
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            <div className="px-3 pb-1 pt-2">
+              <Link
+                href={ADMIN_NAV_HOME.href}
+                className={`group flex items-center gap-2.5 py-2 pr-3 text-sm font-medium transition-colors duration-150 ease-out ${
+                  homeActive
+                    ? "rounded-r-lg border-l-[3px] border-[#0085FC] bg-[rgba(0,133,252,0.15)] pl-[9px] text-[#0085FC]"
+                    : "rounded-lg pl-3 text-[var(--admin-sidebar-text-strong)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <HomeIcon size={22} className={homeActive ? "text-[#0085FC] dark:text-[#CCFF00]" : "text-[var(--text-tertiary)]"} />
+                <span className="truncate">{ADMIN_NAV_HOME.label}</span>
+              </Link>
             </div>
-          ))
+
+            {ADMIN_NAV_GROUPS.map((group, idx) => (
+              <div
+                key={group.key}
+                className={idx > 0 ? "mx-4 border-t border-[var(--admin-sidebar-border-subtle)]" : ""}
+              >
+                <GroupBlock
+                  group={group}
+                  open={Boolean(openGroups[group.key])}
+                  active={findActiveGroupKey(pathname) === group.key}
+                  onToggle={() => setOpenGroups((prev) => ({ ...prev, [group.key]: !prev[group.key] }))}
+                  pathname={pathname}
+                />
+              </div>
+            ))}
+          </>
         )}
       </nav>
 
       {/* Footer */}
       <div
-        className="relative shrink-0 px-4 pb-4 pt-3"
+        className={`relative shrink-0 py-4 ${collapsed ? "px-2" : "px-5"}`}
         style={{ borderTop: "1px solid var(--admin-sidebar-border-subtle)" }}
       >
-        <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
+        <div
+          className={`flex items-center gap-2.5 ${collapsed ? "cursor-pointer justify-center" : ""}`}
+          onClick={collapsed ? () => setMenuOpen((v) => !v) : undefined}
+        >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0085FC] text-[13px] font-bold text-white">
             {initials}
           </div>
-          {!collapsed ? (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
-              <p className="truncate text-[11px]" style={{ color: "var(--admin-sidebar-text-muted)" }}>
-                {ownerEmail ?? ""}
-              </p>
-            </div>
-          ) : null}
+          <motion.div
+            className="min-w-0 flex-1 overflow-hidden"
+            animate={{ opacity: collapsed ? 0 : 1 }}
+            transition={{ duration: 0.15, delay: collapsed ? 0 : 0.1 }}
+          >
+            {!collapsed ? (
+              <>
+                <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{displayName}</p>
+                <p className="truncate text-[11px] text-[var(--admin-sidebar-text-muted)]">{ownerEmail ?? ""}</p>
+              </>
+            ) : null}
+          </motion.div>
           {!collapsed ? (
             <button
               type="button"
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((v) => !v);
+              }}
               aria-label="Más opciones"
               className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors duration-150 ease-out hover:bg-[var(--admin-sidebar-hover-bg-strong)] hover:text-[var(--text-primary)]"
             >
@@ -278,7 +403,11 @@ export default function AdminSidebar({
               className="fixed inset-0 z-40 cursor-default"
               onClick={() => setMenuOpen(false)}
             />
-            <div className="absolute bottom-full left-3 z-50 mb-2 min-w-[10rem] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-2 shadow-lg">
+            <div
+              className={`absolute bottom-full z-50 mb-2 min-w-[10rem] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-2 shadow-lg ${
+                collapsed ? "left-1/2 -translate-x-1/2" : "left-3"
+              }`}
+            >
               <div onClick={() => setMenuOpen(false)}>
                 <AdminSignOutLink />
               </div>
@@ -286,6 +415,6 @@ export default function AdminSidebar({
           </>
         ) : null}
       </div>
-    </aside>
+    </motion.aside>
   );
 }

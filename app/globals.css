@@ -75,14 +75,16 @@
   --admin-accent-lima-border: rgba(204, 255, 0, 0.4);
 
   /* Admin — sidebar vertical */
-  --admin-sidebar-width: 280px;
-  --admin-sidebar-collapsed-width: 72px;
+  --admin-sidebar-width: 340px;
+  --admin-sidebar-collapsed-width: 88px;
   --admin-sidebar-bg-dark: #0C1829;
   --admin-sidebar-bg-light: #FFFFFF;
   --admin-sidebar-hover-bg: rgba(0, 0, 0, 0.04);
   --admin-sidebar-hover-bg-strong: rgba(0, 0, 0, 0.06);
   --admin-sidebar-border-subtle: rgba(0, 0, 0, 0.08);
   --admin-sidebar-text-muted: rgba(0, 0, 0, 0.45);
+  --admin-sidebar-text-strong: rgba(0, 0, 0, 0.65);
+  --admin-sidebar-text-soft: rgba(0, 0, 0, 0.55);
   --admin-sidebar-logo-border: rgba(0, 0, 0, 0.15);
   --admin-sidebar-group-label: rgba(0, 0, 0, 0.35);
 
@@ -162,10 +164,12 @@
   --admin-accent-lima-border: rgba(204, 255, 0, 0.5);
 
   /* Admin — sidebar vertical (dark) */
-  --admin-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
-  --admin-sidebar-hover-bg-strong: rgba(255, 255, 255, 0.10);
+  --admin-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --admin-sidebar-hover-bg-strong: rgba(255, 255, 255, 0.12);
   --admin-sidebar-border-subtle: rgba(255, 255, 255, 0.08);
-  --admin-sidebar-text-muted: rgba(255, 255, 255, 0.50);
+  --admin-sidebar-text-muted: rgba(255, 255, 255, 0.45);
+  --admin-sidebar-text-strong: rgba(255, 255, 255, 0.65);
+  --admin-sidebar-text-soft: rgba(255, 255, 255, 0.55);
   --admin-sidebar-logo-border: rgba(255, 255, 255, 0.15);
   --admin-sidebar-group-label: rgba(255, 255, 255, 0.35);
 
@@ -348,11 +352,12 @@ html.capacitor-native svg {
 .admin-sidebar {
   background: var(--admin-sidebar-bg-light);
   border-right: 1px solid rgba(0, 133, 252, 0.10);
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
 }
 .dark .admin-sidebar {
   background: var(--admin-sidebar-bg-dark);
   border-right: none;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
 }
 
 /* Detalle de marca en accesos rapidos: linea superior que aparece al hover */
