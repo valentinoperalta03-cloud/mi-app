@@ -41,7 +41,7 @@ function CollapsedButton({
   ariaLabel?: string;
   children: ReactNode;
 }) {
-  const className = `mx-auto my-1 flex h-12 w-12 cursor-pointer items-center justify-center rounded-[10px] border transition-colors duration-150 ease-out ${
+  const className = `flex h-12 w-12 cursor-pointer items-center justify-center rounded-[10px] border transition-colors duration-150 ease-out ${
     active
       ? "border-[rgba(0,133,252,0.25)] bg-[rgba(0,133,252,0.15)]"
       : "border-transparent hover:bg-[var(--admin-sidebar-hover-bg)]"
@@ -104,7 +104,9 @@ function GroupBlock({
       <button
         type="button"
         onClick={onToggle}
-        className="group flex w-full cursor-pointer items-center gap-2.5 px-4 pb-1.5 pt-4 text-left"
+        className={`group flex w-full cursor-pointer items-center gap-2.5 border-l-[3px] px-4 pb-1.5 pt-4 text-left transition-colors duration-150 ease-out ${
+          active ? "border-[#0085FC] bg-[rgba(0,133,252,0.10)]" : "border-transparent hover:bg-[var(--admin-sidebar-hover-bg)]"
+        }`}
       >
         <Icon size={18} className={`shrink-0 ${active ? "text-[#0085FC]" : "text-[var(--admin-sidebar-group-label)]"}`} />
         <span
@@ -287,19 +289,18 @@ export default function AdminSidebar({
       {/* Nav */}
       <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {collapsed ? (
-          <div className="flex flex-col items-center pt-3">
-            <CollapsedButton href={ADMIN_NAV_HOME.href} active={homeActive} ariaLabel={ADMIN_NAV_HOME.label}>
-              <HomeIcon size={28} className="text-[#0085FC] dark:text-[#CCFF00]" />
-            </CollapsedButton>
+          <div className="flex flex-col gap-1.5 pt-3">
+            <div className="flex justify-center">
+              <CollapsedButton href={ADMIN_NAV_HOME.href} active={homeActive} ariaLabel={ADMIN_NAV_HOME.label}>
+                <HomeIcon size={28} className="text-[#0085FC] dark:text-[#CCFF00]" />
+              </CollapsedButton>
+            </div>
 
-            {ADMIN_NAV_GROUPS.map((group, idx) => {
+            {ADMIN_NAV_GROUPS.map((group) => {
               const groupActive = findActiveGroupKey(pathname) === group.key;
               const GroupIcon = group.icon;
               return (
-                <div key={group.key} className="w-full">
-                  {idx > 0 ? (
-                    <div style={{ borderTop: "1px solid var(--admin-sidebar-border-subtle)", margin: "6px 16px" }} />
-                  ) : null}
+                <div key={group.key} className="relative flex justify-center">
                   <CollapsedButton
                     active={groupActive}
                     ariaLabel={group.title}
@@ -322,16 +323,16 @@ export default function AdminSidebar({
           </div>
         ) : (
           <>
-            <div className="px-3 pb-1 pt-2">
+            <div className="pb-1 pt-2">
               <Link
                 href={ADMIN_NAV_HOME.href}
-                className={`flex items-center gap-2.5 py-2 pr-3 text-sm font-medium transition-colors duration-150 ease-out ${
+                className={`flex items-center gap-2.5 border-l-[3px] px-4 py-2.5 text-sm font-medium transition-colors duration-150 ease-out ${
                   homeActive
-                    ? "rounded-r-lg border-l-[3px] border-[#0085FC] bg-[rgba(0,133,252,0.15)] pl-[9px] text-[#0085FC]"
-                    : "rounded-lg pl-3 text-[var(--admin-sidebar-text-strong)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
+                    ? "border-[#0085FC] bg-[rgba(0,133,252,0.15)] text-[#0085FC]"
+                    : "border-transparent text-[var(--admin-sidebar-text-strong)] hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <HomeIcon size={22} className={homeActive ? "text-[#0085FC] dark:text-[#CCFF00]" : "text-[var(--text-tertiary)]"} />
+                <HomeIcon size={18} className={homeActive ? "text-[#0085FC] dark:text-[#CCFF00]" : "text-[var(--text-tertiary)]"} />
                 <span className="truncate">{ADMIN_NAV_HOME.label}</span>
               </Link>
             </div>
