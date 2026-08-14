@@ -356,7 +356,10 @@ export default function CompletarPerfilClient() {
                   <SectionLabel>¿Dónde jugás?</SectionLabel>
                   <select
                     value={province}
-                    onChange={(e) => setProvince(e.target.value)}
+                    onChange={(e) => {
+                      setProvince(e.target.value);
+                      setCity("");
+                    }}
                     style={{ height: 52 }}
                     className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white outline-none focus:border-[#0085FC]"
                   >
@@ -369,13 +372,24 @@ export default function CompletarPerfilClient() {
                       </option>
                     ))}
                   </select>
-                  <input
+                  <select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Tu ciudad"
+                    disabled={!province}
                     style={{ height: 52 }}
-                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
-                  />
+                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white outline-none focus:border-[#0085FC] disabled:opacity-40"
+                  >
+                    <option value="" disabled className="bg-[#0C1829] text-white/35">
+                      {province ? "Seleccioná tu ciudad" : "Elegí primero tu provincia"}
+                    </option>
+                    {(ARGENTINA_PROVINCES.find((prov) => prov.name === province)?.cities ?? []).map(
+                      (cityName) => (
+                        <option key={cityName} value={cityName} className="bg-[#0C1829] text-white">
+                          {cityName}
+                        </option>
+                      )
+                    )}
+                  </select>
                 </div>
 
                 <MainButton enabled={canSubmitStep1} onClick={goToStep2}>
