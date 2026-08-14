@@ -23,17 +23,9 @@ export async function updateClubSlugAction(
     return { error: "No tenés permiso para editar este club." };
   }
 
-  const { data: club, error: clubError } = await supabase
-    .from(DB_TABLES.clubs)
-    .select("id, slug")
-    .eq("owner_id", ctx.userId)
-    .maybeSingle();
+  const serviceClient = createServiceClient();
 
-  console.log("[slug] club:", club, "error:", clubError);
-
-  if (!club) return { error: `Club no encontrado para owner ${ctx.userId}` };
-
-  const { data: existing } = await supabase
+  const { data: existing } = await serviceClient
     .from(DB_TABLES.clubs)
     .select("id")
     .eq("slug", slug)
@@ -44,7 +36,7 @@ export async function updateClubSlugAction(
     return { error: "Ese link ya está en uso, elegí otro" };
   }
 
-  const { data: currentClub } = await supabase
+  const { data: currentClub } = await serviceClient
     .from(DB_TABLES.clubs)
     .select("slug")
     .eq("id", clubId)
@@ -52,16 +44,15 @@ export async function updateClubSlugAction(
 
   const oldSlug = (currentClub as { slug?: string | null } | null)?.slug ?? null;
   if (oldSlug && oldSlug !== slug) {
-    await supabase
+    await serviceClient
       .from(DB_TABLES.clubSlugRedirects)
       .upsert({ old_slug: oldSlug, club_id: clubId });
   }
 
-  const serviceClient = createServiceClient();
   const { error: updateError } = await serviceClient
     .from(DB_TABLES.clubs)
     .update({ slug })
-    .eq("id", club.id);
+    .eq("id", clubId);
 
   if (updateError) return { error: "No se pudo guardar el link: " + updateError.message };
 
