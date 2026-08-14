@@ -1,9 +1,10 @@
 "use client";
 
-import { Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
-import { Check, Loader2 } from "lucide-react";
+import { Camera, Check, ChevronLeft, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import { AppleToast } from "@/components/apple-toast";
 import { firebaseAuth } from "@/lib/firebase";
@@ -11,6 +12,7 @@ import { createClient } from "@/utils/supabase/client";
 import { completarPerfilAction } from "./actions";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
+const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"] });
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const OTP_COOLDOWN_SECONDS = 30;
@@ -26,15 +28,28 @@ const CATEGORIES: { value: string; description: string }[] = [
   { value: "1ra", description: "Jugador de élite, torneos nacionales" },
 ];
 
-function Chip({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+const labelClass = `${ibmPlexMono.className} text-[11px] font-semibold uppercase tracking-[0.12em] text-[#CCFF00]`;
+
+function Chip({
+  label,
+  selected,
+  onClick,
+  minHeight = 52,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  minHeight?: number;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+      style={{ minHeight }}
+      className={`flex flex-1 items-center justify-center rounded-[10px] border px-3 text-sm font-semibold transition-colors ${
         selected
           ? "border-[#0085FC] bg-[#0085FC] text-white"
-          : "border-white/15 bg-transparent text-white/70 hover:border-white/30"
+          : "border-white/15 bg-white/[0.06] text-white/70"
       }`}
     >
       {label}
@@ -42,14 +57,51 @@ function Chip({ label, selected, onClick }: { label: string; selected: boolean; 
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ children }: { children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">{title}</h2>
-      <div className="mt-4 space-y-4">{children}</div>
+      <div className="space-y-4">{children}</div>
     </section>
   );
 }
+
+type StepStatus = "active" | "completed" | "pending";
+
+function StepCircle({ status, number }: { status: StepStatus; number: number }) {
+  if (status === "completed") {
+    return (
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#CCFF00] text-black">
+        <Check size={16} strokeWidth={3} />
+      </div>
+    );
+  }
+  if (status === "active") {
+    return (
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0085FC] text-sm font-bold text-white">
+        {number}
+      </div>
+    );
+  }
+  return (
+    <div className="h-9 w-9 shrink-0 rounded-full border border-white/30 bg-transparent" />
+  );
+}
+
+function ProgressIndicator({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <StepCircle status={step === 1 ? "active" : "completed"} number={1} />
+      <div className={`h-0.5 w-14 rounded-full ${step === 2 ? "bg-[#CCFF00]" : "bg-white/20"}`} />
+      <StepCircle status={step === 2 ? "active" : "pending"} number={2} />
+    </div>
+  );
+}
+
+const slideVariants = {
+  enter: (direction: number) => ({ x: direction > 0 ? "100%" : "-100%", opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({ x: direction > 0 ? "-100%" : "100%", opacity: 0 }),
+};
 
 export default function CompletarPerfilClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -58,22 +110,16 @@ export default function CompletarPerfilClient() {
 
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [step, setStep] = useState<1 | 2>(1);
+  const [direction, setDirection] = useState(1);
 
-  // Sección 1 — tus datos
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  // Pantalla 1 — sobre vos
+  const [name, setName] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // Sección 2 — sobre tu juego
-  const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
-  const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
-  const [preferredSchedule, setPreferredSchedule] = useState<"manana" | "tarde" | "noche" | "cualquiera" | "">("");
-  const [category, setCategory] = useState("");
-
-  // Sección 3 — teléfono
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -81,6 +127,12 @@ export default function CompletarPerfilClient() {
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  // Pantalla 2 — tu juego
+  const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
+  const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
+  const [preferredSchedule, setPreferredSchedule] = useState<"manana" | "tarde" | "noche" | "cualquiera" | "">("");
+  const [category, setCategory] = useState("");
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -90,9 +142,11 @@ export default function CompletarPerfilClient() {
     return () => window.clearInterval(id);
   }, [cooldown]);
 
-  // El div#recaptcha-container ya está montado en este punto (se renderiza
-  // incondicionalmente en el JSX, antes de cualquier lógica condicional) —
-  // RecaptchaVerifier exige que el elemento exista en el DOM al construirse.
+  // El div#recaptcha-container se renderiza siempre, fuera de los bloques
+  // condicionales por paso, para que nunca se desmonte del DOM mientras el
+  // usuario navega entre pantallas — RecaptchaVerifier exige que el
+  // elemento exista en el DOM al construirse y se rompe si el nodo al que
+  // apunta queda desmontado.
   useEffect(() => {
     console.log("[Firebase] Inicializando RecaptchaVerifier...");
     recaptchaVerifierRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
@@ -210,21 +264,25 @@ export default function CompletarPerfilClient() {
     }
   }
 
-  const canSubmit =
-    firstName.trim() &&
-    lastName.trim() &&
-    gender &&
-    preferredHand &&
-    courtPosition &&
-    preferredSchedule &&
-    category &&
-    phoneVerified;
+  const canSubmitStep1 = Boolean(name.trim() && gender && phoneVerified);
+  const canSubmitStep2 = Boolean(preferredHand && courtPosition && preferredSchedule && category);
+
+  function goToStep2() {
+    if (!canSubmitStep1) return;
+    setDirection(1);
+    setStep(2);
+  }
+
+  function goToStep1() {
+    setDirection(-1);
+    setStep(1);
+  }
 
   function handleFinish() {
-    if (!canSubmit) return;
+    if (!canSubmitStep2) return;
     startTransition(async () => {
       const res = await completarPerfilAction({
-        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+        name: name.trim(),
         gender: gender as "masculino" | "femenino",
         avatarUrl: avatarUrl || null,
         preferredHand: preferredHand as "derecha" | "izquierda" | "ambas",
@@ -240,234 +298,314 @@ export default function CompletarPerfilClient() {
   }
 
   return (
-    <main className="min-h-dvh" style={{ background: "#0C1829" }}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pb-10 pt-[max(2rem,env(safe-area-inset-top))]">
-        <div className="flex flex-col items-center text-center">
-          <Image src="/logo.png" alt="PadeLibre" width={56} height={56} className="rounded-2xl" />
-          <h1 className={`${spaceGrotesk.className} mt-4 text-2xl font-bold text-white`}>Completá tu perfil</h1>
-          <p className="mt-1.5 text-sm text-white/50">
-            Solo te pedimos esto una vez. Después siempre entrás directo.
-          </p>
+    <main
+      className="min-h-dvh"
+      style={{ background: "linear-gradient(135deg, #0C1829 0%, #0A2540 100%)" }}
+    >
+      <div className="h-0.5 w-full bg-[#CCFF00]" />
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col gap-6 overflow-y-auto px-5 py-6">
+        <div className="flex flex-col items-center gap-5">
+          <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-lg" />
+          <ProgressIndicator step={step} />
         </div>
 
-        <Card title="Tus datos">
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-white/[0.06]"
-            >
-              {avatarPreview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-xs font-medium text-white/40">Foto</span>
-              )}
-            </button>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              await handleAvatarUpload(file);
-            }}
-          />
-          <p className="text-center text-xs text-white/40">{uploadingAvatar ? "Subiendo foto…" : "Foto de perfil (opcional)"}</p>
+        <div className="relative flex-1 overflow-hidden">
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
+            {step === 1 ? (
+              <motion.div
+                key="step1"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+                className="flex flex-col gap-6"
+              >
+                <div className="text-center">
+                  <h1 className={`${spaceGrotesk.className} text-[26px] font-bold text-white`}>
+                    Contanos sobre vos
+                  </h1>
+                  <p className="mt-1.5 text-sm text-white/60">
+                    Solo te pedimos esto una vez. Después siempre entrás directo.
+                  </p>
+                </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block">
-              <span className="text-xs font-semibold text-white/60">Nombre</span>
-              <input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Tu nombre"
-                className="mt-1 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-white/60">Apellido</span>
-              <input
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Tu apellido"
-                className="mt-1 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
-              />
-            </label>
-          </div>
+                <Card>
+                  <span className={labelClass}>¿Cómo te llamás?</span>
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06]"
+                    >
+                      {avatarPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <Camera size={22} className="text-white/40" />
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      await handleAvatarUpload(file);
+                    }}
+                  />
+                  <p className="text-center text-xs text-white/40">
+                    {uploadingAvatar ? "Subiendo foto…" : "Agregar foto (opcional)"}
+                  </p>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Tu nombre completo"
+                    className="w-full rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
+                  />
+                </Card>
 
-          <div>
-            <span className="text-xs font-semibold text-white/60">Género</span>
-            <div className="mt-1.5 grid grid-cols-2 gap-2">
-              {(["masculino", "femenino"] as const).map((g) => (
-                <Chip key={g} label={g === "masculino" ? "Masculino" : "Femenino"} selected={gender === g} onClick={() => setGender(g)} />
-              ))}
-            </div>
-          </div>
-        </Card>
+                <Card>
+                  <span className={labelClass}>¿Cuál es tu género?</span>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGender("masculino")}
+                      style={{ minHeight: 56 }}
+                      className={`w-full rounded-[10px] border text-[15px] font-semibold transition-colors ${
+                        gender === "masculino"
+                          ? "border-[#0085FC] bg-[#0085FC] text-white"
+                          : "border-white/15 bg-white/[0.06] text-white/70"
+                      }`}
+                    >
+                      ♂ Masculino
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender("femenino")}
+                      style={{ minHeight: 56 }}
+                      className={`w-full rounded-[10px] border text-[15px] font-semibold transition-colors ${
+                        gender === "femenino"
+                          ? "border-[#0085FC] bg-[#0085FC] text-white"
+                          : "border-white/15 bg-white/[0.06] text-white/70"
+                      }`}
+                    >
+                      ♀ Femenino
+                    </button>
+                  </div>
+                </Card>
 
-        <Card title="Sobre tu juego">
-          <div>
-            <span className="text-xs font-semibold text-white/60">Mano hábil</span>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {[
-                { id: "derecha", label: "Derecha" },
-                { id: "izquierda", label: "Izquierda" },
-                { id: "ambas", label: "Ambas" },
-              ].map((opt) => (
-                <Chip
-                  key={opt.id}
-                  label={opt.label}
-                  selected={preferredHand === opt.id}
-                  onClick={() => setPreferredHand(opt.id as "derecha" | "izquierda" | "ambas")}
-                />
-              ))}
-            </div>
-          </div>
+                <Card>
+                  <span className={labelClass}>¿Cuál es tu número de WhatsApp?</span>
+                  <p className="text-[13px] leading-relaxed text-white/55">
+                    El club puede contactarte si tiene alguna novedad sobre tu reserva o partido.
+                  </p>
 
-          <div>
-            <span className="text-xs font-semibold text-white/60">Posición en cancha</span>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {[
-                { id: "drive", label: "Drive" },
-                { id: "reves", label: "Revés" },
-                { id: "ambas", label: "Ambas" },
-              ].map((opt) => (
-                <Chip
-                  key={opt.id}
-                  label={opt.label}
-                  selected={courtPosition === opt.id}
-                  onClick={() => setCourtPosition(opt.id as "drive" | "reves" | "ambas")}
-                />
-              ))}
-            </div>
-          </div>
+                  {!phoneVerified ? (
+                    <>
+                      <div className="flex gap-2">
+                        <span className="flex items-center rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-[15px] font-medium text-white/70">
+                          +54
+                        </span>
+                        <input
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value.replace(/[^0-9]/g, ""));
+                            setOtpSent(false);
+                          }}
+                          inputMode="numeric"
+                          placeholder="91122334455"
+                          disabled={otpSent}
+                          className="flex-1 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC] disabled:opacity-50"
+                        />
+                      </div>
 
-          <div>
-            <span className="text-xs font-semibold text-white/60">Horario favorito</span>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {[
-                { id: "manana", label: "Mañana" },
-                { id: "tarde", label: "Tarde" },
-                { id: "noche", label: "Noche" },
-                { id: "cualquiera", label: "Cualquiera" },
-              ].map((opt) => (
-                <Chip
-                  key={opt.id}
-                  label={opt.label}
-                  selected={preferredSchedule === opt.id}
-                  onClick={() => setPreferredSchedule(opt.id as "manana" | "tarde" | "noche" | "cualquiera")}
-                />
-              ))}
-            </div>
-          </div>
+                      {!otpSent ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleSendCode()}
+                          disabled={sendingCode}
+                          style={{ minHeight: 52 }}
+                          className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {sendingCode ? <Loader2 size={16} className="animate-spin" /> : null}
+                          Enviar código
+                        </button>
+                      ) : (
+                        <>
+                          <input
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="123456"
+                            className="w-full rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-4 text-center text-2xl tracking-[0.3em] text-white placeholder:text-white/20 outline-none focus:border-[#0085FC]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleVerifyCode()}
+                            disabled={verifyingCode || otpCode.length !== 6}
+                            style={{ minHeight: 52 }}
+                            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-sm font-semibold text-white disabled:opacity-60"
+                          >
+                            {verifyingCode ? <Loader2 size={16} className="animate-spin" /> : null}
+                            Verificar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={cooldown > 0 || sendingCode}
+                            onClick={() => void handleSendCode()}
+                            className="w-full text-center text-xs font-semibold text-[#0085FC] disabled:opacity-40"
+                          >
+                            {cooldown > 0 ? `Reenviar código en ${cooldown}s` : "Reenviar código"}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-[10px] border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-3 text-sm font-semibold text-emerald-300">
+                      <Check size={16} strokeWidth={3} />
+                      Teléfono verificado
+                    </div>
+                  )}
+                </Card>
 
-          <div>
-            <span className="text-xs font-semibold text-white/60">Categoría</span>
-            <div className="mt-1.5 flex flex-wrap gap-2">
-              {CATEGORIES.map((opt) => (
-                <Chip key={opt.value} label={opt.value} selected={category === opt.value} onClick={() => setCategory(opt.value)} />
-              ))}
-            </div>
-            {category ? (
-              <p className="mt-2 text-xs text-white/50">
-                {CATEGORIES.find((c) => c.value === category)?.description}
-              </p>
-            ) : null}
-            {category ? (
-              <div className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-3.5 py-3 text-xs leading-relaxed text-amber-200">
-                ⚠️ Elegí tu categoría con honestidad. Si mentís, no vas a poder unirte a partidos con tus amigos
-                ni a torneos de tu nivel.
-              </div>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card title="Verificá tu teléfono">
-          <div id="recaptcha-container" />
-          {!phoneVerified ? (
-            <>
-              <div className="flex gap-2">
-                <span className="flex items-center rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-[15px] font-medium text-white/70">
-                  +54
-                </span>
-                <input
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value.replace(/[^0-9]/g, ""));
-                    setOtpSent(false);
-                  }}
-                  inputMode="numeric"
-                  placeholder="91122334455"
-                  disabled={otpSent}
-                  className="flex-1 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC] disabled:opacity-50"
-                />
-              </div>
-              <p className="text-xs text-white/40">Te mandamos un SMS al número ingresado.</p>
-
-              {!otpSent ? (
                 <button
                   type="button"
-                  onClick={() => void handleSendCode()}
-                  disabled={sendingCode}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  onClick={goToStep2}
+                  disabled={!canSubmitStep1}
+                  style={{ minHeight: 52 }}
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-[0_8px_24px_rgba(0,133,252,0.25)] disabled:opacity-40"
                 >
-                  {sendingCode ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Enviar código
+                  Continuar →
                 </button>
-              ) : (
-                <>
-                  <input
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4 text-center text-2xl tracking-[0.3em] text-white placeholder:text-white/20 outline-none focus:border-[#0085FC]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void handleVerifyCode()}
-                    disabled={verifyingCode || otpCode.length !== 6}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0085FC] py-3 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {verifyingCode ? <Loader2 size={16} className="animate-spin" /> : null}
-                    Verificar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={cooldown > 0 || sendingCode}
-                    onClick={() => void handleSendCode()}
-                    className="w-full text-center text-xs font-semibold text-[#0085FC] disabled:opacity-40"
-                  >
-                    {cooldown > 0 ? `Reenviar código en ${cooldown}s` : "Reenviar código"}
-                  </button>
-                </>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-3 text-sm font-semibold text-emerald-300">
-              <Check size={16} strokeWidth={3} />
-              Teléfono verificado
-            </div>
-          )}
-        </Card>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="step2"
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+                className="flex flex-col gap-6"
+              >
+                <button
+                  type="button"
+                  onClick={goToStep1}
+                  className="flex items-center gap-1 self-start text-sm font-medium text-white/50 transition hover:text-white/80"
+                >
+                  <ChevronLeft size={16} />
+                  Volver
+                </button>
 
-        {canSubmit ? (
-          <button
-            type="button"
-            onClick={handleFinish}
-            disabled={pending}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-3.5 text-base font-bold text-white shadow-[0_8px_24px_rgba(0,133,252,0.25)] disabled:opacity-60"
-          >
-            {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-            Guardar y empezar a jugar
-          </button>
-        ) : null}
+                <div className="text-center">
+                  <h1 className={`${spaceGrotesk.className} text-[26px] font-bold text-white`}>¿Cómo jugás?</h1>
+                  <p className="mt-1.5 text-sm text-white/60">
+                    Esto nos ayuda a encontrarte los mejores partidos.
+                  </p>
+                </div>
+
+                <Card>
+                  <span className={labelClass}>Mano hábil</span>
+                  <div className="flex gap-2">
+                    {[
+                      { id: "derecha", label: "Derecha" },
+                      { id: "izquierda", label: "Izquierda" },
+                      { id: "ambas", label: "Ambas" },
+                    ].map((opt) => (
+                      <Chip
+                        key={opt.id}
+                        label={opt.label}
+                        selected={preferredHand === opt.id}
+                        onClick={() => setPreferredHand(opt.id as "derecha" | "izquierda" | "ambas")}
+                      />
+                    ))}
+                  </div>
+                </Card>
+
+                <Card>
+                  <span className={labelClass}>Posición en cancha</span>
+                  <div className="flex gap-2">
+                    {[
+                      { id: "drive", label: "Drive" },
+                      { id: "reves", label: "Revés" },
+                      { id: "ambas", label: "Ambas" },
+                    ].map((opt) => (
+                      <Chip
+                        key={opt.id}
+                        label={opt.label}
+                        selected={courtPosition === opt.id}
+                        onClick={() => setCourtPosition(opt.id as "drive" | "reves" | "ambas")}
+                      />
+                    ))}
+                  </div>
+                </Card>
+
+                <Card>
+                  <span className={labelClass}>Horario favorito</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "manana", label: "Mañana" },
+                      { id: "tarde", label: "Tarde" },
+                      { id: "noche", label: "Noche" },
+                      { id: "cualquiera", label: "Cualquiera" },
+                    ].map((opt) => (
+                      <Chip
+                        key={opt.id}
+                        label={opt.label}
+                        selected={preferredSchedule === opt.id}
+                        onClick={() => setPreferredSchedule(opt.id as "manana" | "tarde" | "noche" | "cualquiera")}
+                      />
+                    ))}
+                  </div>
+                </Card>
+
+                <Card>
+                  <span className={labelClass}>Tu categoría</span>
+                  <div className="rounded-[10px] border-l-[3px] border-[#FFC107] bg-[rgba(255,193,7,0.12)] px-3.5 py-3 text-xs leading-relaxed text-amber-100">
+                    Elegí con honestidad. Si mentís, no vas a poder unirte a partidos con tus amigos ni a
+                    torneos de tu nivel.
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CATEGORIES.map((opt) => (
+                      <Chip
+                        key={opt.value}
+                        label={opt.value}
+                        selected={category === opt.value}
+                        onClick={() => setCategory(opt.value)}
+                        minHeight={44}
+                      />
+                    ))}
+                  </div>
+                  {category ? (
+                    <p className="text-xs text-white/50">
+                      {CATEGORIES.find((c) => c.value === category)?.description}
+                    </p>
+                  ) : null}
+                </Card>
+
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  disabled={!canSubmitStep2 || pending}
+                  style={{ minHeight: 52 }}
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-[0_8px_24px_rgba(0,133,252,0.25)] disabled:opacity-40"
+                >
+                  {pending ? <Loader2 size={16} className="animate-spin" /> : null}
+                  Guardar y empezar a jugar 🎾
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
+      <div id="recaptcha-container" />
       <AppleToast message={toast} />
     </main>
   );

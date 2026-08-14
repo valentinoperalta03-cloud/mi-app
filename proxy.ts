@@ -126,7 +126,29 @@ export async function proxy(request: NextRequest) {
     return redirectPreservingSupabaseCookies(request, homePath, response);
   }
 
-  if (pathname === "/completar-perfil") {
+  // Gate de perfil de jugador: los dueños de club tienen su propio flujo de
+  // onboarding admin (checkOnboardingStatus) y no pasan por acá.
+  if (!isAdmin) {
+    const { data: profileRow } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("onboarding_completed")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const onboardingCompleted = Boolean(
+      (profileRow as { onboarding_completed?: boolean | null } | null)?.onboarding_completed
+    );
+
+    if (pathname === "/completar-perfil") {
+      if (onboardingCompleted) {
+        return redirectPreservingSupabaseCookies(request, "/home", response);
+      }
+      return response;
+    }
+
+    if (!onboardingCompleted && isJugadorAppPath(pathname)) {
+      return redirectPreservingSupabaseCookies(request, "/completar-perfil", response);
+    }
+  } else if (pathname === "/completar-perfil") {
     return response;
   }
 

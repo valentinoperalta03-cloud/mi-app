@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Capacitor } from "@capacitor/core";
-import { FaApple } from "react-icons/fa";
+import { FaApple, FaGoogle } from "react-icons/fa";
 import { startNativeAppleOAuth, startNativeGoogleOAuth } from "@/lib/native-oauth";
 import { isCapacitorIosIpad } from "@/lib/capacitor-device";
 import { EXISTING_ACCOUNT_LOGIN_MESSAGE } from "./constants";
@@ -14,12 +14,27 @@ import {
 } from "./actions";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0085FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-[#1c1c1e]";
+  "h-[52px] w-full rounded-xl border border-white/15 bg-white/[0.08] px-4 text-sm font-medium text-white placeholder:text-white/40 outline-none transition-all duration-200 focus:border-[#0085FC]";
 
-const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
+const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50";
 
 const oauthButtonClass =
-  "flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white py-3.5 text-sm font-semibold text-slate-800 shadow-[var(--shadow-card)] transition-all duration-200 hover:bg-slate-50 active:scale-[0.99] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:hover:bg-[#2c2c2e]";
+  "flex h-[52px] w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white transition-all duration-200 hover:bg-white/[0.14] active:scale-[0.99]";
+
+const primaryButtonClass =
+  "flex h-[52px] w-full items-center justify-center rounded-xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(0,133,252,0.40)] transition-all duration-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55";
+
+const linkButtonClass =
+  "w-full rounded-xl py-4 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55";
+
+const noticeClass =
+  "rounded-2xl border border-amber-400/30 bg-amber-400/10 px-3 py-2.5 text-xs font-medium leading-relaxed text-amber-200";
+
+const errorClass =
+  "rounded-2xl border border-rose-400/30 bg-rose-400/10 px-3 py-2.5 text-sm font-medium text-rose-300";
+
+const successClass =
+  "rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-3 py-2.5 text-sm font-medium text-emerald-300";
 
 function useCapacitorIosIpad() {
   const [isIpad, setIsIpad] = useState(false);
@@ -70,7 +85,7 @@ export function GoogleAuthForm() {
   return (
     <div className="space-y-2">
       {isIpadNative ? (
-        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-xs font-medium leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className={noticeClass}>
           En iPad, «Continuar con Google» puede abrir Safari para iniciar sesión. Si no volvés a la
           app, usá <strong>Continuar con Apple</strong> o <strong>email y contraseña</strong>.
         </p>
@@ -82,22 +97,18 @@ export function GoogleAuthForm() {
           disabled={googlePending}
           className={oauthButtonClass}
         >
+          <FaGoogle className="h-[18px] w-[18px] shrink-0" aria-hidden />
           {googlePending ? "Abriendo Google..." : "Continuar con Google"}
         </button>
       ) : (
         <a href="/auth/google" className={oauthButtonClass}>
+          <FaGoogle className="h-[18px] w-[18px] shrink-0" aria-hidden />
           Continuar con Google
         </a>
       )}
-      {googleError ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-          {googleError}
-        </p>
-      ) : null}
+      {googleError ? <p className={errorClass}>{googleError}</p> : null}
       {Capacitor.isNativePlatform() && !isIpadNative ? (
-        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-          Si Google falla en la app, usá email y contraseña.
-        </p>
+        <p className="text-center text-xs text-white/40">Si Google falla en la app, usá email y contraseña.</p>
       ) : null}
     </div>
   );
@@ -148,25 +159,18 @@ export function AppleAuthForm() {
           type="button"
           onClick={() => void openAppleNative()}
           disabled={applePending}
-          className={`${oauthButtonClass} bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100`}
+          className={oauthButtonClass}
         >
           <FaApple className="h-5 w-5 shrink-0" aria-hidden />
           {applePending ? "Abriendo Apple..." : "Continuar con Apple"}
         </button>
-        {appleError ? (
-          <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-            {appleError}
-          </p>
-        ) : null}
+        {appleError ? <p className={errorClass}>{appleError}</p> : null}
       </div>
     );
   }
 
   return (
-    <a
-      href="/auth/apple"
-      className={`${oauthButtonClass} bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100`}
-    >
+    <a href="/auth/apple" className={oauthButtonClass}>
       <FaApple className="h-5 w-5 shrink-0" aria-hidden />
       Continuar con Apple
     </a>
@@ -205,11 +209,7 @@ function LoginForm({
         });
       }}
     >
-      {notice ? (
-        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <p className={noticeClass}>{notice}</p> : null}
 
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
@@ -247,20 +247,12 @@ function LoginForm({
       </div>
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0085FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
-        >
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
           {pending ? "Iniciando sesión..." : "Iniciar sesión"}
         </button>
       </div>
 
-      {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className={errorClass}>{error}</p> : null}
     </form>
   );
 }
@@ -348,20 +340,12 @@ function RegisterForm({
       </div>
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0085FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
-        >
+        <button type="submit" disabled={pending} className={primaryButtonClass}>
           {pending ? "Creando cuenta..." : "Crear mi cuenta"}
         </button>
       </div>
 
-      {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className={errorClass}>{error}</p> : null}
     </form>
   );
 }
@@ -410,8 +394,8 @@ function OtpForm({
       }}
     >
       <div className="space-y-1">
-        <h3 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Revisá tu email</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <h3 className="text-xl font-semibold tracking-tight text-white">Revisá tu email</h3>
+        <p className="text-sm text-white/60">
           Te enviamos un código de 6 dígitos a {email}. Si no llega, revisá spam o reenviá.
         </p>
       </div>
@@ -430,16 +414,12 @@ function OtpForm({
           onChange={(event) => setToken(event.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder="123456"
           required
-          className={`${inputClass} px-6 py-5 text-center text-3xl tracking-[0.35em]`}
+          className="w-full rounded-xl border border-white/15 bg-white/[0.08] px-6 py-5 text-center text-3xl tracking-[0.35em] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
         />
       </div>
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={verifyPending}
-          className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:from-[#0085FC] hover:to-[#0461C4] hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55"
-        >
+        <button type="submit" disabled={verifyPending} className={primaryButtonClass}>
           {verifyPending ? "Verificando..." : "Verificar código"}
         </button>
       </div>
@@ -462,35 +442,30 @@ function OtpForm({
             setCooldown(30);
           });
         }}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:text-sky-400 dark:hover:bg-slate-800"
+        className={linkButtonClass}
       >
         {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviar código"}
       </button>
 
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-1 w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
-      >
+      <button type="button" onClick={onBack} className={linkButtonClass}>
         Volver
       </button>
 
-      {error ? (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-          {error}
-        </p>
-      ) : null}
-      {successMessage ? (
-        <p className="rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-          {successMessage}
-        </p>
-      ) : null}
+      {error ? <p className={errorClass}>{error}</p> : null}
+      {successMessage ? <p className={successClass}>{successMessage}</p> : null}
     </form>
   );
 }
 
-export function EmailAuthForm({ next }: { next?: string }) {
-  const [isLogin, setIsLogin] = useState(true);
+export function EmailAuthForm({
+  next,
+  isLogin,
+  onModeChange,
+}: {
+  next?: string;
+  isLogin: boolean;
+  onModeChange: (isLogin: boolean) => void;
+}) {
   const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [loginEmailPrefill, setLoginEmailPrefill] = useState("");
   const [otpState, setOtpState] = useState<{ active: boolean; email: string }>({
@@ -521,7 +496,7 @@ export function EmailAuthForm({ next }: { next?: string }) {
           next={next}
           onOtpRequired={(email) => setOtpState({ active: true, email })}
           onExistingAccount={(email) => {
-            setIsLogin(true);
+            onModeChange(true);
             setLoginEmailPrefill(email);
             setLoginNotice(EXISTING_ACCOUNT_LOGIN_MESSAGE);
           }}
@@ -532,11 +507,11 @@ export function EmailAuthForm({ next }: { next?: string }) {
         <button
           type="button"
           onClick={() => {
-            setIsLogin((prev) => !prev);
+            onModeChange(!isLogin);
             setLoginNotice(null);
             setLoginEmailPrefill("");
           }}
-          className="w-full rounded-2xl py-4 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
+          className={linkButtonClass}
         >
           {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
         </button>

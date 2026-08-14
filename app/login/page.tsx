@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import CapacitorShellReady from "@/components/capacitor-shell-ready";
 import { LegalFooterLinks } from "@/components/legal-footer-links";
-import { AppleAuthForm, EmailAuthForm, GoogleAuthForm } from "./auth-forms";
+import LoginCard from "./login-card";
 
 type LoginPageProps = {
   searchParams: Promise<{ message?: string; kind?: string; next?: string }>;
@@ -17,81 +17,53 @@ function displayMessage(raw: string | undefined) {
   }
 }
 
-function LoginMark() {
-  return (
-    <div className="mx-auto" aria-hidden>
-      <Image src="/logo.png" alt="PadeLibre" width={56} height={56} className="rounded-2xl" />
-    </div>
-  );
-}
-
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { message, kind, next } = await searchParams;
   const text = displayMessage(message);
   const isError = kind === "error" || (Boolean(text) && kind !== "info");
 
   return (
-    <main className="login-page-main relative isolate flex min-h-dvh flex-col justify-center overflow-y-auto bg-[#F2F2F7] px-4 py-10 dark:bg-black sm:py-14">
+    <main
+      className="login-page-main relative isolate flex min-h-dvh flex-col overflow-y-auto"
+      style={{ background: "linear-gradient(135deg, #0C1829 0%, #0A2540 100%)" }}
+    >
       <CapacitorShellReady />
-      <div className="login-page-inner player-shell-inner mx-auto w-full px-4 md:max-w-2xl">
-        <div className="login-page-card rounded-3xl border border-[var(--border-subtle)] bg-white p-8 shadow-[var(--shadow-card)] sm:p-10">
-          <div className="mb-8 flex flex-col items-center text-center">
-            <LoginMark />
-            <h1 className="mt-5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
-              Crear cuenta
-            </h1>
-            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-              Unite a la comunidad de pádel
-            </p>
+      <div className="h-0.5 w-full shrink-0 bg-[#CCFF00]" />
+      <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:py-14">
+        <div className="login-page-inner mx-auto w-full max-w-[480px] px-4">
+          <div className="flex flex-col items-center">
+            <Image src="/logo.png" alt="PadeLibre" width={40} height={40} className="rounded-xl" priority />
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/40">PadeLibre</p>
           </div>
 
-          {text ? (
-            <p
-              role="alert"
-              className={
-                isError
-                  ? "mb-6 rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300"
-                  : "mb-6 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-3 text-sm font-medium text-[#0085FC] dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
-              }
-            >
-              {text}
-            </p>
-          ) : null}
+          <div className="login-page-card mt-6 rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_25px_70px_-20px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:p-10">
+            {text ? (
+              <p
+                role="alert"
+                className={
+                  isError
+                    ? "mb-6 rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-300"
+                    : "mb-6 rounded-2xl border border-[#0085FC]/30 bg-[#0085FC]/10 px-4 py-3 text-sm font-medium text-[#69B8FF]"
+                }
+              >
+                {text}
+              </p>
+            ) : null}
 
-          <div className="space-y-3">
-            <AppleAuthForm />
-            <GoogleAuthForm />
+            <LoginCard next={next} />
+
+            <div className="mt-7 border-t border-white/10 pt-5 text-center">
+              <p className="text-sm font-medium text-white/50">¿Tenés un club de pádel?</p>
+              <Link
+                href="/registro-club"
+                className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-[#0085FC] hover:underline"
+              >
+                Registrá tu club gratis <span aria-hidden>→</span>
+              </Link>
+            </div>
+
+            <LegalFooterLinks variant="login" className="mt-6" />
           </div>
-
-          <div className="my-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <span className="h-px flex-1 bg-slate-200/90 dark:bg-slate-700" />
-            <span className="shrink-0">o con email</span>
-            <span className="h-px flex-1 bg-slate-200/90 dark:bg-slate-700" />
-          </div>
-
-          <EmailAuthForm next={next} />
-
-          <div className="mt-7 border-t border-slate-200/70 pt-5 text-center dark:border-slate-700">
-            <p className="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-              📱 Registrate una sola vez y listo.
-              <br />
-              La próxima vez que entrés desde cualquier link de un club,
-              <br />
-              ya vas a estar dentro de tu cuenta automáticamente.
-            </p>
-          </div>
-
-          <div className="mt-5 border-t border-slate-200/70 pt-5 text-center dark:border-slate-700">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">¿Tenés un club de pádel?</p>
-            <Link
-              href="/registro-club"
-              className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-[#0085FC] hover:underline dark:text-sky-400"
-            >
-              Registrá tu club gratis <span aria-hidden>→</span>
-            </Link>
-          </div>
-
-          <LegalFooterLinks variant="login" className="mt-6" />
         </div>
       </div>
     </main>
