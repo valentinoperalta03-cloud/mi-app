@@ -90,9 +90,26 @@ export default function CompletarPerfilClient() {
     return () => window.clearInterval(id);
   }, [cooldown]);
 
+  // El div#recaptcha-container ya está montado en este punto (se renderiza
+  // incondicionalmente en el JSX, antes de cualquier lógica condicional) —
+  // RecaptchaVerifier exige que el elemento exista en el DOM al construirse.
   useEffect(() => {
+    console.log("[Firebase] Inicializando RecaptchaVerifier...");
+    recaptchaVerifierRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
+      size: "invisible",
+      callback: () => {
+        console.log("[Firebase] reCAPTCHA resuelto.");
+      },
+      "expired-callback": () => {
+        console.log("[Firebase] reCAPTCHA expirado.");
+      },
+    });
+    console.log("[Firebase] RecaptchaVerifier inicializado.");
+
     return () => {
+      console.log("[Firebase] Limpiando RecaptchaVerifier...");
       recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
     };
   }, []);
 
@@ -141,35 +158,32 @@ export default function CompletarPerfilClient() {
     }
   }
 
-  function getRecaptchaVerifier(): RecaptchaVerifier {
-    if (!recaptchaVerifierRef.current) {
-      recaptchaVerifierRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
-        size: "invisible",
-      });
-    }
-    return recaptchaVerifierRef.current;
-  }
-
   async function handleSendCode() {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 8) {
       showToast("Ingresá un número de teléfono válido.");
       return;
     }
+    const verifier = recaptchaVerifierRef.current;
+    if (!verifier) {
+      console.error("[Firebase] RecaptchaVerifier no está inicializado todavía.");
+      showToast("Todavía se está cargando la verificación. Esperá un segundo e intentá de nuevo.");
+      return;
+    }
+    const fullPhone = `+54${digits}`;
     setSendingCode(true);
     try {
-      const verifier = getRecaptchaVerifier();
-      const fullPhone = `+54${digits}`;
+      console.log("[Firebase] signInWithPhoneNumber llamado con:", fullPhone);
       const result = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
+      console.log("[Firebase] SMS enviado, esperando código.");
       confirmationRef.current = result;
       setOtpSent(true);
       setOtpCode("");
       setCooldown(OTP_COOLDOWN_SECONDS);
       showToast("Te enviamos un código por SMS.");
-    } catch {
+    } catch (error) {
+      console.error("[Firebase] Error:", error);
       showToast("No se pudo enviar el SMS. Verificá el número e intentá de nuevo.");
-      recaptchaVerifierRef.current?.clear();
-      recaptchaVerifierRef.current = null;
     } finally {
       setSendingCode(false);
     }
@@ -183,10 +197,13 @@ export default function CompletarPerfilClient() {
     }
     setVerifyingCode(true);
     try {
+      console.log("[Firebase] Verificando código OTP...");
       await confirmationRef.current.confirm(otpCode);
+      console.log("[Firebase] Código verificado correctamente.");
       setPhoneVerified(true);
       showToast("Teléfono verificado.");
-    } catch {
+    } catch (error) {
+      console.error("[Firebase] Error:", error);
       showToast("Código incorrecto o expirado. Probá de nuevo.");
     } finally {
       setVerifyingCode(false);
@@ -370,6 +387,7 @@ export default function CompletarPerfilClient() {
         </Card>
 
         <Card title="Verificá tu teléfono">
+          <div id="recaptcha-container" />
           {!phoneVerified ? (
             <>
               <div className="flex gap-2">
@@ -436,7 +454,6 @@ export default function CompletarPerfilClient() {
               Teléfono verificado
             </div>
           )}
-          <div id="recaptcha-container" />
         </Card>
 
         {canSubmit ? (
