@@ -10,8 +10,8 @@ import PlayerNavigationProgress from "@/components/player-navigation-progress";
 import PlayerRoutePrefetch from "@/components/player-route-prefetch";
 import TopNav from "@/components/top-nav";
 
-/** Rutas de pantalla completa: sin TopNav ni BottomNav (ver app/(player)/bienvenida). */
-const FULLSCREEN_ROUTES = ["/bienvenida"];
+/** Rutas de pantalla completa: sin TopNav ni BottomNav. */
+const FULLSCREEN_ROUTES: string[] = [];
 
 export default function PlayerLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();

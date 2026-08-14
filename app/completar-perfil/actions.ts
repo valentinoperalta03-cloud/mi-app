@@ -17,6 +17,8 @@ type CompletarPerfilPayload = {
   preferredSchedule: "manana" | "tarde" | "noche" | "cualquiera";
   category: string;
   phone: string;
+  province: string;
+  city: string;
 };
 
 export type CompletarPerfilResult = { ok: boolean; message: string };
@@ -32,6 +34,8 @@ export async function completarPerfilAction(
   const preferredSchedule = String(payload.preferredSchedule ?? "").trim().toLowerCase();
   const category = String(payload.category ?? "").trim();
   const phone = String(payload.phone ?? "").replace(/[^\d+]/g, "").trim();
+  const province = sanitizeText(payload.province ?? "", 80);
+  const city = sanitizeText(payload.city ?? "", 80);
 
   if (!name) return { ok: false, message: "Ingresá tu nombre." };
   if (gender !== "masculino" && gender !== "femenino") {
@@ -51,6 +55,9 @@ export async function completarPerfilAction(
   }
   if (phone.replace(/\D/g, "").length < 8) {
     return { ok: false, message: "Verificá tu número de teléfono." };
+  }
+  if (!province) {
+    return { ok: false, message: "Seleccioná tu provincia." };
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -82,6 +89,8 @@ export async function completarPerfilAction(
       preferred_schedule: preferredSchedule,
       category,
       phone,
+      province,
+      city: city || null,
       onboarding_completed: true,
     })
     .eq("user_id", user.id);

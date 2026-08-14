@@ -64,19 +64,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const { data: profileData } = await supabase
     .from(DB_TABLES.profiles)
-    .select("slides_seen, onboarding_completed, name, gender")
+    .select("onboarding_completed, name, gender")
     .eq("user_id", user.id)
     .maybeSingle();
 
   const profileRow = profileData as {
-    slides_seen?: boolean | null;
     onboarding_completed?: boolean | null;
     name?: string | null;
     gender?: string | null;
   } | null;
-
-  const slidesSeen = Boolean(profileRow?.slides_seen);
-  if (!slidesSeen) redirect("/bienvenida");
 
   const hasName = Boolean(profileRow?.name?.trim());
   const hasGender = Boolean(profileRow?.gender?.trim());

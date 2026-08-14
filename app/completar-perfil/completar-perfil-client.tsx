@@ -6,6 +6,7 @@ import { Camera, ChevronLeft, Loader2 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppleToast } from "@/components/apple-toast";
+import { ARGENTINA_PROVINCES } from "@/lib/argentina-provinces";
 import { createClient } from "@/utils/supabase/client";
 import { completarPerfilAction } from "./actions";
 
@@ -137,6 +138,8 @@ export default function CompletarPerfilClient() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [phone, setPhone] = useState("");
+  const [province, setProvince] = useState("");
+  const [city, setCity] = useState("");
 
   // Pantalla 2 — tu juego
   const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
@@ -189,7 +192,9 @@ export default function CompletarPerfilClient() {
     }
   }
 
-  const canSubmitStep1 = Boolean(name.trim() && gender && phone.replace(/\D/g, "").length >= 8);
+  const canSubmitStep1 = Boolean(
+    name.trim() && gender && phone.replace(/\D/g, "").length >= 8 && province
+  );
   const canSubmitStep2 = Boolean(preferredHand && courtPosition && preferredSchedule && category);
 
   function goToStep2() {
@@ -213,6 +218,8 @@ export default function CompletarPerfilClient() {
         preferredSchedule: preferredSchedule as "manana" | "tarde" | "noche" | "cualquiera",
         category,
         phone: `+54${phone.replace(/\D/g, "")}`,
+        province,
+        city: city.trim(),
       });
       if (res && !res.ok) {
         showToast(res.message);
@@ -343,6 +350,32 @@ export default function CompletarPerfilClient() {
                       className="flex-1 rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
                     />
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>¿Dónde jugás?</SectionLabel>
+                  <select
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                    style={{ height: 52 }}
+                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white outline-none focus:border-[#0085FC]"
+                  >
+                    <option value="" disabled className="bg-[#0C1829] text-white/35">
+                      Seleccioná tu provincia
+                    </option>
+                    {ARGENTINA_PROVINCES.map((prov) => (
+                      <option key={prov.code} value={prov.name} className="bg-[#0C1829] text-white">
+                        {prov.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Tu ciudad"
+                    style={{ height: 52 }}
+                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
+                  />
                 </div>
 
                 <MainButton enabled={canSubmitStep1} onClick={goToStep2}>
