@@ -30,7 +30,7 @@ export default async function CrearPartidoPage({ searchParams }: PageProps) {
   }
   const onboardingDone = await isOnboardingComplete(supabase, user.id);
   if (!onboardingDone) {
-    redirect("/onboarding");
+    redirect("/completar-perfil");
   }
   const { data: profile } = user
     ? await supabase.from(DB_TABLES.profiles).select("gender").eq("user_id", user.id).maybeSingle()

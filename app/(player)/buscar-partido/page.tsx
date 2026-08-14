@@ -19,7 +19,7 @@ export default async function BuscarPartidoPage({ searchParams }: PageProps) {
   if (!user) redirect("/login");
 
   const complete = await isOnboardingComplete(supabase, user.id);
-  if (!complete) redirect("/onboarding");
+  if (!complete) redirect("/completar-perfil");
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] pb-24">

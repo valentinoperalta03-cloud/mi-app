@@ -126,7 +126,7 @@ export async function proxy(request: NextRequest) {
     return redirectPreservingSupabaseCookies(request, homePath, response);
   }
 
-  if (pathname === "/onboarding") {
+  if (pathname === "/completar-perfil") {
     return response;
   }
 

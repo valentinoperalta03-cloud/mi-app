@@ -141,7 +141,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className={`flex flex-col gap-3 ${!profileComplete ? "pointer-events-none opacity-40 select-none" : ""}`}>
         <Link
-          href={profileComplete ? quickActions[0].href : "/onboarding"}
+          href={profileComplete ? quickActions[0].href : "/completar-perfil"}
           prefetch
           className="group relative flex items-center gap-4 overflow-hidden rounded-3xl p-5 text-white transition active:scale-[0.98]"
           style={{
@@ -161,7 +161,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </Link>
 
         <Link
-          href={profileComplete ? quickActions[1].href : "/onboarding"}
+          href={profileComplete ? quickActions[1].href : "/completar-perfil"}
           prefetch
           className="flex items-center gap-4 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-card)] transition active:scale-[0.98]"
         >

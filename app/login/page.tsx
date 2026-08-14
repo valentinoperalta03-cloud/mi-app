@@ -72,6 +72,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <EmailAuthForm next={next} />
 
           <div className="mt-7 border-t border-slate-200/70 pt-5 text-center dark:border-slate-700">
+            <p className="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+              📱 Registrate una sola vez y listo.
+              <br />
+              La próxima vez que entrés desde cualquier link de un club,
+              <br />
+              ya vas a estar dentro de tu cuenta automáticamente.
+            </p>
+          </div>
+
+          <div className="mt-5 border-t border-slate-200/70 pt-5 text-center dark:border-slate-700">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">¿Tenés un club de pádel?</p>
             <Link
               href="/registro-club"

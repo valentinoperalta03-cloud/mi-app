@@ -123,7 +123,7 @@ export default async function PerfilPage() {
     preferred_schedule?: string | null;
   };
   if (row.onboarding_completed !== true) {
-    redirect("/onboarding");
+    redirect("/completar-perfil");
   }
   const displayName = row?.name?.trim() || "Tu perfil";
   const categoryLabel = formatPlayerCategory(row?.category);

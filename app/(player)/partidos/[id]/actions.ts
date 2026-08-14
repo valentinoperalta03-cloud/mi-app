@@ -212,7 +212,7 @@ export async function requestToJoin(formData: FormData): Promise<void> {
   const { isOnboardingComplete } = await import("@/lib/onboarding-check");
   const complete = await isOnboardingComplete(supabase, user.id);
   if (!complete) {
-    redirect("/onboarding");
+    redirect("/completar-perfil");
   }
 
   const { data: matchRow, error: mErr } = await supabase

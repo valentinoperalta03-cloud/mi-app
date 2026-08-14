@@ -28,7 +28,7 @@ export function OnboardingRequiredModal({ onClose }: { onClose: () => void }) {
         </p>
         <div className="mt-5 space-y-2">
           <Link
-            href="/onboarding"
+            href="/completar-perfil"
             className="block w-full rounded-2xl bg-[#0085FC] py-3.5 text-center text-sm font-semibold text-white transition active:scale-[0.98]"
           >
             Completar perfil

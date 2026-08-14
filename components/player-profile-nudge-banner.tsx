@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 export default function PlayerProfileNudgeBanner() {
   return (
     <Link
-      href="/onboarding"
+      href="/completar-perfil"
       className="flex items-center gap-3 rounded-2xl bg-[var(--bg-subtle)] px-4 py-2.5 text-sm transition active:scale-[0.99]"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-lima text-[11px] font-bold text-black">

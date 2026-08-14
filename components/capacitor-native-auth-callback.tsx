@@ -77,7 +77,7 @@ async function wasDeepLinkHandled(url: string): Promise<boolean> {
 
 const PADELIBRE_HOSTS = new Set(["www.padelibre.online", "padelibre.online"]);
 // Paths que no deben ser interceptados (los maneja el flujo de auth normal)
-const SKIP_PATHS = new Set(["/", "/login", "/verificar-email", "/onboarding", "/bienvenida"]);
+const SKIP_PATHS = new Set(["/", "/login", "/verificar-email", "/completar-perfil", "/bienvenida"]);
 
 function extractDeepLinkPath(url: string): string | null {
   try {
