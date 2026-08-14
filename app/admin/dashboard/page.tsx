@@ -10,6 +10,7 @@ import {
 import { adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { PaymentStatusPill } from "@/components/admin/admin-status-pills";
 import OnboardingChecklist from "@/components/admin/onboarding-checklist";
+import DashboardClubLink from "./dashboard-club-link";
 import FixedSlotTodayCard, { type TodayFixedSlotCard } from "./fixed-slot-today-card";
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { formatDateInArgentina, getTodayYmdInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
@@ -83,7 +84,7 @@ export default async function AdminDashboardPage({
 
   const { data: clubInfoRaw } = await supabase
     .from(DB_TABLES.clubs)
-    .select("id,name,logo_url,onboarding_completed,open_time,close_time")
+    .select("id,name,logo_url,onboarding_completed,open_time,close_time,slug")
     .in("id", ctx.clubIds)
     .order("name", { ascending: true })
     .limit(1);
@@ -95,9 +96,11 @@ export default async function AdminDashboardPage({
         onboarding_completed?: boolean | null;
         open_time?: string | null;
         close_time?: string | null;
+        slug?: string | null;
       }
     | null;
   const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
+  const clubSlug = club?.slug?.trim() || null;
 
   const { data: todayMatchesRaw } = ctx.courtIds.length
     ? await supabase
@@ -606,6 +609,7 @@ export default async function AdminDashboardPage({
           <span aria-hidden="true">·</span>
           <CurrentArTime />
         </div>
+        {clubSlug ? <DashboardClubLink slug={clubSlug} /> : null}
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

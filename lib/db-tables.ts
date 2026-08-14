@@ -9,6 +9,7 @@
 export const DB_TABLES = {
   profiles: "profiles",
   clubs: "clubs",
+  clubSlugRedirects: "club_slug_redirects",
   clubClosedDays: "club_closed_days",
   // Deprecada: ya no hay código que lea/escriba esta tabla (bloqueos
   // recurrentes por día de semana). No se dropeó de la DB por si hay datos

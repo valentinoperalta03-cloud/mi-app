@@ -11,12 +11,14 @@ import ConfigClubDataForm from "../config-club-data-form";
 import ConfigClubLocationForm from "../config-club-location-form";
 import ConfigClubPhotosForm from "../config-club-photos-form";
 import ClubHoursForm from "../club-hours-form";
+import ConfigClubSlugForm from "./config-club-slug-form";
+import ConfigClubSocialsForm from "./config-club-socials-form";
 
 export const dynamic = "force-dynamic";
 
 const NO_CLUB_MSG = "No tenés un club asignado. Contactá a soporte.padelibre@gmail.com";
 const CLUB_ADMIN_COLUMNS =
-  "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id" as const;
+  "id,name,location,city,province,country,description,address,contact_phone,whatsapp,instagram,facebook,tiktok,slug,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,cancellation_hours,owner_id" as const;
 const CLUB_ADMIN_COLUMNS_FALLBACK =
   "id,name,location,description,address,contact_phone,whatsapp,instagram,business_hours,open_time,close_time,logo_url,cover_image_url,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,cancellation_policy,owner_id" as const;
 
@@ -77,7 +79,10 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
   if (
     clubErr?.message?.toLowerCase().includes("cancellation_hours") ||
     clubErr?.message?.toLowerCase().includes("open_time") ||
-    clubErr?.message?.toLowerCase().includes("close_time")
+    clubErr?.message?.toLowerCase().includes("close_time") ||
+    clubErr?.message?.toLowerCase().includes("slug") ||
+    clubErr?.message?.toLowerCase().includes("facebook") ||
+    clubErr?.message?.toLowerCase().includes("tiktok")
   ) {
     const fallback = await supabase
       .from(DB_TABLES.clubs)
@@ -111,6 +116,9 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
     contact_phone: string | null;
     whatsapp: string | null;
     instagram: string | null;
+    facebook?: string | null;
+    tiktok?: string | null;
+    slug?: string | null;
     business_hours: string | null;
     open_time?: string | null;
     close_time?: string | null;
@@ -156,6 +164,17 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
         title="Información del club"
         subtitle="Datos, horarios y fotos de tu club"
       />
+
+      <section className={`${adminCard} ${adminAccentBar} p-6`}>
+        <p className={adminKicker}>Link público</p>
+        <h2 className={adminTitle}>Tu link público</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          Compartí este link con tus jugadores para que reserven directo en tu club.
+        </p>
+        <div className="mt-4">
+          <ConfigClubSlugForm clubId={clubId} initialSlug={club.slug ?? ""} />
+        </div>
+      </section>
 
       <section className={`${adminCard} ${adminAccentBar} p-6`}>
         <p className={adminKicker}>Cuenta</p>
@@ -242,6 +261,23 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
               gallery_image_2: club.gallery_image_2 ?? "",
               gallery_image_3: club.gallery_image_3 ?? "",
               gallery_image_4: club.gallery_image_4 ?? "",
+            }}
+          />
+        </div>
+      </section>
+
+      <section className={`${adminCard} p-6`}>
+        <p className={adminKicker}>Redes sociales</p>
+        <h2 className={adminTitle}>Redes sociales</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Se muestran en tu perfil público.</p>
+        <div className="mt-4">
+          <ConfigClubSocialsForm
+            clubId={clubId}
+            initial={{
+              instagram: club.instagram ?? "",
+              whatsapp: club.whatsapp ?? "",
+              facebook: club.facebook ?? "",
+              tiktok: club.tiktok ?? "",
             }}
           />
         </div>
