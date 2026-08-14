@@ -93,6 +93,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Si la ruta no coincide con ninguna ruta conocida, puede ser un slug de club
+  // (app/[slug]/) — página pública, sin login. Dejar pasar sin gating de sesión.
+  const isKnownRoute =
+    isAdminPanelPath(pathname) ||
+    isJugadorAppPath(pathname) ||
+    isPublicAuthPath(pathname) ||
+    isPublicPath(pathname) ||
+    isSuperadminPath(pathname) ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/";
+  if (!isKnownRoute) {
+    return response;
+  }
+
   if (user && !user.email_confirmed_at) {
     if (pathname === "/verificar-email" || pathname.startsWith("/auth/")) {
       return response;

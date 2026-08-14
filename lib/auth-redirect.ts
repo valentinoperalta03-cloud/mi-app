@@ -73,7 +73,11 @@ export function isPublicAuthPath(pathname: string): boolean {
   return false;
 }
 
-/** Rutas públicas sin sesión que NO deben redirigir a usuarios ya logueados (a diferencia de isPublicAuthPath). */
+/**
+ * Rutas públicas sin sesión que NO deben redirigir a usuarios ya logueados (a diferencia de isPublicAuthPath).
+ * Las páginas públicas de club (`/[slug]`) NO se listan acá: se resuelven en `proxy.ts` dejando pasar
+ * cualquier ruta que no matchee ninguna ruta conocida de la app (ver `isKnownRoute` en proxy.ts).
+ */
 export function isPublicPath(pathname: string): boolean {
   return pathname === "/agenda";
 }
