@@ -6,19 +6,21 @@ import { resendOtpCode, signUpWithEmail } from "@/app/login/actions";
 import { verifyClubOtpAction } from "./actions";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-[#0085FC] focus:bg-white focus:shadow-[0_0_0_3px_rgba(56,189,248,0.22)] dark:border-[var(--border-subtle)] dark:bg-[#1c1c1e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-[#1c1c1e]";
+  "h-[52px] w-full rounded-xl border border-white/15 bg-white/[0.08] px-4 text-sm font-medium text-white placeholder:text-white/40 outline-none transition-all duration-200 focus:border-[#0085FC]";
 
-const labelClass =
-  "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400";
+const labelClass = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50";
 
 const primaryButtonClass =
-  "w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-4 text-[15px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(2,132,199,0.45)] transition-all duration-200 hover:shadow-[0_6px_22px_-4px_rgba(2,132,199,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55";
+  "flex h-[52px] w-full items-center justify-center rounded-xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(0,133,252,0.40)] transition-all duration-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55";
+
+const linkButtonClass =
+  "w-full rounded-xl py-3.5 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/10 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55";
 
 const errorClass =
-  "rounded-2xl border border-rose-200/80 bg-rose-50/90 px-3 py-2.5 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300";
+  "rounded-2xl border border-rose-400/30 bg-rose-400/10 px-3 py-2.5 text-sm font-medium text-rose-300";
 
 const successClass =
-  "rounded-2xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-2.5 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300";
+  "rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-3 py-2.5 text-sm font-medium text-emerald-300";
 
 type Step = "datos" | "otp" | "confirmando";
 
@@ -88,7 +90,7 @@ export default function RegistroClubForm() {
     return (
       <div className="flex flex-col items-center gap-4 py-10 text-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#0085FC]/20 border-t-[#0085FC]" />
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Creando tu club...</p>
+        <p className="text-sm font-medium text-white/55">Creando tu club...</p>
       </div>
     );
   }
@@ -103,10 +105,8 @@ export default function RegistroClubForm() {
         }}
       >
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            Revisá tu email
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="text-xl font-semibold tracking-tight text-white">Revisá tu email</h2>
+          <p className="text-sm text-white/60">
             Te enviamos un código de 6 dígitos a {email}. Si no llega, revisá spam o reenviá.
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function RegistroClubForm() {
             onChange={(event) => setToken(event.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="123456"
             required
-            className={`${inputClass} px-6 py-5 text-center text-3xl tracking-[0.35em]`}
+            className="w-full rounded-xl border border-white/15 bg-white/[0.08] px-6 py-5 text-center text-3xl tracking-[0.35em] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
           />
         </div>
 
@@ -151,7 +151,7 @@ export default function RegistroClubForm() {
               setCooldown(30);
             });
           }}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 dark:text-sky-400 dark:hover:bg-slate-800"
+          className={linkButtonClass}
         >
           {cooldown > 0 ? `Reenviar en ${cooldown}s...` : resendPending ? "Reenviando..." : "Reenviá el código"}
         </button>
@@ -162,7 +162,7 @@ export default function RegistroClubForm() {
             setError(null);
             setStep("datos");
           }}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-semibold text-[#0085FC] transition-all duration-200 hover:bg-[#0085FC]/5 active:scale-[0.99] dark:text-sky-400 dark:hover:bg-slate-800"
+          className={linkButtonClass}
         >
           Volver
         </button>
