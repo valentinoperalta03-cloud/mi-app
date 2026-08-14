@@ -2,7 +2,7 @@
 
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
-import { Camera, Check, ChevronLeft, Loader2 } from "lucide-react";
+import { Camera, ChevronLeft, Loader2 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppleToast } from "@/components/apple-toast";
@@ -25,80 +25,102 @@ const CATEGORIES: { value: string; description: string }[] = [
   { value: "1ra", description: "Jugador de élite, torneos nacionales" },
 ];
 
-const labelClass = `${ibmPlexMono.className} text-[11px] font-semibold uppercase tracking-[0.12em] text-[#CCFF00]`;
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <span className="text-[15px] font-bold text-white">{children}</span>;
+}
 
 function Chip({
   label,
   selected,
   onClick,
-  minHeight = 52,
+  minHeight = 48,
 }: {
   label: string;
   selected: boolean;
   onClick: () => void;
   minHeight?: number;
 }) {
+  const [bump, setBump] = useState(0);
   return (
-    <button
+    <motion.button
+      key={bump}
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        onClick();
+        setBump((b) => b + 1);
+      }}
       style={{ minHeight }}
-      className={`flex flex-1 items-center justify-center rounded-[10px] border px-3 text-sm font-semibold transition-colors ${
+      initial={{ scale: 1 }}
+      animate={selected ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className={`flex flex-1 items-center justify-center rounded-xl border px-3 text-sm transition-colors duration-150 hover:bg-white/[0.12] ${
         selected
-          ? "border-[#0085FC] bg-[#0085FC] text-white"
-          : "border-white/15 bg-white/[0.06] text-white/70"
+          ? "border-[#0085FC] bg-[#0085FC]/20 font-bold text-white"
+          : "border-white/[0.12] bg-white/[0.08] text-white/75"
       }`}
     >
       {label}
-    </button>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-5">
-      <div className="space-y-4">{children}</div>
-    </section>
-  );
-}
-
-type StepStatus = "active" | "completed" | "pending";
-
-function StepCircle({ status, number }: { status: StepStatus; number: number }) {
-  if (status === "completed") {
-    return (
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#CCFF00] text-black">
-        <Check size={16} strokeWidth={3} />
-      </div>
-    );
-  }
-  if (status === "active") {
-    return (
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0085FC] text-sm font-bold text-white">
-        {number}
-      </div>
-    );
-  }
-  return (
-    <div className="h-9 w-9 shrink-0 rounded-full border border-white/30 bg-transparent" />
+    </motion.button>
   );
 }
 
 function ProgressIndicator({ step }: { step: 1 | 2 }) {
   return (
-    <div className="flex items-center justify-center gap-2">
-      <StepCircle status={step === 1 ? "active" : "completed"} number={1} />
-      <div className={`h-0.5 w-14 rounded-full ${step === 2 ? "bg-[#CCFF00]" : "bg-white/20"}`} />
-      <StepCircle status={step === 2 ? "active" : "pending"} number={2} />
+    <div className="flex w-full flex-col items-center gap-2">
+      <span className={`${ibmPlexMono.className} text-[11px] uppercase tracking-[0.12em] text-white/40`}>
+        Paso {step} de 2
+      </span>
+      <div className="h-[3px] w-full rounded-full bg-white/10">
+        <motion.div
+          className="h-full rounded-full bg-[#CCFF00]"
+          animate={{ width: step === 1 ? "50%" : "100%" }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        />
+      </div>
     </div>
   );
 }
 
 const slideVariants = {
-  enter: (direction: number) => ({ x: direction > 0 ? "100%" : "-100%", opacity: 0 }),
+  enter: { x: 40, opacity: 0 },
   center: { x: 0, opacity: 1 },
-  exit: (direction: number) => ({ x: direction > 0 ? "-100%" : "100%", opacity: 0 }),
+  exit: { x: -40, opacity: 0 },
 };
+
+function MainButton({
+  enabled,
+  pending,
+  onClick,
+  children,
+}: {
+  enabled: boolean;
+  pending?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      key={enabled ? "enabled" : "disabled"}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!enabled || pending}
+        style={{
+          minHeight: 56,
+          boxShadow: enabled ? "0 4px 20px rgba(0,133,252,0.40)" : "none",
+        }}
+        className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white disabled:cursor-not-allowed disabled:opacity-40 ${spaceGrotesk.className}`}
+      >
+        {pending ? <Loader2 size={16} className="animate-spin" /> : null}
+        {children}
+      </button>
+    </motion.div>
+  );
+}
 
 export default function CompletarPerfilClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -106,7 +128,6 @@ export default function CompletarPerfilClient() {
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<1 | 2>(1);
-  const [direction, setDirection] = useState(1);
 
   // Pantalla 1 — sobre vos
   const [name, setName] = useState("");
@@ -173,12 +194,10 @@ export default function CompletarPerfilClient() {
 
   function goToStep2() {
     if (!canSubmitStep1) return;
-    setDirection(1);
     setStep(2);
   }
 
   function goToStep1() {
-    setDirection(-1);
     setStep(1);
   }
 
@@ -202,46 +221,44 @@ export default function CompletarPerfilClient() {
   }
 
   return (
-    <main
-      className="min-h-dvh"
-      style={{ background: "linear-gradient(135deg, #0C1829 0%, #0A2540 100%)" }}
-    >
-      <div className="h-0.5 w-full bg-[#CCFF00]" />
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col gap-6 overflow-y-auto px-5 py-6">
+    <main className="min-h-dvh" style={{ backgroundColor: "#0C1829" }}>
+      <div className="mx-auto flex min-h-dvh w-full max-w-[420px] flex-col gap-8 px-5 py-6">
         <div className="flex flex-col items-center gap-5">
           <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-lg" />
           <ProgressIndicator step={step} />
         </div>
 
         <div className="relative flex-1 overflow-hidden">
-          <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             {step === 1 ? (
               <motion.div
                 key="step1"
-                custom={direction}
                 variants={slideVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
-                className="flex flex-col gap-6"
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col gap-8"
               >
-                <div className="text-center">
-                  <h1 className={`${spaceGrotesk.className} text-[26px] font-bold text-white`}>
-                    Contanos sobre vos
-                  </h1>
-                  <p className="mt-1.5 text-sm text-white/60">
-                    Solo te pedimos esto una vez. Después siempre entrás directo.
-                  </p>
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <span style={{ fontSize: 80, lineHeight: 1 }}>🎾</span>
+                  <div>
+                    <h1 className={`${spaceGrotesk.className} text-[28px] font-bold text-white`}>
+                      ¡Hola! Contanos sobre vos
+                    </h1>
+                    <p className="mt-1.5 text-sm text-white/55">
+                      Solo te pedimos esto una vez. Después siempre entrás directo.
+                    </p>
+                  </div>
                 </div>
 
-                <Card>
-                  <span className={labelClass}>¿Cómo te llamás?</span>
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu nombre</SectionLabel>
                   <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.06]"
+                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/[0.12] bg-white/[0.08]"
                     >
                       {avatarPreview ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -269,21 +286,22 @@ export default function CompletarPerfilClient() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Tu nombre completo"
-                    className="w-full rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
+                    style={{ height: 52 }}
+                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
                   />
-                </Card>
+                </div>
 
-                <Card>
-                  <span className={labelClass}>¿Cuál es tu género?</span>
-                  <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu género</SectionLabel>
+                  <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setGender("masculino")}
-                      style={{ minHeight: 56 }}
-                      className={`w-full rounded-[10px] border text-[15px] font-semibold transition-colors ${
+                      style={{ height: 56 }}
+                      className={`w-1/2 rounded-2xl border text-[15px] font-semibold transition-colors duration-200 ${
                         gender === "masculino"
-                          ? "border-[#0085FC] bg-[#0085FC] text-white"
-                          : "border-white/15 bg-white/[0.06] text-white/70"
+                          ? "border-transparent bg-[#0085FC] font-bold text-white"
+                          : "border-white/[0.12] bg-white/[0.08] text-white/75"
                       }`}
                     >
                       ♂ Masculino
@@ -291,25 +309,29 @@ export default function CompletarPerfilClient() {
                     <button
                       type="button"
                       onClick={() => setGender("femenino")}
-                      style={{ minHeight: 56 }}
-                      className={`w-full rounded-[10px] border text-[15px] font-semibold transition-colors ${
+                      style={{ height: 56 }}
+                      className={`w-1/2 rounded-2xl border text-[15px] font-semibold transition-colors duration-200 ${
                         gender === "femenino"
-                          ? "border-[#0085FC] bg-[#0085FC] text-white"
-                          : "border-white/15 bg-white/[0.06] text-white/70"
+                          ? "border-transparent bg-[#0085FC] font-bold text-white"
+                          : "border-white/[0.12] bg-white/[0.08] text-white/75"
                       }`}
                     >
                       ♀ Femenino
                     </button>
                   </div>
-                </Card>
+                </div>
 
-                <Card>
-                  <span className={labelClass}>¿Cuál es tu número de teléfono?</span>
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu teléfono</SectionLabel>
                   <p className="text-[13px] leading-relaxed text-white/55">
-                    El club puede contactarte si tiene alguna novedad sobre tu reserva o partido.
+                    Los clubes donde reservés van a poder escribirte si hay alguna novedad. Tu número nunca se
+                    comparte públicamente.
                   </p>
                   <div className="flex gap-2">
-                    <span className="flex items-center rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-[15px] font-medium text-white/70">
+                    <span
+                      style={{ height: 52 }}
+                      className="flex items-center rounded-2xl border border-white/[0.12] bg-white/[0.08] px-3 text-[15px] font-medium text-white/70"
+                    >
                       +54
                     </span>
                     <input
@@ -317,31 +339,25 @@ export default function CompletarPerfilClient() {
                       onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
                       inputMode="numeric"
                       placeholder="91122334455"
-                      className="flex-1 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
+                      style={{ height: 52 }}
+                      className="flex-1 rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
                     />
                   </div>
-                </Card>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={goToStep2}
-                  disabled={!canSubmitStep1}
-                  style={{ minHeight: 52 }}
-                  className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-[0_8px_24px_rgba(0,133,252,0.25)] disabled:opacity-40"
-                >
-                  Continuar →
-                </button>
+                <MainButton enabled={canSubmitStep1} onClick={goToStep2}>
+                  Continuar — casi listo 👊
+                </MainButton>
               </motion.div>
             ) : (
               <motion.div
                 key="step2"
-                custom={direction}
                 variants={slideVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
-                className="flex flex-col gap-6"
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col gap-8"
               >
                 <button
                   type="button"
@@ -352,15 +368,18 @@ export default function CompletarPerfilClient() {
                   Volver
                 </button>
 
-                <div className="text-center">
-                  <h1 className={`${spaceGrotesk.className} text-[26px] font-bold text-white`}>¿Cómo jugás?</h1>
-                  <p className="mt-1.5 text-sm text-white/60">
-                    Esto nos ayuda a encontrarte los mejores partidos.
-                  </p>
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <span style={{ fontSize: 80, lineHeight: 1 }}>⚡</span>
+                  <div>
+                    <h1 className={`${spaceGrotesk.className} text-[28px] font-bold text-white`}>¿Cómo jugás?</h1>
+                    <p className="mt-1.5 text-sm text-white/55">
+                      Esto nos ayuda a encontrarte los mejores partidos.
+                    </p>
+                  </div>
                 </div>
 
-                <Card>
-                  <span className={labelClass}>Mano hábil</span>
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu mano hábil</SectionLabel>
                   <div className="flex gap-2">
                     {[
                       { id: "derecha", label: "Derecha" },
@@ -375,10 +394,10 @@ export default function CompletarPerfilClient() {
                       />
                     ))}
                   </div>
-                </Card>
+                </div>
 
-                <Card>
-                  <span className={labelClass}>Posición en cancha</span>
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu posición en cancha</SectionLabel>
                   <div className="flex gap-2">
                     {[
                       { id: "drive", label: "Drive" },
@@ -393,10 +412,10 @@ export default function CompletarPerfilClient() {
                       />
                     ))}
                   </div>
-                </Card>
+                </div>
 
-                <Card>
-                  <span className={labelClass}>Horario favorito</span>
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu horario favorito</SectionLabel>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { id: "manana", label: "Mañana" },
@@ -412,13 +431,18 @@ export default function CompletarPerfilClient() {
                       />
                     ))}
                   </div>
-                </Card>
+                </div>
 
-                <Card>
-                  <span className={labelClass}>Tu categoría</span>
-                  <div className="rounded-[10px] border-l-[3px] border-[#FFC107] bg-[rgba(255,193,7,0.12)] px-3.5 py-3 text-xs leading-relaxed text-amber-100">
-                    Elegí con honestidad. Si mentís, no vas a poder unirte a partidos con tus amigos ni a
-                    torneos de tu nivel.
+                <div className="flex flex-col gap-3">
+                  <SectionLabel>Tu categoría</SectionLabel>
+                  <div
+                    style={{ borderLeftWidth: 3, borderLeftColor: "#FFC107", backgroundColor: "rgba(255,193,7,0.10)" }}
+                    className="rounded-[10px] px-4 py-3 text-[13px] leading-relaxed"
+                  >
+                    <span style={{ color: "#FFC107" }}>
+                      ⚠️ Elegí tu categoría con honestidad. Si mentís, no vas a poder unirte a partidos con tus
+                      amigos.
+                    </span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {CATEGORIES.map((opt) => (
@@ -436,18 +460,11 @@ export default function CompletarPerfilClient() {
                       {CATEGORIES.find((c) => c.value === category)?.description}
                     </p>
                   ) : null}
-                </Card>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={handleFinish}
-                  disabled={!canSubmitStep2 || pending}
-                  style={{ minHeight: 52 }}
-                  className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-[0_8px_24px_rgba(0,133,252,0.25)] disabled:opacity-40"
-                >
-                  {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Guardar y empezar a jugar 🎾
-                </button>
+                <MainButton enabled={canSubmitStep2} pending={pending} onClick={handleFinish}>
+                  ¡Listo, a jugar! 🎾
+                </MainButton>
               </motion.div>
             )}
           </AnimatePresence>
