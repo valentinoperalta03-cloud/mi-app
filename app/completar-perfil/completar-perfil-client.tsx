@@ -3,11 +3,9 @@
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
 import { Camera, Check, ChevronLeft, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import { AppleToast } from "@/components/apple-toast";
-import { firebaseAuth } from "@/lib/firebase";
 import { createClient } from "@/utils/supabase/client";
 import { completarPerfilAction } from "./actions";
 
@@ -15,7 +13,6 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] 
 const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"] });
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-const OTP_COOLDOWN_SECONDS = 30;
 
 const CATEGORIES: { value: string; description: string }[] = [
   { value: "8va", description: "Recién empezás a jugar" },
@@ -105,8 +102,6 @@ const slideVariants = {
 
 export default function CompletarPerfilClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -121,51 +116,12 @@ export default function CompletarPerfilClient() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [phone, setPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
-  const [verifyingCode, setVerifyingCode] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
 
   // Pantalla 2 — tu juego
   const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
   const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
   const [preferredSchedule, setPreferredSchedule] = useState<"manana" | "tarde" | "noche" | "cualquiera" | "">("");
   const [category, setCategory] = useState("");
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = window.setInterval(() => {
-      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [cooldown]);
-
-  // El div#recaptcha-container se renderiza siempre, fuera de los bloques
-  // condicionales por paso, para que nunca se desmonte del DOM mientras el
-  // usuario navega entre pantallas — RecaptchaVerifier exige que el
-  // elemento exista en el DOM al construirse y se rompe si el nodo al que
-  // apunta queda desmontado.
-  useEffect(() => {
-    console.log("[Firebase] Inicializando RecaptchaVerifier...");
-    recaptchaVerifierRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
-      size: "invisible",
-      callback: () => {
-        console.log("[Firebase] reCAPTCHA resuelto.");
-      },
-      "expired-callback": () => {
-        console.log("[Firebase] reCAPTCHA expirado.");
-      },
-    });
-    console.log("[Firebase] RecaptchaVerifier inicializado.");
-
-    return () => {
-      console.log("[Firebase] Limpiando RecaptchaVerifier...");
-      recaptchaVerifierRef.current?.clear();
-      recaptchaVerifierRef.current = null;
-    };
-  }, []);
 
   function showToast(message: string) {
     setToast(message);
@@ -212,59 +168,7 @@ export default function CompletarPerfilClient() {
     }
   }
 
-  async function handleSendCode() {
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 8) {
-      showToast("Ingresá un número de teléfono válido.");
-      return;
-    }
-    const verifier = recaptchaVerifierRef.current;
-    if (!verifier) {
-      console.error("[Firebase] RecaptchaVerifier no está inicializado todavía.");
-      showToast("Todavía se está cargando la verificación. Esperá un segundo e intentá de nuevo.");
-      return;
-    }
-    const fullPhone = `+54${digits}`;
-    setSendingCode(true);
-    try {
-      console.log("[Firebase] signInWithPhoneNumber llamado con:", fullPhone);
-      const result = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
-      console.log("[Firebase] SMS enviado, esperando código.");
-      confirmationRef.current = result;
-      setOtpSent(true);
-      setOtpCode("");
-      setCooldown(OTP_COOLDOWN_SECONDS);
-      showToast("Te enviamos un código por SMS.");
-    } catch (error) {
-      console.error("[Firebase] Error:", error);
-      showToast("No se pudo enviar el SMS. Verificá el número e intentá de nuevo.");
-    } finally {
-      setSendingCode(false);
-    }
-  }
-
-  async function handleVerifyCode() {
-    if (!confirmationRef.current) return;
-    if (otpCode.length !== 6) {
-      showToast("Ingresá el código de 6 dígitos.");
-      return;
-    }
-    setVerifyingCode(true);
-    try {
-      console.log("[Firebase] Verificando código OTP...");
-      await confirmationRef.current.confirm(otpCode);
-      console.log("[Firebase] Código verificado correctamente.");
-      setPhoneVerified(true);
-      showToast("Teléfono verificado.");
-    } catch (error) {
-      console.error("[Firebase] Error:", error);
-      showToast("Código incorrecto o expirado. Probá de nuevo.");
-    } finally {
-      setVerifyingCode(false);
-    }
-  }
-
-  const canSubmitStep1 = Boolean(name.trim() && gender && phoneVerified);
+  const canSubmitStep1 = Boolean(name.trim() && gender && phone.replace(/\D/g, "").length >= 8);
   const canSubmitStep2 = Boolean(preferredHand && courtPosition && preferredSchedule && category);
 
   function goToStep2() {
@@ -400,78 +304,22 @@ export default function CompletarPerfilClient() {
                 </Card>
 
                 <Card>
-                  <span className={labelClass}>¿Cuál es tu número de WhatsApp?</span>
+                  <span className={labelClass}>¿Cuál es tu número de teléfono?</span>
                   <p className="text-[13px] leading-relaxed text-white/55">
                     El club puede contactarte si tiene alguna novedad sobre tu reserva o partido.
                   </p>
-
-                  {!phoneVerified ? (
-                    <>
-                      <div className="flex gap-2">
-                        <span className="flex items-center rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-[15px] font-medium text-white/70">
-                          +54
-                        </span>
-                        <input
-                          value={phone}
-                          onChange={(e) => {
-                            setPhone(e.target.value.replace(/[^0-9]/g, ""));
-                            setOtpSent(false);
-                          }}
-                          inputMode="numeric"
-                          placeholder="91122334455"
-                          disabled={otpSent}
-                          className="flex-1 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC] disabled:opacity-50"
-                        />
-                      </div>
-
-                      {!otpSent ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleSendCode()}
-                          disabled={sendingCode}
-                          style={{ minHeight: 52 }}
-                          className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-sm font-semibold text-white disabled:opacity-60"
-                        >
-                          {sendingCode ? <Loader2 size={16} className="animate-spin" /> : null}
-                          Enviar código
-                        </button>
-                      ) : (
-                        <>
-                          <input
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                            inputMode="numeric"
-                            maxLength={6}
-                            placeholder="123456"
-                            className="w-full rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-4 text-center text-2xl tracking-[0.3em] text-white placeholder:text-white/20 outline-none focus:border-[#0085FC]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void handleVerifyCode()}
-                            disabled={verifyingCode || otpCode.length !== 6}
-                            style={{ minHeight: 52 }}
-                            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-sm font-semibold text-white disabled:opacity-60"
-                          >
-                            {verifyingCode ? <Loader2 size={16} className="animate-spin" /> : null}
-                            Verificar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={cooldown > 0 || sendingCode}
-                            onClick={() => void handleSendCode()}
-                            className="w-full text-center text-xs font-semibold text-[#0085FC] disabled:opacity-40"
-                          >
-                            {cooldown > 0 ? `Reenviar código en ${cooldown}s` : "Reenviar código"}
-                          </button>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 rounded-[10px] border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-3 text-sm font-semibold text-emerald-300">
-                      <Check size={16} strokeWidth={3} />
-                      Teléfono verificado
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <span className="flex items-center rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-[15px] font-medium text-white/70">
+                      +54
+                    </span>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      placeholder="91122334455"
+                      className="flex-1 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none focus:border-[#0085FC]"
+                    />
+                  </div>
                 </Card>
 
                 <button
@@ -605,7 +453,6 @@ export default function CompletarPerfilClient() {
           </AnimatePresence>
         </div>
       </div>
-      <div id="recaptcha-container" />
       <AppleToast message={toast} />
     </main>
   );
