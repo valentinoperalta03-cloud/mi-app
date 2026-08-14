@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type UpdateClubSlugResult = { ok: true } | { error: string };
 
@@ -57,13 +57,13 @@ export async function updateClubSlugAction(
       .upsert({ old_slug: oldSlug, club_id: clubId });
   }
 
-  const { error } = await supabase
+  const serviceClient = createServiceClient();
+  const { error: updateError } = await serviceClient
     .from(DB_TABLES.clubs)
     .update({ slug })
-    .eq("id", clubId)
-    .eq("owner_id", ctx.userId);
+    .eq("id", club.id);
 
-  if (error) return { error: "No se pudo guardar el link." };
+  if (updateError) return { error: "No se pudo guardar el link: " + updateError.message };
 
   revalidatePath("/admin/config/informacion");
   revalidatePath("/admin/dashboard");
