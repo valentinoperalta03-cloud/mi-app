@@ -23,6 +23,16 @@ export async function updateClubSlugAction(
     return { error: "No tenés permiso para editar este club." };
   }
 
+  const { data: club, error: clubError } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("id, slug")
+    .eq("owner_id", ctx.userId)
+    .maybeSingle();
+
+  console.log("[slug] club:", club, "error:", clubError);
+
+  if (!club) return { error: `Club no encontrado para owner ${ctx.userId}` };
+
   const { data: existing } = await supabase
     .from(DB_TABLES.clubs)
     .select("id")
