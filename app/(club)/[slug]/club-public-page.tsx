@@ -52,6 +52,12 @@ const SERVICES_CATALOG: Record<string, { emoji: string; label: string }> = {
   escuela: { emoji: "🎓", label: "Escuela" },
 };
 
+const HOW_IT_WORKS = [
+  { emoji: "🎾", title: "Elegís cancha y horario", subtitle: "Ves disponibilidad en tiempo real" },
+  { emoji: "💳", title: "Pagás la seña online", subtitle: "Seguro por Mercado Pago" },
+  { emoji: "✅", title: "¡Listo! La cancha es tuya", subtitle: "Recibís confirmación al instante" },
+];
+
 function formatSurface(raw: string | null | undefined): string {
   if (!raw?.trim()) return "Superficie no definida";
   const s = raw.trim().toLowerCase();
@@ -174,7 +180,7 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
   const cityProvince = [club.city, club.province]
     .filter((v): v is string => Boolean(v?.trim()))
     .map((v) => v.trim().toUpperCase())
-    .join(", ");
+    .join(" · ");
 
   const services = (club.services ?? []).filter(Boolean);
   const socialLinks = [
@@ -189,7 +195,9 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
       <div className="h-0.5 w-full" style={{ backgroundColor: "#CCFF00" }} />
 
       <nav className="mx-auto flex w-full max-w-[480px] items-center justify-between px-4 py-4">
-        <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-md" />
+        <Link href={isLoggedIn ? "/home" : `/login?next=/${club.slug}`}>
+          <Image src="/logo.png" alt="PadeLibre" width={28} height={28} className="rounded-md" />
+        </Link>
         {!isLoggedIn ? (
           <Link
             href={`/login?next=/${club.slug}`}
@@ -200,8 +208,8 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
         ) : null}
       </nav>
 
-      <div className="mx-auto w-full max-w-[480px] px-0 pb-20">
-        <section className="relative h-[180px] w-full overflow-hidden">
+      <div className={`mx-auto w-full max-w-[480px] px-0 ${isLoggedIn ? "pb-20" : "pb-32"}`}>
+        <section className="relative h-[220px] w-full overflow-hidden">
           {club.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={club.cover_image_url} alt={club.name} className="h-full w-full object-cover" />
@@ -210,11 +218,11 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
           )}
           <div
             className="absolute inset-0"
-            style={{ background: "linear-gradient(to top, #0C1829 0%, transparent 60%)" }}
+            style={{ background: "linear-gradient(to top, #0C1829 0%, transparent 70%)" }}
           />
           <div className="absolute bottom-3 left-4 flex items-end gap-3">
             <div
-              className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-[#0C1829] bg-white/10"
+              className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-[#CCFF00]/40 bg-white/10"
               style={{ borderRadius: "50%" }}
             >
               {club.logo_url ? (
@@ -223,20 +231,20 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
               ) : null}
             </div>
             <div className="pb-1">
-              <h1 className="text-[22px] font-bold leading-tight text-white">{club.name}</h1>
-              {cityProvince ? <p className="text-[13px] text-white/65">{cityProvince}</p> : null}
+              <h1 className="text-2xl font-bold leading-tight text-white">{club.name}</h1>
+              {cityProvince ? <p className="text-[13px] uppercase text-white/65">{cityProvince}</p> : null}
             </div>
           </div>
         </section>
 
-        <div className="flex flex-col gap-8 px-4 pt-6">
+        <div className="flex flex-col px-4 pt-6">
           <div className="flex flex-col gap-3">
             {isLoggedIn ? (
               <>
                 <Link
                   href={`/${club.slug}/reservar`}
                   style={{ minHeight: 52 }}
-                  className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                  className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-lg shadow-[#0085FC]/30"
                 >
                   🎾 Reservar una cancha
                 </Link>
@@ -254,7 +262,7 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
                   type="button"
                   onClick={() => setShowAuthModal(true)}
                   style={{ minHeight: 52 }}
-                  className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                  className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white shadow-lg shadow-[#0085FC]/30"
                 >
                   🎾 Reservar una cancha
                 </button>
@@ -268,20 +276,48 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
                 </button>
               </>
             )}
-            <p className="text-center text-xs leading-relaxed text-white/45">
-              Reservar cancha: pagás una seña y la cancha es tuya · Partido abierto: encontrá con quién jugar
-            </p>
+            <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] font-medium text-white/50">
+              <span className="shrink-0">✓ Seña por Mercado Pago</span>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">✓ Confirmación al instante</span>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">✓ Cancelación flexible</span>
+            </div>
           </div>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-[18px] font-bold text-white">Sobre el club</h2>
-            {club.description ? <p className="text-sm leading-relaxed text-white/70">{club.description}</p> : null}
-            {club.business_hours ? <p className="text-sm text-white/60">🕐 {club.business_hours}</p> : null}
+          {!isLoggedIn ? (
+            <section className="flex flex-col gap-3 border-t border-white/[0.08] pt-8">
+              <h2 className="text-[18px] font-bold text-white">¿Cómo funciona?</h2>
+              <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+                {HOW_IT_WORKS.map((item, i) => (
+                  <div
+                    key={item.title}
+                    className={`flex items-start gap-3 ${i > 0 ? "border-t border-white/[0.06] pt-3" : ""}`}
+                  >
+                    <span className="text-xl leading-none">{item.emoji}</span>
+                    <div>
+                      <p className="text-sm font-bold text-white">{item.title}</p>
+                      <p className="text-xs text-white/55">{item.subtitle}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="flex flex-col gap-2 border-t border-white/[0.08] pt-8">
+            <h2 className="text-[13px] font-bold uppercase tracking-widest text-white/40">Sobre el club</h2>
+            {club.description ? <p className="text-sm leading-relaxed text-white/75">{club.description}</p> : null}
+            {club.business_hours ? (
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1 text-xs text-white/60">
+                🕐 {club.business_hours}
+              </span>
+            ) : null}
           </section>
 
           {services.length > 0 ? (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-[18px] font-bold text-white">Servicios</h2>
+            <section className="flex flex-col gap-3 border-t border-white/[0.08] pt-8">
+              <h2 className="text-[13px] font-bold uppercase tracking-widest text-white/40">Servicios</h2>
               <div className="grid grid-cols-3 gap-2">
                 {services.map((s) => {
                   const meta = SERVICES_CATALOG[s.toLowerCase()] ?? { emoji: "🎾", label: s };
@@ -300,35 +336,40 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
           ) : null}
 
           {courts.length > 0 ? (
-            <section className="flex flex-col gap-3">
+            <section className="flex flex-col gap-3 border-t border-white/[0.08] pt-8">
               <h2 className="text-[18px] font-bold text-white">Canchas</h2>
               <div className="flex flex-col gap-2">
                 {courts.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between rounded-xl bg-white/[0.05] px-4 py-3"
-                    style={{ borderRadius: 12 }}
-                  >
+                  <div key={c.id} className="flex items-center gap-3 rounded-xl bg-white/[0.05] px-4 py-3">
+                    <span className="text-lg leading-none">{c.indoor ? "🏠" : "☀️"}</span>
                     <div>
                       <p className="text-sm font-semibold text-white">{c.name ?? "Cancha"}</p>
                       <p className="text-xs text-white/55">
                         {formatSurface(c.surface)} · {c.indoor ? "Techada" : "Descubierta"}
                       </p>
                     </div>
-                    {typeof c.price === "number" ? (
-                      <p className="text-sm font-bold text-[#0085FC]">
-                        ${new Intl.NumberFormat("es-AR").format(c.price)}
-                      </p>
-                    ) : null}
                   </div>
                 ))}
               </div>
+              {isLoggedIn ? (
+                <Link href={`/${club.slug}/reservar`} className="text-sm font-semibold text-[#0085FC]">
+                  Ver disponibilidad →
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-left text-sm font-semibold text-[#0085FC]"
+                >
+                  Ver disponibilidad →
+                </button>
+              )}
             </section>
           ) : null}
 
           {socialLinks.length > 0 ? (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-[18px] font-bold text-white">Las redes de {club.name}</h2>
+            <section className="flex flex-col gap-3 border-t border-white/[0.08] pt-8">
+              <h2 className="text-[18px] font-bold text-white">Encontranos en</h2>
               <div className="flex gap-3">
                 {socialLinks.map(({ key, href, Icon, label }) => (
                   <a
@@ -337,9 +378,10 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={label}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.08] text-white"
+                    className="flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl border border-white/[0.12] bg-white/[0.08] text-white"
                   >
                     <Icon />
+                    <span className="text-[10px] text-white/50">{label}</span>
                   </a>
                 ))}
               </div>
@@ -350,6 +392,31 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
 
       {showAuthModal ? (
         <AuthRequiredModal clubName={club.name} slug={club.slug} onClose={() => setShowAuthModal(false)} />
+      ) : null}
+
+      {!isLoggedIn ? (
+        <div
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.10]"
+          style={{ backgroundColor: "#0C1829", paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2 px-4 pt-3">
+            <p className="text-center text-xs text-white/60">Creá tu cuenta gratis para reservar</p>
+            <div className="flex gap-2">
+              <Link
+                href={`/login?next=/${club.slug}`}
+                className="flex-1 rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-3 text-center text-sm font-bold text-white"
+              >
+                Crear cuenta
+              </Link>
+              <Link
+                href={`/login?next=/${club.slug}`}
+                className="flex-1 rounded-2xl border border-white/20 bg-white/[0.06] py-3 text-center text-sm font-semibold text-white"
+              >
+                Ya tengo cuenta
+              </Link>
+            </div>
+          </div>
+        </div>
       ) : null}
     </main>
   );
