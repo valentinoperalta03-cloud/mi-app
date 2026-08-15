@@ -28,7 +28,9 @@ export default async function ClubSlugPage({ params }: PageProps) {
     if (newSlug) permanentRedirect(`/${newSlug}`);
   }
 
-  const { data: clubRow } = await supabase
+  console.log("[slug page] buscando slug:", slug);
+
+  const { data: clubRow, error: clubError } = await supabase
     .from(DB_TABLES.clubs)
     .select(
       "id,name,slug,description,logo_url,cover_image_url,location,city,province,business_hours,services,instagram,whatsapp,facebook,tiktok,is_active"
@@ -37,7 +39,12 @@ export default async function ClubSlugPage({ params }: PageProps) {
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!clubRow) notFound();
+  console.log("[slug page] club:", clubRow, "error:", clubError);
+
+  if (!clubRow) {
+    console.log("[slug page] notFound() disparado");
+    notFound();
+  }
 
   const club = clubRow as PublicClub & { is_active: boolean };
 
