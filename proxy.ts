@@ -66,6 +66,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Rutas que no coinciden con ninguna ruta conocida de la app
+  // pueden ser slugs de club — dejar pasar a Next.js
+  const KNOWN_PREFIXES = [
+    "/admin", "/superadmin", "/home", "/login", "/registro-club",
+    "/completar-perfil", "/verificar-email", "/privacidad", "/auth",
+    "/api", "/_next", "/feed", "/comunidad", "/clubes", "/partidos",
+    "/buscar-partido", "/reservas", "/perfil", "/jugador", "/clases",
+    "/torneos", "/inicio", "/test", "/agenda",
+  ];
+
+  const isKnownRoute =
+    KNOWN_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
+    pathname === "/";
+
+  if (!isKnownRoute) {
+    return NextResponse.next();
+  }
+
   const { supabase, response } = createMiddlewareClient(request);
 
   const {
@@ -91,21 +109,6 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === "/") {
     return NextResponse.next();
-  }
-
-  // Si la ruta no coincide con ninguna ruta conocida, puede ser un slug de club
-  // (app/[slug]/) — página pública, sin login. Dejar pasar sin gating de sesión.
-  const isKnownRoute =
-    isAdminPanelPath(pathname) ||
-    isJugadorAppPath(pathname) ||
-    isPublicAuthPath(pathname) ||
-    isPublicPath(pathname) ||
-    isSuperadminPath(pathname) ||
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/_next/") ||
-    pathname === "/";
-  if (!isKnownRoute) {
-    return response;
   }
 
   if (user && !user.email_confirmed_at) {
