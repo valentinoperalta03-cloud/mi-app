@@ -1,14 +1,24 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
   buildSlotsForDay,
+  courtBlockStartsFromRows,
   normalizeSlotTime,
+  parseCloseTimeToMinutes,
   type ClubHoursBounds,
   type CourtTimeRangeInput,
 } from "@/lib/court-slots";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { createClient } from "@/utils/supabase/server";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
+import { notifyClubOwner } from "@/lib/club-notify";
+import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
+import { createMPPreference } from "@/lib/mp-preference";
+import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type AvailabilitySlot = { time: string; courtIds: string[] };
 
@@ -125,4 +135,295 @@ export async function getClubAvailability(
   }
 
   return { slots, prices };
+}
+
+async function getUser() {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+  return { supabase, user };
+}
+
+type ReservarCanchaInput = {
+  courtId: string;
+  clubId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+};
+
+type ReservarCanchaResult = { error: string } | { success: true; matchId: string; mpUrl: string };
+
+/**
+ * Reserva directa desde la página pública del club (no un partido abierto):
+ * mismo flujo de validaciones y Mercado Pago que crearPartido(), pero
+ * match_type: 'reservation' para que aparezca en /reservas del jugador y en
+ * la grilla de /admin/reservas — no en el feed de partidos abiertos.
+ */
+export async function reservarCancha(input: ReservarCanchaInput): Promise<ReservarCanchaResult> {
+  const courtId = input.courtId.trim();
+  const clubId = input.clubId.trim();
+  const scheduledDate = input.scheduledDate.trim();
+  const scheduledTime = input.scheduledTime.trim();
+
+  if (!courtId || !clubId || !scheduledDate || !scheduledTime) {
+    return { error: "Completá cancha, fecha y horario." };
+  }
+
+  const durationMinutes = 90;
+
+  const { supabase, user } = await getUser();
+  const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
+  if (!allowedByRateLimit) {
+    return { error: "Límite de partidos creados por hora alcanzado." };
+  }
+
+  const { data: payerProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+  const nameParts = payerName.split(" ");
+  const payerFirstName = nameParts[0] ?? "";
+  const payerLastName = nameParts.slice(1).join(" ") ?? "";
+
+  const { data: courtData, error: courtError } = await supabase
+    .from(DB_TABLES.courts)
+    .select(
+      "club_id, price, name, clubs!inner(name, deposit_type, deposit_value, close_time)"
+    )
+    .eq("id", courtId)
+    .maybeSingle();
+
+  if (courtError || !courtData) {
+    return { error: "No se pudo obtener la información de la cancha." };
+  }
+
+  const clubIdStr = String((courtData as { club_id?: string | null }).club_id ?? "").trim();
+  if (clubIdStr !== clubId) {
+    return { error: "No se pudo obtener la información de la cancha." };
+  }
+
+  // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
+  const { data: clubMpRow } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .select("mp_access_token")
+    .eq("id", clubIdStr)
+    .maybeSingle();
+  const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
+  if (!clubAccessToken) {
+    return { error: "Este club no acepta reservas online todavía. Contactalos directamente." };
+  }
+  const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubIdStr);
+  if (!canReceiveReservations) {
+    return { error: "Este club no está disponible para reservas en este momento." };
+  }
+  if (await isClubSubscriptionBlocked(clubIdStr)) {
+    return { error: "Este club no puede recibir reservas en este momento." };
+  }
+
+  const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
+  const { data: slotPriceRows } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .select("day_of_week,start_time,price_override")
+    .eq("court_id", courtId)
+    .not("start_time", "is", null)
+    .not("price_override", "is", null);
+  const slotPriceRowsTyped = (slotPriceRows ?? []) as Array<{
+    day_of_week: number | null;
+    start_time: string | null;
+    price_override: number | null;
+  }>;
+  const specificPrice = slotPriceRowsTyped.find(
+    (row) => row.day_of_week === dayOfWeek && String(row.start_time ?? "").slice(0, 5) === timeNorm
+  )?.price_override;
+  const legacyPrice = slotPriceRowsTyped.find(
+    (row) => row.day_of_week === null && String(row.start_time ?? "").slice(0, 5) === timeNorm
+  )?.price_override;
+  const totalPrice = Number(specificPrice ?? legacyPrice ?? (courtData as { price: number | null }).price ?? 0);
+  const clubDepositType =
+    (courtData as { clubs?: { deposit_type?: "percentage" | "fixed" | null } | null }).clubs?.deposit_type ?? null;
+  const clubDepositValue = Number(
+    (courtData as { clubs?: { deposit_value?: number | null } | null }).clubs?.deposit_value ?? 0
+  );
+  const clubName = String((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club");
+  const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
+
+  const slotStart = clockToMinutes(timeNorm);
+  const clubCloseTime = String(
+    (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? ""
+  ).trim();
+  if (clubCloseTime) {
+    const closeMinutes = parseCloseTimeToMinutes(clubCloseTime);
+    if (slotStart + durationMinutes > closeMinutes) {
+      return { error: "El club cierra antes de que termine ese turno." };
+    }
+  }
+
+  const todayAr = getTodayYmdInArgentina();
+  if (scheduledDate < todayAr) {
+    return { error: "La fecha debe ser futura." };
+  }
+  if (scheduledDate === todayAr) {
+    const nowMinutesAr = clockToMinutes(getCurrentClockInArgentina());
+    if (slotStart < nowMinutesAr + 60) {
+      return { error: "La fecha debe ser futura." };
+    }
+  }
+
+  const { data: closedDayRows } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", clubIdStr)
+    .eq("closed_date", scheduledDate)
+    .limit(1);
+  if (closedDayRows?.length) {
+    return { error: "El club está cerrado ese día." };
+  }
+
+  const [{ data: blockRowsModern }, { data: blockRowsLegacy }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.courtBlocks)
+      .select("blocked_time")
+      .eq("court_id", courtId)
+      .eq("blocked_date", scheduledDate),
+    supabase.from(DB_TABLES.courtBlocks).select("start_time").eq("court_id", courtId).eq("date", scheduledDate),
+  ]);
+  const blockedStarts = courtBlockStartsFromRows(
+    blockRowsModern as { blocked_time: string | null }[] | null,
+    blockRowsLegacy as { start_time: string | null }[] | null
+  );
+  if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
+    return { error: "Esa cancha está bloqueada en ese horario." };
+  }
+
+  const { data: duplicatedMatch } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("court_id", courtId)
+    .eq("scheduled_date", scheduledDate)
+    .eq("scheduled_time", timeNorm)
+    .neq("match_status", "cancelled")
+    .maybeSingle();
+  if (duplicatedMatch) {
+    return { error: "Ya tenés una reserva en ese horario." };
+  }
+
+  const { count: activeMatchesCount } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
+    .in("match_status", ["scheduled", "reserved", "full"])
+    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
+  if ((activeMatchesCount ?? 0) >= 3) {
+    return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
+  }
+
+  const { data: conflicts, error: conflictsError } = await supabase
+    .from(DB_TABLES.matches)
+    .select("scheduled_time,duration_minutes")
+    .eq("court_id", courtId)
+    .eq("scheduled_date", scheduledDate)
+    .neq("match_status", "cancelled");
+  if (conflictsError) {
+    return { error: "No se pudo validar disponibilidad." };
+  }
+  for (const row of (conflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]) {
+    const otherStart = clockToMinutes(String(row.scheduled_time ?? ""));
+    const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
+    const slotEnd = slotStart + durationMinutes;
+    const otherEnd = otherStart + otherDur;
+    if (slotStart < otherEnd && otherStart < slotEnd) {
+      return { error: "Ese horario ya no está disponible." };
+    }
+  }
+
+  const depositAmount = resolveDepositCharge(totalPrice, clubDepositType, clubDepositValue);
+
+  const { data, error } = await supabase
+    .from(DB_TABLES.matches)
+    .insert({
+      court_id: courtId,
+      owner_id: user.id,
+      scheduled_date: scheduledDate,
+      scheduled_time: timeNorm,
+      duration_minutes: durationMinutes,
+      total_price: totalPrice,
+      payment_status: "pending",
+      amount_paid: 0,
+      amount_pending: totalPrice,
+      financial_status: "unpaid",
+      match_status: "scheduled",
+      match_type: "reservation",
+      location_name: clubName,
+      date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    if (isMatchSlotConflictError(error)) {
+      return { error: "Este horario ya fue reservado. Elegí otro." };
+    }
+    return { error: "No se pudo crear la reserva." };
+  }
+
+  const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: data.id,
+    player_id: user.id,
+    team: 1,
+  });
+  if (participantError) {
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return { error: "No se pudo crear la reserva." };
+  }
+
+  await notifyClubOwner(supabase, clubIdStr, {
+    title: "🎾 Nueva reserva",
+    body: `${payerName || "Un jugador"} reservó ${courtName} el ${scheduledDate} a las ${timeNorm}.`,
+    match_id: data.id,
+  });
+
+  const mp = await createMPPreference({
+    matchId: data.id,
+    amount: depositAmount,
+    clubName,
+    courtName,
+    date: scheduledDate,
+    userId: user.id,
+    externalReference: `${data.id}__${user.id}`,
+    payerEmail: user.email ?? "",
+    payerFirstName,
+    payerLastName,
+    clubAccessToken,
+  });
+
+  if ("error" in mp) {
+    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return { error: mp.error };
+  }
+
+  const { error: ownerPayErr } = await supabase.from(DB_TABLES.payments).insert({
+    match_id: data.id,
+    user_id: user.id,
+    mp_preference_id: mp.prefId,
+    status: "pending",
+    amount: mp.total,
+    payment_method: "mercadopago",
+  });
+  if (ownerPayErr) {
+    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return { error: "No se pudo registrar el pago. Intentá de nuevo." };
+  }
+
+  return { success: true, matchId: data.id, mpUrl: mp.initPoint };
 }

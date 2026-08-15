@@ -5,11 +5,10 @@ import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { crearPartido } from "@/app/(player)/crear-partido/actions";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { nativeOpenUrl } from "@/lib/native-open";
-import { getClubAvailability, type AvailabilitySlot } from "./actions";
+import { getClubAvailability, reservarCancha, type AvailabilitySlot } from "./actions";
 import type { PublicCourt } from "./club-public-page";
 
 function formatSurface(raw: string | null | undefined): string {
@@ -99,25 +98,18 @@ export default function ClubAvailability({ clubId, clubName, courts, depositType
   function handleConfirmBooking() {
     if (!confirmTarget) return;
     setBookingError(null);
-    const fd = new FormData();
-    fd.set("court_id", confirmTarget.courtId);
-    fd.set("scheduled_date", selectedDate);
-    fd.set("scheduled_time", confirmTarget.time);
-    fd.set("duration_minutes", "90");
-    fd.set("visibility", "privado");
-    fd.set("gender_category", "mixto");
-    fd.set("level_restricted", "false");
-    fd.set("invited_friend_ids", "");
-    fd.set("payment_method", "mercadopago");
 
     startBooking(async () => {
       try {
-        const result = (await crearPartido(fd)) as
-          | { error?: string }
-          | { success?: true; matchId?: string; mpUrl?: string };
-        if (result && "error" in result && result.error) {
+        const result = await reservarCancha({
+          courtId: confirmTarget.courtId,
+          clubId,
+          scheduledDate: selectedDate,
+          scheduledTime: confirmTarget.time,
+        });
+        if ("error" in result) {
           setBookingError(result.error);
-        } else if (result && "mpUrl" in result && result.mpUrl) {
+        } else if ("mpUrl" in result) {
           await nativeOpenUrl(result.mpUrl);
         }
       } catch (err) {
