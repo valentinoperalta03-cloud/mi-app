@@ -1,0 +1,13 @@
+-- 20260814120000_club_slug_social_links.sql agrego slug/services/instagram/
+-- whatsapp/facebook/tiktok a public.clubs, pero esta tabla usa GRANT
+-- column-level restrictivo desde 20260713130000_fix_clubs_billing_column_grants.sql.
+-- Postgres: pedir una sola columna sin GRANT hace fallar el SELECT completo
+-- con "permission denied for table clubs" (42501), no solo esa columna.
+-- Las columnas nuevas nunca se agregaron a esa lista -> /[slug]/ (cliente
+-- anon) y el panel admin (cliente authenticated) fallaban al pedir
+-- slug/services/facebook/tiktok. instagram y whatsapp ya estaban otorgadas.
+--
+-- No se otorga UPDATE: los writes de estas columnas van por
+-- createServiceClient() (service_role bypasea grants/RLS), asi que
+-- anon/authenticated no lo necesitan.
+grant select (slug, services, facebook, tiktok) on public.clubs to anon, authenticated;

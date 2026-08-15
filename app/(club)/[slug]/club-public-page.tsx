@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
 import { useState } from "react";
+import ClubAvailability from "./club-availability";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
@@ -23,6 +24,10 @@ export type PublicClub = {
   whatsapp: string | null;
   facebook: string | null;
   tiktok: string | null;
+  open_time: string | null;
+  close_time: string | null;
+  deposit_type: "percentage" | "fixed" | null;
+  deposit_value: number | null;
 };
 
 export type PublicCourt = {
@@ -336,7 +341,14 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
           {isLoggedIn ? (
             <section id="disponibilidad" className="flex flex-col gap-3">
               <h2 className="text-[18px] font-bold text-white">Disponibilidad</h2>
-              <p className="text-sm text-white/50">Cargando disponibilidad...</p>
+              <ClubAvailability
+                clubId={club.id}
+                clubName={club.name}
+                slug={club.slug}
+                courts={courts}
+                depositType={club.deposit_type}
+                depositValue={club.deposit_value}
+              />
             </section>
           ) : null}
         </div>

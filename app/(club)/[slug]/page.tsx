@@ -33,7 +33,7 @@ export default async function ClubSlugPage({ params }: PageProps) {
   const { data: clubRow, error: clubError } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "id,name,slug,description,logo_url,cover_image_url,location,city,province,business_hours,services,instagram,whatsapp,facebook,tiktok,is_active"
+      "id,name,slug,description,logo_url,cover_image_url,location,city,province,business_hours,services,instagram,whatsapp,facebook,tiktok,is_active,open_time,close_time,deposit_type,deposit_value"
     )
     .eq("slug", slug)
     .eq("is_active", true)
