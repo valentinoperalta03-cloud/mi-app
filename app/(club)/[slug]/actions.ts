@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
   buildSlotsForDay,
@@ -137,17 +136,6 @@ export async function getClubAvailability(
   return { slots, prices };
 }
 
-async function getUser() {
-  const supabase = await createClient({ allowCookieWrites: true });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-  return { supabase, user };
-}
-
 type ReservarCanchaInput = {
   courtId: string;
   clubId: string;
@@ -164,18 +152,25 @@ type ReservarCanchaResult = { error: string } | { success: true; matchId: string
  * la grilla de /admin/reservas — no en el feed de partidos abiertos.
  */
 export async function reservarCancha(input: ReservarCanchaInput): Promise<ReservarCanchaResult> {
-  const courtId = input.courtId.trim();
-  const clubId = input.clubId.trim();
-  const scheduledDate = input.scheduledDate.trim();
-  const scheduledTime = input.scheduledTime.trim();
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Necesitás iniciar sesión." };
+  }
+
+  const courtId = input.courtId?.trim() ?? "";
+  const clubId = input.clubId?.trim() ?? "";
+  const scheduledDate = input.scheduledDate?.trim() ?? "";
+  const scheduledTime = input.scheduledTime?.trim() ?? "";
 
   if (!courtId || !clubId || !scheduledDate || !scheduledTime) {
-    return { error: "Completá cancha, fecha y horario." };
+    return { error: "Datos incompletos." };
   }
 
   const durationMinutes = 90;
 
-  const { supabase, user } = await getUser();
   const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
   if (!allowedByRateLimit) {
     return { error: "Límite de partidos creados por hora alcanzado." };
@@ -254,6 +249,10 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   );
   const clubName = String((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club");
   const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
+
+  if (!(clubDepositValue > 0)) {
+    return { error: "Este club no tiene seña configurada." };
+  }
 
   const slotStart = clockToMinutes(timeNorm);
   const clubCloseTime = String(
