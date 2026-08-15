@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
 import { useState } from "react";
-import ClubAvailability from "./club-availability";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
@@ -24,10 +23,6 @@ export type PublicClub = {
   whatsapp: string | null;
   facebook: string | null;
   tiktok: string | null;
-  open_time: string | null;
-  close_time: string | null;
-  deposit_type: "percentage" | "fixed" | null;
-  deposit_value: number | null;
 };
 
 export type PublicCourt = {
@@ -189,14 +184,6 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
     { key: "tiktok", href: tiktokHref(club.tiktok), Icon: TiktokIcon, label: "TikTok" },
   ].filter((s) => s.href);
 
-  function handlePrimaryAction() {
-    if (!isLoggedIn) {
-      setShowAuthModal(true);
-      return;
-    }
-    document.getElementById("disponibilidad")?.scrollIntoView({ behavior: "smooth" });
-  }
-
   return (
     <main className={`min-h-dvh ${spaceGrotesk.className}`} style={{ backgroundColor: "#0C1829" }}>
       <div className="h-0.5 w-full" style={{ backgroundColor: "#CCFF00" }} />
@@ -244,22 +231,43 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
 
         <div className="flex flex-col gap-8 px-4 pt-6">
           <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              style={{ minHeight: 52 }}
-              className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
-            >
-              🎾 Reservar una cancha
-            </button>
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              style={{ minHeight: 52 }}
-              className="w-full rounded-2xl border border-white/20 bg-white/[0.08] text-base font-semibold text-white"
-            >
-              🏆 Ver partidos abiertos
-            </button>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href={`/${club.slug}/reservar`}
+                  style={{ minHeight: 52 }}
+                  className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                >
+                  🎾 Reservar una cancha
+                </Link>
+                <Link
+                  href={`/${club.slug}/partidos`}
+                  style={{ minHeight: 52 }}
+                  className="flex w-full items-center justify-center rounded-2xl border border-white/20 bg-white/[0.08] text-base font-semibold text-white"
+                >
+                  🏆 Ver partidos abiertos
+                </Link>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal(true)}
+                  style={{ minHeight: 52 }}
+                  className="w-full rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                >
+                  🎾 Reservar una cancha
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal(true)}
+                  style={{ minHeight: 52 }}
+                  className="w-full rounded-2xl border border-white/20 bg-white/[0.08] text-base font-semibold text-white"
+                >
+                  🏆 Ver partidos abiertos
+                </button>
+              </>
+            )}
             <p className="text-center text-xs leading-relaxed text-white/45">
               Reservar cancha: pagás una seña y la cancha es tuya · Partido abierto: encontrá con quién jugar
             </p>
@@ -335,20 +343,6 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
                   </a>
                 ))}
               </div>
-            </section>
-          ) : null}
-
-          {isLoggedIn ? (
-            <section id="disponibilidad" className="flex flex-col gap-3">
-              <h2 className="text-[18px] font-bold text-white">Disponibilidad</h2>
-              <ClubAvailability
-                clubId={club.id}
-                clubName={club.name}
-                slug={club.slug}
-                courts={courts}
-                depositType={club.deposit_type}
-                depositValue={club.deposit_value}
-              />
             </section>
           ) : null}
         </div>
