@@ -2,9 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, Users, User as UserIcon } from "lucide-react";
+import {
+  CircleHelp,
+  CreditCard,
+  FileText,
+  Menu,
+  Settings,
+  Shield,
+  Sparkles,
+  User,
+  UserCircle,
+  Users,
+} from "lucide-react";
 import { Space_Grotesk } from "next/font/google";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
@@ -177,6 +188,29 @@ function AuthRequiredModal({ clubName, slug, onClose }: { clubName: string; slug
   );
 }
 
+type DrawerItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ size?: number; className?: string }>;
+};
+
+const accountItems: DrawerItem[] = [
+  { href: "/perfil", label: "Perfil", icon: User },
+  { href: "/comunidad", label: "Comunidad", icon: Users },
+  { href: "/perfil/editar", label: "Editar perfil", icon: User },
+  { href: "/perfil/actividad", label: "Tu actividad", icon: UserCircle },
+  { href: "/perfil/pagos", label: "Tus pagos", icon: CreditCard },
+  { href: "/ajustes", label: "Ajustes", icon: Settings },
+];
+
+const supportItems: DrawerItem[] = [
+  { href: "/sobre-padelibre", label: "Un poco más de PadeLibre", icon: Sparkles },
+  { href: "/ayuda", label: "Chat Bot", icon: CircleHelp },
+  { href: "/como-funciona", label: "Cómo funciona", icon: FileText },
+  { href: "/legal/terminos", label: "Condiciones de uso", icon: Shield },
+  { href: "/legal/privacidad", label: "Política de privacidad", icon: FileText },
+];
+
 function ClubPageDrawer({
   open,
   onClose,
@@ -222,26 +256,40 @@ function ClubPageDrawer({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <p className="px-4 py-2 text-xs uppercase tracking-widest text-white/35">MI CUENTA</p>
-          <Link
-            href="/perfil"
-            onClick={onClose}
-            className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white"
-          >
-            <span className="rounded-full bg-white/[0.06] p-2 text-white">
-              <UserIcon size={16} />
-            </span>
-            <span>Perfil</span>
-          </Link>
-          <Link
-            href="/comunidad"
-            onClick={onClose}
-            className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white"
-          >
-            <span className="rounded-full bg-white/[0.06] p-2 text-white">
-              <Users size={16} />
-            </span>
-            <span>Comunidad</span>
-          </Link>
+          {accountItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white hover:bg-white/[0.04]"
+              >
+                <span className="rounded-full bg-white/[0.06] p-2 text-white">
+                  <Icon size={16} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <p className="px-4 py-2 text-xs uppercase tracking-widest text-white/35">SOPORTE</p>
+          {supportItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white hover:bg-white/[0.04]"
+              >
+                <span className="rounded-full bg-white/[0.06] p-2 text-white">
+                  <Icon size={16} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
 
         <div
