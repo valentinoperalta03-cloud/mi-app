@@ -33,7 +33,7 @@ const quickActions = [
   },
   {
     title: "Crear Partido",
-    href: "/clubes",
+    href: "/crear-partido",
     Icon: CirclePlus,
     desc: "Elegí un club y abrí o reservá una cancha",
     featured: false,
