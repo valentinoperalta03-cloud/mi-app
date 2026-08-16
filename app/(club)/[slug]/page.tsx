@@ -61,5 +61,16 @@ export default async function ClubSlugPage({ params }: PageProps) {
   } = await supabase.auth.getUser();
   const isLoggedIn = Boolean(user);
 
-  return <ClubPublicPage club={club} courts={courts} isLoggedIn={isLoggedIn} />;
+  let playerName = "";
+  if (user) {
+    const { data: profileRow } = await supabase
+      .from(DB_TABLES.profiles)
+      .select("name, avatar_url")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const p = profileRow as { name?: string | null; avatar_url?: string | null } | null;
+    playerName = p?.name?.trim() ?? "";
+  }
+
+  return <ClubPublicPage club={club} courts={courts} isLoggedIn={isLoggedIn} playerName={playerName} />;
 }

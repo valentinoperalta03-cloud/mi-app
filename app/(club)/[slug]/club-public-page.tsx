@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Menu, Users, User as UserIcon } from "lucide-react";
 import { Space_Grotesk } from "next/font/google";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
@@ -37,6 +39,7 @@ type Props = {
   club: PublicClub;
   courts: PublicCourt[];
   isLoggedIn: boolean;
+  playerName: string;
 };
 
 const SERVICES_CATALOG: Record<string, { emoji: string; label: string }> = {
@@ -174,8 +177,95 @@ function AuthRequiredModal({ clubName, slug, onClose }: { clubName: string; slug
   );
 }
 
-export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
+function ClubPageDrawer({
+  open,
+  onClose,
+  playerName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  playerName: string;
+  slug: string;
+}) {
+  if (!open || typeof document === "undefined") return null;
+
+  const initial = (playerName.trim()[0] ?? "J").toUpperCase();
+
+  return createPortal(
+    <>
+      <button
+        type="button"
+        aria-label="Cerrar menú"
+        className="fixed inset-0 z-[75] bg-black/40"
+        onClick={onClose}
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú"
+        className="fixed right-0 z-[76] flex w-80 max-w-[85vw] flex-col overflow-hidden shadow-2xl"
+        style={{ top: 0, height: "100dvh", backgroundColor: "#0F2038" }}
+      >
+        <div
+          className="shrink-0 border-b border-white/15 p-5"
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/50">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-bold text-white">{playerName || "Jugador"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <p className="px-4 py-2 text-xs uppercase tracking-widest text-white/35">MI CUENTA</p>
+          <Link
+            href="/perfil"
+            onClick={onClose}
+            className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white"
+          >
+            <span className="rounded-full bg-white/[0.06] p-2 text-white">
+              <UserIcon size={16} />
+            </span>
+            <span>Perfil</span>
+          </Link>
+          <Link
+            href="/comunidad"
+            onClick={onClose}
+            className="flex items-center gap-3 border-b border-[#1A3050] px-4 py-3 text-sm font-medium text-white"
+          >
+            <span className="rounded-full bg-white/[0.06] p-2 text-white">
+              <Users size={16} />
+            </span>
+            <span>Comunidad</span>
+          </Link>
+        </div>
+
+        <div
+          className="shrink-0 border-t border-[#1A3050] px-4 pt-2"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
+        >
+          <Link
+            href="/home"
+            onClick={onClose}
+            className="flex w-full items-center gap-2 rounded-xl px-2 py-3 text-sm font-semibold text-[#0085FC]"
+          >
+            ← Volver a PadeLibre
+          </Link>
+        </div>
+      </aside>
+    </>,
+    document.body
+  );
+}
+
+export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }: Props) {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const firstName = playerName.trim().split(" ")[0] || "vos";
 
   const cityProvince = [club.city, club.province]
     .filter((v): v is string => Boolean(v?.trim()))
@@ -208,7 +298,16 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
             >
               Iniciar sesión
             </Link>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Abrir menú"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white"
+            >
+              <Menu size={20} />
+            </button>
+          )}
         </nav>
 
         <section className="relative h-[320px] w-full overflow-hidden">
@@ -252,6 +351,13 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
       </div>
 
       <div className={`mx-auto w-full max-w-[480px] ${isLoggedIn ? "pb-20" : "pb-36"}`}>
+        {isLoggedIn ? (
+          <div className="px-4 pb-1 pt-5">
+            <p className="text-[13px] font-medium text-white/50">Hola, {firstName} 👋</p>
+            <p className="mt-0.5 text-[20px] font-bold leading-tight text-white">¿Qué hacemos hoy?</p>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-2 px-4 pb-0 pt-4">
           {isLoggedIn ? (
             <>
@@ -402,6 +508,15 @@ export default function ClubPublicPage({ club, courts, isLoggedIn }: Props) {
 
       {showAuthModal ? (
         <AuthRequiredModal clubName={club.name} slug={club.slug} onClose={() => setShowAuthModal(false)} />
+      ) : null}
+
+      {isLoggedIn ? (
+        <ClubPageDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          playerName={playerName}
+          slug={club.slug}
+        />
       ) : null}
 
       {!isLoggedIn ? (
