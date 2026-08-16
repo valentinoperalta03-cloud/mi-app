@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PlayerStackHeader } from "@/components/player-back-button";
@@ -12,6 +12,7 @@ import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 export type ClubRow = {
   id: string | number;
   name: string | null;
+  slug?: string | null;
   location?: string | null;
   city?: string | null;
   province?: string | null;
@@ -21,6 +22,10 @@ export type ClubRow = {
   business_hours?: string | null;
   isAvailable?: boolean;
 };
+
+function clubHref(club: ClubRow): string {
+  return club.slug?.trim() ? `/${club.slug.trim()}` : `/clubes/${club.id}`;
+}
 
 type LocationFilter = "mi_ciudad" | "mi_provincia" | "todos";
 
@@ -69,6 +74,11 @@ export default function ClubsListClient({
   userProvince,
   errorMessage,
   errorDebug,
+  title = "Explorar clubes",
+  subtitle = "Encontrá canchas y armá tu próximo partido",
+  backHref = "/home",
+  backLabel = "Volver al inicio",
+  headerExtra,
 }: {
   clubs: ClubRow[];
   userCity?: string | null;
@@ -76,6 +86,12 @@ export default function ClubsListClient({
   errorMessage: string | null;
   /** Detalle técnico (p. ej. mensaje PostgREST) para depuración */
   errorDebug?: string | null;
+  title?: string;
+  subtitle?: string;
+  backHref?: string;
+  backLabel?: string;
+  /** Contenido opcional renderizado entre el header y los filtros de ubicación. */
+  headerExtra?: ReactNode;
 }) {
   const router = useRouter();
   const hasCity = Boolean(userCity?.trim());
@@ -103,13 +119,9 @@ export default function ClubsListClient({
 
   return (
     <>
-      <PlayerStackHeader
-        backHref="/home"
-        backLabel="Volver al inicio"
-        title="Explorar clubes"
-        subtitle="Encontrá canchas y armá tu próximo partido"
-        className="mb-1"
-      />
+      <PlayerStackHeader backHref={backHref} backLabel={backLabel} title={title} subtitle={subtitle} className="mb-1" />
+
+      {headerExtra}
 
       <div className="grid grid-cols-3 gap-2">
         <button type="button" onClick={() => setLocationFilter("mi_ciudad")} className={segmentButton(locationFilter === "mi_ciudad")}>
@@ -170,7 +182,7 @@ export default function ClubsListClient({
           return (
             <motion.article key={club.id} variants={itemVariants} layoutId={`club-card-${club.id}`}>
               <Link
-                href={`/clubes/${club.id}`}
+                href={clubHref(club)}
                 onClick={(e) => {
                   if (isUnavailable) e.preventDefault();
                 }}
