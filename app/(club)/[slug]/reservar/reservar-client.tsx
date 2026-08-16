@@ -42,13 +42,24 @@ type Props = {
   club: ReservarClub;
   courts: ReservarCourt[];
   canReserveOnline: boolean;
-  playerFirstName: string;
 };
 
 const GUIDE_STEPS = [
-  { number: "①", label: "Elegí un día" },
-  { number: "②", label: "Elegí horario" },
-  { number: "③", label: "Elegí cancha" },
+  {
+    label: "Paso 1",
+    title: "Elegí el día",
+    description: "Seleccioná entre los próximos 7 días disponibles para tu reserva",
+  },
+  {
+    label: "Paso 2",
+    title: "Elegí el horario",
+    description: "Tocá el horario que más te convenga. Solo aparecen los turnos libres",
+  },
+  {
+    label: "Paso 3",
+    title: "Reservá y pagá la seña",
+    description: "Elegí la cancha y pagá la seña online por Mercado Pago. La cancha es tuya",
+  },
 ];
 
 function formatSurface(raw: string | null | undefined): string {
@@ -196,7 +207,7 @@ function CannotReserveOnline({ club }: { club: ReservarClub }) {
   );
 }
 
-export default function ReservarClient({ club, courts, canReserveOnline, playerFirstName }: Props) {
+export default function ReservarClient({ club, courts, canReserveOnline }: Props) {
   const dayChips = useMemo(() => buildDayChips(), []);
   const [selectedDate, setSelectedDate] = useState(dayChips[0].ymd);
   const [availability, setAvailability] = useState<{ slots: AvailabilitySlot[]; prices: Record<string, number> }>({
@@ -272,24 +283,19 @@ export default function ReservarClient({ club, courts, canReserveOnline, playerF
       <Header club={club} />
 
       <div className="mx-auto flex w-full max-w-[480px] flex-col px-4 pb-24 pt-2">
-        <div>
-          <p className="text-sm font-medium text-white/55">Hola, {playerFirstName || "jugador"} 👋</p>
-          <p className="text-[20px] font-bold text-white">Estás reservando en {club.name}</p>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-[#CCFF00]/20 bg-white/[0.03] px-4 py-3">
-          {GUIDE_STEPS.map((step, i) => (
-            <div key={step.label} className="flex items-center">
-              {i > 0 ? <div className="mx-3 h-6 w-px bg-white/[0.10]" /> : null}
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-mono text-[11px] font-bold text-[#CCFF00]">{step.number}</span>
-                <span className="text-center text-[10px] leading-tight text-white/50">{step.label}</span>
-              </div>
+        <div className="flex flex-col gap-2 mb-5">
+          {GUIDE_STEPS.map((step) => (
+            <div key={step.label} className="rounded-2xl border border-[#1A3050] bg-white/[0.04] px-4 py-4">
+              <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#CCFF00]/60">
+                {step.label}
+              </p>
+              <p className="text-[15px] font-bold text-white">{step.title}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-white/50">{step.description}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-5 border-t border-[#1A3050] pt-5">
+        <div className="border-t border-[#1A3050] pt-5">
           <div className="flex gap-2 overflow-x-auto pb-1">
             {dayChips.map((d) => {
               const active = d.ymd === selectedDate;
