@@ -18,6 +18,14 @@ export default async function ReservarPage({ params }: PageProps) {
     redirect(`/login?next=/${slug}/reservar`);
   }
 
+  const { data: profileRow } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const playerName = (profileRow as { name?: string | null } | null)?.name?.trim() ?? "";
+  const playerFirstName = playerName.split(" ")[0] ?? "";
+
   const { data: clubRow } = await supabase
     .from(DB_TABLES.clubs)
     .select(
@@ -49,5 +57,12 @@ export default async function ReservarPage({ params }: PageProps) {
 
   const canReserveOnline = Boolean(clubAccessToken) && Number(club.deposit_value ?? 0) > 0;
 
-  return <ReservarClient club={club} courts={courts} canReserveOnline={canReserveOnline} />;
+  return (
+    <ReservarClient
+      club={club}
+      courts={courts}
+      canReserveOnline={canReserveOnline}
+      playerFirstName={playerFirstName}
+    />
+  );
 }

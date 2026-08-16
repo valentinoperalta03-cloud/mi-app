@@ -13,7 +13,7 @@ import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/dateti
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
-import { createMPPreference } from "@/lib/mp-preference";
+import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
@@ -402,6 +402,11 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     payerFirstName,
     payerLastName,
     clubAccessToken,
+    backUrls: {
+      success: `${getPublicBaseUrl()}/reservas/confirmacion`,
+      failure: `${getPublicBaseUrl()}/reservas/confirmacion`,
+      pending: `${getPublicBaseUrl()}/reservas/confirmacion`,
+    },
   });
 
   if ("error" in mp) {
