@@ -1,217 +1,19 @@
-﻿import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import EmptyStateCard from "@/components/empty-state-card";
 import { MatchesRealtimeRefresh } from "@/components/matches-realtime-refresh";
 import MotionPage from "@/components/motion-page";
-import { Badge } from "@/components/ui/badge";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { PLAYER_CARD_INTERACTIVE, PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
-import { cancelReservation, confirmFixedSlotAttendance, declineFixedSlotAttendance } from "./actions";
-
-type ReservationRow = {
-  id: string;
-  scheduled_date: string | null;
-  scheduled_time: string | null;
-  duration_minutes: number | null;
-  total_price: number | null;
-  match_status: string | null;
-  financial_status: string | null;
-  courts: { name: string | null; clubs: { name: string | null } | null } | null;
-};
+import ReservasTabs, {
+  type FixedSlotEntry,
+  type OpenMatchRow,
+  type ReservationRow,
+} from "./reservas-tabs-client";
 
 function todayKey() {
   return getTodayYmdInArgentina();
-}
-
-function ReservationCard({
-  row,
-  showCancel,
-}: {
-  row: ReservationRow;
-  showCancel: boolean;
-}) {
-  const club = row.courts?.clubs?.name ?? "Club";
-  const court = row.courts?.name ?? "Cancha";
-  const dateStr = row.scheduled_date ?? "";
-  const fecha =
-    dateStr.length >= 10
-      ? format(parseISO(`${dateStr}T12:00:00`), "EEE d MMM yyyy", { locale: es })
-      : "—";
-  const hora = (row.scheduled_time ?? "").toString().trim().slice(0, 5);
-  const dur = row.duration_minutes ?? 90;
-  const precio = row.total_price != null ? `$${Math.round(Number(row.total_price)).toLocaleString("es-AR")}` : "—";
-  const status = row.match_status ?? "";
-  const financialStatus = row.financial_status ?? "unpaid";
-  const badgeReserved = status === "reserved" && financialStatus !== "unpaid";
-  const badgePending = status === "reserved" && financialStatus === "unpaid";
-  const badgeCancelled = status === "cancelled";
-
-  return (
-    <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold tracking-tight text-slate-950">{club}</h2>
-          <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{court}</p>
-        </div>
-        {badgeReserved ? (
-          <Badge variant="success" className="shrink-0">
-            Confirmada
-          </Badge>
-        ) : badgePending ? (
-          <Badge variant="warning" className="shrink-0">
-            Pendiente de pago
-          </Badge>
-        ) : badgeCancelled ? (
-          <Badge variant="neutral" className="shrink-0">
-            Cancelada
-          </Badge>
-        ) : (
-          (() => {
-            const normalized = (status || "").toLowerCase();
-            if (normalized.includes("compet")) {
-              return (
-                <Badge variant="brand">
-                  Competitivo
-                </Badge>
-              );
-            }
-            if (normalized.includes("amist")) {
-              return (
-                <Badge variant="brand">
-                  Amistoso
-                </Badge>
-              );
-            }
-            if (normalized.includes("nivel")) {
-              return (
-                <Badge variant="warning">
-                  Nivel restringido 🎯
-                </Badge>
-              );
-            }
-            return (
-              <Badge variant="neutral" className="shrink-0">
-                {status || "—"}
-              </Badge>
-            );
-          })()
-        )}
-      </div>
-      <dl className="mt-3 grid gap-2 text-sm text-[var(--text-tertiary)]">
-        <div className="flex justify-between">
-          <dt className="text-[var(--text-tertiary)]">Fecha</dt>
-          <dd className="font-semibold capitalize text-[var(--text-primary)]">{fecha}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-[var(--text-tertiary)]">Hora</dt>
-          <dd className="font-semibold text-[var(--text-primary)]">{hora || "—"}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-[var(--text-tertiary)]">Duración</dt>
-          <dd className="font-semibold text-[var(--text-primary)]">{dur} min</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-[var(--text-tertiary)]">Precio</dt>
-          <dd className="shrink-0 font-bold text-[#0085FC]">{precio}</dd>
-        </div>
-      </dl>
-      {showCancel && status === "reserved" ? (
-        <form action={cancelReservation} className="mt-4">
-          <input type="hidden" name="id" value={row.id} />
-          <button
-            type="submit"
-            className="w-full rounded-2xl border border-rose-200 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
-          >
-            Cancelar
-          </button>
-        </form>
-      ) : null}
-    </article>
-  );
-}
-
-type FixedSlotEntry = {
-  matchId: string;
-  scheduledDate: string;
-  scheduledTime: string;
-  durationMinutes: number;
-  courtName: string;
-  clubName: string;
-  attendanceStatus: string | null;
-  deadlinePassed: boolean;
-};
-
-function FixedSlotCard({ slot }: { slot: FixedSlotEntry }) {
-  const dateStr = slot.scheduledDate;
-  const fecha =
-    dateStr.length >= 10
-      ? format(parseISO(`${dateStr}T12:00:00`), "EEE d MMM yyyy", { locale: es })
-      : "—";
-  const confirmed = slot.attendanceStatus === "confirmed";
-
-  return (
-    <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold tracking-tight text-slate-950">{slot.clubName}</h2>
-          <p className="truncate text-sm font-medium text-[var(--text-tertiary)]">{slot.courtName}</p>
-        </div>
-        <Badge variant="brand" className="shrink-0">
-          Turno fijo
-        </Badge>
-      </div>
-      <dl className="mt-3 grid gap-2 text-sm text-[var(--text-tertiary)]">
-        <div className="flex justify-between">
-          <dt>Fecha</dt>
-          <dd className="font-semibold capitalize text-[var(--text-primary)]">{fecha}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt>Hora</dt>
-          <dd className="font-semibold text-[var(--text-primary)]">{slot.scheduledTime}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt>Duración</dt>
-          <dd className="font-semibold text-[var(--text-primary)]">{slot.durationMinutes} min</dd>
-        </div>
-      </dl>
-      <div className="mt-4">
-        {confirmed ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700">
-            Confirmaste tu asistencia
-          </p>
-        ) : slot.deadlinePassed ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-sm text-slate-500">
-            Plazo de confirmación vencido
-          </p>
-        ) : (
-          <div className="flex gap-2">
-            <form action={confirmFixedSlotAttendance} className="flex-1">
-              <input type="hidden" name="match_id" value={slot.matchId} />
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-[#0085FC] py-2.5 text-sm font-semibold text-white transition hover:brightness-105"
-              >
-                Confirmo asistencia
-              </button>
-            </form>
-            <form action={declineFixedSlotAttendance} className="flex-1">
-              <input type="hidden" name="match_id" value={slot.matchId} />
-              <button
-                type="submit"
-                className="w-full rounded-xl border border-rose-200 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
-              >
-                No voy
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
-    </article>
-  );
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -228,13 +30,14 @@ const INFO_MESSAGES: Record<string, string> = {
 export default async function ReservasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; info?: string }>;
+  searchParams: Promise<{ error?: string; info?: string; tab?: string }>;
 }) {
   const sp = await searchParams;
   const urlError = sp.error?.trim();
   const urlInfo = sp.info?.trim();
   const urlErrorMessage = urlError ? ERROR_MESSAGES[urlError] ?? null : null;
   const urlInfoMessage = urlInfo ? INFO_MESSAGES[urlInfo] ?? null : null;
+  const defaultTab = sp.tab?.trim() === "partidos" ? "partidos" : "canchas";
 
   const supabase = await createClient();
   const {
@@ -383,6 +186,51 @@ export default async function ReservasPage({
   });
   // ─────────────────────────────────────────────────────────────────
 
+  // ── Partidos abiertos donde el jugador participa ──────────────────
+  const { data: openMatchParticipations } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("match_id")
+    .eq("player_id", user.id);
+
+  const openMatchIds = ((openMatchParticipations ?? []) as Array<{ match_id: string }>).map(
+    (p) => p.match_id
+  );
+
+  const { data: openMatchRows } =
+    openMatchIds.length > 0
+      ? await supabase
+          .from(DB_TABLES.matches)
+          .select(
+            "id, scheduled_date, scheduled_time, duration_minutes, match_status, match_type, courts(name, clubs(name))"
+          )
+          .in("id", openMatchIds)
+          .eq("match_type", "amistoso")
+          .neq("match_status", "cancelled")
+          .order("scheduled_date", { ascending: true })
+      : { data: [] };
+
+  const openMatches: OpenMatchRow[] = ((openMatchRows ?? []) as Array<Record<string, unknown>>).map(
+    (row) => {
+      const courtsRel = row.courts as
+        | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }
+        | { name: string | null; clubs: { name: string | null } | { name: string | null }[] | null }[]
+        | null;
+      const courtObj = Array.isArray(courtsRel) ? courtsRel[0] ?? null : courtsRel;
+      const clubRel = courtObj?.clubs ?? null;
+      const clubObj = Array.isArray(clubRel) ? clubRel[0] ?? null : clubRel;
+      return {
+        id: String(row.id),
+        scheduled_date: (row.scheduled_date as string | null) ?? null,
+        scheduled_time: (row.scheduled_time as string | null) ?? null,
+        duration_minutes: (row.duration_minutes as number | null) ?? null,
+        match_status: (row.match_status as string | null) ?? null,
+        match_type: (row.match_type as string | null) ?? null,
+        courts: courtObj ? { name: courtObj.name, clubs: clubObj } : null,
+      };
+    }
+  );
+  // ─────────────────────────────────────────────────────────────────
+
   const upcoming = list.filter((r) => {
     const d = r.scheduled_date ?? "";
     return d >= today && r.match_status === "reserved" && (r.financial_status ?? "unpaid") !== "unpaid";
@@ -401,9 +249,17 @@ export default async function ReservasPage({
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-[var(--bg-app)] px-4 pb-24 pt-6">
       <MatchesRealtimeRefresh channelName={`reservas-live:${user.id}`} filter={`owner_id=eq.${user.id}`} />
       <header className="space-y-1">
-        <p className="text-sm font-medium text-[#0085FC]">Reservas</p>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-950">Mis reservas</h1>
-        <p className="text-sm font-light text-[var(--text-tertiary)]">Canchas que reservaste con FaltaUno.</p>
+        <Link
+          href="/home"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0085FC] transition hover:text-[#0461C4]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Inicio
+        </Link>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">Mis reservas</h1>
+        <p className="text-sm font-light text-[var(--text-tertiary)]">
+          Tus canchas reservadas y partidos activos
+        </p>
       </header>
 
       {error ? (
@@ -418,63 +274,17 @@ export default async function ReservasPage({
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{urlInfoMessage}</div>
       ) : null}
 
-      {!error && list.length === 0 ? (
-        <EmptyStateCard
-          icon="calendar"
-          title="Sin reservas todavía"
-          subtitle="Reservá una cancha y aparecerá acá"
-          ctaHref="/crear-partido"
-          ctaLabel="Hacer una reserva"
+      {!error ? (
+        <ReservasTabs
+          defaultTab={defaultTab}
+          fixedSlots={fixedSlots}
+          upcoming={upcoming}
+          pending={pending}
+          history={history}
+          hasAnyReservation={list.length > 0}
+          openMatches={openMatches}
         />
       ) : null}
-
-      {!error && fixedSlots.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Turnos fijos</h2>
-          <div className="space-y-3">
-            {fixedSlots.map((slot) => (
-              <FixedSlotCard key={slot.matchId} slot={slot} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {!error && upcoming.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Próximas</h2>
-          <div className="space-y-3">
-            {upcoming.map((r) => (
-              <ReservationCard key={r.id} row={r} showCancel />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {!error && pending.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Pendientes de pago</h2>
-          <div className="space-y-3">
-            {pending.map((r) => (
-              <ReservationCard key={r.id} row={r} showCancel />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {!error && history.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Historial</h2>
-          <div className="space-y-3">
-            {history.map((r) => (
-              <ReservationCard key={r.id} row={r} showCancel={false} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <Link href="/clubes" className={`inline-flex justify-center ${PLAYER_PRIMARY_BUTTON} w-full py-3`}>
-        Buscar clubes para reservar
-      </Link>
     </MotionPage>
   );
 }
