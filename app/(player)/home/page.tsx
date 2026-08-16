@@ -7,14 +7,9 @@ import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
 import HomeJoinRequestsSection from "@/components/home-join-requests-section";
-import { HomeReservationsSection } from "@/components/home-reservations-section";
 import { HomeSocialSection } from "@/components/home-social-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
-import {
-  HomeReservationsSkeleton,
-  HomeSectionLineSkeleton,
-  HomeSummarySkeleton,
-} from "@/components/home-loading-skeletons";
+import { HomeSectionLineSkeleton, HomeSummarySkeleton } from "@/components/home-loading-skeletons";
 import {
   getCachedPendingResultsForUser,
   getCachedProfileDisplayName,
@@ -259,13 +254,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Tu resumen</h2>
         <Suspense fallback={<HomeSummarySkeleton />}>
           <HomeSummarySection userId={user.id} />
-        </Suspense>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Mis partidos</h2>
-        <Suspense fallback={<HomeReservationsSkeleton />}>
-          <HomeReservationsSection userId={user.id} />
         </Suspense>
       </section>
     </MotionPage>
