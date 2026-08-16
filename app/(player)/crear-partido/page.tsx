@@ -3,42 +3,18 @@ import { Suspense } from "react";
 export const dynamic = "force-dynamic";
 import MotionPage from "@/components/motion-page";
 import ClubsListClient, { type ClubRow } from "@/components/clubs-list-client";
+import { CrearPartidoInfoButton } from "@/components/crear-partido-info-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { normalizeCity } from "@/lib/locations";
 import { PLAYER_CARD } from "@/lib/player-ui";
 import { createClient } from "@/utils/supabase/server";
 
-const HOW_IT_WORKS_BULLETS = [
-  "Abrís un partido en el club que elijas",
-  "Otros jugadores de tu nivel se unen",
-  "Al completarse los 4, el último paga la seña y confirma la cancha para todos",
-];
-
-const BULLET_NUMBERS = ["①", "②", "③"];
-
-function HowItWorksCard() {
+function CrearPartidoExplainer() {
   return (
-    <div className="rounded-2xl border border-[#CCFF00]/20 bg-[#CCFF00]/[0.03] p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0085FC]/10 text-lg">
-          🎾
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-[var(--text-primary)]">¿Qué es un partido abierto?</p>
-          <div className="mt-2 space-y-1.5">
-            {HOW_IT_WORKS_BULLETS.map((bullet, i) => (
-              <p key={bullet} className="flex gap-2 text-sm text-[var(--text-tertiary)]">
-                <span className="shrink-0 font-mono text-[#CCFF00]">{BULLET_NUMBERS[i]}</span>
-                <span>{bullet}</span>
-              </p>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-[var(--text-tertiary)]/60">
-            La seña se cobra por Mercado Pago al completarse el grupo
-          </p>
-        </div>
-      </div>
-    </div>
+    <p className="text-sm leading-relaxed text-[var(--text-tertiary)]">
+      Elegí el club donde querés jugar. Vas a ver toda la disponibilidad de canchas y los partidos abiertos para ese
+      club — reservá una cancha o unite a un partido en segundos.
+    </p>
   );
 }
 
@@ -130,7 +106,8 @@ async function CrearPartidoContent() {
       errorDebug={errorDebug}
       title="Crear partido"
       subtitle="Elegí un club para abrir tu partido"
-      headerExtra={<HowItWorksCard />}
+      headerExtra={<CrearPartidoExplainer />}
+      headerAction={<CrearPartidoInfoButton />}
     />
   );
 }

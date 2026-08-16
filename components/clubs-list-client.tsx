@@ -79,6 +79,7 @@ export default function ClubsListClient({
   backHref = "/home",
   backLabel = "Volver al inicio",
   headerExtra,
+  headerAction,
 }: {
   clubs: ClubRow[];
   userCity?: string | null;
@@ -92,6 +93,8 @@ export default function ClubsListClient({
   backLabel?: string;
   /** Contenido opcional renderizado entre el header y los filtros de ubicación. */
   headerExtra?: ReactNode;
+  /** Acción opcional (ej. botón info) al lado del título, arriba a la derecha. */
+  headerAction?: ReactNode;
 }) {
   const router = useRouter();
   const hasCity = Boolean(userCity?.trim());
@@ -119,7 +122,20 @@ export default function ClubsListClient({
 
   return (
     <>
-      <PlayerStackHeader backHref={backHref} backLabel={backLabel} title={title} subtitle={subtitle} className="mb-1" />
+      {headerAction ? (
+        <div className="flex items-start justify-between gap-2">
+          <PlayerStackHeader
+            backHref={backHref}
+            backLabel={backLabel}
+            title={title}
+            subtitle={subtitle}
+            className="mb-0 min-w-0 flex-1"
+          />
+          <div className="shrink-0 pt-1">{headerAction}</div>
+        </div>
+      ) : (
+        <PlayerStackHeader backHref={backHref} backLabel={backLabel} title={title} subtitle={subtitle} className="mb-1" />
+      )}
 
       {headerExtra}
 
