@@ -171,6 +171,10 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     redirect("/buscar-partido");
   }
 
+  if ((matchRow as { match_type?: string | null }).match_type === "reservation") {
+    redirect("/reservas");
+  }
+
   const match = matchRow as unknown as {
     id: string;
     date: string;

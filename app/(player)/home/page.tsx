@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
+import { Building2, CalendarClock, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
 import PlayerProfileNudgeBanner from "@/components/player-profile-nudge-banner";
 import MotionPage from "@/components/motion-page";
 import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
@@ -38,9 +38,9 @@ const quickActions = [
   },
   {
     title: "Crear Partido",
-    href: "/crear-partido",
+    href: "/clubes",
     Icon: CirclePlus,
-    desc: "Organizá un partido en segundos",
+    desc: "Elegí un club y abrí o reservá una cancha",
     featured: false,
   },
 ] as const;
@@ -212,6 +212,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <ChevronRight size={20} className="shrink-0 text-[#0085FC]" aria-hidden />
       </Link>
 
+      <Link
+        href="/reservas"
+        prefetch
+        className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)] transition hover:opacity-95 active:scale-[0.99]"
+      >
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+          style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
+        >
+          <CalendarClock size={22} className="text-white" />
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="font-bold text-[var(--text-primary)]">Mis canchas reservadas</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Tus reservas con seña confirmada</p>
+        </div>
+        <ChevronRight size={20} className="shrink-0 text-[#0085FC]" aria-hidden />
+      </Link>
+
       <HomeSocialSection />
 
       {pendingForMe.length > 0 ? (
@@ -245,7 +263,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Mis Reservas</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Mis partidos</h2>
         <Suspense fallback={<HomeReservationsSkeleton />}>
           <HomeReservationsSection userId={user.id} />
         </Suspense>

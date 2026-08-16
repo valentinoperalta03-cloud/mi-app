@@ -142,6 +142,7 @@ export default async function OpenMatchesBoard({
     )
     .gt("date", nowIso)
     .neq("match_status", "cancelled")
+    .neq("match_type", "reservation")
     .order("date", { ascending: true });
 
   const rawMatches = (data ?? []) as unknown as MatchFeedRow[];

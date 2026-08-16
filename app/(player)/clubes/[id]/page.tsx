@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, AtSign, Clock, MapPin, MessageCircle, Phone, Shield } from "lucide-react";
 import ClubGalleryLightbox from "@/components/club-gallery-lightbox";
 import EmptyStateCard from "@/components/empty-state-card";
@@ -48,7 +48,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
   const { data: clubRow, error: clubError } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "name,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,is_active"
+      "name,slug,description,location,cover_image_url,logo_url,contact_phone,whatsapp,instagram,business_hours,cancellation_policy,gallery_image_1,gallery_image_2,gallery_image_3,gallery_image_4,is_active"
     )
     .eq("id", id)
     .eq("is_active", true)
@@ -56,6 +56,11 @@ export default async function ClubDetailPage({ params }: PageProps) {
 
   if (clubError || !clubRow) {
     notFound();
+  }
+
+  const clubSlug = (clubRow as { slug?: string | null }).slug?.trim();
+  if (clubSlug) {
+    redirect(`/${clubSlug}`);
   }
 
   const club = { id, ...(clubRow as Omit<ClubRow, "id">) } as ClubRow;

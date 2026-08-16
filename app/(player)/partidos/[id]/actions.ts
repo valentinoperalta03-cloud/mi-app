@@ -117,10 +117,19 @@ export async function updateMatch(formData: FormData): Promise<void> {
     scheduled_time: string | null;
     payment_status: string | null;
     duration_minutes: number | null;
+    match_type: string | null;
   };
 
   if (m.owner_id !== user.id) {
     redirect(`/partidos/${matchId}?edit_error=permiso`);
+  }
+
+  // Una reserva de cancha (match_type: 'reservation') no es un partido abierto:
+  // no tiene sentido editarle género/visibilidad/nivel, y sobre todo no puede
+  // mutar de tipo — si acá se le hiciera update(), match_type pasaría a
+  // 'amistoso' y desaparecería de /reservas y /admin/reservas.
+  if (m.match_type === "reservation") {
+    redirect(`/partidos/${matchId}?edit_error=reserva`);
   }
 
   const pay = String(m.payment_status ?? "").toLowerCase();

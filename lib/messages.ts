@@ -12,6 +12,7 @@ export const EDIT_ERROR_MESSAGES: Record<string, string> = {
   duracion: "Duración del turno inválida.",
   permiso: "No tenés permiso para editar este partido.",
   pagado: "No podés editar un partido con jugadores que ya pagaron.",
+  reserva: "Las reservas de cancha no se pueden editar desde acá.",
   fecha: "No se encontró la fecha del partido.",
   ocupado: "Ese horario ya está ocupado. Elegí otro.",
   db: "No se pudieron guardar los cambios. Intentá de nuevo.",

@@ -42,6 +42,7 @@ export async function fetchUpcomingMatches(
     .from(DB_TABLES.matches)
     .select(matchListSelect)
     .gte("date", new Date().toISOString())
+    .neq("match_type", "reservation")
     .order("date", { ascending: true })
     .limit(limit);
 }
@@ -100,6 +101,7 @@ export async function fetchNextMatchForPlayer(
       .eq("owner_id", userId)
       .gte("date", now)
       .neq("match_status", "cancelled")
+      .neq("match_type", "reservation")
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle(),
@@ -117,6 +119,7 @@ export async function fetchNextMatchForPlayer(
       .in("id", ids)
       .gte("date", now)
       .neq("match_status", "cancelled")
+      .neq("match_type", "reservation")
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -129,10 +132,12 @@ export async function fetchNextMatchForPlayer(
   return new Date(createdMatch.date) <= new Date(joinedMatch.date) ? createdMatch : joinedMatch;
 }
 
+/** Trae un match puntual por id, de cualquier match_type — el caller decide si filtrar reservas. */
 export async function fetchMatchById(supabase: SupabaseClient, matchId: string) {
   return supabase.from(DB_TABLES.matches).select(matchListSelect).eq("id", matchId).maybeSingle();
 }
 
+/** Chequeo de conflictos de horario por cancha: debe incluir TODOS los match_type (una reserva ocupa el turno igual que un partido abierto). No filtrar por match_type acá. */
 export async function fetchMatchesForCourtsOnDay(
   supabase: SupabaseClient,
   courtIds: string[],

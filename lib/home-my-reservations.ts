@@ -102,7 +102,7 @@ export async function fetchMyHomeReservations(
     .select(
       `
       match_id,
-      matches (
+      matches!inner (
         id,
         date,
         scheduled_date,
@@ -115,7 +115,8 @@ export async function fetchMyHomeReservations(
       )
     `
     )
-    .eq("player_id", userId);
+    .eq("player_id", userId)
+    .neq("matches.match_type", "reservation");
 
   if (error || !data?.length) {
     return [];
