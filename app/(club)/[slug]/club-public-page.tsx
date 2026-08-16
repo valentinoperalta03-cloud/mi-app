@@ -419,7 +419,7 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
                 href={`/${club.slug}/partidos`}
                 className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white"
               >
-                🏆 Ver partidos abiertos
+                🏆 Abrir o unirse a un partido
               </Link>
             </>
           ) : (
@@ -436,7 +436,7 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
                 onClick={() => setShowAuthModal(true)}
                 className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white"
               >
-                🏆 Ver partidos abiertos
+                🏆 Abrir o unirse a un partido
               </button>
             </>
           )}

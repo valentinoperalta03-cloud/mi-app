@@ -8,10 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Space_Grotesk } from "next/font/google";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { crearPartido } from "@/app/(player)/crear-partido/actions";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { nativeOpenUrl } from "@/lib/native-open";
-import { getClubAvailability, type AvailabilitySlot } from "../actions";
+import { abrirPartido, getClubAvailability, type AvailabilitySlot } from "../actions";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
@@ -291,27 +289,20 @@ export default function PartidosClient({
     setCreateError(null);
     startCreating(async () => {
       try {
-        const fd = new FormData();
-        fd.set("court_id", selectedCourtId);
-        fd.set("scheduled_date", selectedDate);
-        fd.set("scheduled_time", selectedTime);
-        fd.set("duration_minutes", "90");
-        fd.set("visibility", visibilidad);
-        fd.set("gender_category", genero);
-        fd.set("level_restricted", "false");
-        fd.set("invited_friend_ids", "");
-        fd.set("payment_method", "mercadopago");
-
-        const result = await crearPartido(fd);
+        const result = await abrirPartido({
+          courtId: selectedCourtId,
+          clubId: club.id,
+          scheduledDate: selectedDate,
+          scheduledTime: selectedTime,
+          genderCategory: genero,
+          categoryRange: [categoria],
+          visibility: visibilidad,
+        });
         if ("error" in result) {
           setCreateError(result.error);
           return;
         }
-        if ("mpUrl" in result && result.mpUrl) {
-          await nativeOpenUrl(result.mpUrl);
-          return;
-        }
-        router.push(`/partidos/${result.matchId}?message=Partido creado`);
+        router.push(`/partidos/${result.matchId}?message=¡Partido abierto! Compartilo para que se sumen.`);
       } catch (err) {
         if (isRedirectError(err)) throw err;
         setCreateError("Hubo un error de conexión. Intentá de nuevo.");
@@ -348,6 +339,22 @@ export default function PartidosClient({
 
       {tab === "abrir" ? (
         <div className="mx-auto w-full max-w-[480px] px-4 pb-24 pt-5">
+          <div className="mb-5 rounded-xl border border-[#CCFF00]/20 bg-[#CCFF00]/[0.03] p-4">
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-white/35">Cómo funciona</p>
+            <div className="flex flex-col gap-2">
+              {[
+                { n: "①", text: "Abrís el partido y se publica para que otros se unan" },
+                { n: "②", text: "Jugadores 2 y 3 se unen gratis" },
+                { n: "③", text: "El 4to jugador paga la seña y confirma la cancha para todos" },
+              ].map((item) => (
+                <p key={item.n} className="flex gap-2 text-sm text-white/55">
+                  <span className="shrink-0 font-mono text-[#CCFF00]">{item.n}</span>
+                  <span>{item.text}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 ? (
               <motion.div

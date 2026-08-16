@@ -11,6 +11,7 @@ import {
 } from "@/lib/court-slots";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
+import { createGroupChat } from "@/lib/group-chats";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
@@ -430,4 +431,232 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   }
 
   return { success: true, matchId: data.id, mpUrl: mp.initPoint };
+}
+
+type AbrirPartidoInput = {
+  courtId: string;
+  clubId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  genderCategory: "masculino" | "femenino" | "mixto";
+  categoryRange: string[];
+  visibility: "publico" | "privado";
+};
+
+type AbrirPartidoResult = { error: string } | { success: true; matchId: string };
+
+/**
+ * Abre un partido abierto desde la página pública del club: match_type
+ * 'amistoso', sin cobro al crear. El 4to jugador en unirse paga la seña
+ * — ver requestToJoin en app/(player)/partidos/[id]/actions.ts.
+ */
+export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirPartidoResult> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Necesitás iniciar sesión." };
+  }
+
+  const courtId = input.courtId?.trim() ?? "";
+  const clubId = input.clubId?.trim() ?? "";
+  const scheduledDate = input.scheduledDate?.trim() ?? "";
+  const scheduledTime = input.scheduledTime?.trim() ?? "";
+  const genderCategory = input.genderCategory;
+  const visibility = input.visibility;
+
+  if (!courtId || !clubId || !scheduledDate || !scheduledTime || !genderCategory || !visibility) {
+    return { error: "Datos incompletos." };
+  }
+
+  const durationMinutes = 90;
+
+  const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
+  if (!allowedByRateLimit) {
+    return { error: "Límite de partidos creados por hora alcanzado." };
+  }
+
+  const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubId);
+  if (!canReceiveReservations) {
+    return { error: "Este club no está disponible para partidos en este momento." };
+  }
+  if (await isClubSubscriptionBlocked(clubId)) {
+    return { error: "Este club no puede recibir partidos en este momento." };
+  }
+
+  const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+
+  const todayAr = getTodayYmdInArgentina();
+  if (scheduledDate < todayAr) {
+    return { error: "La fecha debe ser futura." };
+  }
+  const slotStart = clockToMinutes(timeNorm);
+  if (scheduledDate === todayAr) {
+    const nowMinutesAr = clockToMinutes(getCurrentClockInArgentina());
+    if (slotStart < nowMinutesAr + 60) {
+      return { error: "La fecha debe ser futura." };
+    }
+  }
+
+  const { data: closedDayRows } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", clubId)
+    .eq("closed_date", scheduledDate)
+    .limit(1);
+  if (closedDayRows?.length) {
+    return { error: "El club está cerrado ese día." };
+  }
+
+  const [{ data: blockRowsModern }, { data: blockRowsLegacy }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.courtBlocks)
+      .select("blocked_time")
+      .eq("court_id", courtId)
+      .eq("blocked_date", scheduledDate),
+    supabase.from(DB_TABLES.courtBlocks).select("start_time").eq("court_id", courtId).eq("date", scheduledDate),
+  ]);
+  const blockedStarts = courtBlockStartsFromRows(
+    blockRowsModern as { blocked_time: string | null }[] | null,
+    blockRowsLegacy as { start_time: string | null }[] | null
+  );
+  if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
+    return { error: "Esa cancha está bloqueada en ese horario." };
+  }
+
+  const { data: conflicts, error: conflictsError } = await supabase
+    .from(DB_TABLES.matches)
+    .select("scheduled_time,duration_minutes")
+    .eq("court_id", courtId)
+    .eq("scheduled_date", scheduledDate)
+    .neq("match_status", "cancelled");
+  if (conflictsError) {
+    return { error: "No se pudo validar disponibilidad." };
+  }
+  for (const row of (conflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]) {
+    const otherStart = clockToMinutes(String(row.scheduled_time ?? ""));
+    const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
+    const slotEnd = slotStart + durationMinutes;
+    const otherEnd = otherStart + otherDur;
+    if (slotStart < otherEnd && otherStart < slotEnd) {
+      return { error: "Ese horario ya no está disponible." };
+    }
+  }
+
+  const { count: activeMatchesCount } = await supabase
+    .from(DB_TABLES.matches)
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id)
+    .in("match_status", ["scheduled", "reserved", "full"])
+    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
+  if ((activeMatchesCount ?? 0) >= 3) {
+    return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
+  }
+
+  const { data: courtData, error: courtError } = await supabase
+    .from(DB_TABLES.courts)
+    .select("club_id, price, name, clubs!inner(name)")
+    .eq("id", courtId)
+    .maybeSingle();
+  if (courtError || !courtData) {
+    return { error: "No se pudo obtener la información de la cancha." };
+  }
+  const clubIdStr = String((courtData as { club_id?: string | null }).club_id ?? "").trim();
+  if (clubIdStr !== clubId) {
+    return { error: "No se pudo obtener la información de la cancha." };
+  }
+  const clubName = String((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club");
+  const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
+
+  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
+  const { data: slotPriceRows } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .select("day_of_week,start_time,price_override")
+    .eq("court_id", courtId)
+    .not("start_time", "is", null)
+    .not("price_override", "is", null);
+  const slotPriceRowsTyped = (slotPriceRows ?? []) as Array<{
+    day_of_week: number | null;
+    start_time: string | null;
+    price_override: number | null;
+  }>;
+  const specificPrice = slotPriceRowsTyped.find(
+    (row) => row.day_of_week === dayOfWeek && String(row.start_time ?? "").slice(0, 5) === timeNorm
+  )?.price_override;
+  const legacyPrice = slotPriceRowsTyped.find(
+    (row) => row.day_of_week === null && String(row.start_time ?? "").slice(0, 5) === timeNorm
+  )?.price_override;
+  const totalPrice = Number(specificPrice ?? legacyPrice ?? (courtData as { price: number | null }).price ?? 0);
+
+  const { data: payerProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+
+  const { data, error } = await supabase
+    .from(DB_TABLES.matches)
+    .insert({
+      court_id: courtId,
+      owner_id: user.id,
+      scheduled_date: scheduledDate,
+      scheduled_time: timeNorm,
+      duration_minutes: durationMinutes,
+      total_price: totalPrice,
+      payment_status: "pending",
+      amount_paid: 0,
+      amount_pending: totalPrice,
+      financial_status: "unpaid",
+      match_status: "scheduled",
+      match_type: "amistoso",
+      visibility,
+      gender_category: genderCategory,
+      level_restricted: false,
+      location_name: clubName,
+      date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
+      result_available_at: new Date(
+        new Date(`${scheduledDate}T${timeNorm}:00-03:00`).getTime() + durationMinutes * 60 * 1000
+      ).toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    if (isMatchSlotConflictError(error)) {
+      return { error: "Este horario ya fue reservado. Elegí otro." };
+    }
+    return { error: "No se pudo abrir el partido." };
+  }
+
+  const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
+    match_id: data.id,
+    player_id: user.id,
+    team: 1,
+  });
+  if (participantError) {
+    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    return { error: "No se pudo abrir el partido." };
+  }
+
+  const groupRes = await createGroupChat(
+    supabase,
+    user.id,
+    `Partido en ${clubName} el ${scheduledDate}`,
+    "",
+    [],
+    data.id
+  );
+  if (!groupRes.ok) {
+    console.error("[abrirPartido] group chat", groupRes.message);
+  }
+
+  await notifyClubOwner(supabase, clubIdStr, {
+    title: "🏆 Nuevo partido abierto",
+    body: `${payerName || "Un jugador"} abrió un partido en ${courtName} el ${scheduledDate} a las ${timeNorm}.`,
+    match_id: data.id,
+  });
+
+  return { success: true, matchId: data.id };
 }

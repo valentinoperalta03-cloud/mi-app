@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { isLevelCompatible } from "@/lib/match-level";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { log } from "@/lib/logger";
@@ -12,7 +13,7 @@ import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { generateInviteToken } from "@/lib/invite-token";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
-import { createMPPreference } from "@/lib/mp-preference";
+import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { refundApprovedPayment } from "@/lib/payment-refund";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -378,6 +379,117 @@ export async function requestToJoin(formData: FormData): Promise<void> {
       redirect(`/partidos/${matchId}?join_error=no_disponible`);
     }
     redirect(`/partidos/${matchId}?join_error=db`);
+  }
+
+  // Contar participantes después de unirse
+  const { count: participantCount } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+
+  // Si llegamos a 4 → el 4to paga la seña
+  if ((participantCount ?? 0) >= 4) {
+    const { data: matchForPayment } = await supabase
+      .from(DB_TABLES.matches)
+      .select("total_price, scheduled_date, court_id, courts(name, club_id, clubs(name, deposit_type, deposit_value))")
+      .eq("id", matchId)
+      .maybeSingle();
+
+    const matchPay = matchForPayment as {
+      total_price: number | null;
+      scheduled_date: string | null;
+      court_id: string | null;
+      courts:
+        | {
+            name: string | null;
+            club_id: string | null;
+            clubs: { name: string | null; deposit_type: string | null; deposit_value: number | null } | null;
+          }
+        | null;
+    } | null;
+
+    const courtRel = matchPay?.courts;
+    const clubRel = Array.isArray(courtRel?.clubs) ? courtRel?.clubs[0] : courtRel?.clubs;
+    const clubId = String(courtRel?.club_id ?? "").trim();
+    const totalPrice = Number(matchPay?.total_price ?? 0);
+    const depositType = (clubRel?.deposit_type ?? null) as "percentage" | "fixed" | null;
+    const depositValue = Number(clubRel?.deposit_value ?? 0);
+    const depositAmount = resolveDepositCharge(totalPrice, depositType, depositValue);
+
+    if (depositAmount > 0 && clubId) {
+      // Obtener mp_access_token del club con service client
+      const { data: clubMpRow } = await createServiceClient()
+        .from(DB_TABLES.clubs)
+        .select("mp_access_token")
+        .eq("id", clubId)
+        .maybeSingle();
+      const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
+
+      if (clubAccessToken) {
+        const { data: payerProfile } = await supabase
+          .from(DB_TABLES.profiles)
+          .select("name")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+        const nameParts = payerName.split(" ");
+
+        const mp = await createMPPreference({
+          matchId,
+          amount: depositAmount,
+          clubName: String(clubRel?.name ?? "Club"),
+          courtName: String(courtRel?.name ?? "Cancha"),
+          date: String(matchPay?.scheduled_date ?? ""),
+          userId: user.id,
+          externalReference: `${matchId}__${user.id}`,
+          payerEmail: user.email ?? "",
+          payerFirstName: nameParts[0] ?? "",
+          payerLastName: nameParts.slice(1).join(" ") ?? "",
+          clubAccessToken,
+          backUrls: {
+            success: `${getPublicBaseUrl()}/reservas/confirmacion`,
+            failure: `${getPublicBaseUrl()}/reservas/confirmacion`,
+            pending: `${getPublicBaseUrl()}/reservas/confirmacion`,
+          },
+        });
+
+        if (!("error" in mp)) {
+          // Registrar el pago pendiente
+          await supabase.from(DB_TABLES.payments).insert({
+            match_id: matchId,
+            user_id: user.id,
+            mp_preference_id: mp.prefId,
+            status: "pending",
+            amount: mp.total,
+            payment_method: "mercadopago",
+          });
+
+          // Notificar a los otros 3 jugadores que el partido está completo
+          const { data: otherParticipants } = await supabase
+            .from(DB_TABLES.matchParticipants)
+            .select("player_id")
+            .eq("match_id", matchId)
+            .neq("player_id", user.id);
+
+          for (const p of (otherParticipants ?? []) as Array<{ player_id: string }>) {
+            await createNotification(supabase, {
+              user_id: p.player_id,
+              type: "player_joined",
+              title: "🎾 ¡Partido completo!",
+              body: `Se completaron los 4 jugadores. ${joinerName} está pagando la seña para confirmar la cancha.`,
+              match_id: matchId,
+            });
+          }
+
+          revalidatePath(`/partidos/${matchId}`);
+          revalidatePath("/buscar-partido");
+          revalidatePath("/home");
+
+          // Redirigir al 4to a MP para pagar
+          redirect(`/partidos/${matchId}/pago?match_id=${matchId}`);
+        }
+      }
+    }
   }
 
   await addPlayerToMatchGroup(supabase, matchId, user.id);
