@@ -15,6 +15,8 @@ const initial: EditProfileState = { ok: false, message: "" };
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
+const CATEGORIES = ["8va", "7ma", "6ta", "5ta", "4ta", "3ra", "2da", "1ra"];
+
 export function EditProfileForm({
   userId,
   defaultName,
@@ -25,7 +27,7 @@ export function EditProfileForm({
   defaultPreferredHand,
   defaultCourtPosition,
   defaultPreferredSchedule,
-  competitiveLevelLine,
+  defaultCategory,
 }: {
   userId: string;
   defaultName: string;
@@ -36,8 +38,7 @@ export function EditProfileForm({
   defaultPreferredHand: string | null;
   defaultCourtPosition: string | null;
   defaultPreferredSchedule: string | null;
-  /** Solo lectura: nivel competitivo (no editable acá). */
-  competitiveLevelLine: string;
+  defaultCategory: string | null;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(updateMyProfile, initial);
@@ -48,6 +49,7 @@ export function EditProfileForm({
   const [preferredHand, setPreferredHand] = useState<string>(defaultPreferredHand ?? "derecha");
   const [courtPosition, setCourtPosition] = useState<string>(defaultCourtPosition ?? "drive");
   const [preferredSchedule, setPreferredSchedule] = useState<string>(defaultPreferredSchedule ?? "cualquiera");
+  const [category, setCategory] = useState<string>(defaultCategory ?? "8va");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -244,13 +246,34 @@ export function EditProfileForm({
           <input type="hidden" name="gender" value={gender} />
         </div>
 
-        <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+        <div className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
             Categoría
+          </span>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Elegí tu nivel real — esto define con quién podés jugar
           </p>
-          <p className="mt-1 text-sm text-[#0461C4]">
-            <span className="font-bold">{competitiveLevelLine || "—"}</span>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                aria-pressed={category === cat}
+                className={`rounded-2xl border px-3 py-3 text-sm font-bold transition ${
+                  category === cat
+                    ? "border-[#0085FC]/20 bg-[#0085FC] text-white shadow-sm"
+                    : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-[var(--text-tertiary)]/70">
+            8va = principiante · 1ra = avanzado
           </p>
+          <input type="hidden" name="category" value={category} />
         </div>
 
         <label className="block">

@@ -4,7 +4,6 @@ import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { EditProfileForm } from "@/components/edit-profile-form";
 import { DB_TABLES } from "@/lib/db-tables";
-import { formatPlayerCategory } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function EditarPerfilPage() {
@@ -34,7 +33,6 @@ export default async function EditarPerfilPage() {
 
   const emailLocal = user.email?.split("@")[0] ?? "Jugador";
   const defaultName = row?.name?.trim() || emailLocal;
-  const competitiveLevelLine = formatPlayerCategory(row?.category);
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-24 pt-6">
@@ -64,7 +62,7 @@ export default async function EditarPerfilPage() {
           defaultPreferredHand={row?.preferred_hand ?? null}
           defaultCourtPosition={row?.court_position ?? null}
           defaultPreferredSchedule={row?.preferred_schedule ?? null}
-          competitiveLevelLine={competitiveLevelLine}
+          defaultCategory={row?.category ?? null}
         />
       </section>
     </MotionPage>

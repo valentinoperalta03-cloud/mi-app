@@ -8,6 +8,8 @@ import { createClient } from "@/utils/supabase/server";
 
 export type EditProfileState = { ok: boolean; message: string };
 
+const VALID_CATEGORIES = ["8va", "7ma", "6ta", "5ta", "4ta", "3ra", "2da", "1ra"];
+
 export async function updateMyProfile(
   _prev: EditProfileState,
   formData: FormData
@@ -62,6 +64,9 @@ export async function updateMyProfile(
   const courtPositionRaw = String(formData.get("court_position") ?? "").trim().toLowerCase();
   const preferredScheduleRaw = String(formData.get("preferred_schedule") ?? "").trim().toLowerCase();
 
+  const categoryRaw = String(formData.get("category") ?? "").trim();
+  const category = VALID_CATEGORIES.includes(categoryRaw) ? categoryRaw : null;
+
   const payload: Record<string, unknown> = {
     name,
     age,
@@ -70,6 +75,7 @@ export async function updateMyProfile(
     preferred_hand: preferredHandRaw || null,
     court_position: courtPositionRaw || null,
     preferred_schedule: preferredScheduleRaw || null,
+    category,
   };
 
   payload.avatar_url = avatarUrlRaw === "" ? null : avatarUrlRaw;
