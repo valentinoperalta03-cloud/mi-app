@@ -92,47 +92,64 @@ export default function JugadoresClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        <input
-          type="search"
-          placeholder="Buscar jugador..."
-          className={adminInputClass}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select className={adminSelectClass} value={segmentFilter} onChange={(e) => setSegmentFilter(e.target.value)}>
-          <option value="">Todos</option>
-          <option value="Nuevo">Nuevos</option>
-          <option value="Recurrente">Recurrentes</option>
-        </select>
-        <select className={adminSelectClass} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-          <option value="">Todas las categorías</option>
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-        <select className={adminSelectClass} value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}>
-          <option value="">Cualquier día</option>
-          {DAYS.map((d) => (
-            <option key={d} value={d}>
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </option>
-          ))}
-        </select>
-        <select className={adminSelectClass} value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
-          <option value="totalPlayed">Más activos</option>
-          <option value="last">Última reserva</option>
-          <option value="cancellationRate">Mayor cancelación</option>
-          <option value="name">Nombre A-Z</option>
-        </select>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col gap-1">
+          <label className={adminKicker}>Buscar por nombre</label>
+          <input
+            type="search"
+            placeholder="Nombre del jugador..."
+            className={adminInputClass}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={adminKicker}>Segmento</label>
+          <select className={adminSelectClass} value={segmentFilter} onChange={(e) => setSegmentFilter(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="Nuevo">Nuevos</option>
+            <option value="Recurrente">Recurrentes</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={adminKicker}>Categoría</label>
+          <select className={adminSelectClass} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="">Todas</option>
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={adminKicker}>Día favorito</label>
+          <select className={adminSelectClass} value={dayFilter} onChange={(e) => setDayFilter(e.target.value)}>
+            <option value="">Cualquier día</option>
+            {DAYS.map((d) => (
+              <option key={d} value={d}>
+                {d.charAt(0).toUpperCase() + d.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <p className="text-sm text-[var(--text-tertiary)]">
-        {filtered.length} jugador{filtered.length !== 1 ? "es" : ""}
-        {hasActiveFilters ? " encontrados" : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[var(--text-tertiary)]">
+          {filtered.length} jugador{filtered.length !== 1 ? "es" : ""}
+          {hasActiveFilters ? " encontrados" : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          <label className={adminKicker}>Ordenar por</label>
+          <select className={adminSelectClass} value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
+            <option value="totalPlayed">Más activos</option>
+            <option value="last">Última reserva</option>
+            <option value="cancellationRate">Mayor cancelación</option>
+            <option value="name">Nombre A-Z</option>
+          </select>
+        </div>
+      </div>
 
       {filtered.length === 0 ? (
         hasActiveFilters ? (
@@ -177,15 +194,15 @@ export default function JugadoresClient({
 
       {selectedPlayer ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
           onClick={() => setSelectedPlayer(null)}
         >
           <div
-            className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-[var(--bg-card)] p-6"
-            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+            className="flex w-full max-w-lg flex-col rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl"
+            style={{ maxHeight: "80vh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border-subtle)] px-6 pb-4 pt-6">
               <PlayerAvatar name={selectedPlayer.name} avatarUrl={selectedPlayer.avatarUrl} size={56} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-lg font-bold text-[var(--text-primary)]">{selectedPlayer.name}</p>
@@ -198,96 +215,106 @@ export default function JugadoresClient({
               </button>
             </div>
 
-            <dl className="grid grid-cols-2 gap-3 border-t border-[var(--border-subtle)] pt-4 text-sm">
-              <div>
-                <dt className={adminKicker}>Categoría</dt>
-                <dd className="mt-1">
-                  {selectedPlayer.levelBadge === "Sin nivelar" ? (
-                    <span className="font-semibold text-[var(--text-secondary)]">Sin categoría</span>
-                  ) : (
-                    <span className={adminBadgeBrand}>{selectedPlayer.levelBadge}</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Segmento</dt>
-                <dd className="mt-1">
-                  <PlayerSegmentPill segment={selectedPlayer.segment} />
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Email</dt>
-                <dd className="mt-1 truncate font-semibold text-[var(--text-secondary)]">
-                  {selectedPlayer.email ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Teléfono</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.phone ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Ciudad</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                  {[selectedPlayer.city, selectedPlayer.province].filter(Boolean).join(", ") || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Reservas creadas</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.reservationsCreated}</dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Partidos totales</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.totalPlayed}</dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Última reserva</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                  {format(parseISO(selectedPlayer.last), "d MMM yyyy", { locale: es })}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Cancelaciones</dt>
-                <dd
-                  className={`mt-1 font-semibold ${
-                    selectedPlayer.cancellationRate > 30
-                      ? "text-rose-700 dark:text-rose-400"
-                      : "text-[var(--text-secondary)]"
-                  }`}
-                >
-                  {selectedPlayer.cancellationCount} ({selectedPlayer.cancellationRate}%)
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Horario favorito</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                  {selectedPlayer.favoriteSlot === "Sin historial" ? "Sin historial" : `${selectedPlayer.favoriteSlot}hs`}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Día favorito</dt>
-                <dd className="mt-1 font-semibold capitalize text-[var(--text-secondary)]">
-                  {selectedPlayer.favoriteDay ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Posición</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.courtPosition}</dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Mano hábil</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                  {selectedPlayer.preferredHand ?? "No definida"}
-                </dd>
-              </div>
-              <div>
-                <dt className={adminKicker}>Estado</dt>
-                <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                  {blockedSet.has(selectedPlayer.uid) ? "🚫 Bloqueado" : "✓ Activo"}
-                </dd>
-              </div>
-            </dl>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className={adminKicker}>Categoría</dt>
+                  <dd className="mt-1">
+                    {selectedPlayer.levelBadge === "Sin nivelar" ? (
+                      <span className="font-semibold text-[var(--text-secondary)]">Sin categoría</span>
+                    ) : (
+                      <span className={adminBadgeBrand}>{selectedPlayer.levelBadge}</span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Segmento</dt>
+                  <dd className="mt-1">
+                    <PlayerSegmentPill segment={selectedPlayer.segment} />
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className={adminKicker}>Email</dt>
+                  <dd className="mt-1 break-all text-sm font-semibold text-[var(--text-primary)]">
+                    {selectedPlayer.email ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Teléfono</dt>
+                  <dd className="mt-1 text-sm font-semibold">
+                    {selectedPlayer.phone ? (
+                      <a href={`tel:${selectedPlayer.phone}`} className="text-[#0085FC]">
+                        {selectedPlayer.phone}
+                      </a>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]">—</span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Ciudad</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-primary)]">
+                    {[selectedPlayer.city, selectedPlayer.province].filter(Boolean).join(", ") || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Reservas creadas</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.reservationsCreated}</dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Partidos totales</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.totalPlayed}</dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Última reserva</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
+                    {format(parseISO(selectedPlayer.last), "d MMM yyyy", { locale: es })}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Cancelaciones</dt>
+                  <dd
+                    className={`mt-1 font-semibold ${
+                      selectedPlayer.cancellationRate > 30
+                        ? "text-rose-700 dark:text-rose-400"
+                        : "text-[var(--text-secondary)]"
+                    }`}
+                  >
+                    {selectedPlayer.cancellationCount} ({selectedPlayer.cancellationRate}%)
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Horario favorito</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
+                    {selectedPlayer.favoriteSlot === "Sin historial" ? "Sin historial" : `${selectedPlayer.favoriteSlot}hs`}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Día favorito</dt>
+                  <dd className="mt-1 font-semibold capitalize text-[var(--text-secondary)]">
+                    {selectedPlayer.favoriteDay ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Posición</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{selectedPlayer.courtPosition}</dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Mano hábil</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
+                    {selectedPlayer.preferredHand ?? "No definida"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={adminKicker}>Estado</dt>
+                  <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
+                    {blockedSet.has(selectedPlayer.uid) ? "🚫 Bloqueado" : "✓ Activo"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
 
-            <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-4">
+            <div className="flex shrink-0 flex-wrap gap-2 border-t border-[var(--border-subtle)] px-6 py-4">
               {selectedPlayer.phone ? (
                 <a
                   href={`https://wa.me/${selectedPlayer.phone.replace(/\D/g, "")}`}
