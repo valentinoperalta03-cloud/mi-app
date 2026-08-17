@@ -512,26 +512,6 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
             ) : null}
           </section>
 
-          {services.length > 0 ? (
-            <section className="mt-6 border-t border-[#1A3050] pt-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">Servicios</p>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {services.map((s) => {
-                  const meta = SERVICES_CATALOG[s.toLowerCase()] ?? { emoji: "🎾", label: s };
-                  return (
-                    <div
-                      key={s}
-                      className="flex flex-col items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.04] px-2 py-3 text-center"
-                    >
-                      <span className="text-xl">{meta.emoji}</span>
-                      <span className="mt-1 text-[11px] text-white/60">{meta.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-
           {courts.length > 0 ? (
             <section className="mt-6 border-t border-[#1A3050] pt-6">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">
@@ -565,6 +545,26 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
                   Ver disponibilidad →
                 </button>
               )}
+            </section>
+          ) : null}
+
+          {services.length > 0 ? (
+            <section className="mt-6 border-t border-[#1A3050] pt-6">
+              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">Servicios</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {services.map((s) => {
+                  const meta = SERVICES_CATALOG[s.toLowerCase()] ?? { emoji: "🎾", label: s };
+                  return (
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.10] bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-white/70"
+                    >
+                      <span className="text-sm">{meta.emoji}</span>
+                      {meta.label}
+                    </span>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
 

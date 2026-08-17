@@ -13,6 +13,7 @@ import {
   Settings,
   Settings2,
   SquareChartGantt,
+  Star,
   Target,
   Trophy,
   Users,
@@ -75,6 +76,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: "/admin/canchas", label: "Canchas", icon: Building2 },
       { href: "/admin/config/informacion", label: "Información", icon: Info },
+      { href: "/admin/config/servicios", label: "Servicios", icon: Star },
       { href: "/admin/config/pagos", label: "Métodos de pago", icon: CreditCard },
       { href: "/admin/config/general", label: "General", icon: Settings2 },
       { href: "/admin/config/suscripcion", label: "Suscripción", icon: CircleDollarSign },
