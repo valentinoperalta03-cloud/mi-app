@@ -2,7 +2,7 @@
 
 import { DB_TABLES } from "@/lib/db-tables";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 const VALID_KEYS = [
   "cancha_techada",
@@ -38,7 +38,8 @@ export async function updateClubServices(
 
   const validServices = services.filter((s) => VALID_KEYS.includes(s));
 
-  const { error } = await supabase
+  const serviceSupabase = createServiceClient();
+  const { error } = await serviceSupabase
     .from(DB_TABLES.clubs)
     .update({ services: validServices })
     .eq("id", clubId)
