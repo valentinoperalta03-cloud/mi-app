@@ -1,17 +1,14 @@
-﻿import { format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import Link from "next/link";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminInputClass } from "@/components/admin/admin-form-input";
 import AdminPageHeader from "@/components/admin/admin-page-header";
-import { adminAccentBar, adminBadgeBrand, adminCTADanger, adminBadgeSuccess, adminCard, adminEmptyState, adminKicker } from "@/components/admin/admin-premium";
-import { AdminPressableSurface } from "@/components/admin/admin-pressable";
-import { PlayerAvatar, PlayerSegmentPill } from "@/components/admin/admin-status-pills";
+import { adminAccentBar, adminCard, adminKicker } from "@/components/admin/admin-premium";
+import { PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
+import JugadoresClient, { type PlayerRow } from "./jugadores-client";
 
 const NEW_DAYS = 21;
 const SLOT_MINUTES = 90;
@@ -83,6 +80,7 @@ export default async function AdminJugadoresPage() {
       last: string;
       matchIds: Set<string>;
       slotCounts: Map<string, number>;
+      dayCounts: Map<string, number>;
     }
   >();
 
@@ -92,6 +90,7 @@ export default async function AdminJugadoresPage() {
     const matchDate = match.date;
     const timeValue = String(match.scheduled_time ?? "").slice(0, 5) || hhmmFromDate(matchDate);
     const slotKey = slotKeyFromTime(timeValue);
+    const dayKey = format(parseISO(matchDate), "EEEE", { locale: es });
     const current = byUser.get(uid);
     if (!current) {
       byUser.set(uid, {
@@ -101,6 +100,7 @@ export default async function AdminJugadoresPage() {
         last: matchDate,
         matchIds: new Set([matchId]),
         slotCounts: new Map([[slotKey, 1]]),
+        dayCounts: new Map([[dayKey, 1]]),
       });
       return;
     }
@@ -109,6 +109,7 @@ export default async function AdminJugadoresPage() {
       current.matchIds.add(matchId);
       current.totalPlayed += 1;
       current.slotCounts.set(slotKey, (current.slotCounts.get(slotKey) ?? 0) + 1);
+      current.dayCounts.set(dayKey, (current.dayCounts.get(dayKey) ?? 0) + 1);
     }
     if (parseISO(matchDate) > parseISO(current.last)) current.last = matchDate;
     if (parseISO(matchDate) < parseISO(current.first)) current.first = matchDate;
@@ -128,7 +129,7 @@ export default async function AdminJugadoresPage() {
   const { data: profilesRaw } = userIds.length
     ? await supabase
         .from(DB_TABLES.profiles)
-        .select("user_id,name,avatar_url,category,preferred_hand,court_position,preferred_schedule")
+        .select("user_id,name,avatar_url,category,preferred_hand,court_position,preferred_schedule,phone,city,province")
         .in("user_id", userIds)
     : { data: [] };
 
@@ -141,6 +142,9 @@ export default async function AdminJugadoresPage() {
       preferred_hand: string | null;
       court_position: string | null;
       preferred_schedule: string | null;
+      phone: string | null;
+      city: string | null;
+      province: string | null;
     }) => [
       p.user_id,
       {
@@ -150,9 +154,28 @@ export default async function AdminJugadoresPage() {
         preferredHand: p.preferred_hand ?? null,
         courtPosition: p.court_position ?? null,
         preferredSchedule: p.preferred_schedule ?? null,
+        phone: p.phone ?? null,
+        city: p.city ?? null,
+        province: p.province ?? null,
       },
     ])
   );
+
+  const emailByUid = new Map<string, string | null>();
+  if (userIds.length && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const serviceClient = createServiceClient();
+    const results = await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const { data } = await serviceClient.auth.admin.getUserById(uid);
+          return [uid, data.user?.email ?? null] as const;
+        } catch {
+          return [uid, null] as const;
+        }
+      })
+    );
+    for (const [uid, email] of results) emailByUid.set(uid, email);
+  }
 
   const { data: paymentsRaw } = userIds.length && clubMatchIds.length
     ? await supabase
@@ -173,7 +196,7 @@ export default async function AdminJugadoresPage() {
   }
 
   const now = new Date();
-  const list = userIds
+  const list: PlayerRow[] = userIds
     .map((uid) => {
       const stats = byUser.get(uid)!;
       const firstDt = parseISO(stats.first);
@@ -187,6 +210,14 @@ export default async function AdminJugadoresPage() {
           favoriteSlot = slot;
         }
       }
+      let favoriteDay: string | null = null;
+      let maxDayCount = 0;
+      for (const [day, count] of stats.dayCounts.entries()) {
+        if (count > maxDayCount) {
+          maxDayCount = count;
+          favoriteDay = day;
+        }
+      }
       const pay = paymentStats.get(uid) ?? { approved: 0, cancelled: 0 };
       const totalForCancellation = pay.approved + pay.cancelled;
       const cancellationRate = totalForCancellation > 0 ? Math.round((pay.cancelled / totalForCancellation) * 100) : 0;
@@ -198,6 +229,7 @@ export default async function AdminJugadoresPage() {
         name: profile?.name ?? "Jugador",
         avatarUrl: profile?.avatarUrl ?? null,
         levelBadge,
+        category,
         totalPlayed: stats.totalPlayed,
         reservationsCreated: stats.reservationsCreated,
         last: stats.last,
@@ -205,8 +237,13 @@ export default async function AdminJugadoresPage() {
         cancellationCount: pay.cancelled,
         cancellationRate,
         favoriteSlot,
+        favoriteDay,
         courtPosition: formatPosition(profile?.courtPosition ?? null),
         preferredHand: String(profile?.preferredHand ?? "").trim() || null,
+        email: emailByUid.get(uid) ?? null,
+        phone: profile?.phone ?? null,
+        city: profile?.city ?? null,
+        province: profile?.province ?? null,
       };
     })
     .sort((a, b) => b.totalPlayed - a.totalPlayed);
@@ -217,40 +254,7 @@ export default async function AdminJugadoresPage() {
         .select("user_id")
         .eq("club_id", ctx.clubIds[0])
     : { data: [] };
-  const blockedSet = new Set(
-    (blockedRaw ?? []).map((r: { user_id: string }) => r.user_id)
-  );
-
-  async function blockPlayerAction(formData: FormData) {
-    "use server";
-    const userId = String(formData.get("user_id") ?? "").trim();
-    const reason = String(formData.get("reason") ?? "").trim();
-    if (!userId) return;
-    const supabaseAction = await createClient({ allowCookieWrites: true });
-    const actionCtx = await getOwnerAdminContext(supabaseAction);
-    if (!actionCtx?.userId || !actionCtx.clubIds.length) return;
-    await supabaseAction.from(DB_TABLES.blockedUsers).upsert({
-      club_id: actionCtx.clubIds[0],
-      user_id: userId,
-      reason: reason || "Bloqueado desde panel admin",
-    });
-    revalidatePath("/admin/jugadores");
-  }
-
-  async function unblockPlayerAction(formData: FormData) {
-    "use server";
-    const userId = String(formData.get("user_id") ?? "").trim();
-    if (!userId) return;
-    const supabaseAction = await createClient({ allowCookieWrites: true });
-    const actionCtx = await getOwnerAdminContext(supabaseAction);
-    if (!actionCtx?.userId || !actionCtx.clubIds.length) return;
-    await supabaseAction
-      .from(DB_TABLES.blockedUsers)
-      .delete()
-      .eq("club_id", actionCtx.clubIds[0])
-      .eq("user_id", userId);
-    revalidatePath("/admin/jugadores");
-  }
+  const blockedUserIds = (blockedRaw ?? []).map((r: { user_id: string }) => r.user_id);
 
   const monthCutoff = new Date();
   monthCutoff.setDate(monthCutoff.getDate() - 30);
@@ -292,12 +296,7 @@ export default async function AdminJugadoresPage() {
           <p className={adminKicker}>Jugador más activo</p>
           {topPlayer ? (
             <div className="mt-2 flex items-center gap-2">
-              {topPlayer.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-                <img src={topPlayer.avatarUrl} alt={topPlayer.name} className="h-8 w-8 rounded-full border border-[var(--border-subtle)] object-cover" />
-              ) : (
-                <PlayerAvatar name={topPlayer.name} />
-              )}
+              <PlayerAvatar name={topPlayer.name} avatarUrl={topPlayer.avatarUrl} size={32} />
               <p className="text-sm font-bold text-[var(--text-primary)]">
                 {topPlayer.name} ({topPlayer.totalPlayed})
               </p>
@@ -313,128 +312,7 @@ export default async function AdminJugadoresPage() {
         </div>
       </section>
 
-      {list.length === 0 ? (
-        <p className={adminEmptyState}>
-          Todavía no hay creadores de partidos en tus canchas.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-4">
-          {list.map((row) => (
-            <li key={row.uid}>
-              <AdminPressableSurface className={adminCard}>
-                <div className="flex gap-4">
-                  {row.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
-                    <img src={row.avatarUrl} alt={row.name} className="h-12 w-12 rounded-full border border-[var(--border-subtle)] object-cover" />
-                  ) : (
-                    <PlayerAvatar name={row.name} />
-                  )}
-                  <div className="min-w-0 flex-1 space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-lg font-bold text-[var(--text-primary)]">{row.name}</p>
-                        <p className="mt-0.5 text-xs font-medium text-[var(--text-tertiary)]">
-                          ID: {row.uid.slice(0, 8)}…
-                        </p>
-                      </div>
-                      <PlayerSegmentPill segment={row.segment} />
-                    </div>
-                    <dl className="grid grid-cols-1 gap-4 border-t border-[var(--border-subtle)] pt-4 text-sm sm:grid-cols-2">
-                      <div>
-                        <dt className={adminKicker}>Reservas creadas</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.reservationsCreated}</dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Última reserva</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                          {format(parseISO(row.last), "d MMM yyyy HH:mm", { locale: es })}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Estado</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                          {blockedSet.has(row.uid) ? "Bloqueado" : "Activo"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Nivel ELO y categoría</dt>
-                        <dd className="mt-1">
-                          {row.levelBadge === "Sin nivelar" ? (
-                            <span className="font-semibold text-[var(--text-secondary)]">Sin nivelar</span>
-                          ) : (
-                            <span className={adminBadgeBrand}>
-                              {row.levelBadge}
-                            </span>
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Partidos totales en este club</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.totalPlayed} partidos jugados</dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Tasa de cancelación</dt>
-                        <dd
-                          className={`mt-1 font-semibold ${
-                            row.cancellationRate > 30
-                              ? "text-rose-700 dark:text-rose-400"
-                              : "text-[var(--text-secondary)]"
-                          }`}
-                        >
-                          {row.cancellationRate > 30 ? "⚠️ " : ""}
-                          {row.cancellationCount} cancelaciones ({row.cancellationRate}%)
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Horario favorito</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                          {row.favoriteSlot === "Sin historial" ? "Sin historial" : `Juega más a las ${row.favoriteSlot}hs`}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={adminKicker}>Posición en cancha</dt>
-                        <dd className="mt-1 font-semibold text-[var(--text-secondary)]">{row.courtPosition}</dd>
-                      </div>
-                    </dl>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {!blockedSet.has(row.uid) ? (
-                        <form action={blockPlayerAction} className="flex items-center gap-2">
-                          <input type="hidden" name="user_id" value={row.uid} />
-                          <input
-                            name="reason"
-                            placeholder="Motivo (opcional)"
-                            className={`${adminInputClass} w-auto text-xs`}
-                          />
-                          <button type="submit" className={adminCTADanger}>
-                            Bloquear
-                          </button>
-                        </form>
-                      ) : (
-                        <form action={unblockPlayerAction}>
-                          <input type="hidden" name="user_id" value={row.uid} />
-                          <button
-                            type="submit"
-                            className={adminBadgeSuccess}
-                          >
-                            Desbloquear
-                          </button>
-                        </form>
-                      )}
-                      <Link
-                        href={`/admin/reservas?selected=&date=${format(parseISO(row.last), "yyyy-MM-dd")}`}
-                        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]"
-                      >
-                        Ver reservas
-                      </Link>
-                      {/* WhatsApp no se muestra si la columna no existe o está vacía */}
-                    </div>
-                  </div>
-                </div>
-              </AdminPressableSurface>
-            </li>
-          ))}
-        </ul>
-      )}
+      <JugadoresClient list={list} blockedUserIds={blockedUserIds} />
     </div>
   );
 }

@@ -161,11 +161,33 @@ export function PlayerSegmentPill({ segment }: { segment: "Nuevo" | "Recurrente"
   );
 }
 
-export function PlayerAvatar({ name }: { name: string }) {
+export function PlayerAvatar({
+  name,
+  avatarUrl,
+  size = 48,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  size?: number;
+}) {
   const initial = (name.trim().charAt(0) || "?").toUpperCase();
+
+  if (avatarUrl?.trim()) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- URL pública de storage
+      <img
+        src={avatarUrl}
+        alt={name}
+        style={{ height: size, width: size }}
+        className="shrink-0 rounded-2xl border border-[var(--border-subtle)] object-cover"
+      />
+    );
+  }
+
   return (
     <div
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0085FC] to-indigo-100 text-base font-bold text-[#0085FC] ring-1 ring-[#0085FC]/20"
+      style={{ height: size, width: size, fontSize: Math.max(12, Math.round(size * 0.33)) }}
+      className="flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0085FC] to-indigo-100 font-bold text-[#0085FC] ring-1 ring-[#0085FC]/20"
       aria-hidden
     >
       {initial}
