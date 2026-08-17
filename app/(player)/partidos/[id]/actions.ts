@@ -1182,6 +1182,79 @@ export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; 
   return { ok: true };
 }
 
+export async function submitMatchFeedback(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const matchId = getField(formData, "match_id");
+  const ratingRaw = Number(formData.get("rating") ?? 0);
+  const tagsRaw = String(formData.get("tags") ?? "");
+  const message = String(formData.get("message") ?? "").trim();
+
+  if (!matchId || ratingRaw < 1 || ratingRaw > 5) {
+    return { ok: false, error: "Datos inválidos." };
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Necesitás iniciar sesión." };
+
+  const { data: participation } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId)
+    .eq("player_id", user.id)
+    .maybeSingle();
+
+  if (!participation) {
+    return { ok: false, error: "No participaste en este partido." };
+  }
+
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select("date, court_id")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  const matchDate = new Date(String((matchRow as { date?: string } | null)?.date ?? ""));
+  if (new Date() <= matchDate) {
+    return { ok: false, error: "El partido todavía no ocurrió." };
+  }
+
+  const tags = tagsRaw
+    ? tagsRaw
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  const { error } = await supabase.from(DB_TABLES.matchFeedback).upsert(
+    {
+      match_id: matchId,
+      user_id: user.id,
+      rating: ratingRaw,
+      tags,
+      message: ratingRaw === 1 && message ? message : null,
+    },
+    { onConflict: "match_id,user_id" }
+  );
+
+  if (error) return { ok: false, error: error.message };
+
+  const courtId = String((matchRow as { court_id?: string | null } | null)?.court_id ?? "").trim();
+  const clubId = courtId ? await getClubIdForCourt(supabase, courtId) : "";
+  if (clubId) {
+    const stars = "⭐".repeat(ratingRaw);
+    await notifyClubOwner(supabase, clubId, {
+      title: `${stars} Nuevo feedback`,
+      body: `Un jugador calificó el partido con ${ratingRaw}/5${tags.length ? ` · ${tags.join(", ")}` : ""}`,
+      match_id: matchId,
+    });
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  return { ok: true };
+}
+
 export async function cancelFixedSlotDayAction(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
   const res = await cancelFixedSlotDay(matchId);

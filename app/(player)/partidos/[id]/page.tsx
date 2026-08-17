@@ -18,6 +18,7 @@ import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
 import JoinWithTeamForm from "./join-with-team-form";
 import KickPlayerButton from "./kick-player-button";
+import { MatchFeedbackSection } from "./match-feedback-section";
 import PartidoEditSection from "./partido-edit-section";
 import RegenerarPagoButton from "./regenerar-pago-button";
 import RequestJoinButton from "./request-join-button";
@@ -159,7 +160,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,result_available_at,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location))"
+      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location))"
     )
     .eq("id", id)
     .maybeSingle();
@@ -180,7 +181,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     scheduled_time: string | null;
     payment_status: string | null;
     match_status: string | null;
-    result_available_at?: string | null;
     court_id: string;
     match_type: string | null;
     visibility: "publico" | "privado" | null;
@@ -208,13 +208,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     redirect("/buscar-partido");
   }
 
-  // Check if result screen should be shown
-  const now = new Date();
-  const resultAvailableAt = match.result_available_at
-    ? new Date(match.result_available_at)
-    : null;
-  const isResultAvailable = resultAvailableAt ? now >= resultAvailableAt : false;
-  const isMatchFinished = match.match_status === "reserved" && isResultAvailable;
+  const matchDateObj = new Date(match.date);
+  const nowAr = new Date();
+  const matchAlreadyPlayed = nowAr > matchDateObj;
 
   const detail: MatchDetailRow = {
     id: match.id,
@@ -325,6 +321,18 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const isParticipant = participants.some((participant) => participant.player_id === user.id);
   const isOwner = Boolean(user.id && match.owner_id && user.id === match.owner_id);
+
+  const { data: myFeedbackRow } =
+    isParticipant && matchAlreadyPlayed
+      ? await supabase
+          .from(DB_TABLES.matchFeedback)
+          .select("id, rating, tags")
+          .eq("match_id", id)
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : { data: null };
+
+  const alreadyLeftFeedback = Boolean(myFeedbackRow);
 
   const adminForGroup = await getAdminClient();
   const { data: groupChatRow } = await adminForGroup
@@ -757,7 +765,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {!isOwner && !isParticipant && !isMatchFinished ? (
+      {!isOwner && !isParticipant && matchStatusNorm !== "cancelled" ? (
         <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
           <div className="flex w-full justify-center">
             <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
@@ -990,7 +998,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         }}
       />
 
-      {isParticipant && !isMatchFinished && matchStatusNorm !== "cancelled" ? (
+      {isParticipant && matchStatusNorm !== "cancelled" ? (
         <section className={`${PLAYER_CARD_INTERACTIVE} rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm`}>
           <h2 className="text-base font-semibold tracking-tight text-slate-950">Tu cupo</h2>
           <p className="mt-1 text-sm text-slate-600">
@@ -1008,6 +1016,19 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
+      {isParticipant && matchAlreadyPlayed ? (
+        <MatchFeedbackSection
+          matchId={id}
+          alreadyLeftFeedback={alreadyLeftFeedback}
+          initialRating={
+            alreadyLeftFeedback ? (myFeedbackRow as { rating?: number } | null)?.rating ?? 0 : 0
+          }
+          initialTags={
+            alreadyLeftFeedback ? (myFeedbackRow as { tags?: string[] } | null)?.tags ?? [] : []
+          }
+        />
+      ) : null}
+
       {hasInvitedPayment && !isParticipant ? (
         <section className="rounded-2xl border border-[#0085FC]/30 bg-[#0085FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
@@ -1016,7 +1037,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isParticipant && !isOwner && !isMatchFinished ? (
+      {isParticipant && !isOwner && matchStatusNorm !== "cancelled" ? (
         <section className="space-y-3 rounded-2xl border border-emerald-200/80 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900/40">
           <div className="flex w-full justify-center">
             <WhatsappShareButton fallbackPath={partyUrl} sharePath={partyUrl} shareText={shareWhatsText} />
@@ -1032,7 +1053,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {canJoinAsNewPlayer && !isMatchFinished && !isPrivate && !match.level_restricted ? (
+      {canJoinAsNewPlayer && !isPrivate && !match.level_restricted ? (
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
           <h2 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white">Sumate al partido</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Confirmás tu lugar con el pago del turno.</p>
@@ -1046,7 +1067,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {canJoinAsNewPlayer && !isMatchFinished && match.level_restricted && !isOwner ? (
+      {canJoinAsNewPlayer && match.level_restricted && !isOwner ? (
         <div className="space-y-2">
           <JoinWithTeamForm
             matchId={id}
