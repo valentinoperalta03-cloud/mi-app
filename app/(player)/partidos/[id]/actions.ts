@@ -196,7 +196,9 @@ export async function updateMatch(formData: FormData): Promise<void> {
   redirect(`/partidos/${matchId}`);
 }
 
-export async function requestToJoin(formData: FormData): Promise<void> {
+export async function requestToJoin(
+  formData: FormData
+): Promise<void | { needsPayment: true; mpUrl: string }> {
   const matchId = getField(formData, "match_id");
   const levelOverride = getField(formData, "level_override") === "true";
   const requestedTeamRaw = getField(formData, "team");
@@ -485,8 +487,10 @@ export async function requestToJoin(formData: FormData): Promise<void> {
           revalidatePath("/buscar-partido");
           revalidatePath("/home");
 
-          // Redirigir al 4to a MP para pagar
-          redirect(`/partidos/${matchId}/pago?match_id=${matchId}`);
+          // En vez de redirect(), devolver la URL de MP al cliente — un
+          // redirect() del server action no navega a mercadopago.com dentro
+          // del WebView de Capacitor (no está en allowNavigation).
+          return { needsPayment: true, mpUrl: mp.initPoint };
         }
       }
     }

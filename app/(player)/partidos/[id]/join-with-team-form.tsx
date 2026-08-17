@@ -1,6 +1,8 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { useTransition } from "react";
+import { nativeOpenUrl } from "@/lib/native-open";
 import { requestToJoin } from "./actions";
 
 type Props = {
@@ -31,7 +33,7 @@ export default function JoinWithTeamForm({
     <div className="space-y-3">
       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Elegí a qué equipo querés unirte.</p>
       <div className="grid grid-cols-2 gap-3">
-        <TeamJoinSubmit
+        <TeamJoinButton
           matchId={matchId}
           team={1}
           disabled={t1Full}
@@ -40,7 +42,7 @@ export default function JoinWithTeamForm({
           slotLabel={getSlotLabel(t1Free)}
           tone="blue"
         />
-        <TeamJoinSubmit
+        <TeamJoinButton
           matchId={matchId}
           team={2}
           disabled={t2Full}
@@ -55,35 +57,6 @@ export default function JoinWithTeamForm({
 }
 
 function TeamJoinButton({
-  disabled,
-  label,
-  slotLabel,
-  tone,
-}: {
-  disabled: boolean;
-  label: string;
-  slotLabel: string;
-  tone: "blue" | "slate";
-}) {
-  const { pending } = useFormStatus();
-  const isDisabled = disabled || pending;
-  const toneClass =
-    tone === "blue"
-      ? "border-[#0085FC]/30 bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] hover:brightness-95"
-      : "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700";
-  return (
-    <button
-      type="submit"
-      disabled={isDisabled}
-      className={`w-full rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${toneClass}`}
-    >
-      <span className="block truncate">{pending ? "Enviando..." : label}</span>
-      <span className="mt-1 block text-xs font-medium opacity-90">{slotLabel}</span>
-    </button>
-  );
-}
-
-function TeamJoinSubmit({
   matchId,
   team,
   disabled,
@@ -100,12 +73,43 @@ function TeamJoinSubmit({
   slotLabel: string;
   tone: "blue" | "slate";
 }) {
+  const [isPending, startTransition] = useTransition();
+  const isDisabled = disabled || isPending;
+  const toneClass =
+    tone === "blue"
+      ? "border-[#0085FC]/30 bg-[#0085FC] text-white shadow-[0_2px_8px_rgba(5,133,252,0.3)] hover:brightness-95"
+      : "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700";
+
+  function handleClick() {
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("match_id", matchId);
+        fd.set("level_override", levelOverride ? "true" : "false");
+        fd.set("team", String(team));
+
+        const result = await requestToJoin(fd);
+
+        if (result && "needsPayment" in result && result.mpUrl) {
+          await nativeOpenUrl(result.mpUrl);
+        }
+        // Si no devuelve nada → la action hizo redirect() internamente
+      } catch (err) {
+        if (isRedirectError(err)) throw err;
+        console.error("[JoinWithTeamForm]", err);
+      }
+    });
+  }
+
   return (
-    <form action={requestToJoin}>
-      <input type="hidden" name="match_id" value={matchId} />
-      <input type="hidden" name="level_override" value={levelOverride ? "true" : "false"} />
-      <input type="hidden" name="team" value={String(team)} />
-      <TeamJoinButton disabled={disabled} label={label} slotLabel={slotLabel} tone={tone} />
-    </form>
+    <button
+      type="button"
+      disabled={isDisabled}
+      onClick={handleClick}
+      className={`w-full rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55 ${toneClass}`}
+    >
+      <span className="block truncate">{isPending ? "Enviando..." : label}</span>
+      <span className="mt-1 block text-xs font-medium opacity-90">{slotLabel}</span>
+    </button>
   );
 }
