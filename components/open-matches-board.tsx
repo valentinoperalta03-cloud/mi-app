@@ -16,9 +16,9 @@ type MatchFeedRow = {
   owner_id?: string | null;
   visibility?: "publico" | "privado" | string | null;
   total_price?: number | null;
-  is_competitive?: boolean | null;
   level_restricted?: boolean | null;
   gender_category?: "masculino" | "femenino" | "mixto" | null;
+  category_range?: string[] | null;
   courts:
     | {
         clubs:
@@ -118,9 +118,9 @@ export default async function OpenMatchesBoard({
       owner_id,
       visibility,
       total_price,
-      is_competitive,
       level_restricted,
       gender_category,
+      category_range,
       courts (
         clubs (
           name,
@@ -181,13 +181,13 @@ export default async function OpenMatchesBoard({
       id: match.id,
       date: match.date,
       owner_id: match.owner_id ?? null,
-      is_competitive: Boolean(match.is_competitive),
       level_restricted: Boolean(match.level_restricted),
       gender_category: genderCategory,
       clubName: club?.name ?? "Club sin nombre",
       clubLocation: club?.location ?? "Ubicación pendiente",
       clubCity: normalizeCity(rawCity),
       clubProvince: club?.province?.trim() ?? "",
+      categoryRange: (match as any).category_range ?? null,
       playersCount,
       freeSlots,
       currentUserJoined,

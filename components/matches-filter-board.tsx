@@ -12,13 +12,13 @@ export type MatchCardData = {
   id: string;
   date: string;
   owner_id: string | null;
-  is_competitive: boolean;
   level_restricted: boolean;
   gender_category: "masculino" | "femenino" | "mixto";
   clubName: string;
   clubLocation: string;
   clubCity: string;
   clubProvince: string;
+  categoryRange: string[] | null;
   playersCount: number;
   freeSlots: number;
   currentUserJoined: boolean;
@@ -46,9 +46,11 @@ type Props = {
   userProvince: string;
 };
 
-type StatusFilter = "todos" | "amistoso" | "competitivo" | "con_lugar";
+type CuposFilter = "todos" | "con_lugar";
 type GenderFilter = "todos" | "masculino" | "femenino" | "mixto";
 type CityFilter = "mi_ciudad" | "mi_provincia" | "todas";
+
+const CATEGORIES = ["8va", "7ma", "6ta", "5ta", "4ta", "3ra", "2da", "1ra"];
 
 function normalizeForCompare(value: string): string {
   return value.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
@@ -56,21 +58,23 @@ function normalizeForCompare(value: string): string {
 
 const chip = (active: boolean) =>
   active
-    ? "rounded-full bg-[color:var(--color-brand-mid)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
-    : "rounded-full border border-slate-200 bg-slate-100/80 px-3 py-1.5 text-xs font-semibold text-slate-600";
+    ? "rounded-full bg-[#0085FC] px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+    : "rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]";
 
 export default function MatchesFilterBoard({ matches, userId, userCity, userProvince }: Props) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("con_lugar");
+  const [cuposFilter, setCuposFilter] = useState<CuposFilter>("con_lugar");
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("todos");
   const [cityFilter, setCityFilter] = useState<CityFilter>("mi_ciudad");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   const filtered = matches.filter((m) => {
-    if (statusFilter === "amistoso" && m.is_competitive) return false;
-    if (statusFilter === "competitivo" && !m.is_competitive) return false;
-    if (statusFilter === "con_lugar" && m.freeSlots <= 0) return false;
+    if (cuposFilter === "con_lugar" && m.freeSlots <= 0) return false;
     if (genderFilter !== "todos" && m.gender_category !== genderFilter) return false;
     if (cityFilter === "mi_ciudad" && normalizeForCompare(m.clubCity) !== normalizeForCompare(userCity)) return false;
     if (cityFilter === "mi_provincia" && normalizeForCompare(m.clubProvince) !== normalizeForCompare(userProvince)) return false;
+    if (categoryFilter && m.categoryRange && m.categoryRange.length > 0) {
+      if (!m.categoryRange.includes(categoryFilter)) return false;
+    }
     return true;
   });
 
@@ -89,17 +93,12 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
           </button>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {(["todos", "amistoso", "competitivo", "con_lugar"] as StatusFilter[]).map((f) => (
-            <button key={f} type="button" onClick={() => setStatusFilter(f)} className={chip(statusFilter === f)}>
-              {f === "todos"
-                ? "Todos"
-                : f === "amistoso"
-                  ? "Amistoso"
-                  : f === "competitivo"
-                    ? "Competitivo"
-                    : "Con lugar"}
-            </button>
-          ))}
+          <button type="button" onClick={() => setCuposFilter("todos")} className={chip(cuposFilter === "todos")}>
+            Todos
+          </button>
+          <button type="button" onClick={() => setCuposFilter("con_lugar")} className={chip(cuposFilter === "con_lugar")}>
+            Con lugar libre
+          </button>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {(["todos", "masculino", "femenino", "mixto"] as GenderFilter[]).map((f) => (
@@ -108,9 +107,24 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
             </button>
           ))}
         </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button type="button" onClick={() => setCategoryFilter("")} className={chip(!categoryFilter)}>
+            Todas las categorías
+          </button>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategoryFilter(cat === categoryFilter ? "" : cat)}
+              className={chip(categoryFilter === cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <p className="text-sm font-medium text-slate-500">
+      <p className="text-sm font-medium text-[var(--text-tertiary)]">
         {filtered.length} {filtered.length === 1 ? "partido disponible" : "partidos disponibles"}
       </p>
 
@@ -130,7 +144,6 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
               : match.gender_category === "femenino"
                 ? "border-[#ec4899]/35 bg-[#ec4899]/10 text-[#be185d]"
                 : "border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#6d28d9]";
-          const topBarColor = match.is_competitive ? "bg-[var(--color-brand)]" : "bg-[#16a34a]";
 
             return (
             <motion.article
@@ -140,15 +153,14 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               key={match.id}
-              className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 pt-6 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)]`}
+              className={`${PLAYER_CARD_INTERACTIVE} relative w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[0_2px_16px_-4px_rgba(10,22,40,0.08)]`}
             >
-              <div className={`absolute left-0 right-0 top-0 h-1.5 ${topBarColor}`} aria-hidden />
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="truncate text-xl font-semibold leading-tight tracking-tight text-slate-900">
+                  <h2 className="truncate text-xl font-semibold leading-tight tracking-tight text-[var(--text-primary)]">
                     {match.clubName}
                   </h2>
-                  <p className="truncate text-sm text-slate-500">{match.clubLocation}</p>
+                  <p className="truncate text-sm text-[var(--text-tertiary)]">{match.clubLocation}</p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <span
@@ -156,11 +168,6 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                   >
                     {categoryLabel}
                   </span>
-                  {match.is_competitive ? (
-                    <span className="shrink-0 rounded-full border border-[var(--color-brand)]/20 bg-[var(--color-brand-light)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-dark)]">
-                      Partido competitivo
-                    </span>
-                  ) : null}
                   {match.level_restricted ? (
                     <span className="shrink-0 rounded-full border border-[var(--color-brand)]/20 bg-[var(--color-brand-light)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-dark)]">
                       Nivel restringido 🎯
@@ -169,45 +176,51 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-2 text-sm text-slate-600">
+              <div className="mt-4 grid gap-2 text-sm text-[var(--text-secondary)]">
                 <p>
-                  <span className="font-medium text-slate-800">Hora:</span> {when}
+                  <span className="font-medium text-[var(--text-primary)]">Hora:</span> {when}
                 </p>
-                <p>
-                  <span className="font-medium text-slate-800">Nivel promedio:</span>{" "}
-                  <span className="text-[#0461C4]">
-                    <span className="font-bold">{match.levelCategory || "—"}</span>
-                    {match.levelDescription ? (
-                      <span className="font-medium">{" - "}{match.levelDescription}</span>
-                    ) : null}
-                  </span>
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-medium text-slate-800">Cupos:</span>
+                {match.categoryRange && match.categoryRange.length > 0 ? (
+                  <p>
+                    <span className="font-medium text-[var(--text-primary)]">Categorías: </span>
+                    <span className="text-[var(--text-secondary)]">
+                      {match.categoryRange.join(" · ")}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-[var(--text-tertiary)]">Cualquier categoría</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
                   <div
-                    className="flex items-center gap-1.5"
+                    className="flex gap-1"
                     role="img"
                     aria-label={`${match.playersCount} jugadores anotados, ${match.freeSlots} cupos libres de 4`}
                   >
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const filled = i < match.playersCount;
-                      return (
-                        <span
-                          key={i}
-                          className={
-                            filled
-                              ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-brand)]"
-                              : "h-2.5 w-2.5 shrink-0 rounded-full border-2 border-slate-300 bg-transparent dark:border-slate-500"
-                          }
-                        />
-                      );
-                    })}
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`h-2 w-6 rounded-full transition ${
+                          i < match.playersCount
+                            ? "bg-[#0085FC]"
+                            : "border border-[var(--border-subtle)] bg-[var(--bg-subtle)]"
+                        }`}
+                      />
+                    ))}
                   </div>
-                  <span className="text-xs text-slate-500">
-                    {match.freeSlots} libre{match.freeSlots === 1 ? "" : "s"}
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                    {match.playersCount}/4
                   </span>
+                  {match.freeSlots > 0 ? (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      {match.freeSlots} libre{match.freeSlots !== 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-tertiary)]">
+                      Completo
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--text-tertiary)]">
                   Equipos: {match.team1Count}/2 · {match.team2Count}/2
                 </p>
               </div>
@@ -218,7 +231,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                     <li key={mp.player_id}>
                       <Link
                         href={`/jugador/${mp.player_id}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0085FC]"
+                        className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0085FC]"
                       >
                         <ProfileAvatar
                           avatarUrl={mp.avatar_url}
@@ -242,7 +255,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
               ) : null}
 
               <div className="mt-4 flex items-center justify-between">
-                <p className="min-w-0 text-xs text-slate-500">{match.playersCount} jugador(es) anotado(s)</p>
+                <p className="min-w-0 text-xs text-[var(--text-tertiary)]">{match.playersCount} jugador(es) anotado(s)</p>
 
                 {userId ? (
                   userId === match.owner_id ? (
@@ -267,20 +280,20 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                       Unirse al partido
                     </Link>
                   ) : match.genderRestrictionMessage ? (
-                    <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                    <span className="rounded-[2rem] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-tertiary)]">
                       Solo {categoryLabel}
                     </span>
                   ) : (
-                    <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                    <span className="rounded-[2rem] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-tertiary)]">
                       Completo
                     </span>
                   )
                 ) : match.freeSlots > 0 ? (
-                  <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                  <span className="rounded-[2rem] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-tertiary)]">
                     Iniciá sesión
                   </span>
                 ) : (
-                  <span className="rounded-[2rem] border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500">
+                  <span className="rounded-[2rem] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-tertiary)]">
                     Completo
                   </span>
                 )}
@@ -292,7 +305,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
       </motion.div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-5 text-center text-sm font-medium text-slate-600">
+        <p className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]/80 px-4 py-5 text-center text-sm font-medium text-[var(--text-secondary)]">
           No encontramos partidos con esos filtros. ¡Proba con otros!
         </p>
       ) : null}
