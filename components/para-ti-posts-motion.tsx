@@ -7,10 +7,10 @@ import { ProfileAvatar } from "@/components/profile-avatar";
 import { RelativeTime } from "@/components/relative-time";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { PostFeedItem } from "@/lib/para-ti-posts";
+import type { FeedItem, MatchFeedItem } from "@/lib/para-ti-posts";
 
-export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
-  if (posts.length === 0) {
+export function ParaTiPostsMotion({ items }: { items: FeedItem[] }) {
+  if (items.length === 0) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800">
         <EmptyState
@@ -24,7 +24,20 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {posts.map((p, i) => {
+      {items.map((item, i) => {
+        if (item.type === "match") {
+          return (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <MatchCard match={item} />
+            </motion.div>
+          );
+        }
+        const p = item;
         const name = p.profiles?.name?.trim() || "Jugador";
         const postTypeLabel =
           p.post_type === "photo" ? "Foto" : p.post_type === "result" ? "Resultado" : "Texto";
@@ -104,5 +117,68 @@ export function ParaTiPostsMotion({ posts }: { posts: PostFeedItem[] }) {
         );
       })}
     </div>
+  );
+}
+
+function MatchCard({ match }: { match: MatchFeedItem }) {
+  const genderLabel =
+    match.genderCategory === "masculino" ? "Masculino" : match.genderCategory === "femenino" ? "Femenino" : "Mixto";
+
+  return (
+    <Link
+      href={`/partidos/${match.id}`}
+      className="block rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/[0.04] p-4 transition hover:bg-[#0085FC]/[0.08]"
+    >
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div>
+          <p className="mb-1 text-[11px] font-mono uppercase tracking-widest text-[#0085FC]/70">
+            Partido abierto
+          </p>
+          <p className="text-base font-bold text-[var(--text-primary)]">{match.clubName}</p>
+          {match.courtName ? (
+            <p className="text-xs text-[var(--text-tertiary)]">{match.courtName}</p>
+          ) : null}
+        </div>
+        {match.freeSlots > 0 ? (
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            {match.freeSlots} lugar{match.freeSlots !== 1 ? "es" : ""} libre{match.freeSlots !== 1 ? "s" : ""}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-tertiary)]">
+            Completo
+          </span>
+        )}
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="rounded-full bg-[var(--bg-subtle)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+          📅 {match.scheduledDate} · {match.scheduledTime}hs
+        </span>
+        <span className="rounded-full bg-[var(--bg-subtle)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+          {genderLabel}
+        </span>
+        {match.categoryRange && match.categoryRange.length > 0 ? (
+          <span className="rounded-full bg-[var(--bg-subtle)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+            {match.categoryRange.join(" · ")}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 w-5 rounded-full ${
+                i < match.playersCount
+                  ? "bg-[#0085FC]"
+                  : "border border-[var(--border-subtle)] bg-[var(--bg-subtle)]"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs text-[var(--text-tertiary)]">{match.playersCount}/4 jugadores</span>
+      </div>
+    </Link>
   );
 }
