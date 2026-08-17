@@ -390,18 +390,8 @@ html.capacitor-native .login-page-main {
     180deg,
     transparent 0,
     transparent var(--cap-safe-top),
-    #f2f2f7 var(--cap-safe-top),
-    #f2f2f7 100%
-  ) !important;
-}
-
-html.capacitor-native.dark .login-page-main {
-  background: linear-gradient(
-    180deg,
-    transparent 0,
-    transparent var(--cap-safe-top),
-    #000 var(--cap-safe-top),
-    #000 100%
+    #0c1829 var(--cap-safe-top),
+    #0a2540 100%
   ) !important;
 }
 
