@@ -2,12 +2,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { motion } from "framer-motion";
 import { MessageCircle, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
 import { ConfirmTransferWhatsappButton } from "@/components/confirm-transfer-whatsapp-button";
-import { MatchResultForm } from "@/components/match-result-form";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -293,10 +291,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const team2Players = participants.filter((p) => p.team === 2);
   const team1Count = team1Players.length;
   const team2Count = team2Players.length;
-  const resultTeam1Label =
-    team1Players.map((p) => p.name?.trim() || "Jugador").join(" · ") || "Equipo 1";
-  const resultTeam2Label =
-    team2Players.map((p) => p.name?.trim() || "Jugador").join(" · ") || "Equipo 2";
 
   // Check if current user has paid
   const { data: myPayment } = await supabase
@@ -341,32 +335,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const groupChatId = String((groupChatRow as { id?: string } | null)?.id ?? "").trim() || null;
   const groupChatHref = groupChatId ? `/comunidad/mensajes/grupo/${groupChatId}` : null;
   const showGroupChat = Boolean(groupChatHref && (isOwner || isParticipant));
-
-  // Check if current user already submitted result
-  const { data: myResult } = await supabase
-    .from(DB_TABLES.matchResults)
-    .select("id, status")
-    .eq("match_id", id)
-    .eq("proposed_by", user.id)
-    .maybeSingle();
-
-  const alreadySubmitted = Boolean(myResult);
-
-  const { data: matchResultRow } = await supabase
-    .from(DB_TABLES.matchResults)
-    .select("id")
-    .eq("match_id", id)
-    .maybeSingle();
-
-  const matchResultId = (matchResultRow as { id?: string } | null)?.id;
-
-  const { count: confirmCount } = matchResultId
-    ? await supabase
-        .from(DB_TABLES.matchResultConfirmations)
-        .select("id", { count: "exact", head: true })
-        .eq("match_result_id", matchResultId)
-        .eq("decision", "confirm")
-    : { count: 0 };
 
   const { data: favoritesRows } = await supabase
     .from(DB_TABLES.userFavorites)
@@ -1038,87 +1006,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             </button>
           </form>
         </section>
-      ) : null}
-
-      {isParticipant && isMatchFinished ? (
-        <section className="space-y-3">
-          <div
-            className="rounded-2xl p-4 text-center"
-            style={{ background: "linear-gradient(135deg, #0085FC 0%, #0461C4 100%)" }}
-          >
-            <p className="text-white font-bold text-lg">🏆 ¡El partido terminó!</p>
-            <p className="text-white/80 text-sm mt-1">
-              {alreadySubmitted
-                ? `Esperando que los otros jugadores confirmen (${confirmCount ?? 0}/4)`
-                : "Es hora de cargar el resultado"}
-            </p>
-          </div>
-
-          {!alreadySubmitted ? (
-            <MatchResultForm
-              matchId={id}
-              teamALabel={resultTeam1Label}
-              teamBLabel={resultTeam2Label}
-              lockedByTeammate={false}
-              alreadyStarted={false}
-            />
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/30"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">✅</span>
-                <div>
-                  <p className="font-bold text-emerald-800 dark:text-emerald-300">
-                    Resultado enviado
-                  </p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                    Esperando que los {4 - (confirmCount ?? 0)} jugadores restantes confirmen
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center gap-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
-                      i < (confirmCount ?? 0)
-                        ? "bg-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.4)]"
-                        : "bg-emerald-100 text-emerald-300 dark:bg-emerald-900/30"
-                    }`}
-                  >
-                    {i < (confirmCount ?? 0) ? "✓" : i + 1}
-                  </motion.div>
-                ))}
-              </div>
-
-              <p className="text-center text-xs text-emerald-600 dark:text-emerald-500">
-                {confirmCount ?? 0} de 4 jugadores confirmaron
-              </p>
-            </motion.div>
-          )}
-        </section>
-      ) : null}
-
-      {!isMatchFinished && isParticipant && resultAvailableAt && now < resultAvailableAt ? (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-center">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            ⏱ El resultado estará disponible después del partido
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {resultAvailableAt.toLocaleTimeString("es-AR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}{" "}
-            hs
-          </p>
-        </div>
       ) : null}
 
       {hasInvitedPayment && !isParticipant ? (

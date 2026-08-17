@@ -15,7 +15,6 @@ import {
   Shield,
   Sparkles,
   User,
-  UserCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
@@ -30,7 +29,6 @@ type DrawerItem = {
 
 const accountItems: DrawerItem[] = [
   { href: "/perfil/editar", label: "Editar perfil", icon: User },
-  { href: "/perfil/actividad", label: "Tu actividad", icon: UserCircle },
   { href: "/perfil/pagos", label: "Tus pagos", icon: CreditCard },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];

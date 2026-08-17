@@ -8,12 +8,10 @@ import {
 } from "@/components/profile/profile-motion-section";
 import { ProfileMatchCardsPremium } from "@/components/profile/profile-match-cards-premium";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { ProfileActivityClient } from "@/components/profile-activity-client";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatPlayerCategory } from "@/lib/profile-display";
-import { fetchFinishedMatchActivity } from "@/lib/player-match-history";
 import {
   fetchProfileMatchCards,
   fetchTopClubsByReservations,
@@ -128,8 +126,7 @@ export default async function PerfilPage() {
   const displayName = row?.name?.trim() || "Tu perfil";
   const categoryLabel = formatPlayerCategory(row?.category);
 
-  const [activities, matchCards, coplayers, clubs] = await Promise.all([
-    fetchFinishedMatchActivity(supabase, user.id),
+  const [matchCards, coplayers, clubs] = await Promise.all([
     fetchProfileMatchCards(supabase, user.id, 3),
     fetchTopCoplayers(supabase, user.id, 5),
     fetchTopClubsByReservations(supabase, user.id, 5),
@@ -294,10 +291,6 @@ export default async function PerfilPage() {
             ))}
           </ul>
         )}
-      </ProfileMotionSection>
-
-      <ProfileMotionSection title="Actividad" description="Últimos movimientos en la app.">
-        <ProfileActivityClient activities={activities} />
       </ProfileMotionSection>
 
       <ProfileSessionFooter />

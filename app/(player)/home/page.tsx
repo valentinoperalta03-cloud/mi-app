@@ -4,16 +4,12 @@ import { redirect } from "next/navigation";
 import { Building2, CalendarClock, ChevronRight, CirclePlus, GraduationCap, MapPin, Search, Trophy } from "lucide-react";
 import PlayerProfileNudgeBanner from "@/components/player-profile-nudge-banner";
 import MotionPage from "@/components/motion-page";
-import { CompetitiveResultConfirmationCard } from "@/components/competitive-result-confirmation-card";
 import { FriendRequestsSection } from "@/components/friend-requests-section";
 import HomeJoinRequestsSection from "@/components/home-join-requests-section";
 import { HomeSocialSection } from "@/components/home-social-section";
 import { HomeSummarySection } from "@/components/home-summary-section";
 import { HomeSectionLineSkeleton, HomeSummarySkeleton } from "@/components/home-loading-skeletons";
-import {
-  getCachedPendingResultsForUser,
-  getCachedProfileDisplayName,
-} from "@/lib/home-cache";
+import { getCachedProfileDisplayName } from "@/lib/home-cache";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatCityLabel } from "@/lib/locations";
 import { getUserLocationServer } from "@/lib/locations-server";
@@ -74,9 +70,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const hasOnboarding = Boolean(profileRow?.onboarding_completed);
   const profileComplete = hasOnboarding && hasName && hasGender;
 
-  const [displayName, pendingForMe, userLocation] = await Promise.all([
+  const [displayName, userLocation] = await Promise.all([
     getCachedProfileDisplayName(user.id),
-    getCachedPendingResultsForUser(user.id),
     getUserLocationServer(),
   ]);
   const cityLabel = formatCityLabel(userLocation.city);
@@ -226,20 +221,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </Link>
 
       <HomeSocialSection />
-
-      {pendingForMe.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">Resultados pendientes</h2>
-          {pendingForMe.slice(0, 2).map((p) => (
-            <CompetitiveResultConfirmationCard
-              key={p.match_id}
-              matchId={p.match_id}
-              label="la dupla rival"
-              scoreLabel={`${p.team_a_score ?? 0}-${p.team_b_score ?? 0}`}
-            />
-          ))}
-        </section>
-      ) : null}
 
       <section className="space-y-4">
         <Suspense fallback={<HomeSectionLineSkeleton />}>

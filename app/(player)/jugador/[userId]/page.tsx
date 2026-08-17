@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Building2, MapPin } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ProfileAvatar } from "@/components/profile-avatar";
-import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatPlayerCategory } from "@/lib/profile-display";
 import { createClient } from "@/utils/supabase/server";
@@ -21,7 +21,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
   const { data: profile, error } = await supabase
     .from(DB_TABLES.profiles)
     .select(
-      "user_id, name, gender, category, age, bio, avatar_url, preferred_hand, court_position, preferred_schedule"
+      "user_id, name, gender, category, age, bio, avatar_url, preferred_hand, court_position, preferred_schedule, city, province"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -40,9 +40,15 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     preferred_hand?: string | null;
     court_position?: string | null;
     preferred_schedule?: string | null;
+    city?: string | null;
+    province?: string | null;
   };
 
   const displayName = row.name?.trim() || "Jugador";
+  const cityProvince = [row.city, row.province]
+    .filter((v): v is string => Boolean(v?.trim()))
+    .map((v) => v.trim())
+    .join(", ");
 
   let favorited = false;
   let followsBack = false;
@@ -86,72 +92,6 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     .limit(500);
   const matchIds = [...new Set((participantRows ?? []).map((r: { match_id: string }) => r.match_id))];
   const partidosJugados = matchIds.length;
-
-  type MatchResultJoined = {
-    match_id: string;
-    team_a_score: number | null;
-    team_b_score: number | null;
-    created_at: string | null;
-    matches:
-      | {
-          id: string;
-          date: string;
-          match_participants: { player_id: string }[] | null;
-        }
-      | {
-          id: string;
-          date: string;
-          match_participants: { player_id: string }[] | null;
-        }[]
-      | null;
-  };
-
-  const { data: resultRows } = matchIds.length
-    ? await supabase
-        .from(DB_TABLES.matchResults)
-        .select(
-          "match_id, team_a_score, team_b_score, created_at, matches(id,date,match_participants(player_id))"
-        )
-        .in("match_id", matchIds.slice(0, 300))
-    : { data: [] };
-
-  const normalizedResults = ((resultRows ?? []) as MatchResultJoined[])
-    .map((row) => {
-      const rawMatch = row.matches;
-      const match = Array.isArray(rawMatch) ? rawMatch[0] ?? null : rawMatch;
-      if (!match) return null;
-      const ordered = (match.match_participants ?? []).map((p) => p.player_id);
-      const teamAIds = ordered.slice(0, 2);
-      const teamBIds = ordered.slice(2, 4);
-      const sa = row.team_a_score;
-      const sb = row.team_b_score;
-      if (sa == null || sb == null) return null;
-      const userTeam = teamAIds.includes(userId) ? "A" : teamBIds.includes(userId) ? "B" : null;
-      if (!userTeam) return null;
-      const gano = userTeam === "A" ? sa > sb : sb > sa;
-      const resultado = sa === sb ? "Empate" : gano ? "Victoria" : "Derrota";
-      return {
-        matchId: row.match_id,
-        whenIso: row.created_at ?? match.date,
-        scoreLabel: `${sa} — ${sb}`,
-        resultado,
-        gano,
-      };
-    })
-    .filter(Boolean) as Array<{
-    matchId: string;
-    whenIso: string;
-    scoreLabel: string;
-    resultado: "Victoria" | "Derrota" | "Empate";
-    gano: boolean;
-  }>;
-
-  const victoriasTotales = normalizedResults.filter((r) => r.resultado === "Victoria").length;
-  const derrotasTotales = normalizedResults.filter((r) => r.resultado === "Derrota").length;
-  const empatesTotales = normalizedResults.filter((r) => r.resultado === "Empate").length;
-  const ultimosCinco = normalizedResults
-    .sort((a, b) => new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime())
-    .slice(0, 5);
 
   const { data: participantsInMyMatches } = matchIds.length
     ? await supabase
@@ -211,23 +151,33 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     .map(([clubId, count]) => ({ clubId, count, name: clubMap.get(clubId) ?? "Club" }));
 
   return (
-    <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-gradient-to-b from-slate-50 to-white px-4 pb-32 pt-6">
+    <MotionPage className="relative mx-auto min-h-screen w-full max-w-md bg-[var(--bg-app)] px-4 pb-32 pt-6">
       <Link
         href="/home"
-        className="mb-4 inline-block text-sm font-semibold text-slate-600 transition hover:text-[#0085FC]"
+        className="mb-4 inline-block text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[#0085FC]"
       >
         ← Volver
       </Link>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 text-center shadow-[0_2px_16px_-4px_rgba(15,23,42,0.08)]">
+      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center shadow-[var(--shadow-card)]">
         <div className="mx-auto w-fit">
-          <div className="rounded-full border border-slate-200 bg-white p-1 shadow-[0_8px_20px_-14px_rgba(15,23,42,0.35)]">
-            <ProfileAvatar avatarUrl={row.avatar_url} name={displayName} size={108} />
-          </div>
+          <ProfileAvatar avatarUrl={row.avatar_url} name={displayName} size={96} />
         </div>
-        <h1 className="mt-5 text-xl font-semibold tracking-tight text-slate-900">{displayName}</h1>
+        <h1 className="mt-4 text-xl font-semibold tracking-tight text-[var(--text-primary)]">{displayName}</h1>
+        {cityProvince ? (
+          <p className="mt-1 flex items-center justify-center gap-1 text-sm text-[var(--text-tertiary)]">
+            <MapPin size={14} className="shrink-0" aria-hidden />
+            {cityProvince}
+          </p>
+        ) : null}
+        <span
+          className="mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest"
+          style={{ background: "#CCFF00", color: "#000" }}
+        >
+          {categoryLabel}
+        </span>
         {!isMe && isMutual ? (
-          <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <span className="mt-2 ml-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             Amigos ✓
           </span>
         ) : null}
@@ -243,116 +193,63 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
           </div>
         ) : null}
         {row.bio?.trim() ? (
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">{row.bio.trim()}</p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">{row.bio.trim()}</p>
         ) : null}
-        <p className="mt-2 text-sm text-[#0461C4]">
-          <span className="font-bold">{categoryLabel}</span>
-        </p>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">Partidos</p>
-            <p className="text-sm font-bold text-slate-900">{partidosJugados}</p>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Partidos</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">{partidosJugados}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">Seguidores</p>
-            <p className="text-sm font-bold text-slate-900">{followersCount ?? 0}</p>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Seguidores</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">{followersCount ?? 0}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">Seguidos</p>
-            <p className="text-sm font-bold text-slate-900">{followingCount ?? 0}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-6 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">Preferencias del jugador</h2>
-        <div className="space-y-2 rounded-3xl border border-slate-200/80 bg-white px-4 py-4 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)]">
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold text-slate-900">Mano hábil:</span> {row.preferred_hand || "No definida"}
-          </p>
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold text-slate-900">Posición en cancha:</span> {row.court_position || "No definida"}
-          </p>
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold text-slate-900">Horario favorito:</span> {row.preferred_schedule || "No definido"}
-          </p>
-        </div>
-      </section>
-
-      <section className="mt-6 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">Partidos que jugó</h2>
-        {ultimosCinco.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
-            Todavía no hay partidos con resultado para mostrar.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {ultimosCinco.map((item) => (
-              <li
-                key={`${item.matchId}-${item.whenIso}`}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
-              >
-                <div>
-                  <p className="text-xs font-medium text-slate-500">
-                    {formatDateInArgentina(item.whenIso, { day: "2-digit", month: "short", year: "numeric" })}
-                  </p>
-                  <p className="text-sm font-semibold text-slate-800">{item.scoreLabel}</p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    item.resultado === "Victoria"
-                      ? "bg-emerald-100 text-emerald-800"
-                      : item.resultado === "Derrota"
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  {item.resultado}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-6 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">Estadísticas</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Victorias</p>
-            <p className="text-base font-semibold text-emerald-600">{victoriasTotales}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Derrotas</p>
-            <p className="text-base font-semibold text-rose-500">{derrotasTotales}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Empates</p>
-            <p className="text-base font-semibold text-amber-500">{empatesTotales}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-400">Efectividad</p>
-            <p className="text-base font-semibold text-[#0461C4]">
-              {partidosJugados > 0 ? `${Math.round((victoriasTotales / partidosJugados) * 100)}%` : "—"}
-            </p>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Siguiendo</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">{followingCount ?? 0}</p>
           </div>
         </div>
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">
+        <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">Preferencias del jugador</h2>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 text-center shadow-[var(--shadow-card)]">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Mano</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{row.preferred_hand || "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 text-center shadow-[var(--shadow-card)]">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Posición</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{row.court_position || "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 text-center shadow-[var(--shadow-card)]">
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Horario</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{row.preferred_schedule || "—"}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 space-y-3">
+        <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
           Jugadores con quien más juega
         </h2>
         {topCoPlayersWithCount.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+          <p className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-tertiary)] shadow-[var(--shadow-card)]">
             {displayName} todavía no tiene suficientes partidos para calcular compañeros frecuentes.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {topCoPlayersWithCount.map((p) => (
-              <li key={p.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-                <span className="font-semibold text-slate-900">{displayName}</span> suele jugar con{" "}
-                <span className="font-semibold text-[#0461C4]">{p.name}</span> ({p.count} partidos)
+              <li key={p.id}>
+                <Link
+                  href={`/jugador/${p.id}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-sm shadow-[var(--shadow-card)] transition hover:bg-[var(--bg-subtle)]"
+                >
+                  <span className="truncate font-medium text-[var(--text-primary)]">{p.name}</span>
+                  <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]">
+                    {p.count} partido{p.count === 1 ? "" : "s"}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -360,32 +257,41 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">Clubes donde juega {displayName}</h2>
+        <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">Clubes donde juega</h2>
         {topClubs.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+          <p className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-tertiary)] shadow-[var(--shadow-card)]">
             Todavía no hay clubes suficientes para mostrar.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {topClubs.map((club) => (
-              <li key={club.clubId} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-                <span className="font-semibold text-slate-900">{club.name}</span> · {club.count} canchas jugadas
+              <li key={club.clubId}>
+                <Link
+                  href={`/clubes/${club.clubId}`}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-sm shadow-[var(--shadow-card)] transition hover:bg-[var(--bg-subtle)]"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Building2 className="h-4 w-4 shrink-0 text-[#0085FC]" strokeWidth={1.6} />
+                    <span className="truncate font-medium text-[var(--text-primary)]">{club.name}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]">
+                    {club.count}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {user ? (
+      {isMe ? (
         <div className="mt-6">
-          {isMe ? (
-            <Link
-              href="/perfil/editar"
-              className="block rounded-2xl bg-[color:var(--color-brand-mid)] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[color:var(--color-brand-light)] active:scale-[0.98]"
-            >
-              Editar mi perfil
-            </Link>
-          ) : null}
+          <Link
+            href="/perfil/editar"
+            className="block rounded-2xl bg-[color:var(--color-brand-mid)] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[color:var(--color-brand-light)] active:scale-[0.98]"
+          >
+            Editar mi perfil
+          </Link>
         </div>
       ) : null}
     </MotionPage>

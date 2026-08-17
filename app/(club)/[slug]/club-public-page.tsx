@@ -11,7 +11,6 @@ import {
   Shield,
   Sparkles,
   User,
-  UserCircle,
   Users,
 } from "lucide-react";
 import { Space_Grotesk } from "next/font/google";
@@ -198,7 +197,6 @@ const accountItems: DrawerItem[] = [
   { href: "/perfil", label: "Perfil", icon: User },
   { href: "/comunidad", label: "Comunidad", icon: Users },
   { href: "/perfil/editar", label: "Editar perfil", icon: User },
-  { href: "/perfil/actividad", label: "Tu actividad", icon: UserCircle },
   { href: "/perfil/pagos", label: "Tus pagos", icon: CreditCard },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
