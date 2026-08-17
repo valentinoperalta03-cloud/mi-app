@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { refundReservationPayment } from "@/lib/payment-refund";
@@ -307,6 +308,8 @@ export async function createManualReservationAction(
     return { ok: false, message: insertErr?.message ?? "No se pudo crear la reserva." };
   }
   const matchId = String((inserted as { id: string }).id);
+
+  await cancelConflictingOpenMatches(supabase, courtId, date, time);
 
   if (playerIds.length > 0) {
     await supabase

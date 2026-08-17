@@ -12,6 +12,7 @@ import {
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { createGroupChat } from "@/lib/group-chats";
+import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
@@ -429,6 +430,8 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
     return { error: "No se pudo registrar el pago. Intentá de nuevo." };
   }
+
+  await cancelConflictingOpenMatches(supabase, courtId, scheduledDate, timeNorm);
 
   return { success: true, matchId: data.id, mpUrl: mp.initPoint };
 }
