@@ -6,6 +6,7 @@ import {
   CircleHelp,
   CreditCard,
   FileText,
+  LogOut,
   Menu,
   Settings,
   Shield,
@@ -14,8 +15,10 @@ import {
   Users,
 } from "lucide-react";
 import { Space_Grotesk } from "next/font/google";
+import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
+import { createClient } from "@/utils/supabase/client";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
 
@@ -229,9 +232,26 @@ function ClubPageDrawer({
   playerName: string;
   slug: string;
 }) {
+  const router = useRouter();
+  const [signOutBusy, setSignOutBusy] = useState(false);
+
   if (!open || typeof document === "undefined") return null;
 
   const initial = (playerName.trim()[0] ?? "J").toUpperCase();
+
+  async function handleSignOut() {
+    setSignOutBusy(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("[ClubPageDrawer] sign out failed", err);
+    } finally {
+      onClose();
+      router.replace("/login");
+      router.refresh();
+    }
+  }
 
   return createPortal(
     <>
@@ -311,6 +331,17 @@ function ClubPageDrawer({
           >
             ← Volver a PadeLibre
           </Link>
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            disabled={signOutBusy}
+            className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-sm font-medium text-red-400 transition hover:bg-red-950/25 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="rounded-full bg-white/[0.06] p-2 text-red-400">
+              <LogOut size={16} />
+            </span>
+            <span>{signOutBusy ? "Cerrando sesión…" : "Cerrar sesión"}</span>
+          </button>
         </div>
       </aside>
     </>,
