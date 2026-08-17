@@ -36,6 +36,7 @@ type RawMatchRow = {
   scheduled_time: string | null;
   duration_minutes: number | null;
   gender_category: "masculino" | "femenino" | "mixto" | null;
+  category_range: string[] | null;
   court_id: string;
   courts: RawCourtEmbed | RawCourtEmbed[] | null;
   match_participants: RawParticipant[] | null;
@@ -88,7 +89,7 @@ export default async function ClubPartidosPage({ params }: PageProps) {
   const { data: matchesRaw } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id, scheduled_date, scheduled_time, duration_minutes, gender_category, court_id, courts!inner(id,name,surface,indoor,club_id), match_participants(player_id,team,profiles(name,avatar_url,category))"
+      "id, scheduled_date, scheduled_time, duration_minutes, gender_category, category_range, court_id, courts!inner(id,name,surface,indoor,club_id), match_participants(player_id,team,profiles(name,avatar_url,category))"
     )
     .eq("match_type", "amistoso")
     .neq("match_status", "cancelled")
@@ -114,6 +115,7 @@ export default async function ClubPartidosPage({ params }: PageProps) {
       scheduled_time: row.scheduled_time,
       duration_minutes: row.duration_minutes,
       gender_category: row.gender_category,
+      categoryRange: row.category_range ?? null,
       court_name: courtEmbed?.name ?? null,
       court_surface: courtEmbed?.surface ?? null,
       category: firstParticipantCategory(participants),

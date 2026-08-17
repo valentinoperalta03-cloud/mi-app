@@ -229,7 +229,7 @@ export async function requestToJoin(
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,visibility,match_status,level_restricted,gender_category")
+    .select("id,owner_id,visibility,match_status,level_restricted,gender_category,category_range")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -243,7 +243,9 @@ export async function requestToJoin(
     match_status: string | null;
     level_restricted: boolean | null;
     gender_category: string | null;
+    category_range: string[] | null;
   };
+  const categoryRange = m.category_range ?? null;
 
   const matchStatusCheck = String(m.match_status ?? "").toLowerCase();
   if (
@@ -305,21 +307,27 @@ export async function requestToJoin(
 
   let isCompatibleLevel = true;
   if (isLevelRestricted) {
-    const { data: ownerProfile } = await supabase
-      .from(DB_TABLES.profiles)
-      .select("category")
-      .eq("user_id", m.owner_id ?? "")
-      .maybeSingle();
-
     const { data: userProfile } = await supabase
       .from(DB_TABLES.profiles)
       .select("category")
       .eq("user_id", user.id)
       .maybeSingle();
+    const userCategory = (userProfile as { category?: string | null } | null)?.category?.trim() ?? null;
 
-    const ownerCategory = (ownerProfile as { category?: string | null } | null)?.category ?? null;
-    const userCategory = (userProfile as { category?: string | null } | null)?.category ?? null;
-    isCompatibleLevel = isLevelCompatible(userCategory, ownerCategory);
+    if (categoryRange != null && categoryRange.length > 0) {
+      // El organizador definió un rango explícito de categorías al abrir el
+      // partido (categoryRange) — se valida contra ese rango en vez del ±1
+      // por defecto de isLevelCompatible, para no duplicar la lógica.
+      isCompatibleLevel = userCategory != null && categoryRange.includes(userCategory);
+    } else {
+      const { data: ownerProfile } = await supabase
+        .from(DB_TABLES.profiles)
+        .select("category")
+        .eq("user_id", m.owner_id ?? "")
+        .maybeSingle();
+      const ownerCategory = (ownerProfile as { category?: string | null } | null)?.category ?? null;
+      isCompatibleLevel = isLevelCompatible(userCategory, ownerCategory);
+    }
 
     if (!isCompatibleLevel && !levelOverride) {
       redirect(`/partidos/${matchId}?join_error=nivel`);

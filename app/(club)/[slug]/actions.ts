@@ -468,6 +468,7 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
   const scheduledTime = input.scheduledTime?.trim() ?? "";
   const genderCategory = input.genderCategory;
   const visibility = input.visibility;
+  const categoryRange = Array.isArray(input.categoryRange) ? input.categoryRange.filter(Boolean) : [];
 
   if (!courtId || !clubId || !scheduledDate || !scheduledTime || !genderCategory || !visibility) {
     return { error: "Datos incompletos." };
@@ -616,7 +617,8 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
       match_type: "amistoso",
       visibility,
       gender_category: genderCategory,
-      level_restricted: false,
+      level_restricted: categoryRange.length > 0,
+      category_range: categoryRange.length > 0 ? categoryRange : null,
       location_name: clubName,
       date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
       result_available_at: new Date(

@@ -45,6 +45,7 @@ export type OpenMatchRow = {
   scheduled_time: string | null;
   duration_minutes: number | null;
   gender_category: "masculino" | "femenino" | "mixto" | null;
+  categoryRange: string[] | null;
   court_name: string | null;
   court_surface: string | null;
   category: string | null;
@@ -64,6 +65,21 @@ type Visibility = "publico" | "privado";
 type GenderCategory = "masculino" | "femenino" | "mixto";
 
 const CATEGORY_OPTIONS = ["8va", "7ma", "6ta", "5ta", "4ta", "3ra", "2da", "1ra"];
+
+/** Default: categoría del jugador ±1. */
+function defaultCategoryRange(playerCategory: string): string[] {
+  const idx = CATEGORY_OPTIONS.indexOf(playerCategory);
+  if (idx === -1) return [playerCategory];
+  return CATEGORY_OPTIONS.slice(Math.max(0, idx - 1), idx + 2);
+}
+
+/** No se puede seleccionar una categoría a más de ±2 de la del jugador. */
+function isSelectable(cat: string, playerCategory: string): boolean {
+  const playerIdx = CATEGORY_OPTIONS.indexOf(playerCategory);
+  const catIdx = CATEGORY_OPTIONS.indexOf(cat);
+  if (playerIdx === -1 || catIdx === -1) return true;
+  return Math.abs(catIdx - playerIdx) <= 2;
+}
 
 const GENDER_OPTIONS: { value: GenderCategory; label: string }[] = [
   { value: "masculino", label: "Masculino" },
@@ -201,9 +217,15 @@ function OpenMatchCard({ match }: { match: OpenMatchRow }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-        <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-white/60">
-          {match.category ?? "Libre"}
-        </span>
+        {match.categoryRange && match.categoryRange.length > 0 ? (
+          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-mono text-white/50">
+            {match.categoryRange.join(" · ")}
+          </span>
+        ) : (
+          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-mono text-white/50">
+            Cualquier categoría
+          </span>
+        )}
         <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] text-white/60">
           {genderLabel(match.gender_category)}
         </span>
@@ -252,7 +274,12 @@ export default function PartidosClient({
     playerGender === "masculino" || playerGender === "femenino" ? playerGender : "mixto";
   const defaultCategory = playerCategory && CATEGORY_OPTIONS.includes(playerCategory) ? playerCategory : "6ta";
 
-  const [categoria, setCategoria] = useState(defaultCategory);
+  const [categoryRange, setCategoryRange] = useState<string[]>(() => defaultCategoryRange(defaultCategory));
+
+  function toggleCategory(cat: string) {
+    if (!isSelectable(cat, defaultCategory)) return;
+    setCategoryRange((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
+  }
   const [genero, setGenero] = useState<GenderCategory>(defaultGender);
   const [visibilidad, setVisibilidad] = useState<Visibility>("publico");
 
@@ -295,7 +322,7 @@ export default function PartidosClient({
           scheduledDate: selectedDate,
           scheduledTime: selectedTime,
           genderCategory: genero,
-          categoryRange: [categoria],
+          categoryRange,
           visibility: visibilidad,
         });
         if ("error" in result) {
@@ -533,20 +560,24 @@ export default function PartidosClient({
                 </p>
 
                 <div>
-                  <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">Categoría</p>
+                  <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">
+                    Categorías permitidas
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {CATEGORY_OPTIONS.map((cat) => {
-                      const active = cat === categoria;
+                      const active = categoryRange.includes(cat);
+                      const selectable = isSelectable(cat, defaultCategory);
                       return (
                         <button
                           key={cat}
                           type="button"
-                          onClick={() => setCategoria(cat)}
-                          className="rounded-xl border px-3 py-2 text-sm font-semibold"
+                          disabled={!selectable}
+                          onClick={() => toggleCategory(cat)}
+                          className="rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-30"
                           style={
                             active
-                              ? { borderColor: "#CCFF00", backgroundColor: "rgba(204,255,0,0.10)", color: "#fff" }
-                              : { borderColor: "#1A3050", color: "rgba(255,255,255,0.6)" }
+                              ? { borderColor: "#CCFF00", backgroundColor: "rgba(204,255,0,0.08)", color: "#fff" }
+                              : { borderColor: "rgba(255,255,255,0.15)", backgroundColor: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)" }
                           }
                         >
                           {cat}
@@ -554,7 +585,9 @@ export default function PartidosClient({
                       );
                     })}
                   </div>
-                  <p className="mt-2 text-xs text-white/35">Solo pueden unirse jugadores de categoría similar</p>
+                  <p className="mt-2 text-xs text-white/35">
+                    Solo jugadores de estas categorías podrán unirse directamente
+                  </p>
                 </div>
 
                 <div>
@@ -634,7 +667,8 @@ export default function PartidosClient({
                     {(selectedCourt?.name ?? "Cancha").toUpperCase()}
                   </p>
                   <p className="mt-0.5 text-xs text-white/55">
-                    Categoría {categoria} · {genderLabel(genero)} · {visibilidad === "publico" ? "Público" : "Privado"}
+                    {categoryRange.length > 0 ? categoryRange.join(" · ") : "Cualquier categoría"} ·{" "}
+                    {genderLabel(genero)} · {visibilidad === "publico" ? "Público" : "Privado"}
                   </p>
                 </div>
 
