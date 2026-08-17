@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, ClipboardList, CreditCard, Settings2 } from "lucide-react";
+import { Building2, ChevronRight, ClipboardList, CreditCard, Settings2, Star } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import { AdminSignOutLink } from "@/components/admin/admin-sign-out-link";
 import {
@@ -33,6 +33,12 @@ const GROUPS: Array<{
     title: "Métodos de pago",
     description: "Mercado Pago, efectivo y transferencia bancaria",
     icon: CreditCard,
+  },
+  {
+    href: "/admin/config/servicios",
+    title: "Servicios",
+    description: "Los servicios que ofrece tu club",
+    icon: Star,
   },
   {
     href: "/admin/config/general",

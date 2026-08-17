@@ -53,16 +53,26 @@ type Props = {
 };
 
 const SERVICES_CATALOG: Record<string, { emoji: string; label: string }> = {
-  parking: { emoji: "🅿️", label: "Estacionamiento" },
+  cancha_techada: { emoji: "🏠", label: "Complejo techado" },
+  filmacion: { emoji: "🎥", label: "Filmación de partidos" },
+  parrilla: { emoji: "🔥", label: "Parrilla" },
+  cobertura_medica: { emoji: "🏥", label: "Cobertura médica" },
   estacionamiento: { emoji: "🅿️", label: "Estacionamiento" },
-  vestuarios: { emoji: "🚿", label: "Vestuarios" },
-  buffet: { emoji: "🍴", label: "Buffet" },
+  venta_pelotas: { emoji: "🎾", label: "Venta de pelotas" },
+  pelotas_prestadas: { emoji: "🎾", label: "Pelotas prestadas" },
+  paletas_prestadas: { emoji: "🏓", label: "Paletas prestadas" },
+  alquiler_paletas: { emoji: "🏓", label: "Alquiler de paletas" },
+  venta_grips: { emoji: "🔧", label: "Venta de grips" },
+  venta_indumentaria: { emoji: "👕", label: "Venta de indumentaria" },
+  vestuarios: { emoji: "🚿", label: "Vestuarios con duchas" },
   wifi: { emoji: "📶", label: "WiFi" },
-  iluminacion: { emoji: "💡", label: "Iluminación" },
-  pileta: { emoji: "🏊", label: "Pileta" },
+  buffet: { emoji: "🍔", label: "Bar / Buffet" },
+  pro_shop: { emoji: "🛍️", label: "Pro shop" },
+  cumpleanos: { emoji: "🎂", label: "Eventos y cumpleaños" },
+  aire_acondicionado: { emoji: "❄️", label: "Aire acondicionado" },
+  acceso_discapacidad: { emoji: "♿", label: "Acceso para discapacitados" },
+  guardarropa: { emoji: "👜", label: "Guardarropa" },
   gimnasio: { emoji: "💪", label: "Gimnasio" },
-  tienda: { emoji: "🛍️", label: "Tienda" },
-  escuela: { emoji: "🎓", label: "Escuela" },
 };
 
 const HOW_IT_WORKS = [
