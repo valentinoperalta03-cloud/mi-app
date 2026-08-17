@@ -13,9 +13,8 @@ export type PostFeedItem = {
   created_at: string;
   user_id: string;
   image_url: string | null;
-  post_type: "text" | "photo" | "result";
+  post_type: "text" | "photo";
   profiles: PostProfile | null;
-  scoreLabel: string | null;
 };
 
 export async function fetchPostsFeed(
@@ -53,23 +52,9 @@ export async function fetchPostsFeed(
     created_at: p.created_at,
     user_id: p.user_id,
     image_url: p.image_url ?? null,
-    post_type: (p.post_type ?? "text") as "text" | "photo" | "result",
+    post_type: (p.post_type ?? "text") as "text" | "photo",
     profiles: profileMap.get(p.user_id) ?? null,
-    scoreLabel: null,
   }));
-}
-
-export type LatestMatchLink = {
-  match_id: string;
-  scoreLabel: string;
-} | null;
-
-/** Ya no hay flujo de carga de resultados: nunca hay un partido para vincular. */
-export async function fetchLatestMatchResultForUser(
-  _supabase: SupabaseClient,
-  _userId: string
-): Promise<LatestMatchLink> {
-  return null;
 }
 
 export type MatchFeedItem = {

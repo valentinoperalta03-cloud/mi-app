@@ -621,9 +621,6 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
       category_range: categoryRange.length > 0 ? categoryRange : null,
       location_name: clubName,
       date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
-      result_available_at: new Date(
-        new Date(`${scheduledDate}T${timeNorm}:00-03:00`).getTime() + durationMinutes * 60 * 1000
-      ).toISOString(),
     })
     .select("id")
     .single();

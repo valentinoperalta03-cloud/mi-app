@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { DB_TABLES } from "@/lib/db-tables";
-import { fetchLatestMatchResultForUser } from "@/lib/para-ti-posts";
 import { createClient } from "@/utils/supabase/server";
 import type { CreatePostState } from "./post-types";
 
@@ -30,8 +29,8 @@ export async function createPostAction(
     return { ok: false, message: "El texto es demasiado largo." };
   }
 
-  const postType = String(formData.get("post_type") ?? "text").trim() as "text" | "photo" | "result";
-  if (!["text", "photo", "result"].includes(postType)) {
+  const postType = String(formData.get("post_type") ?? "text").trim() as "text" | "photo";
+  if (!["text", "photo"].includes(postType)) {
     return { ok: false, message: "Tipo de publicación inválido." };
   }
 
@@ -55,32 +54,12 @@ export async function createPostAction(
     }
   }
 
-  const linkMatch = postType === "result" && formData.get("link_match") === "on";
-  let matchId: string | null = null;
-
-  if (linkMatch) {
-    const latest = await fetchLatestMatchResultForUser(supabase, user.id);
-    if (!latest?.match_id) {
-      return { ok: false, message: "No tenés un resultado reciente para vincular." };
-    }
-    const { data: inMatch } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("match_id")
-      .eq("match_id", latest.match_id)
-      .eq("player_id", user.id)
-      .maybeSingle();
-    if (!inMatch) {
-      return { ok: false, message: "No podés vincular ese partido." };
-    }
-    matchId = latest.match_id;
-  }
-
   const { data: inserted, error } = await supabase
     .from(DB_TABLES.posts)
     .insert({
       user_id: user.id,
       content,
-      match_id: matchId,
+      match_id: null,
       post_type: postType,
       image_url: imageUrl,
     })

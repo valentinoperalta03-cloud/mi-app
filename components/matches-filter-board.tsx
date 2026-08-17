@@ -24,16 +24,11 @@ export type MatchCardData = {
   currentUserJoined: boolean;
   userCanJoinByGender: boolean;
   genderRestrictionMessage: string | null;
-  levelLabel: string;
-  levelCategory: string;
-  levelDescription: string;
   participants: Array<{
     player_id: string;
     team?: number | null;
     name: string;
     avatar_url: string | null;
-    nivelCategory: string;
-    nivelDescription: string;
   }>;
   team1Count: number;
   team2Count: number;
@@ -239,15 +234,7 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                           size={24}
                           ringClassName="ring-1 ring-white"
                         />
-                        <span className="flex flex-col leading-tight">
-                          <span>{mp.name}</span>
-                          <span className="text-[10px] font-medium text-[#0085FC]/90">
-                            <span className="font-bold">{mp.nivelCategory || "—"}</span>
-                            {mp.nivelDescription ? (
-                              <span>{" - "}{mp.nivelDescription}</span>
-                            ) : null}
-                          </span>
-                        </span>
+                        <span>{mp.name}</span>
                       </Link>
                     </li>
                   ))}

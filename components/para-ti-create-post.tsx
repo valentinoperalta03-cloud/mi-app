@@ -5,19 +5,13 @@ import { Plus, X } from "lucide-react";
 import { createPostAction } from "@/app/(player)/comunidad/actions";
 import { initialCreatePostState, type CreatePostState } from "@/app/(player)/comunidad/post-types";
 
-export type LatestMatch = {
-  match_id: string;
-  scoreLabel: string;
-} | null;
-
 type PostModalProps = {
   open: boolean;
   sessionKey: number;
-  latestMatch: LatestMatch;
   onClose: () => void;
 };
 
-function PostModal({ open, sessionKey, latestMatch, onClose }: PostModalProps) {
+function PostModal({ open, sessionKey, onClose }: PostModalProps) {
   if (!open) return null;
 
   return (
@@ -34,20 +28,19 @@ function PostModal({ open, sessionKey, latestMatch, onClose }: PostModalProps) {
         className="w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white p-6 shadow-[0_24px_64px_-20px_rgba(15,23,42,0.25)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <CreatePostForm key={sessionKey} latestMatch={latestMatch} onRequestClose={onClose} />
+        <CreatePostForm key={sessionKey} onRequestClose={onClose} />
       </div>
     </div>
   );
 }
 
 type CreatePostFormProps = {
-  latestMatch: LatestMatch;
   onRequestClose: () => void;
 };
 
-type PostType = "text" | "photo" | "result";
+type PostType = "text" | "photo";
 
-function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
+function CreatePostForm({ onRequestClose }: CreatePostFormProps) {
   const [postType, setPostType] = useState<PostType>("text");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +52,6 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
   const tabs: { type: PostType; label: string; icon: string }[] = [
     { type: "text", label: "Texto", icon: "✏️" },
     { type: "photo", label: "Foto", icon: "📸" },
-    { type: "result", label: "Resultado", icon: "🏆" },
   ];
 
   useEffect(() => {
@@ -85,7 +77,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
         </button>
       </div>
 
-      <div className="mb-4 grid grid-cols-3 gap-2">
+      <div className="mb-4 grid grid-cols-2 gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.type}
@@ -108,13 +100,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
           name="content"
           required
           rows={postType === "photo" ? 2 : 4}
-          placeholder={
-            postType === "text"
-              ? "¿Qué querés compartir?"
-              : postType === "photo"
-                ? "Descripción de la foto..."
-                : "Contá cómo te fue en el partido..."
-          }
+          placeholder={postType === "text" ? "¿Qué querés compartir?" : "Descripción de la foto..."}
           disabled={pending}
           className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#0085FC] focus:ring-2 focus:ring-[#0085FC]/20 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
@@ -163,27 +149,6 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
           </div>
         ) : null}
 
-        {postType === "result" && latestMatch ? (
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
-            <input
-              type="checkbox"
-              name="link_match"
-              defaultChecked
-              disabled={pending}
-              className="mt-1 h-4 w-4 text-[#0085FC]"
-            />
-            <span className="text-sm text-slate-600 dark:text-slate-300">
-              <span className="block font-semibold">Vincular resultado</span>
-              <span className="text-xs text-slate-500">{latestMatch.scoreLabel}</span>
-            </span>
-          </label>
-        ) : null}
-        {postType === "result" && !latestMatch ? (
-          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-            No tenés resultados recientes para vincular.
-          </p>
-        ) : null}
-
         {state.message && !state.ok ? (
           <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
             {state.message}
@@ -202,7 +167,7 @@ function CreatePostForm({ latestMatch, onRequestClose }: CreatePostFormProps) {
   );
 }
 
-export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) {
+export function ParaTiCreatePost() {
   const [open, setOpen] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
 
@@ -211,10 +176,10 @@ export function ParaTiCreatePost({ latestMatch }: { latestMatch: LatestMatch }) 
     setSessionKey((k) => k + 1);
   }, []);
 
-  return <PostModal open={open} sessionKey={sessionKey} latestMatch={latestMatch} onClose={handleClose} />;
+  return <PostModal open={open} sessionKey={sessionKey} onClose={handleClose} />;
 }
 
-export function ParaTiCreatePostButton({ latestMatch }: { latestMatch: LatestMatch }) {
+export function ParaTiCreatePostButton() {
   const [open, setOpen] = useState(false);
   const [sessionKey, setSessionKey] = useState(0);
 
@@ -239,7 +204,7 @@ export function ParaTiCreatePostButton({ latestMatch }: { latestMatch: LatestMat
         Publicar
       </button>
 
-      <PostModal open={open} sessionKey={sessionKey} latestMatch={latestMatch} onClose={handleClose} />
+      <PostModal open={open} sessionKey={sessionKey} onClose={handleClose} />
     </>
   );
 }

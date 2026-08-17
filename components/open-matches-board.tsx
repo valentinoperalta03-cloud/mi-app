@@ -5,7 +5,6 @@ import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
 import { isMatchPrivate } from "@/lib/match-visibility";
-import { formatPlayerCategory } from "@/lib/profile-display";
 import { formatCityLabel, normalizeCity } from "@/lib/locations";
 import { getUserLocationServer } from "@/lib/locations-server";
 import { createClient } from "@/utils/supabase/server";
@@ -39,23 +38,11 @@ type MatchFeedRow = {
           | {
               name: string | null;
               avatar_url: string | null;
-              category: string | null;
             }
           | null;
       }[]
     | null;
 };
-
-/** Categoría representativa del partido: la del primer jugador con categoría definida. */
-function getRepresentativeCategory(players: MatchFeedRow["match_participants"]): string | null {
-  const list = players ?? [];
-  for (const player of list) {
-    const prof = player.profiles;
-    const p = Array.isArray(prof) ? prof[0] : prof;
-    if (p?.category?.trim()) return p.category.trim();
-  }
-  return null;
-}
 
 type OpenMatchesBoardProps = {
   searchParams?: Promise<{
@@ -134,8 +121,7 @@ export default async function OpenMatchesBoard({
         team,
         profiles (
           name,
-          avatar_url,
-          category
+          avatar_url
         )
       )
     `
@@ -161,8 +147,6 @@ export default async function OpenMatchesBoard({
     const userCanJoinByGender = genderCategory === "mixto" || (currentUserGender != null && currentUserGender === genderCategory);
     const genderLabel = genderCategory === "masculino" ? "Masculino" : genderCategory === "femenino" ? "Femenino" : "Mixto";
     const genderRestrictionMessage = !currentUserJoined && !userCanJoinByGender ? `Este partido es exclusivo para ${genderLabel}.` : null;
-    const representativeCategory = getRepresentativeCategory(match.match_participants);
-    const levelLabel = formatPlayerCategory(representativeCategory);
     const participants = (match.match_participants ?? []).map((mp) => {
       const prof = mp.profiles;
       const p = Array.isArray(prof) ? prof[0] : prof;
@@ -171,8 +155,6 @@ export default async function OpenMatchesBoard({
         team: mp.team ?? null,
         name: p?.name?.trim() || "Jugador",
         avatar_url: p?.avatar_url ?? null,
-        nivelCategory: p?.category?.trim() ?? "",
-        nivelDescription: "",
       };
     });
     const club = match.courts?.clubs;
@@ -193,9 +175,6 @@ export default async function OpenMatchesBoard({
       currentUserJoined,
       userCanJoinByGender,
       genderRestrictionMessage,
-      levelLabel,
-      levelCategory: representativeCategory ?? "",
-      levelDescription: "",
       participants,
       team1Count: participants.filter((p) => p.team === 1).length,
       team2Count: participants.filter((p) => p.team === 2).length,

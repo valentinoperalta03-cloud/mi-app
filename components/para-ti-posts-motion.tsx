@@ -5,7 +5,6 @@ import { MessageSquareDashed } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { RelativeTime } from "@/components/relative-time";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { FeedItem, MatchFeedItem } from "@/lib/para-ti-posts";
 
@@ -39,20 +38,12 @@ export function ParaTiPostsMotion({ items }: { items: FeedItem[] }) {
         }
         const p = item;
         const name = p.profiles?.name?.trim() || "Jugador";
-        const postTypeLabel =
-          p.post_type === "photo" ? "Foto" : p.post_type === "result" ? "Resultado" : "Texto";
-        const accentBorder =
-          p.post_type === "result"
-            ? "border-l-[#f59e0b]"
-            : p.post_type === "photo"
-              ? "border-l-[#0085FC]"
-              : "border-l-[#8b5cf6]";
+        const postTypeLabel = p.post_type === "photo" ? "Foto" : "Texto";
+        const accentBorder = p.post_type === "photo" ? "border-l-[#0085FC]" : "border-l-[#8b5cf6]";
         const badgeClass =
-          p.post_type === "result"
-            ? "border-amber-300/80 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-900 shadow-sm dark:from-amber-950/50 dark:to-amber-900/30 dark:text-amber-200"
-            : p.post_type === "photo"
-              ? "border-[#0085FC]/30 bg-gradient-to-r from-[#0085FC]/12 to-sky-100/80 text-[#0461C4] shadow-sm dark:to-sky-950/40 dark:text-sky-200"
-              : "border-violet-300/70 bg-gradient-to-r from-violet-50 to-violet-100/80 text-violet-900 shadow-sm dark:from-violet-950/40 dark:to-violet-900/25 dark:text-violet-200";
+          p.post_type === "photo"
+            ? "border-[#0085FC]/30 bg-gradient-to-r from-[#0085FC]/12 to-sky-100/80 text-[#0461C4] shadow-sm dark:to-sky-950/40 dark:text-sky-200"
+            : "border-violet-300/70 bg-gradient-to-r from-violet-50 to-violet-100/80 text-violet-900 shadow-sm dark:from-violet-950/40 dark:to-violet-900/25 dark:text-violet-200";
 
         return (
           <motion.article
@@ -97,19 +88,6 @@ export function ParaTiPostsMotion({ items }: { items: FeedItem[] }) {
                 {p.image_url && p.post_type === "photo" ? (
                   // eslint-disable-next-line @next/next/no-img-element -- imagen pública servida desde storage
                   <img src={p.image_url} alt="Foto del post" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
-                ) : null}
-                {p.post_type === "result" && p.scoreLabel ? (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1.5 dark:bg-amber-950/30">
-                    <span className="text-sm font-bold text-amber-800 dark:text-amber-300">🏆 {p.scoreLabel}</span>
-                  </div>
-                ) : null}
-                {p.post_type === "result" && !p.scoreLabel && p.match_id ? (
-                  <Badge variant="brand" className="mt-3 inline-flex items-center">
-                    <span className="mr-1.5" aria-hidden>
-                      🏆
-                    </span>
-                    Partido vinculado
-                  </Badge>
                 ) : null}
               </div>
             </div>

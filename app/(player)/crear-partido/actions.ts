@@ -379,9 +379,6 @@ export async function crearPartido(
         location_name: clubName,
         invited_friend_ids: invitedFriendIds,
         date: new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).toISOString(),
-        result_available_at: new Date(
-          new Date(`${scheduledDate}T${scheduledTime}:00-03:00`).getTime() + durationMinutes * 60 * 1000
-        ).toISOString(),
       })
       .select("id")
       .single();

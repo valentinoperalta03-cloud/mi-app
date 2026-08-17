@@ -27,10 +27,13 @@ export const DB_TABLES = {
   matchParticipants: "match_participants",
   matchJoinRequests: "match_join_requests",
   matchJoinVotes: "match_join_votes",
+  // tabla legacy, ya no se escribe (sistema de resultados/ELO eliminado)
   matchResults: "match_results",
+  // tabla legacy, ya no se escribe (sistema de resultados/ELO eliminado)
   matchResultConfirmations: "match_result_confirmations",
   matchFeedback: "match_feedback",
   matchMessages: "match_messages",
+  // tabla legacy, ya no se escribe (sistema de resultados/ELO eliminado)
   playerRatings: "player_ratings",
   userFavorites: "user_favorites",
   friendRequests: "friend_requests",
@@ -39,6 +42,7 @@ export const DB_TABLES = {
   groupChats: "group_chats",
   groupChatMembers: "group_chat_members",
   groupChatMessages: "group_chat_messages",
+  // tabla legacy, ya no se escribe (sistema de resultados/ELO eliminado)
   levelEvolution: "level_evolution",
   payments: "payments",
   clubDebts: "club_debts",

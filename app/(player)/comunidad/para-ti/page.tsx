@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import MotionPage from "@/components/motion-page";
 import { ParaTiCreatePostButton } from "@/components/para-ti-create-post";
 import { ParaTiPostsMotion } from "@/components/para-ti-posts-motion";
-import { fetchFeedWithMatches, fetchLatestMatchResultForUser } from "@/lib/para-ti-posts";
+import { fetchFeedWithMatches } from "@/lib/para-ti-posts";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 
@@ -22,10 +22,7 @@ export default async function ParaTiPage() {
     .maybeSingle();
   const userCity = (profileRow as { city?: string | null } | null)?.city?.trim() ?? "";
 
-  const [feedItems, latestMatch] = await Promise.all([
-    fetchFeedWithMatches(supabase, userCity),
-    fetchLatestMatchResultForUser(supabase, user.id),
-  ]);
+  const feedItems = await fetchFeedWithMatches(supabase, userCity);
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-transparent pb-32 pt-5">
@@ -45,7 +42,7 @@ export default async function ParaTiPage() {
               Partidos abiertos y publicaciones de la comunidad
             </p>
           </div>
-          <ParaTiCreatePostButton latestMatch={latestMatch} />
+          <ParaTiCreatePostButton />
         </div>
 
         <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
