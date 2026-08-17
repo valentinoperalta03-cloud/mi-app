@@ -4,7 +4,7 @@ import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { fetchComunidadPlayersData } from "@/lib/comunidad-players-data";
 import { createClient } from "@/utils/supabase/server";
-import FriendsSearchClient from "../buscar/friends-search-client";
+import JugadoresClient from "./jugadores-client";
 
 export default async function JugadoresPage() {
   const supabase = await createClient();
@@ -35,13 +35,12 @@ export default async function JugadoresPage() {
             subtitle="Probá con otro nombre o esperá que más jugadores se sumen"
           />
         ) : (
-          <section className="min-w-0 overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/95 p-4 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03] backdrop-blur-sm dark:bg-[var(--bg-card)]/90 dark:ring-white/[0.06]">
-            <FriendsSearchClient
-              players={players}
-              initialFollowingIds={initialFollowingIds}
-              followsMeIds={followsMeIds}
-            />
-          </section>
+          <JugadoresClient
+            players={players}
+            initialFollowingIds={initialFollowingIds}
+            followsMeIds={followsMeIds}
+            currentUserId={user.id}
+          />
         )}
       </div>
     </MotionPage>
