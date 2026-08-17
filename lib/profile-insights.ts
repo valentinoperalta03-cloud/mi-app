@@ -1,15 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 
-export type ProfileMatchCard = {
-  resultId: string;
-  matchId: string;
-  whenIso: string;
-  clubName: string;
-  courtName: string;
-  scoreLabel: string | null;
-};
-
 export type CoplayerStat = {
   user_id: string;
   name: string;
@@ -22,94 +13,6 @@ export type ClubStat = {
   name: string;
   count: number;
 };
-
-function unwrapCourtClub(
-  courts: unknown
-): { courtName: string; clubName: string } {
-  const c = Array.isArray(courts) ? courts[0] : courts;
-  const court = c as { name?: string | null; clubs?: unknown } | null;
-  const courtName = court?.name?.trim() || "Cancha";
-  const cl = court?.clubs;
-  const club = Array.isArray(cl) ? cl[0] : cl;
-  const clubName = (club as { name?: string | null } | null)?.name?.trim() || "Club";
-  return { courtName, clubName };
-}
-
-export async function fetchProfileMatchCards(
-  supabase: SupabaseClient,
-  userId: string,
-  limit: number
-): Promise<ProfileMatchCard[]> {
-  const { data: mp } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("match_id")
-    .eq("player_id", userId)
-    .limit(500);
-
-  const idList = [...new Set((mp ?? []).map((r: { match_id: string }) => r.match_id))];
-  if (idList.length === 0) return [];
-
-  const { data: matches } = await supabase
-    .from(DB_TABLES.matches)
-    .select(
-      `
-      id,
-      date,
-      courts ( name, clubs ( name ) )
-    `
-    )
-    .in("id", idList.length > 280 ? idList.slice(0, 280) : idList)
-    .order("date", { ascending: false })
-    .limit(Math.max(limit * 5, 24));
-
-  const ordered = (matches ?? []) as { id: string; date: string; courts: unknown }[];
-  if (ordered.length === 0) return [];
-
-  const mids = ordered.map((m) => m.id);
-  const { data: results } = await supabase
-    .from(DB_TABLES.matchResults)
-    .select("id, match_id, created_at, team_a_score, team_b_score")
-    .in("match_id", mids);
-
-  const resByMatch = new Map<
-    string,
-    {
-      id: string;
-      match_id: string;
-      created_at: string | null;
-      team_a_score: number | null;
-      team_b_score: number | null;
-    }
-  >();
-  for (const raw of results ?? []) {
-    const r = raw as {
-      id: string;
-      match_id: string;
-      created_at: string | null;
-      team_a_score: number | null;
-      team_b_score: number | null;
-    };
-    if (!resByMatch.has(r.match_id)) resByMatch.set(r.match_id, r);
-  }
-
-  const withResults = ordered.filter((m) => resByMatch.has(m.id)).slice(0, limit);
-
-  return withResults.map((meta) => {
-    const r = resByMatch.get(meta.id)!;
-    const { courtName, clubName } = unwrapCourtClub(meta.courts ?? null);
-    const sa = r.team_a_score;
-    const sb = r.team_b_score;
-    const scoreLabel = sa != null && sb != null ? `${sa} — ${sb}` : null;
-    return {
-      resultId: r.id,
-      matchId: meta.id,
-      whenIso: meta.date ?? r.created_at ?? new Date().toISOString(),
-      clubName,
-      courtName,
-      scoreLabel,
-    };
-  });
-}
 
 export async function fetchTopCoplayers(
   supabase: SupabaseClient,

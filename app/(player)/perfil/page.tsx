@@ -6,14 +6,12 @@ import {
   ProfileMotionSection,
   ProfileMotionSurface,
 } from "@/components/profile/profile-motion-section";
-import { ProfileMatchCardsPremium } from "@/components/profile/profile-match-cards-premium";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { ProfileSessionFooter } from "@/components/profile-session-footer";
 import type { ProfileRow } from "@/lib/database.types";
 import { DB_TABLES } from "@/lib/db-tables";
 import { formatPlayerCategory } from "@/lib/profile-display";
 import {
-  fetchProfileMatchCards,
   fetchTopClubsByReservations,
   fetchTopCoplayers,
 } from "@/lib/profile-insights";
@@ -126,8 +124,7 @@ export default async function PerfilPage() {
   const displayName = row?.name?.trim() || "Tu perfil";
   const categoryLabel = formatPlayerCategory(row?.category);
 
-  const [matchCards, coplayers, clubs] = await Promise.all([
-    fetchProfileMatchCards(supabase, user.id, 3),
+  const [coplayers, clubs] = await Promise.all([
     fetchTopCoplayers(supabase, user.id, 5),
     fetchTopClubsByReservations(supabase, user.id, 5),
   ]);
@@ -223,10 +220,6 @@ export default async function PerfilPage() {
           </div>
         </section>
       ) : null}
-
-      <ProfileMotionSection title="Partidos" description="Tus últimos resultados.">
-        <ProfileMatchCardsPremium cards={matchCards} showViewAll />
-      </ProfileMotionSection>
 
       <ProfileMotionSection title="Datos" description="Información de tu perfil.">
         <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4">
