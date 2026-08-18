@@ -49,6 +49,11 @@ export async function updateMyProfile(
     return { ok: false, message: "Seleccioná sexo masculino o femenino." };
   }
 
+  const phone = String(formData.get("phone") ?? "").replace(/[^\d+]/g, "").trim();
+  if (phone.replace(/\D/g, "").length < 8) {
+    return { ok: false, message: "Verificá tu número de teléfono." };
+  }
+
   const avatarUrlRaw = String(formData.get("avatar_url") ?? "").trim();
   if (avatarUrlRaw.startsWith("data:")) {
     return {
@@ -72,6 +77,7 @@ export async function updateMyProfile(
     age,
     bio: bio === "" ? null : bio,
     gender: genderRaw,
+    phone,
     preferred_hand: preferredHandRaw || null,
     court_position: courtPositionRaw || null,
     preferred_schedule: preferredScheduleRaw || null,

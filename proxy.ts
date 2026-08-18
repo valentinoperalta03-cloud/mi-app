@@ -163,7 +163,7 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    if (!onboardingCompleted && isJugadorAppPath(pathname)) {
+    if (!onboardingCompleted && pathname !== "/home" && isJugadorAppPath(pathname)) {
       return redirectPreservingSupabaseCookies(request, "/completar-perfil", response);
     }
   } else if (pathname === "/completar-perfil") {

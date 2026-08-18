@@ -28,6 +28,7 @@ export function EditProfileForm({
   defaultCourtPosition,
   defaultPreferredSchedule,
   defaultCategory,
+  defaultPhone,
 }: {
   userId: string;
   defaultName: string;
@@ -39,6 +40,7 @@ export function EditProfileForm({
   defaultCourtPosition: string | null;
   defaultPreferredSchedule: string | null;
   defaultCategory: string | null;
+  defaultPhone: string | null;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(updateMyProfile, initial);
@@ -196,6 +198,20 @@ export function EditProfileForm({
             autoComplete="name"
             defaultValue={defaultName}
             maxLength={120}
+            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Teléfono</span>
+          <input
+            name="phone"
+            type="tel"
+            required
+            autoComplete="tel"
+            defaultValue={defaultPhone ?? ""}
+            maxLength={20}
+            placeholder="Ej. 1122334455"
             className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
           />
         </label>
