@@ -6,7 +6,10 @@ import { createSupabaseRouteHandlerClient } from "@/utils/supabase/route-handler
 export async function GET(request: NextRequest) {
   try {
     const origin = getAuthOriginFromRequest(request);
-    const redirectTo = `${origin}/auth/callback`;
+    const next = request.nextUrl.searchParams.get("next");
+    const redirectTo = next
+      ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+      : `${origin}/auth/callback`;
 
     const { supabase, redirectWithCookies } = createSupabaseRouteHandlerClient(request);
 

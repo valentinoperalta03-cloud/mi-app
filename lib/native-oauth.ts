@@ -14,6 +14,7 @@ export type NativeOAuthCallbackParams = {
   refreshToken: string | null;
   error: string | null;
   errorDescription: string | null;
+  next: string | null;
 };
 
 export function parseNativeOAuthCallback(url: string): NativeOAuthCallbackParams | null {
@@ -32,22 +33,32 @@ export function parseNativeOAuthCallback(url: string): NativeOAuthCallbackParams
     refreshToken: hashParams.get("refresh_token"),
     error: queryParams.get("error") ?? hashParams.get("error"),
     errorDescription: queryParams.get("error_description") ?? hashParams.get("error_description"),
+    next: queryParams.get("next") ?? hashParams.get("next"),
   };
+}
+
+function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
 }
 
 async function startNativeOAuth(
   provider: Provider,
-  options?: { queryParams?: Record<string, string>; scopes?: string }
+  options?: { queryParams?: Record<string, string>; scopes?: string; next?: string }
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const supabase = createSupabaseBrowserClient();
 
   let oauthUrl: string | null = null;
 
+  const redirectTo = options?.next
+    ? `${NATIVE_AUTH_CALLBACK_URL}?next=${encodeURIComponent(options.next)}`
+    : NATIVE_AUTH_CALLBACK_URL;
+
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: NATIVE_AUTH_CALLBACK_URL,
+        redirectTo,
         skipBrowserRedirect: true,
         queryParams: options?.queryParams,
         scopes: options?.scopes,
@@ -96,17 +107,22 @@ async function startNativeOAuth(
   return { ok: true };
 }
 
-export function startNativeGoogleOAuth(): Promise<{ ok: true } | { ok: false; message: string }> {
+export function startNativeGoogleOAuth(
+  next?: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
   return startNativeOAuth("google", {
     queryParams: {
       access_type: "offline",
       prompt: "select_account",
     },
+    next,
   });
 }
 
-export function startNativeAppleOAuth(): Promise<{ ok: true } | { ok: false; message: string }> {
-  return startNativeOAuth("apple", { scopes: "name email" });
+export function startNativeAppleOAuth(
+  next?: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  return startNativeOAuth("apple", { scopes: "name email", next });
 }
 
 export async function completeNativeOAuthFromDeepLink(
@@ -168,6 +184,6 @@ export async function completeNativeOAuthFromDeepLink(
       redirectTo: `/login?kind=error&message=${encodeURIComponent("No se pudo obtener la sesión.")}`,
     };
   }
-  const home = await resolveHomePath(supabase, user.id);
+  const home = safeNextPath(params.next) ?? (await resolveHomePath(supabase, user.id));
   return { ok: true, redirectTo: home };
 }

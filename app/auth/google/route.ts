@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const redirectTo = `${origin}/auth/callback`;
+    const next = request.nextUrl.searchParams.get("next");
+    const redirectTo = next
+      ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+      : `${origin}/auth/callback`;
 
     const { supabase, redirectWithCookies } = createSupabaseRouteHandlerClient(request);
 

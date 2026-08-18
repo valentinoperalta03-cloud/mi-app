@@ -59,7 +59,7 @@ function useCapacitorNativeOAuth() {
   return enabled;
 }
 
-export function GoogleAuthForm() {
+export function GoogleAuthForm({ next }: { next?: string }) {
   const isIpadNative = useCapacitorIosIpad();
   const useNativeOAuth = useCapacitorNativeOAuth();
   const [googlePending, setGooglePending] = useState(false);
@@ -70,7 +70,7 @@ export function GoogleAuthForm() {
     setGoogleError(null);
 
     try {
-      const result = await startNativeGoogleOAuth();
+      const result = await startNativeGoogleOAuth(next);
       if (!result.ok) {
         setGoogleError(result.message);
       }
@@ -101,7 +101,10 @@ export function GoogleAuthForm() {
           {googlePending ? "Abriendo Google..." : "Continuar con Google"}
         </button>
       ) : (
-        <a href="/auth/google" className={oauthButtonClass}>
+        <a
+          href={next ? `/auth/google?next=${encodeURIComponent(next)}` : "/auth/google"}
+          className={oauthButtonClass}
+        >
           <FaGoogle className="h-[18px] w-[18px] shrink-0" aria-hidden />
           Continuar con Google
         </a>
@@ -128,7 +131,7 @@ function useShowAppleSignIn() {
   return show;
 }
 
-export function AppleAuthForm() {
+export function AppleAuthForm({ next }: { next?: string }) {
   const show = useShowAppleSignIn();
   const useNativeOAuth = useCapacitorNativeOAuth();
   const [applePending, setApplePending] = useState(false);
@@ -141,7 +144,7 @@ export function AppleAuthForm() {
     setAppleError(null);
 
     try {
-      const result = await startNativeAppleOAuth();
+      const result = await startNativeAppleOAuth(next);
       if (!result.ok) {
         setAppleError(result.message);
       }
@@ -170,7 +173,10 @@ export function AppleAuthForm() {
   }
 
   return (
-    <a href="/auth/apple" className={oauthButtonClass}>
+    <a
+      href={next ? `/auth/apple?next=${encodeURIComponent(next)}` : "/auth/apple"}
+      className={oauthButtonClass}
+    >
       <FaApple className="h-5 w-5 shrink-0" aria-hidden />
       Continuar con Apple
     </a>

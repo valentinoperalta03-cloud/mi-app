@@ -22,8 +22,8 @@ export default function LoginCard({ next }: { next?: string }) {
       </div>
 
       <div className="mt-7 space-y-3">
-        <AppleAuthForm />
-        <GoogleAuthForm />
+        <AppleAuthForm next={next} />
+        <GoogleAuthForm next={next} />
       </div>
 
       <div className="my-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-white/30">

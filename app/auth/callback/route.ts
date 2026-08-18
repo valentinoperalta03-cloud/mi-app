@@ -12,6 +12,11 @@ type EmailOtpType =
   | "email_change"
   | "magiclink";
 
+function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  return next;
+}
+
 function redirectToLogin(
   origin: string,
   message: string,
@@ -46,6 +51,7 @@ export async function GET(request: NextRequest) {
     const code = requestUrl.searchParams.get("code");
     const token_hash = requestUrl.searchParams.get("token_hash");
     const type = requestUrl.searchParams.get("type");
+    const next = safeNextPath(requestUrl.searchParams.get("next"));
 
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -67,7 +73,7 @@ export async function GET(request: NextRequest) {
         return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
       }
 
-      const home = await resolveHomePath(supabase, user.id);
+      const home = next ?? (await resolveHomePath(supabase, user.id));
       return redirectWithCookies(new URL(home, origin));
     }
 
@@ -94,7 +100,7 @@ export async function GET(request: NextRequest) {
         return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
       }
 
-      const home = await resolveHomePath(supabase, user.id);
+      const home = next ?? (await resolveHomePath(supabase, user.id));
       return redirectWithCookies(new URL(home, origin));
     }
 
