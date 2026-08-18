@@ -82,8 +82,7 @@ export default function OnboardingChecklist({ status }: OnboardingChecklistProps
 
       <div className="divide-y divide-[var(--admin-card-border)]">
         {status.phases.map((phase, idx) => {
-          const prevPhase = idx > 0 ? status.phases[idx - 1] : null;
-          const isLocked = prevPhase ? !prevPhase.completed : false;
+          const isLocked = idx < 3 ? idx > 0 && !status.phases[idx - 1].completed : false;
           const isNext = !phase.completed && !isLocked;
 
           return (

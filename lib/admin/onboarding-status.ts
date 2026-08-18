@@ -27,7 +27,7 @@ type ClubOnboardingRow = {
   business_hours: string | null;
   cover_image_url: string | null;
   logo_url: string | null;
-  cancellation_hours: number | null;
+  cancellation_policy: string | null;
   deposit_value: number | null;
   deposit_type: string | null;
   instagram: string | null;
@@ -51,7 +51,7 @@ export async function checkAdminOnboardingStatus(
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_hours, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services"
+        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services"
       )
       .eq("id", clubId)
       .maybeSingle(),
@@ -80,12 +80,7 @@ export async function checkAdminOnboardingStatus(
       phase: 1,
       title: "Información del club",
       description: "Nombre, descripción, ubicación, horarios y fotos",
-      completed: Boolean(
-        club?.description?.trim() &&
-          club?.city?.trim() &&
-          club?.business_hours?.trim() &&
-          club?.cover_image_url?.trim()
-      ),
+      completed: Boolean(club?.description?.trim() && club?.city?.trim()),
       href: "/admin/config/informacion",
     },
     {
@@ -109,7 +104,7 @@ export async function checkAdminOnboardingStatus(
       phase: 4,
       title: "Política de cancelación",
       description: "Definí cuántas horas antes puede cancelar un jugador",
-      completed: club?.cancellation_hours != null,
+      completed: Boolean(club?.cancellation_policy?.trim()),
       href: "/admin/config/informacion",
     },
     {
