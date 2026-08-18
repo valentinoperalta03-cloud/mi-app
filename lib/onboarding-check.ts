@@ -13,7 +13,5 @@ export async function isOnboardingComplete(supabase: SupabaseClient, userId: str
     name?: string | null;
     gender?: string | null;
   } | null;
-  return Boolean(
-    profile?.onboarding_completed === true && profile?.name?.trim() && profile?.gender?.trim()
-  );
+  return Boolean(profile?.onboarding_completed === true && profile?.name?.trim());
 }

@@ -137,7 +137,7 @@ export default async function JugadorPublicProfilePage({ params }: PageProps) {
     : { data: [] };
   const clubIds = [...new Set((courtsRows ?? []).map((c: { club_id: string | null }) => c.club_id).filter(Boolean))] as string[];
   const { data: clubsRows } = clubIds.length
-    ? await supabase.from(DB_TABLES.clubs).select("id, name").in("id", clubIds)
+    ? await supabase.from(DB_TABLES.clubs).select("id, name").in("id", clubIds).eq("is_active", true)
     : { data: [] };
   const clubMap = new Map((clubsRows ?? []).map((c: { id: string; name: string | null }) => [c.id, c.name?.trim() || "Club"]));
   const clubCounter = new Map<string, number>();

@@ -53,6 +53,7 @@ type Props = {
   courts: PublicCourt[];
   isLoggedIn: boolean;
   playerName: string;
+  profileComplete: boolean;
 };
 
 const SERVICES_CATALOG: Record<string, { emoji: string; label: string }> = {
@@ -197,6 +198,52 @@ function AuthRequiredModal({ clubName, slug, onClose }: { clubName: string; slug
         </div>
       </div>
     </div>
+  );
+}
+
+function IncompleteProfileModal({
+  open,
+  onClose,
+  nextPath,
+}: {
+  open: boolean;
+  onClose: () => void;
+  nextPath: string;
+}) {
+  if (!open) return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-t-3xl bg-[#0F2038] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-white/[0.10]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-center mb-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0085FC]/20">
+            <span className="text-2xl">👤</span>
+          </div>
+        </div>
+        <h2 className="text-center text-[20px] font-bold text-white mb-2">Completá tu perfil</h2>
+        <p className="text-center text-sm text-white/55 leading-relaxed mb-6">
+          Para reservar o unirte a partidos, el club necesita saber quién sos. Solo te lleva 1 minuto.
+        </p>
+        <Link
+          href={`/completar-perfil?next=${encodeURIComponent(nextPath)}`}
+          className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] py-3.5 text-sm font-bold text-white mb-3"
+        >
+          Completar mi perfil →
+        </Link>
+        <button
+          onClick={onClose}
+          className="w-full rounded-2xl border border-white/15 bg-white/[0.06] py-3 text-sm font-semibold text-white/70"
+        >
+          Ahora no
+        </button>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -349,8 +396,9 @@ function ClubPageDrawer({
   );
 }
 
-export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }: Props) {
+export default function ClubPublicPage({ club, courts, isLoggedIn, playerName, profileComplete }: Props) {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showIncompleteProfile, setShowIncompleteProfile] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const firstName = playerName.trim().split(" ")[0] || "vos";
 
@@ -447,20 +495,39 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
 
         <div className="flex flex-col gap-2 px-4 pb-0 pt-4">
           {isLoggedIn ? (
-            <>
-              <Link
-                href={`/${club.slug}/reservar`}
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
-              >
-                🎾 Reservar una cancha
-              </Link>
-              <Link
-                href={`/${club.slug}/partidos`}
-                className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white"
-              >
-                🏆 Abrir o unirse a un partido
-              </Link>
-            </>
+            profileComplete ? (
+              <>
+                <Link
+                  href={`/${club.slug}/reservar`}
+                  className="flex h-14 w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                >
+                  🎾 Reservar una cancha
+                </Link>
+                <Link
+                  href={`/${club.slug}/partidos`}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white"
+                >
+                  🏆 Abrir o unirse a un partido
+                </Link>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowIncompleteProfile(true)}
+                  className="flex h-14 w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white"
+                >
+                  🎾 Reservar una cancha
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowIncompleteProfile(true)}
+                  className="flex h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] text-sm font-semibold text-white"
+                >
+                  🏆 Abrir o unirse a un partido
+                </button>
+              </>
+            )
           ) : (
             <>
               <button
@@ -596,6 +663,12 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName }:
       {showAuthModal ? (
         <AuthRequiredModal clubName={club.name} slug={club.slug} onClose={() => setShowAuthModal(false)} />
       ) : null}
+
+      <IncompleteProfileModal
+        open={showIncompleteProfile}
+        onClose={() => setShowIncompleteProfile(false)}
+        nextPath={`/${club.slug}`}
+      />
 
       {isLoggedIn ? (
         <ClubPageDrawer

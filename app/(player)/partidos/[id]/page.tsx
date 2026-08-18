@@ -895,7 +895,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <p className="text-sm text-amber-700 dark:text-amber-400">
             Podés enviar una solicitud especial. Los jugadores del partido votarán si te aceptan.
           </p>
-          <RequestJoinButton matchId={id} levelOverride={true} submitLabel="Solicitar revisión" />
+          <RequestJoinButton
+            matchId={id}
+            levelOverride={true}
+            submitLabel="Solicitar revisión"
+            profileComplete={onboardingComplete}
+          />
         </div>
       ) : joinErrorKey === "nivel" ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 space-y-3">
@@ -905,7 +910,12 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           <p className="text-sm text-amber-700 dark:text-amber-400">
             Podés enviar una solicitud especial. Los jugadores del partido votarán si te aceptan.
           </p>
-          <RequestJoinButton matchId={id} levelOverride={true} submitLabel="Solicitar revisión" />
+          <RequestJoinButton
+            matchId={id}
+            levelOverride={true}
+            submitLabel="Solicitar revisión"
+            profileComplete={onboardingComplete}
+          />
         </div>
       ) : null}
 
@@ -921,7 +931,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 Ya enviaste una solicitud pendiente.
               </p>
             ) : (
-              <RequestJoinButton matchId={id} />
+              <RequestJoinButton matchId={id} profileComplete={onboardingComplete} />
             )}
           </div>
         </section>
@@ -1033,7 +1043,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         <section className="rounded-2xl border border-[#0085FC]/30 bg-[#0085FC]/5 p-4 space-y-3">
           <h2 className="text-base font-bold text-[#0461C4]">¡Fuiste invitado a este partido!</h2>
           <p className="text-sm text-slate-700">Sumate cuando quieras. El pago lo coordinás con el organizador.</p>
-          <RequestJoinButton matchId={id} submitLabel="Unirme al partido" />
+          <RequestJoinButton matchId={id} submitLabel="Unirme al partido" profileComplete={onboardingComplete} />
         </section>
       ) : null}
 

@@ -1,5 +1,6 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isOnboardingComplete } from "@/lib/onboarding-check";
 import { createClient } from "@/utils/supabase/server";
 import ClubPublicPage, { type PublicClub, type PublicCourt } from "./club-public-page";
 
@@ -62,6 +63,7 @@ export default async function ClubSlugPage({ params }: PageProps) {
   const isLoggedIn = Boolean(user);
 
   let playerName = "";
+  let profileComplete = true;
   if (user) {
     const { data: profileRow } = await supabase
       .from(DB_TABLES.profiles)
@@ -70,7 +72,16 @@ export default async function ClubSlugPage({ params }: PageProps) {
       .maybeSingle();
     const p = profileRow as { name?: string | null; avatar_url?: string | null } | null;
     playerName = p?.name?.trim() ?? "";
+    profileComplete = await isOnboardingComplete(supabase, user.id);
   }
 
-  return <ClubPublicPage club={club} courts={courts} isLoggedIn={isLoggedIn} playerName={playerName} />;
+  return (
+    <ClubPublicPage
+      club={club}
+      courts={courts}
+      isLoggedIn={isLoggedIn}
+      playerName={playerName}
+      profileComplete={profileComplete}
+    />
+  );
 }
