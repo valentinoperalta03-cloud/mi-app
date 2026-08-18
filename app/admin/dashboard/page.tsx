@@ -15,6 +15,7 @@ import FixedSlotTodayCard, { type TodayFixedSlotCard } from "./fixed-slot-today-
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
 import { formatDateInArgentina, getTodayYmdInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
+import { checkAdminOnboardingStatus } from "@/lib/admin/onboarding-status";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
@@ -436,9 +437,7 @@ export default async function AdminDashboardPage({
       .eq("id", club.id)
       .eq("owner_id", ctx.userId);
   }
-  const showOnboardingChecklist = Boolean(
-    club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && !onboardingStatus.allCompleted
-  );
+  const onboardingPhasesStatus = club?.id ? await checkAdminOnboardingStatus(supabase, club.id) : null;
 
   const criticalAlerts = [
     onboardingStatus && !onboardingStatus.hasMpConnected
@@ -593,14 +592,8 @@ export default async function AdminDashboardPage({
           ¡Suscripción activada! Bienvenido a PadeLibre.
         </div>
       ) : null}
-      {showOnboardingChecklist && onboardingStatus ? (
-        <OnboardingChecklist
-          items={onboardingStatus.items}
-          completedCount={onboardingStatus.completedCount}
-          totalCount={onboardingStatus.totalCount}
-          canReceiveReservations={onboardingStatus.canReceiveReservations}
-          allCompleted={onboardingStatus.allCompleted}
-        />
+      {onboardingPhasesStatus && !onboardingPhasesStatus.allComplete ? (
+        <OnboardingChecklist status={onboardingPhasesStatus} />
       ) : null}
       <section className="px-1 pt-2">
         <h1 className="font-admin-display text-[28px] font-bold text-[var(--text-primary)]">Hola, {clubName} 👋</h1>
