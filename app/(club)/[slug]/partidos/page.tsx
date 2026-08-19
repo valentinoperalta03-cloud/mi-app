@@ -13,8 +13,9 @@ type PageProps = {
 };
 
 type RawParticipant = {
-  player_id: string;
+  player_id: string | null;
   team: number | null;
+  guest_name: string | null;
   profiles: { name: string | null; avatar_url: string | null; category: string | null } | Array<{
     name: string | null;
     avatar_url: string | null;
@@ -37,6 +38,7 @@ type RawMatchRow = {
   duration_minutes: number | null;
   gender_category: "masculino" | "femenino" | "mixto" | null;
   category_range: string[] | null;
+  created_by_club: boolean | null;
   court_id: string;
   courts: RawCourtEmbed | RawCourtEmbed[] | null;
   match_participants: RawParticipant[] | null;
@@ -89,7 +91,7 @@ export default async function ClubPartidosPage({ params }: PageProps) {
   const { data: matchesRaw } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id, scheduled_date, scheduled_time, duration_minutes, gender_category, category_range, court_id, courts!inner(id,name,surface,indoor,club_id), match_participants(player_id,team,profiles(name,avatar_url,category))"
+      "id, scheduled_date, scheduled_time, duration_minutes, gender_category, category_range, created_by_club, court_id, courts!inner(id,name,surface,indoor,club_id), match_participants(player_id,team,guest_name,profiles(name,avatar_url,category))"
     )
     .eq("match_type", "amistoso")
     .neq("match_status", "cancelled")
@@ -104,8 +106,8 @@ export default async function ClubPartidosPage({ params }: PageProps) {
       return {
         player_id: p.player_id,
         team: p.team ?? null,
-        name: prof?.name ?? null,
-        avatar_url: prof?.avatar_url ?? null,
+        name: p.guest_name?.trim() || prof?.name || null,
+        avatar_url: p.guest_name ? null : (prof?.avatar_url ?? null),
         category: prof?.category ?? null,
       };
     });
@@ -116,6 +118,7 @@ export default async function ClubPartidosPage({ params }: PageProps) {
       duration_minutes: row.duration_minutes,
       gender_category: row.gender_category,
       categoryRange: row.category_range ?? null,
+      createdByClub: Boolean(row.created_by_club),
       court_name: courtEmbed?.name ?? null,
       court_surface: courtEmbed?.surface ?? null,
       category: firstParticipantCategory(participants),

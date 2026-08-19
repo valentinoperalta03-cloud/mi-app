@@ -18,6 +18,7 @@ type MatchFeedRow = {
   level_restricted?: boolean | null;
   gender_category?: "masculino" | "femenino" | "mixto" | null;
   category_range?: string[] | null;
+  created_by_club?: boolean | null;
   courts:
     | {
         clubs:
@@ -32,8 +33,9 @@ type MatchFeedRow = {
     | null;
   match_participants:
     | {
-        player_id: string;
+        player_id: string | null;
         team?: number | null;
+        guest_name?: string | null;
         profiles:
           | {
               name: string | null;
@@ -108,6 +110,7 @@ export default async function OpenMatchesBoard({
       level_restricted,
       gender_category,
       category_range,
+      created_by_club,
       courts (
         clubs (
           name,
@@ -119,6 +122,7 @@ export default async function OpenMatchesBoard({
       match_participants (
         player_id,
         team,
+        guest_name,
         profiles (
           name,
           avatar_url
@@ -153,8 +157,8 @@ export default async function OpenMatchesBoard({
       return {
         player_id: mp.player_id,
         team: mp.team ?? null,
-        name: p?.name?.trim() || "Jugador",
-        avatar_url: p?.avatar_url ?? null,
+        name: mp.guest_name?.trim() || p?.name?.trim() || "Jugador",
+        avatar_url: mp.guest_name ? null : (p?.avatar_url ?? null),
       };
     });
     const club = match.courts?.clubs;
@@ -170,6 +174,7 @@ export default async function OpenMatchesBoard({
       clubCity: normalizeCity(rawCity),
       clubProvince: club?.province?.trim() ?? "",
       categoryRange: (match as any).category_range ?? null,
+      createdByClub: Boolean(match.created_by_club),
       playersCount,
       freeSlots,
       currentUserJoined,

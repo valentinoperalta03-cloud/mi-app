@@ -117,7 +117,7 @@ type MatchDetailRow = {
 };
 
 type ParticipantRow = {
-  player_id: string;
+  player_id: string | null;
   team: number | null;
   name: string | null;
   avatar_url: string | null;
@@ -228,12 +228,13 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   const { data: participantsRows } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id, team, profiles(name,avatar_url,category)")
+    .select("player_id, team, guest_name, profiles(name,avatar_url,category)")
     .eq("match_id", id);
 
   const participants = ((participantsRows ?? []) as Array<{
-    player_id: string;
+    player_id: string | null;
     team: number | null;
+    guest_name: string | null;
     profiles:
       | {
           name: string | null;
@@ -251,8 +252,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     return {
       player_id: row.player_id,
       team: row.team ?? null,
-      name: profile?.name ?? null,
-      avatar_url: profile?.avatar_url ?? null,
+      name: row.guest_name?.trim() || profile?.name || null,
+      avatar_url: row.guest_name ? null : (profile?.avatar_url ?? null),
       category: profile?.category ?? null,
     } satisfies ParticipantRow;
   });
@@ -557,7 +558,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 const level = formatPlayerCategory(participant.category);
                 return (
                   <div
-                    key={participant.player_id}
+                    key={participant.player_id ?? `guest-${name}`}
                     className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
                   >
                     <ProfileAvatar
@@ -568,7 +569,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
                     <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
-                    {isOwner && participant.player_id !== match.owner_id ? (
+                    {isOwner && participant.player_id && participant.player_id !== match.owner_id ? (
                       <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
                     ) : null}
                   </div>
@@ -620,7 +621,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 const level = formatPlayerCategory(participant.category);
                 return (
                   <div
-                    key={participant.player_id}
+                    key={participant.player_id ?? `guest-${name}`}
                     className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
                   >
                     <ProfileAvatar
@@ -631,7 +632,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
                     <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
-                    {isOwner && participant.player_id !== match.owner_id ? (
+                    {isOwner && participant.player_id && participant.player_id !== match.owner_id ? (
                       <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
                     ) : null}
                   </div>

@@ -19,13 +19,14 @@ export type MatchCardData = {
   clubCity: string;
   clubProvince: string;
   categoryRange: string[] | null;
+  createdByClub?: boolean;
   playersCount: number;
   freeSlots: number;
   currentUserJoined: boolean;
   userCanJoinByGender: boolean;
   genderRestrictionMessage: string | null;
   participants: Array<{
-    player_id: string;
+    player_id: string | null;
     team?: number | null;
     name: string;
     avatar_url: string | null;
@@ -168,6 +169,11 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
                       Nivel restringido 🎯
                     </span>
                   ) : null}
+                  {match.createdByClub ? (
+                    <span className="shrink-0 rounded-full bg-[#CCFF00]/15 px-2 py-0.5 text-[10px] font-bold text-[#7a8f00] dark:text-[#CCFF00]">
+                      📍 Publicado por el club
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -222,22 +228,36 @@ export default function MatchesFilterBoard({ matches, userId, userCity, userProv
 
               {match.participants.length > 0 ? (
                 <ul className="mt-3 flex flex-wrap gap-2 text-xs">
-                  {match.participants.map((mp) => (
-                    <li key={mp.player_id}>
-                      <Link
-                        href={`/jugador/${mp.player_id}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0085FC]"
-                      >
-                        <ProfileAvatar
-                          avatarUrl={mp.avatar_url}
-                          name={mp.name}
-                          size={24}
-                          ringClassName="ring-1 ring-white"
-                        />
-                        <span>{mp.name}</span>
-                      </Link>
-                    </li>
-                  ))}
+                  {match.participants.map((mp, idx) =>
+                    mp.player_id ? (
+                      <li key={mp.player_id}>
+                        <Link
+                          href={`/jugador/${mp.player_id}`}
+                          className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 font-semibold text-[#0461C4] hover:text-[#0085FC]"
+                        >
+                          <ProfileAvatar
+                            avatarUrl={mp.avatar_url}
+                            name={mp.name}
+                            size={24}
+                            ringClassName="ring-1 ring-white"
+                          />
+                          <span>{mp.name}</span>
+                        </Link>
+                      </li>
+                    ) : (
+                      <li key={`guest-${idx}`}>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-2 py-1 font-semibold text-[var(--text-secondary)]">
+                          <ProfileAvatar
+                            avatarUrl={mp.avatar_url}
+                            name={mp.name}
+                            size={24}
+                            ringClassName="ring-1 ring-white"
+                          />
+                          <span>{mp.name}</span>
+                        </span>
+                      </li>
+                    )
+                  )}
                 </ul>
               ) : null}
 

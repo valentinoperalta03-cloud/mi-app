@@ -32,7 +32,7 @@ export type PartidosCourt = {
 };
 
 export type OpenMatchParticipant = {
-  player_id: string;
+  player_id: string | null;
   team: number | null;
   name: string | null;
   avatar_url: string | null;
@@ -46,6 +46,7 @@ export type OpenMatchRow = {
   duration_minutes: number | null;
   gender_category: "masculino" | "femenino" | "mixto" | null;
   categoryRange: string[] | null;
+  createdByClub?: boolean;
   court_name: string | null;
   court_surface: string | null;
   category: string | null;
@@ -197,9 +198,16 @@ function OpenMatchCard({ match }: { match: OpenMatchRow }) {
 
   return (
     <article className="rounded-2xl border border-[#1A3050] bg-white/[0.04] p-4">
-      <p className="text-sm font-bold capitalize text-white">
-        {fecha} · {hora || "—"} hs
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-bold capitalize text-white">
+          {fecha} · {hora || "—"} hs
+        </p>
+        {match.createdByClub ? (
+          <span className="rounded-full bg-[#CCFF00]/15 px-2 py-0.5 text-[10px] font-bold text-[#CCFF00]">
+            📍 Publicado por el club
+          </span>
+        ) : null}
+      </div>
       <p className="mt-0.5 text-xs text-white/50">
         {match.court_name ?? "Cancha"} · {formatSurface(match.court_surface)}
       </p>

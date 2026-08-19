@@ -22,6 +22,7 @@ import { confirmOfflineCobro } from "../cobros/actions";
 import DateNav from "./date-nav";
 import ReservasGridClient, { type GridCellData } from "./reservas-grid-client";
 import AdminReservasMobileView, { type MobileCourtData, type MobileSlot } from "./reservas-mobile-view";
+import ReservasTabs, { type OpenMatchData } from "./reservas-tabs";
 
 function externalLabelFromReason(reason: string | null | undefined): string {
   const r = String(reason ?? "").trim();
@@ -309,6 +310,62 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
   const refundErr = sp.refund_error ? decodeURIComponent(sp.refund_error.replace(/\+/g, " ")) : "";
 
+  const { data: openMatchesRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.matches)
+        .select(
+          "id,scheduled_date,scheduled_time,match_status,gender_category,category_range,created_by_club,courts(name),match_participants(id,player_id,team,guest_name,profiles(name,avatar_url))"
+        )
+        .in("court_id", ctx.courtIds)
+        .eq("match_type", "amistoso")
+        .neq("match_status", "cancelled")
+        .gte("scheduled_date", today)
+        .order("scheduled_date", { ascending: true })
+        .order("scheduled_time", { ascending: true })
+    : { data: [] };
+
+  type OpenParticipantRaw = {
+    id: string | null;
+    player_id: string | null;
+    team: number | null;
+    guest_name: string | null;
+    profiles: { name: string | null; avatar_url: string | null } | { name: string | null; avatar_url: string | null }[] | null;
+  };
+  type OpenMatchRaw = {
+    id: string;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    match_status: string | null;
+    gender_category: "masculino" | "femenino" | "mixto" | null;
+    category_range: string[] | null;
+    created_by_club: boolean | null;
+    courts: { name: string | null } | { name: string | null }[] | null;
+    match_participants: OpenParticipantRaw[] | null;
+  };
+
+  const openMatches: OpenMatchData[] = ((openMatchesRaw ?? []) as unknown as OpenMatchRaw[]).map((m) => {
+    const courtEmbed = Array.isArray(m.courts) ? m.courts[0] ?? null : m.courts;
+    return {
+      id: m.id,
+      scheduledDate: m.scheduled_date ?? "",
+      scheduledTime: (m.scheduled_time ?? "").slice(0, 5),
+      courtName: courtEmbed?.name ?? "Cancha",
+      genderCategory: m.gender_category,
+      categoryRange: m.category_range ?? [],
+      createdByClub: Boolean(m.created_by_club),
+      participants: (m.match_participants ?? []).map((p) => {
+        const prof = Array.isArray(p.profiles) ? p.profiles[0] ?? null : p.profiles;
+        return {
+          id: p.id ?? "",
+          playerId: p.player_id,
+          team: (p.team === 1 || p.team === 2 ? p.team : null) as 1 | 2 | null,
+          name: p.guest_name?.trim() || prof?.name?.trim() || "Jugador",
+          avatarUrl: p.guest_name ? null : (prof?.avatar_url ?? null),
+        };
+      }),
+    };
+  });
+
   const gridCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
 
   const mobileCourts: MobileCourtData[] = gridCourts.map((court) => ({
@@ -334,54 +391,61 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         subtitle="Vista por canchas para operar el día sin fricción"
       />
 
-      <section className={adminCard}>
-        <DateNav selectedDate={selectedDate} today={today} />
-      </section>
+      <ReservasTabs
+        openMatches={openMatches}
+        courts={gridCourts}
+        clubId={mainClubId}
+        clubName={ctx.clubs.find((c) => c.id === mainClubId)?.name ?? "Club"}
+      >
+        <section className={adminCard}>
+          <DateNav selectedDate={selectedDate} today={today} />
+        </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className={`${adminCard} ${adminAccentBar}`}>
-          <p className={adminKicker}>Total reservas del día</p>
-          <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{totalReservas}</p>
-        </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Abonado</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{fullyPaidReservas}</p>
-        </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Seña abonada</p>
-          <p className="mt-2 text-2xl font-bold text-amber-500">{partiallyPaidReservas}</p>
-        </div>
-        <div className={adminCard}>
-          <p className={adminKicker}>Pendiente</p>
-          <p className="mt-2 text-2xl font-bold text-[var(--text-tertiary)]">{unpaidReservas}</p>
-        </div>
-      </section>
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={`${adminCard} ${adminAccentBar}`}>
+            <p className={adminKicker}>Total reservas del día</p>
+            <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{totalReservas}</p>
+          </div>
+          <div className={adminCard}>
+            <p className={adminKicker}>Abonado</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-600">{fullyPaidReservas}</p>
+          </div>
+          <div className={adminCard}>
+            <p className={adminKicker}>Seña abonada</p>
+            <p className="mt-2 text-2xl font-bold text-amber-500">{partiallyPaidReservas}</p>
+          </div>
+          <div className={adminCard}>
+            <p className={adminKicker}>Pendiente</p>
+            <p className="mt-2 text-2xl font-bold text-[var(--text-tertiary)]">{unpaidReservas}</p>
+          </div>
+        </section>
 
-      {closedDay ? (
-        <div className="rounded-2xl border-l-[3px] border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] p-5 text-sm font-semibold text-[var(--admin-alert-warning-text)]">
-          El club está cerrado este día{closedDay.reason ? ` (${closedDay.reason})` : ""}. No se muestra la grilla.
-        </div>
-      ) : matchesError ? (
-        <div
-          className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200`}
-        >
-          Error al cargar reservas: {matchesError.message}.
-        </div>
-      ) : (
-        <>
-          <section className={`${adminCard} hidden overflow-hidden p-0 md:block`}>
-            <ReservasGridClient
-              courts={gridCourts}
-              slots={slots}
-              courtSlotTimes={courtSlotTimes}
-              cells={cells}
-              selectedDate={selectedDate}
-            />
-          </section>
+        {closedDay ? (
+          <div className="rounded-2xl border-l-[3px] border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] p-5 text-sm font-semibold text-[var(--admin-alert-warning-text)]">
+            El club está cerrado este día{closedDay.reason ? ` (${closedDay.reason})` : ""}. No se muestra la grilla.
+          </div>
+        ) : matchesError ? (
+          <div
+            className={`${adminCard} border-rose-200/80 bg-rose-50/90 text-sm font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200`}
+          >
+            Error al cargar reservas: {matchesError.message}.
+          </div>
+        ) : (
+          <>
+            <section className={`${adminCard} hidden overflow-hidden p-0 md:block`}>
+              <ReservasGridClient
+                courts={gridCourts}
+                slots={slots}
+                courtSlotTimes={courtSlotTimes}
+                cells={cells}
+                selectedDate={selectedDate}
+              />
+            </section>
 
-          <AdminReservasMobileView courts={mobileCourts} selectedDate={selectedDate} />
-        </>
-      )}
+            <AdminReservasMobileView courts={mobileCourts} selectedDate={selectedDate} />
+          </>
+        )}
+      </ReservasTabs>
 
       {selectedMatch ? (
         <>
