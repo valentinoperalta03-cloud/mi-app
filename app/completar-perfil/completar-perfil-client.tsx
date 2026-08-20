@@ -29,19 +29,26 @@ const CATEGORIES: { value: string; description: string }[] = [
 ];
 
 const HAND_OPTIONS = [
-  { id: "derecha" as const, label: "Diestro", emoji: "🏏", sub: "Mano derecha" },
-  { id: "izquierda" as const, label: "Zurdo", emoji: "🤜", sub: "Mano izquierda" },
+  { id: "derecha" as const, label: "Diestro", sub: "Mano derecha", mirror: false },
+  { id: "izquierda" as const, label: "Zurdo", sub: "Mano izquierda", mirror: true },
 ];
 
 const POSITION_OPTIONS = [
-  { id: "drive" as const, label: "Drive", emoji: "🎯" },
-  { id: "reves" as const, label: "Revés", emoji: "🔄" },
-  { id: "ambas" as const, label: "Indistinto", emoji: "↔️" },
+  { id: "drive" as const, label: "Drive" },
+  { id: "reves" as const, label: "Revés" },
+  { id: "ambas" as const, label: "Indistinto" },
 ];
 
 const GENDER_OPTIONS = [
   { id: "masculino" as const, label: "Caballeros", emoji: "👨" },
   { id: "femenino" as const, label: "Damas", emoji: "👩" },
+];
+
+const SCHEDULE_OPTIONS = [
+  { id: "manana" as const, label: "🌅 Mañana" },
+  { id: "tarde" as const, label: "☀️ Tarde" },
+  { id: "noche" as const, label: "🌙 Noche" },
+  { id: "cualquiera" as const, label: "🕐 Cualquiera" },
 ];
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -149,15 +156,15 @@ function SelectField(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 function HandCard({
   selected,
   onClick,
-  emoji,
   label,
   sub,
+  mirror,
 }: {
   selected: boolean;
   onClick: () => void;
-  emoji: string;
   label: string;
   sub: string;
+  mirror: boolean;
 }) {
   return (
     <motion.button
@@ -175,9 +182,10 @@ function HandCard({
       <motion.span
         animate={selected ? { rotate: [0, -15, 15, 0] } : { rotate: 0 }}
         transition={{ duration: 0.5 }}
+        style={{ display: "inline-block", transform: mirror ? "scaleX(-1)" : undefined }}
         className="text-[48px]"
       >
-        {emoji}
+        🤚
       </motion.span>
       <span className={`text-base font-black ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
       <span className="text-xs text-white/40">{sub}</span>
@@ -188,12 +196,10 @@ function HandCard({
 function PositionChip({
   selected,
   onClick,
-  emoji,
   label,
 }: {
   selected: boolean;
   onClick: () => void;
-  emoji: string;
   label: string;
 }) {
   return (
@@ -208,16 +214,35 @@ function PositionChip({
         boxShadow: selected ? "0 0 20px rgba(204,255,0,0.2)" : "none",
       }}
       style={{ height: 64 }}
-      className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl border"
+      className="flex flex-1 flex-col items-center justify-center rounded-2xl border"
     >
-      <motion.span
-        animate={selected ? { rotate: [0, -10, 10, 0] } : { rotate: 0 }}
-        transition={{ duration: 0.4 }}
-        className="text-xl"
-      >
-        {emoji}
-      </motion.span>
-      <span className={`text-xs font-bold ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
+      <span className={`text-sm font-bold ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
+    </motion.button>
+  );
+}
+
+function ScheduleChip({
+  selected,
+  onClick,
+  label,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileTap={{ scale: 0.95 }}
+      animate={{
+        borderColor: selected ? "#CCFF00" : "rgba(255,255,255,0.10)",
+        backgroundColor: selected ? "rgba(204,255,0,0.08)" : "rgba(255,255,255,0.04)",
+        boxShadow: selected ? "0 0 15px rgba(204,255,0,0.2)" : "none",
+      }}
+      className="rounded-2xl border py-3 text-sm font-semibold text-white"
+    >
+      {label}
     </motion.button>
   );
 }
@@ -384,12 +409,15 @@ function AvatarCircle({
         <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-white/[0.06]">
-          <span className="text-4xl">👤</span>
+          <span className="text-5xl">🧑</span>
         </div>
       )}
       {onClick ? (
-        <div className="absolute bottom-0 right-0 rounded-full bg-[#CCFF00] p-1.5">
-          <span className="text-xs text-[#06101E]">📷</span>
+        <div
+          className="absolute bottom-0 right-0 flex items-center justify-center rounded-full bg-[#CCFF00]"
+          style={{ width: 28, height: 28 }}
+        >
+          <span style={{ fontSize: 14 }}>📷</span>
         </div>
       ) : null}
     </motion.div>
@@ -419,6 +447,9 @@ export default function CompletarPerfilClient({
   // Paso 2 — Estilo de juego
   const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "">("");
   const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
+  const [preferredSchedule, setPreferredSchedule] = useState<
+    "manana" | "tarde" | "noche" | "cualquiera" | ""
+  >("");
 
   // Paso 3 — Perfil deportivo
   const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
@@ -477,7 +508,7 @@ export default function CompletarPerfilClient({
   }
 
   const canStep1 = Boolean(name.trim() && birthDate && edad !== null);
-  const canStep2 = Boolean(preferredHand && courtPosition);
+  const canStep2 = Boolean(preferredHand && courtPosition && preferredSchedule);
   const canStep3 = Boolean(gender && category);
   const canStep4 = Boolean(phone.replace(/\D/g, "").length >= 8 && province);
 
@@ -502,7 +533,7 @@ export default function CompletarPerfilClient({
         avatarUrl: avatarUrl || null,
         preferredHand: preferredHand as "derecha" | "izquierda",
         courtPosition: courtPosition as "drive" | "reves" | "ambas",
-        preferredSchedule: "cualquiera",
+        preferredSchedule: preferredSchedule as "manana" | "tarde" | "noche" | "cualquiera",
         category,
         phone: `+54${phone.replace(/\D/g, "")}`,
         province,
@@ -542,7 +573,7 @@ export default function CompletarPerfilClient({
           </div>
         </div>
 
-        <div className="relative flex-1 overflow-hidden pb-16">
+        <div className="relative flex-1 overflow-visible pb-16">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
               <motion.div
@@ -582,23 +613,16 @@ export default function CompletarPerfilClient({
 
                 <Card index={1}>
                   <div className="flex flex-col gap-5">
-                    <div className="relative">
-                      <motion.label
-                        initial={false}
-                        animate={{
-                          y: name ? -20 : 0,
-                          scale: name ? 0.8 : 1,
-                          color: name ? "#CCFF00" : "rgba(255,255,255,0.35)",
-                        }}
-                        className="pointer-events-none absolute left-4 top-3.5 origin-left text-sm"
-                      >
+                    <div className="space-y-1.5">
+                      <label className={`${ibmPlexMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40`}>
                         Tu nombre completo
-                      </motion.label>
+                      </label>
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        style={{ height: 60 }}
-                        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 pb-3 pt-5 text-white outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
+                        placeholder="Juan Pérez"
+                        style={{ height: 52 }}
+                        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-white outline-none placeholder:text-white/25 focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
                       />
                     </div>
 
@@ -631,9 +655,11 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <PrimaryButton enabled={canStep1} onClick={goNext}>
-                  Continuar
-                </PrimaryButton>
+                <div className="px-1 pb-1">
+                  <PrimaryButton enabled={canStep1} onClick={goNext}>
+                    Continuar
+                  </PrimaryButton>
+                </div>
               </motion.div>
             )}
 
@@ -658,9 +684,9 @@ export default function CompletarPerfilClient({
                           key={opt.id}
                           selected={preferredHand === opt.id}
                           onClick={() => setPreferredHand(opt.id)}
-                          emoji={opt.emoji}
                           label={opt.label}
                           sub={opt.sub}
+                          mirror={opt.mirror}
                         />
                       ))}
                     </div>
@@ -676,7 +702,6 @@ export default function CompletarPerfilClient({
                           key={opt.id}
                           selected={courtPosition === opt.id}
                           onClick={() => setCourtPosition(opt.id)}
-                          emoji={opt.emoji}
                           label={opt.label}
                         />
                       ))}
@@ -684,9 +709,29 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <PrimaryButton enabled={canStep2} onClick={goNext}>
-                  Continuar
-                </PrimaryButton>
+                <Card index={2}>
+                  <div className="space-y-3">
+                    <label className={`${ibmPlexMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40`}>
+                      Horario favorito
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {SCHEDULE_OPTIONS.map((opt) => (
+                        <ScheduleChip
+                          key={opt.id}
+                          selected={preferredSchedule === opt.id}
+                          onClick={() => setPreferredSchedule(opt.id)}
+                          label={opt.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                <div className="px-1 pb-1">
+                  <PrimaryButton enabled={canStep2} onClick={goNext}>
+                    Continuar
+                  </PrimaryButton>
+                </div>
               </motion.div>
             )}
 
@@ -755,9 +800,11 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <PrimaryButton enabled={canStep3} onClick={goNext}>
-                  Continuar
-                </PrimaryButton>
+                <div className="px-1 pb-1">
+                  <PrimaryButton enabled={canStep3} onClick={goNext}>
+                    Continuar
+                  </PrimaryButton>
+                </div>
               </motion.div>
             )}
 
@@ -867,9 +914,11 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <PrimaryButton enabled={canStep4} onClick={goNext}>
-                  Continuar
-                </PrimaryButton>
+                <div className="px-1 pb-1">
+                  <PrimaryButton enabled={canStep4} onClick={goNext}>
+                    Continuar
+                  </PrimaryButton>
+                </div>
               </motion.div>
             )}
 
@@ -920,7 +969,9 @@ export default function CompletarPerfilClient({
                   </div>
                 </motion.div>
 
-                <FinalButton pending={pending} onClick={handleFinish} />
+                <div className="px-1 pb-1">
+                  <FinalButton pending={pending} onClick={handleFinish} />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
