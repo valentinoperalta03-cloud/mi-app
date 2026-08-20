@@ -1,30 +1,14 @@
-﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminFlashMessage from "@/components/admin/admin-flash-message";
 import AdminGuideBox from "@/components/admin/admin-guide-box";
 import AdminPageHeader from "@/components/admin/admin-page-header";
-import {
-  adminAccentBar,
-  adminBadgeError,
-  adminBadgeNeutral,
-  adminCard,
-  adminCTAPrimary,
-  adminEmptyState,
-  adminKicker,
-  adminTip,
-} from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminTip } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
-import {
-  confirmOfflineCobro,
-  confirmPracticeOfflineCobro,
-  confirmRemainingBalanceAction,
-  markOfflineNoShow,
-  markPracticeOfflineNoShow,
-} from "./actions";
+import CobrosClient, { type ConfirmedItem, type PendingItem } from "./cobros-client";
 
 function isYmdInArgentina(iso: string, ymd: string): boolean {
   return (
@@ -37,8 +21,13 @@ function isYmdInArgentina(iso: string, ymd: string): boolean {
   );
 }
 
+function matchBadge(matchType: string | null, esTurnoFijo: boolean | null): "Reserva" | "Partido abierto" | "Turno fijo" {
+  if (esTurnoFijo) return "Turno fijo";
+  return String(matchType ?? "").toLowerCase() === "reservation" ? "Reserva" : "Partido abierto";
+}
+
 type PageProps = {
-  searchParams?: Promise<{ error?: string; ok?: string; saldo?: string }>;
+  searchParams?: Promise<{ error?: string; ok?: string }>;
 };
 
 export default async function AdminCobrosPage({ searchParams }: PageProps) {
@@ -56,7 +45,6 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   }
 
   const todayAr = getTodayYmdInArgentina();
-  const clubId = ctx.clubIds[0]!;
   const admin = await getAdminClient();
 
   const { data: clubMatchRows } = await supabase
@@ -66,20 +54,21 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   const clubMatchIds = (clubMatchRows ?? []).map((m: { id: string }) => m.id);
 
   const [
-    { data: pendingRows, error: pendErr },
+    { data: pendingMatchRows, error: pendErr },
     { data: practicePendingRows, error: practicePendErr },
+    { data: tournamentPendingRows, error: tournamentPendErr },
     { data: payRows },
     { data: practiceApprovedRows },
-    { data: debtRows },
-    { data: noShowRows },
-    { data: pendingBalanceRows, error: pendingBalanceErr },
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.matches)
-      .select("id, owner_id, court_id, scheduled_time, total_price, payment_status, match_type")
+      .select(
+        "id, owner_id, court_id, scheduled_time, total_price, amount_paid, amount_pending, payment_status, match_type, match_status, es_turno_fijo"
+      )
       .in("court_id", ctx.courtIds)
       .eq("scheduled_date", todayAr)
-      .in("payment_status", ["cash_pending", "transfer_pending"])
+      .in("payment_status", ["cash_pending", "transfer_pending", "pending"])
+      .neq("match_status", "cancelled")
       .order("scheduled_time", { ascending: true }),
     supabase
       .from(DB_TABLES.practiceRegistrations)
@@ -90,6 +79,12 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .eq("practice_sessions.session_date", todayAr)
       .in("practice_sessions.practices.club_id", ctx.clubIds)
       .order("registered_at", { ascending: true }),
+    supabase
+      .from(DB_TABLES.tournamentRegistrations)
+      .select("id, player1_id, player2_id, tournament_id, payment_status, total_price, tournaments!inner(name, club_id)")
+      .eq("payment_status", "pending")
+      .is("mp_payment_id", null)
+      .in("tournaments.club_id", ctx.clubIds),
     clubMatchIds.length > 0
       ? admin
           .from(DB_TABLES.payments)
@@ -112,45 +107,34 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .eq("practice_sessions.session_date", todayAr)
       .in("practice_sessions.practices.club_id", ctx.clubIds)
       .order("confirmed_at", { ascending: false }),
-    supabase
-      .from(DB_TABLES.clubDebts)
-      .select("id, amount, confirmed_at, payment_method, match_id")
-      .eq("club_id", clubId)
-      .order("confirmed_at", { ascending: false })
-      .limit(80),
-    supabase
-      .from(DB_TABLES.matches)
-      .select("id, owner_id, court_id, scheduled_time, total_price")
-      .in("court_id", ctx.courtIds)
-      .eq("scheduled_date", todayAr)
-      .eq("payment_status", "no_show")
-      .order("scheduled_time", { ascending: true }),
-    supabase
-      .from(DB_TABLES.matches)
-      .select("id, owner_id, court_id, scheduled_date, scheduled_time, total_price, amount_paid, amount_pending")
-      .in("court_id", ctx.courtIds)
-      .eq("financial_status", "partially_paid")
-      .gt("amount_pending", 0)
-      .gte("scheduled_date", todayAr)
-      .neq("match_status", "cancelled")
-      .order("scheduled_date", { ascending: true })
-      .order("scheduled_time", { ascending: true }),
   ]);
 
-  const pending = (pendingRows ?? []) as Array<{
+  type MatchPendingRow = {
     id: string;
     owner_id: string;
     court_id: string;
     scheduled_time: string | null;
     total_price: number | null;
+    amount_paid: number | null;
+    amount_pending: number | null;
     payment_status: string | null;
     match_type: string | null;
-  }>;
+    match_status: string | null;
+    es_turno_fijo: boolean | null;
+  };
+  const pendingMatchesRaw = (pendingMatchRows ?? []) as MatchPendingRow[];
+  // Un partido abierto (amistoso) solo se muestra como "pendiente de cobro"
+  // cuando ya esta confirmado (reserved) — antes de eso no tiene sentido
+  // pedirle plata a nadie, todavia puede no completarse.
+  const pendingMatches = pendingMatchesRaw.filter(
+    (m) => String(m.match_type ?? "").toLowerCase() !== "amistoso" || String(m.match_status ?? "") === "reserved"
+  );
 
   type PracticePendingRow = {
     id: string;
     player_id: string;
     payment_status: string;
+    payment_method?: string | null;
     amount: number | null;
     practice_sessions: {
       session_date: string;
@@ -163,7 +147,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     }[];
   };
 
-  function parsePracticeReg(row: PracticePendingRow & { payment_method?: string | null }) {
+  function parsePracticeReg(row: PracticePendingRow) {
     const s = Array.isArray(row.practice_sessions) ? row.practice_sessions[0] : row.practice_sessions;
     const p = s ? (Array.isArray(s.practices) ? s.practices[0] : s.practices) : null;
     return {
@@ -180,32 +164,30 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   }
 
   const practicePending = ((practicePendingRows ?? []) as PracticePendingRow[]).map(parsePracticeReg);
-
   const practiceApprovedToday = ((practiceApprovedRows ?? []) as PracticePendingRow[]).map(parsePracticeReg);
 
-  const noShows = (noShowRows ?? []) as Array<{
+  type TournamentPendingRow = {
     id: string;
-    owner_id: string;
-    court_id: string;
-    scheduled_time: string | null;
+    player1_id: string;
+    player2_id: string | null;
+    tournament_id: string;
+    payment_status: string;
     total_price: number | null;
-  }>;
+    tournaments: { name: string; club_id: string } | { name: string; club_id: string }[] | null;
+  };
+  function parseTournamentReg(row: TournamentPendingRow) {
+    const t = Array.isArray(row.tournaments) ? row.tournaments[0] : row.tournaments;
+    return {
+      id: row.id,
+      player1_id: row.player1_id,
+      player2_id: row.player2_id,
+      total_price: row.total_price,
+      tournamentName: t?.name ?? "Torneo",
+    };
+  }
+  const tournamentPending = ((tournamentPendingRows ?? []) as TournamentPendingRow[]).map(parseTournamentReg);
 
   const courtName = new Map(ctx.courts.map((c) => [c.id, c.name ?? "Cancha"]));
-  const clubNameByCourt = new Map(
-    ctx.courts.map((c) => [c.id, ctx.clubs.find((club) => club.id === c.club_id)?.name ?? "Club"])
-  );
-
-  const pendingBalances = (pendingBalanceRows ?? []) as Array<{
-    id: string;
-    owner_id: string;
-    court_id: string;
-    scheduled_date: string | null;
-    scheduled_time: string | null;
-    total_price: number | null;
-    amount_paid: number | null;
-    amount_pending: number | null;
-  }>;
 
   const paymentsAll = (payRows ?? []) as Array<{
     id: string;
@@ -215,16 +197,8 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     user_id: string;
     match_id: string;
     matches:
-      | {
-          court_id: string;
-          scheduled_date: string | null;
-          scheduled_time: string | null;
-        }
-      | {
-          court_id: string;
-          scheduled_date: string | null;
-          scheduled_time: string | null;
-        }[]
+      | { court_id: string; scheduled_date: string | null; scheduled_time: string | null }
+      | { court_id: string; scheduled_date: string | null; scheduled_time: string | null }[]
       | null;
   }>;
   const paymentsToday = paymentsAll.filter((p) => {
@@ -236,28 +210,17 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     if (!p.updated_at) return false;
     return isYmdInArgentina(p.updated_at, todayAr);
   });
-  const confirmadosHoy = paymentsToday.length + practiceApprovedToday.length;
-  const totalCobradoHoy =
-    paymentsToday.reduce((s, p) => s + Number(p.amount ?? 0), 0) +
-    practiceApprovedToday.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const totalEfectivo =
-    paymentsToday.filter((p) => p.payment_method === "cash").reduce((s, p) => s + Number(p.amount ?? 0), 0) +
-    practiceApprovedToday.filter((p) => p.payment_method === "cash").reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const totalTransferencia =
-    paymentsToday.filter((p) => p.payment_method === "transfer").reduce((s, p) => s + Number(p.amount ?? 0), 0) +
-    practiceApprovedToday
-      .filter((p) => p.payment_method === "transfer")
-      .reduce((s, p) => s + Number(p.amount ?? 0), 0);
 
   const profileUserIds = [
-    ...new Set([
-      ...pending.map((p) => p.owner_id),
-      ...practicePending.map((p) => p.player_id),
-      ...practiceApprovedToday.map((p) => p.player_id),
-      ...paymentsToday.map((p) => p.user_id),
-      ...noShows.map((m) => m.owner_id),
-      ...pendingBalances.map((m) => m.owner_id),
-    ].filter(Boolean)),
+    ...new Set(
+      [
+        ...pendingMatches.map((p) => p.owner_id),
+        ...practicePending.map((p) => p.player_id),
+        ...practiceApprovedToday.map((p) => p.player_id),
+        ...paymentsToday.map((p) => p.user_id),
+        ...tournamentPending.flatMap((t) => [t.player1_id, t.player2_id].filter(Boolean) as string[]),
+      ].filter(Boolean)
+    ),
   ];
   const { data: profs } = profileUserIds.length
     ? await supabase.from(DB_TABLES.profiles).select("user_id, name").in("user_id", profileUserIds)
@@ -269,378 +232,145 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     ])
   );
 
-  const debts = (debtRows ?? []) as Array<{
-    id: string;
-    amount: number | null;
-    confirmed_at: string;
-    payment_method: string | null;
-    match_id: string | null;
-  }>;
-  const debtsTodayCount = debts.filter((d) => isYmdInArgentina(d.confirmed_at, todayAr)).length;
+  const pendingItems: PendingItem[] = [
+    ...pendingMatches.map((m): PendingItem => {
+      const totalPrice = Number(m.total_price ?? 0);
+      const amountPaid = Number(m.amount_paid ?? 0);
+      return {
+        kind: "match",
+        id: m.id,
+        badge: matchBadge(m.match_type, m.es_turno_fijo),
+        courtLabel: courtName.get(m.court_id) ?? "Cancha",
+        time: String(m.scheduled_time ?? "").slice(0, 5),
+        playerName: playerName.get(m.owner_id) ?? "Jugador",
+        totalPrice,
+        amountPaid,
+        amountPending: Math.max(totalPrice - amountPaid, 0),
+      };
+    }),
+    ...practicePending.map((pr): PendingItem => ({
+      kind: "practice",
+      id: pr.id,
+      title: pr.title,
+      time: pr.start_time.slice(0, 5),
+      playerName: playerName.get(pr.player_id) ?? "Jugador",
+      amount: Math.round(Number(pr.amount ?? 0)),
+    })),
+    ...tournamentPending.map((t): PendingItem => {
+      const p1 = playerName.get(t.player1_id) ?? "Jugador";
+      const p2 = t.player2_id ? playerName.get(t.player2_id) ?? "Jugador" : null;
+      return {
+        kind: "tournament",
+        id: t.id,
+        tournamentName: t.tournamentName,
+        playerName: p2 ? `${p1} / ${p2}` : p1,
+        amount: Math.round(Number(t.total_price ?? 0)),
+      };
+    }),
+  ];
+
+  const confirmedItems: ConfirmedItem[] = [
+    ...paymentsToday.map((p): ConfirmedItem => {
+      const rel = p.matches;
+      const match = Array.isArray(rel) ? rel[0] ?? null : rel;
+      return {
+        kind: "match",
+        id: p.id,
+        label: courtName.get(match?.court_id ?? "") ?? "Cancha",
+        time: String(match?.scheduled_time ?? "").slice(0, 5),
+        playerName: playerName.get(p.user_id) ?? "Jugador",
+        amount: Number(p.amount ?? 0),
+        method: p.payment_method === "cash" ? "cash" : p.payment_method === "transfer" ? "transfer" : null,
+      };
+    }),
+    ...practiceApprovedToday.map((pr): ConfirmedItem => ({
+      kind: "practice",
+      id: pr.id,
+      label: pr.title,
+      time: pr.start_time.slice(0, 5),
+      playerName: playerName.get(pr.player_id) ?? "Jugador",
+      amount: Number(pr.amount ?? 0),
+      method: pr.payment_method === "cash" ? "cash" : pr.payment_method === "transfer" ? "transfer" : null,
+    })),
+  ];
+
+  const totalCobradoHoy = confirmedItems.reduce((s, c) => s + c.amount, 0);
+  const totalEfectivo = confirmedItems.filter((c) => c.method === "cash").reduce((s, c) => s + c.amount, 0);
+  const totalTransferencia = confirmedItems.filter((c) => c.method === "transfer").reduce((s, c) => s + c.amount, 0);
 
   const err = sp.error ? decodeURIComponent(sp.error) : "";
   const ok = sp.ok === "1";
-  const saldoOk = sp.saldo === "1";
 
   return (
     <div className="flex flex-col gap-5">
       <AdminBackLink />
       <AdminPageHeader
         kicker="Registro diario"
-        title="Cobros pendientes"
-        subtitle="Confirmá los pagos en efectivo y transferencia"
+        title="Cobros y pagos"
+        subtitle={`Hoy, ${formatDateInArgentina(`${todayAr}T12:00:00`)}`}
       />
 
       {ok ? <AdminFlashMessage type="success" message="Actualizado correctamente." /> : null}
-      {saldoOk ? <AdminFlashMessage type="success" message="Saldo registrado correctamente." /> : null}
-      {pendingBalanceErr ? (
-        <AdminFlashMessage type="error" message={`No se pudieron cargar los saldos pendientes: ${pendingBalanceErr.message}`} />
-      ) : null}
       {err ? <AdminFlashMessage type="error" message={err} /> : null}
       {pendErr ? <AdminFlashMessage type="error" message={`No se pudieron cargar los pendientes: ${pendErr.message}`} /> : null}
       {practicePendErr ? (
         <AdminFlashMessage type="error" message={`No se pudieron cargar clases pendientes: ${practicePendErr.message}`} />
       ) : null}
+      {tournamentPendErr ? (
+        <AdminFlashMessage type="error" message={`No se pudieron cargar torneos pendientes: ${tournamentPendErr.message}`} />
+      ) : null}
 
-      <AdminGuideBox title="¿Cómo funciona la sección de cobros?">
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">¿Qué aparece acá?</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Sólo los pagos que el jugador eligió hacer en persona: <strong>efectivo</strong> o <strong>transferencia bancaria</strong>. Los pagos con Mercado Pago se confirman automáticamente y no aparecen aquí.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Flujo de un pago offline</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
-              <li>El jugador reserva una cancha o se anota a una clase y elige pagar en persona.</li>
-              <li>El sistema registra el cobro como <strong>pendiente</strong> y aparece en esta pantalla.</li>
-              <li>Cuando el jugador te entrega el dinero o te hace la transferencia, hacé clic en <strong>Confirmar cobro</strong>. El pago queda registrado y el lugar confirmado.</li>
-              <li>Si el jugador no se presentó, marcalo con <strong>No se presentó</strong> para liberar el turno.</li>
-            </ol>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Resumen del día</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Las tarjetas del encabezado muestran cuántos cobros están pendientes, cuántos se confirmaron hoy y el total cobrado separado por efectivo y transferencia. Estos números se resetean con cada día nuevo.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Historial reciente</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              La sección <strong>Confirmados hoy</strong> muestra todos los cobros offline que ya procesaste en el día. Los últimos 20 cobros aprobados de reservas también son visibles en la lista de historial.
-            </p>
-          </div>
-
-          <div className={adminTip}>
-            <span className="font-bold">Consejo:</span> Si activás los métodos de pago en <strong>Configuración → Métodos de pago</strong>, podés habilitar o deshabilitar efectivo y transferencia para controlar qué opciones ven los jugadores al reservar.
-          </div>
+      <AdminGuideBox title="¿Cómo funciona Cobros y pagos?">
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">¿Qué aparece acá?</p>
+          <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
+            Todo lo que el club cobra en persona: reservas, partidos abiertos confirmados, turnos fijos, clases y
+            torneos con pago en efectivo o transferencia. Los pagos con Mercado Pago se confirman automáticamente y
+            no requieren acción acá.
+          </p>
+        </div>
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">Pago parcial</p>
+          <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
+            Con <strong>$ Registrar pago</strong> podés cargar el monto exacto que te entregó el jugador. Si todavía
+            queda saldo, el turno sigue apareciendo en pendientes con el restante actualizado. Si el monto cubre el
+            total, el cobro se cierra solo.
+          </p>
+        </div>
+        <div className={adminTip}>
+          <span className="font-bold">Consejo:</span> Usá <strong>Pagaron todo ✓</strong> cuando te entregan el
+          importe completo de una sola vez — es más rápido que abrir el formulario de pago parcial.
+        </div>
       </AdminGuideBox>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={adminCard}>
           <p className={adminKicker}>Pendientes</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
-            {pending.length + practicePending.length}
+            {pendingItems.length}
           </p>
           <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">de cobro hoy</p>
         </div>
         <div className={adminCard}>
           <p className={adminKicker}>Confirmados</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{confirmadosHoy}</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            {confirmedItems.length}
+          </p>
           <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">efectivo y transferencia</p>
         </div>
         <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Total cobrado</p>
           <p className="mt-2 text-3xl font-bold tabular-nums text-[var(--text-primary)]">
-            ${totalCobradoHoy.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            ${totalCobradoHoy.toLocaleString("es-AR")}
           </p>
           <p className="mt-2 space-y-0.5 text-[11px] font-medium text-[var(--text-tertiary)]">
             <span className="block">💵 Efectivo: ${totalEfectivo.toLocaleString("es-AR")}</span>
             <span className="block">🏦 Transferencia: ${totalTransferencia.toLocaleString("es-AR")}</span>
           </p>
-          {debtsTodayCount > 0 ? (
-            <p className="mt-2 text-[10px] font-medium text-[var(--text-tertiary)]">{debtsTodayCount} deuda(s) PadeLibre registradas</p>
-          ) : null}
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Pendientes ({todayAr})</h2>
-        {pending.length === 0 && practicePending.length === 0 ? (
-          <p className={adminEmptyState}>No hay cobros pendientes para hoy.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {practicePending.map((pr) => {
-              const pay = String(pr.payment_status ?? "").toLowerCase();
-              const methodLabel = pay === "cash_pending" ? "Efectivo" : "Transferencia";
-              const name = playerName.get(pr.player_id) ?? "Jugador";
-              const time = String(pr.start_time ?? "").slice(0, 5);
-              const amount = Math.round(Number(pr.amount ?? 0));
-              return (
-                <li
-                  key={pr.id}
-                  className={`${adminCard} flex flex-col gap-3 border-amber-200/80 dark:border-amber-900/50`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
-                      <p className="text-sm text-[var(--text-tertiary)]">
-                        Clase · {pr.title} · {time}
-                      </p>
-                    </div>
-                    <p className="text-lg font-bold text-[var(--text-primary)]">
-                      ${amount.toLocaleString("es-AR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-[var(--text-tertiary)]">Método:</span>
-                    <span className={adminBadgeNeutral}>
-                      {methodLabel}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <form action={confirmPracticeOfflineCobro} className="flex-1">
-                      <input type="hidden" name="registration_id" value={pr.id} />
-                      <button
-                        type="submit"
-                        className={`w-full ${adminCTAPrimary}`}
-                      >
-                        Confirmar cobro
-                      </button>
-                    </form>
-                    <form action={markPracticeOfflineNoShow} className="flex-1">
-                      <input type="hidden" name="registration_id" value={pr.id} />
-                      <button
-                        type="submit"
-                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)] active:scale-[0.99]"
-                      >
-                        No se presentó
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
-            {pending.map((m) => {
-              const pay = String(m.payment_status ?? "").toLowerCase();
-              const methodLabel =
-                pay === "cash_pending" ? "Efectivo" : pay === "transfer_pending" ? "Transferencia" : "MP";
-              const name = playerName.get(m.owner_id) ?? "Jugador";
-              const time = String(m.scheduled_time ?? "").slice(0, 5);
-              const court = courtName.get(m.court_id) ?? "Cancha";
-              const amount = Math.round(Number(m.total_price ?? 0));
-              return (
-                <li
-                  key={m.id}
-                  className={`${adminCard} flex flex-col gap-3 border-[var(--border-subtle)]`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
-                      <p className="text-sm text-[var(--text-tertiary)]">
-                        {court} · {time} ·{" "}
-                        {String(m.match_type ?? "").toLowerCase() === "reservation" ? "Reserva" : "Partido"}
-                      </p>
-                    </div>
-                    <p className="text-lg font-bold text-[var(--text-primary)]">
-                      ${amount.toLocaleString("es-AR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-[var(--text-tertiary)]">Método:</span>
-                    <span className={adminBadgeNeutral}>
-                      {methodLabel}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <form action={confirmOfflineCobro} className="flex-1">
-                      <input type="hidden" name="match_id" value={m.id} />
-                      <button
-                        type="submit"
-                        className={`w-full ${adminCTAPrimary}`}
-                      >
-                        Confirmar cobro
-                      </button>
-                    </form>
-                    <form action={markOfflineNoShow} className="flex-1">
-                      <input type="hidden" name="match_id" value={m.id} />
-                      <button
-                        type="submit"
-                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-app)] active:scale-[0.99]"
-                      >
-                        No se presentó
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Saldos pendientes en club</h2>
-        <p className="text-xs text-[var(--text-tertiary)]">
-          Reservas y partidos con seña pagada online por Mercado Pago cuyo saldo restante se cobra en persona.
-        </p>
-        {pendingBalances.length === 0 ? (
-          <p className={adminEmptyState}>No hay saldos pendientes de cobro en el club.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {pendingBalances.map((m) => {
-              const name = playerName.get(m.owner_id) ?? "Jugador";
-              const club = clubNameByCourt.get(m.court_id) ?? "Club";
-              const court = courtName.get(m.court_id) ?? "Cancha";
-              const time = String(m.scheduled_time ?? "").slice(0, 5);
-              const dateLabel = m.scheduled_date
-                ? formatDateInArgentina(`${m.scheduled_date}T12:00:00`)
-                : "—";
-              const paid = Math.round(Number(m.amount_paid ?? 0));
-              const pendingAmount = Math.round(Number(m.amount_pending ?? 0));
-              return (
-                <li
-                  key={m.id}
-                  className={`${adminCard} flex flex-col gap-3 border-[var(--border-subtle)]`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-base font-bold text-[var(--text-primary)]">{name}</p>
-                      <p className="text-sm text-[var(--text-tertiary)]">
-                        {club} · {court} · {dateLabel} {time}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span className="text-[var(--text-tertiary)]">
-                      Seña pagada: <span className="font-semibold text-[var(--text-primary)]">${paid.toLocaleString("es-AR")}</span>
-                    </span>
-                    <span className="text-[var(--text-tertiary)]">
-                      Saldo pendiente: <span className="font-semibold text-amber-700 dark:text-amber-300">${pendingAmount.toLocaleString("es-AR")}</span>
-                    </span>
-                  </div>
-                  <form action={confirmRemainingBalanceAction}>
-                    <input type="hidden" name="match_id" value={m.id} />
-                    <button type="submit" className={`w-full ${adminCTAPrimary}`}>
-                      Confirmar saldo recibido
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {paymentsToday.length > 0 || practiceApprovedToday.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Confirmados hoy ({todayAr})</h2>
-          <ul className="flex flex-col gap-2">
-            {practiceApprovedToday.map((pr) => {
-              const methodLabel =
-                pr.payment_method === "cash"
-                  ? "Efectivo"
-                  : pr.payment_method === "transfer"
-                    ? "Transferencia"
-                    : "—";
-              const name = playerName.get(pr.player_id) ?? "Jugador";
-              const time = String(pr.start_time ?? "").slice(0, 5);
-              const amount = Number(pr.amount ?? 0);
-              return (
-                <li
-                  key={pr.id}
-                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
-                    <p className="text-sm text-[var(--text-tertiary)]">
-                      Clase · {pr.title} · {time || "—"}
-                    </p>
-                    <span className={`mt-1.5 inline-block ${adminBadgeNeutral}`}>
-                      {methodLabel}
-                    </span>
-                  </div>
-                  <p className="shrink-0 text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                    ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                  </p>
-                </li>
-              );
-            })}
-            {paymentsToday.map((p) => {
-              const rel = p.matches;
-              const match = Array.isArray(rel) ? rel[0] ?? null : rel;
-              const time = String(match?.scheduled_time ?? "").slice(0, 5);
-              const court = courtName.get(match?.court_id ?? "") ?? "Cancha";
-              const name = playerName.get(p.user_id) ?? "Jugador";
-              const methodLabel =
-                p.payment_method === "cash"
-                  ? "Efectivo"
-                  : p.payment_method === "transfer"
-                    ? "Transferencia"
-                    : "—";
-              const amount = Number(p.amount ?? 0);
-              return (
-                <li
-                  key={p.id}
-                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-emerald-200/60 dark:border-emerald-900/40`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
-                    <p className="text-sm text-[var(--text-tertiary)]">
-                      {court} · {time || "—"}
-                    </p>
-                    <span className={`mt-1.5 inline-block ${adminBadgeNeutral}`}>
-                      {methodLabel}
-                    </span>
-                  </div>
-                  <p className="shrink-0 text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                    ${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      {noShows.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">No se presentaron hoy ({todayAr})</h2>
-          <ul className="flex flex-col gap-2">
-            {noShows.map((m) => {
-              const name = playerName.get(m.owner_id) ?? "Jugador";
-              const time = String(m.scheduled_time ?? "").slice(0, 5);
-              const court = courtName.get(m.court_id) ?? "Cancha";
-              return (
-                <li
-                  key={m.id}
-                  className={`${adminCard} flex flex-wrap items-center justify-between gap-2 border-rose-200/60 dark:border-rose-900/40`}
-                >
-                  <div>
-                    <p className="font-semibold text-[var(--text-primary)]">{name}</p>
-                    <p className="text-sm text-[var(--text-tertiary)]">
-                      {court} · {time || "—"}
-                    </p>
-                  </div>
-                  <span className={adminBadgeError}>
-                    No show
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      <p className="text-center text-xs text-[var(--text-tertiary)]">
-        ¿Problemas con un cobro?{" "}
-        <Link href="/admin/config" className="font-semibold text-[#0085FC] hover:underline">
-          Configuración
-        </Link>
-      </p>
+      <CobrosClient pendingItems={pendingItems} confirmedItems={confirmedItems} todayLabel={todayAr} />
     </div>
   );
 }

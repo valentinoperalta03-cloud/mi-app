@@ -52,10 +52,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     title: "Registro diario",
     icon: DollarSign,
     defaultOpen: false,
-    items: [
-      { href: "/admin/pagos", label: "Pagos", icon: CreditCard },
-      { href: "/admin/cobros", label: "Cobros", icon: Banknote },
-    ],
+    items: [{ href: "/admin/cobros", label: "Cobros y pagos", icon: Banknote }],
   },
   {
     key: "analisis",
