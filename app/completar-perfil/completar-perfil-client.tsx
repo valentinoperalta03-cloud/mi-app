@@ -2,7 +2,7 @@
 
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
-import { Camera, ChevronLeft, Loader2, User } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppleToast } from "@/components/apple-toast";
@@ -15,8 +15,7 @@ const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"] }
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const LIME = "#CCFF00";
-const DARK = "#030812";
-const NAVY = "#0A1628";
+const BG = "#06101E";
 
 const CATEGORIES: { value: string; description: string }[] = [
   { value: "8va", description: "Recién empezás a jugar" },
@@ -27,6 +26,22 @@ const CATEGORIES: { value: string; description: string }[] = [
   { value: "3ra", description: "Alto nivel, torneos provinciales" },
   { value: "2da", description: "Jugador destacado, torneos regionales" },
   { value: "1ra", description: "Jugador de élite, torneos nacionales" },
+];
+
+const HAND_OPTIONS = [
+  { id: "derecha" as const, label: "Diestro", emoji: "🏏", sub: "Mano derecha" },
+  { id: "izquierda" as const, label: "Zurdo", emoji: "🤜", sub: "Mano izquierda" },
+];
+
+const POSITION_OPTIONS = [
+  { id: "drive" as const, label: "Drive", emoji: "🎯" },
+  { id: "reves" as const, label: "Revés", emoji: "🔄" },
+  { id: "ambas" as const, label: "Indistinto", emoji: "↔️" },
+];
+
+const GENDER_OPTIONS = [
+  { id: "masculino" as const, label: "Caballeros", emoji: "👨" },
+  { id: "femenino" as const, label: "Damas", emoji: "👩" },
 ];
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -42,22 +57,24 @@ function calcularEdad(fechaNacimiento: string): number | null {
   return edad > 0 && edad < 120 ? edad : null;
 }
 
-const springTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
+const stepTransition = { type: "spring" as const, stiffness: 280, damping: 28 };
 
 const slideVariants = {
   enter: { x: 40, opacity: 0 },
-  center: { x: 0, opacity: 1, transition: { ...springTransition, staggerChildren: 0.08 } },
+  center: { x: 0, opacity: 1 },
   exit: { x: -40, opacity: 0 },
 };
 
-const itemVariants = {
-  enter: { opacity: 0, y: 16 },
-  center: { opacity: 1, y: 0 },
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 },
 };
+
+const cardShadow = "inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.3)";
 
 function Kicker({ step }: { step: Step }) {
   return (
-    <span className={`${ibmPlexMono.className} text-[11px] uppercase tracking-[0.2em] text-[#CCFF00]/60`}>
+    <span className={`${ibmPlexMono.className} text-[10px] uppercase tracking-[0.2em] text-[#CCFF00]/60`}>
       Paso {step} / 5
     </span>
   );
@@ -65,17 +82,16 @@ function Kicker({ step }: { step: Step }) {
 
 function ProgressBar({ step }: { step: Step }) {
   return (
-    <div className="flex w-full gap-2">
-      {[1, 2, 3, 4, 5].map((s) => (
+    <div className="flex w-full gap-1.5">
+      {[1, 2, 3, 4, 5].map((i) => (
         <motion.div
-          key={s}
-          className="h-[4px] flex-1 rounded-full"
-          initial={false}
+          key={i}
+          className="h-1 flex-1 rounded-full"
           animate={{
-            backgroundColor: s <= step ? LIME : "rgba(255,255,255,0.10)",
-            boxShadow: s <= step ? "0 0 8px rgba(204,255,0,0.55)" : "0 0 0px rgba(204,255,0,0)",
+            backgroundColor: i <= step ? LIME : "rgba(255,255,255,0.10)",
+            boxShadow: i === step ? "0 0 8px rgba(204,255,0,0.6)" : "none",
           }}
-          transition={springTransition}
+          transition={{ duration: 0.3 }}
         />
       ))}
     </div>
@@ -84,59 +100,38 @@ function ProgressBar({ step }: { step: Step }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h1 className={`${spaceGrotesk.className} text-[26px] font-black uppercase tracking-tight text-white`}>
+    <h1 className={`${spaceGrotesk.className} text-[28px] font-black uppercase leading-tight text-white`}>
       {children}
     </h1>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ children, index = 0 }: { children: React.ReactNode; index?: number }) {
   return (
     <motion.div
-      variants={itemVariants}
-      className="rounded-3xl border border-white/[0.07] bg-white/[0.04] p-5 backdrop-blur-sm"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
+      style={{ boxShadow: cardShadow }}
+      className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-5 backdrop-blur-md"
     >
       {children}
     </motion.div>
   );
 }
 
-function FloatingInput({
-  label,
-  value,
-  onChange,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
-  const [focused, setFocused] = useState(false);
-  const active = focused || Boolean(value);
+function HighlightCard({ children, index = 0 }: { children: React.ReactNode; index?: number }) {
   return (
-    <div className="relative">
-      <input
-        {...rest}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={{ height: 56 }}
-        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.05] px-4 pt-3 text-[15px] text-white outline-none transition-colors focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
-      />
-      <motion.label
-        initial={false}
-        animate={{
-          top: active ? 8 : 18,
-          fontSize: active ? 11 : 15,
-          color: active ? "rgba(204,255,0,0.75)" : "rgba(255,255,255,0.35)",
-        }}
-        transition={{ duration: 0.15 }}
-        className="pointer-events-none absolute left-4 origin-left"
-      >
-        {label}
-      </motion.label>
-    </div>
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
+      className="rounded-2xl border border-[#CCFF00]/20 bg-[#CCFF00]/[0.05] p-4"
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -146,12 +141,51 @@ function SelectField(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...rest}
       style={{ height: 52, ...style }}
-      className={`w-full rounded-2xl border border-white/[0.10] bg-white/[0.05] px-4 text-[15px] text-white outline-none transition-colors focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20 disabled:opacity-40 ${className ?? ""}`}
+      className={`w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-[15px] text-white outline-none transition-colors focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20 disabled:opacity-40 ${className ?? ""}`}
     />
   );
 }
 
-function WiggleChip({
+function HandCard({
+  selected,
+  onClick,
+  emoji,
+  label,
+  sub,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  emoji: string;
+  label: string;
+  sub: string;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.96 }}
+      animate={{
+        borderColor: selected ? "#CCFF00" : "rgba(255,255,255,0.10)",
+        backgroundColor: selected ? "rgba(204,255,0,0.08)" : "rgba(255,255,255,0.04)",
+        boxShadow: selected ? "0 0 20px rgba(204,255,0,0.2)" : "none",
+      }}
+      className="flex flex-1 flex-col items-center gap-3 rounded-3xl border p-6"
+    >
+      <motion.span
+        animate={selected ? { rotate: [0, -15, 15, 0] } : { rotate: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-[48px]"
+      >
+        {emoji}
+      </motion.span>
+      <span className={`text-base font-black ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
+      <span className="text-xs text-white/40">{sub}</span>
+    </motion.button>
+  );
+}
+
+function PositionChip({
   selected,
   onClick,
   emoji,
@@ -163,25 +197,28 @@ function WiggleChip({
   label: string;
 }) {
   return (
-    <motion.div
+    <motion.button
+      type="button"
       onClick={onClick}
+      whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.95 }}
       animate={{
         borderColor: selected ? "#CCFF00" : "rgba(255,255,255,0.10)",
         backgroundColor: selected ? "rgba(204,255,0,0.08)" : "rgba(255,255,255,0.05)",
+        boxShadow: selected ? "0 0 20px rgba(204,255,0,0.2)" : "none",
       }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-1 cursor-pointer flex-col items-center gap-3 rounded-2xl border p-5"
+      style={{ height: 64 }}
+      className="flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl border"
     >
       <motion.span
         animate={selected ? { rotate: [0, -10, 10, 0] } : { rotate: 0 }}
         transition={{ duration: 0.4 }}
-        className="text-4xl"
+        className="text-xl"
       >
         {emoji}
       </motion.span>
-      <span className="text-sm font-bold text-white">{label}</span>
-    </motion.div>
+      <span className={`text-xs font-bold ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
+    </motion.button>
   );
 }
 
@@ -197,21 +234,21 @@ function GenderCard({
   label: string;
 }) {
   return (
-    <motion.div
+    <motion.button
+      type="button"
       onClick={onClick}
-      whileTap={{ scale: 0.97 }}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.96 }}
       animate={{
-        scale: selected ? 1.02 : 1,
         borderColor: selected ? "#CCFF00" : "rgba(255,255,255,0.10)",
-        backgroundColor: selected ? "rgba(204,255,0,0.08)" : "rgba(255,255,255,0.05)",
+        backgroundColor: selected ? "rgba(204,255,0,0.08)" : "rgba(255,255,255,0.04)",
       }}
-      transition={{ duration: 0.2 }}
-      style={{ height: 88 }}
-      className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border"
+      style={{ minHeight: 120 }}
+      className="flex flex-1 flex-col items-center gap-3 rounded-3xl border p-6"
     >
-      <span className="text-3xl">{emoji}</span>
-      <span className="text-sm font-bold text-white">{label}</span>
-    </motion.div>
+      <span className="text-[56px]">{emoji}</span>
+      <span className={`text-base font-black ${selected ? "text-[#CCFF00]" : "text-white"}`}>{label}</span>
+    </motion.button>
   );
 }
 
@@ -229,10 +266,13 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
-      className={`rounded-xl py-3 text-sm font-bold transition-colors duration-150 ${
+      animate={{
+        boxShadow: selected ? "0 0 20px rgba(204,255,0,0.25)" : "none",
+      }}
+      className={`rounded-xl py-3 text-sm font-black transition-colors duration-150 ${
         selected
-          ? "border-transparent bg-[#CCFF00] text-[#030812]"
-          : "border border-white/[0.10] bg-white/[0.05] text-white/65 hover:bg-white/[0.10]"
+          ? "border border-transparent bg-[#CCFF00] text-[#06101E]"
+          : "border border-white/[0.10] bg-white/[0.05] text-white/60 hover:border-white/[0.20] hover:bg-white/[0.08]"
       }`}
     >
       {label}
@@ -240,17 +280,15 @@ function CategoryChip({
   );
 }
 
-function MainButton({
+function PrimaryButton({
   enabled,
   pending,
   onClick,
-  pulse,
   children,
 }: {
   enabled: boolean;
   pending?: boolean;
   onClick: () => void;
-  pulse?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -258,30 +296,103 @@ function MainButton({
       type="button"
       onClick={onClick}
       disabled={!enabled || pending}
-      whileTap={enabled ? { scale: 0.98 } : {}}
-      animate={pulse && enabled && !pending ? { scale: [1, 1.03, 1] } : { scale: 1 }}
-      transition={pulse ? { duration: 1.8, repeat: Infinity, ease: "easeInOut" } : { duration: 0.15 }}
-      style={{
-        boxShadow: enabled ? "0 0 30px rgba(204,255,0,0.20)" : "none",
-      }}
-      className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#CCFF00] py-4 text-base font-black uppercase tracking-wide text-[#030812] disabled:cursor-not-allowed disabled:opacity-40 ${spaceGrotesk.className}`}
+      whileHover={enabled ? { scale: 1.02, boxShadow: "0 0 40px rgba(204,255,0,0.5)" } : {}}
+      whileTap={enabled ? { scale: 0.97 } : {}}
+      style={{ boxShadow: enabled ? "0 0 25px rgba(204,255,0,0.3)" : "none" }}
+      className={`w-full rounded-2xl bg-[#CCFF00] py-4 text-base font-black uppercase tracking-widest text-[#06101E] disabled:cursor-not-allowed disabled:opacity-30 ${spaceGrotesk.className}`}
     >
-      {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-      {children}
+      {pending ? <Loader2 size={18} className="mx-auto animate-spin" /> : children}
+    </motion.button>
+  );
+}
+
+function FinalButton({ pending, onClick }: { pending: boolean; onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      animate={{
+        boxShadow: [
+          "0 0 20px rgba(204,255,0,0.3)",
+          "0 0 40px rgba(204,255,0,0.5)",
+          "0 0 20px rgba(204,255,0,0.3)",
+        ],
+      }}
+      transition={{ repeat: Infinity, duration: 2.5 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
+      className={`w-full rounded-2xl bg-[#CCFF00] py-4 text-base font-black uppercase tracking-widest text-[#06101E] disabled:cursor-not-allowed disabled:opacity-30 ${spaceGrotesk.className}`}
+    >
+      {pending ? <Loader2 className="mx-auto animate-spin" size={20} /> : "¡A jugar! →"}
     </motion.button>
   );
 }
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       aria-label="Volver"
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-white transition hover:bg-white/[0.14]"
+      whileTap={{ scale: 0.94 }}
+      className="fixed bottom-6 left-6 z-20 rounded-full border border-white/[0.10] bg-white/[0.08] p-3 transition-colors hover:bg-white/[0.12]"
     >
-      <ChevronLeft size={18} />
-    </button>
+      <ChevronLeft size={18} className="text-white" />
+    </motion.button>
+  );
+}
+
+function AvatarCircle({
+  avatarPreview,
+  onClick,
+  size,
+  pulseInfinite,
+}: {
+  avatarPreview: string | null;
+  onClick?: () => void;
+  size: number;
+  pulseInfinite?: boolean;
+}) {
+  return (
+    <motion.div
+      whileHover={onClick ? { scale: 1.05 } : {}}
+      whileTap={onClick ? { scale: 0.95 } : {}}
+      onClick={onClick}
+      animate={
+        pulseInfinite
+          ? {
+              boxShadow: [
+                "0 0 20px rgba(204,255,0,0.3)",
+                "0 0 40px rgba(204,255,0,0.6)",
+                "0 0 20px rgba(204,255,0,0.3)",
+              ],
+            }
+          : {}
+      }
+      transition={pulseInfinite ? { repeat: Infinity, duration: 2 } : { duration: 0.2 }}
+      className={`relative mx-auto overflow-hidden rounded-full ${onClick ? "cursor-pointer" : ""}`}
+      style={{
+        width: size,
+        height: size,
+        border: pulseInfinite ? "2px solid #CCFF00" : "2px solid rgba(204,255,0,0.5)",
+        boxShadow: pulseInfinite ? undefined : "0 0 20px rgba(204,255,0,0.2), inset 0 0 20px rgba(204,255,0,0.05)",
+      }}
+    >
+      {avatarPreview ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-white/[0.06]">
+          <span className="text-4xl">👤</span>
+        </div>
+      )}
+      {onClick ? (
+        <div className="absolute bottom-0 right-0 rounded-full bg-[#CCFF00] p-1.5">
+          <span className="text-xs text-[#06101E]">📷</span>
+        </div>
+      ) : null}
+    </motion.div>
   );
 }
 
@@ -405,22 +516,23 @@ export default function CompletarPerfilClient({
   }
 
   const categoryDescription = CATEGORIES.find((c) => c.value === category)?.description;
-  const handLabel = preferredHand === "derecha" ? "Diestro" : preferredHand === "izquierda" ? "Zurdo" : "";
-  const positionLabel =
-    courtPosition === "drive" ? "Drive" : courtPosition === "reves" ? "Revés" : "Indistinto";
+  const genderPill = gender === "masculino" ? "👨 Caballeros" : gender === "femenino" ? "👩 Damas" : "";
+  const handPill = preferredHand === "derecha" ? "🏏 Diestro" : preferredHand === "izquierda" ? "🤜 Zurdo" : "";
+  const positionPill =
+    courtPosition === "drive" ? "🎯 Drive" : courtPosition === "reves" ? "🔄 Revés" : courtPosition === "ambas" ? "↔️ Indistinto" : "";
+  const summaryPills = [genderPill, handPill, positionPill, province].filter(Boolean);
 
   return (
     <main
       className="relative min-h-dvh overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #030812 0%, #0A1628 50%, #0D1F3C 100%)" }}
+      style={{
+        background: BG,
+        backgroundImage: "radial-gradient(rgba(204,255,0,0.05) 1px, transparent 1px)",
+        backgroundSize: "32px 32px",
+      }}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: "radial-gradient(rgba(204,255,0,0.06) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+      <div className="fixed inset-x-0 top-0 z-30 h-[2px]" style={{ backgroundColor: LIME }} />
+
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-[420px] flex-col gap-8 px-5 py-6">
         <div className="flex flex-col items-center gap-5">
           <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-lg" />
@@ -430,7 +542,7 @@ export default function CompletarPerfilClient({
           </div>
         </div>
 
-        <div className="relative flex-1 overflow-hidden">
+        <div className="relative flex-1 overflow-hidden pb-16">
           <AnimatePresence mode="wait" initial={false}>
             {step === 1 && (
               <motion.div
@@ -439,53 +551,20 @@ export default function CompletarPerfilClient({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={springTransition}
+                transition={stepTransition}
                 className="flex flex-col gap-5"
               >
                 <SectionTitle>Datos personales</SectionTitle>
 
-                <Card>
+                <Card index={0}>
                   <div className="flex flex-col items-center gap-3">
-                    <div className="relative">
-                      <motion.button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        animate={{
-                          borderColor: [
-                            "rgba(204,255,0,0.4)",
-                            "rgba(204,255,0,0.85)",
-                            "rgba(204,255,0,0.4)",
-                          ],
-                        }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                        className="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 bg-white/[0.06]"
-                      >
-                        {avatarPreview ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                              <Camera size={20} className="text-white" />
-                            </div>
-                          </>
-                        ) : (
-                          <div
-                            className="flex h-full w-full items-center justify-center"
-                            style={{ backgroundColor: "rgba(204,255,0,0.10)" }}
-                          >
-                            <User size={30} style={{ color: LIME }} />
-                          </div>
-                        )}
-                      </motion.button>
-                      <span
-                        style={{ backgroundColor: LIME }}
-                        className="pointer-events-none absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#030812]"
-                      >
-                        <Camera size={13} color={DARK} />
-                      </span>
-                    </div>
+                    <AvatarCircle
+                      avatarPreview={avatarPreview}
+                      onClick={() => fileInputRef.current?.click()}
+                      size={96}
+                    />
                     <p className="text-xs text-white/40">
-                      {uploadingAvatar ? "Subiendo foto…" : "Tocá para cambiar tu foto"}
+                      {uploadingAvatar ? "Subiendo foto…" : "Tocá para agregar tu foto"}
                     </p>
                     <input
                       ref={fileInputRef}
@@ -501,38 +580,60 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <Card>
-                  <div className="flex flex-col gap-4">
-                    <FloatingInput label="Tu nombre completo" value={name} onChange={(e) => setName(e.target.value)} />
-                    <div>
-                      <span className="mb-2 block text-sm font-bold text-white/70">¿Cuándo naciste?</span>
+                <Card index={1}>
+                  <div className="flex flex-col gap-5">
+                    <div className="relative">
+                      <motion.label
+                        initial={false}
+                        animate={{
+                          y: name ? -20 : 0,
+                          scale: name ? 0.8 : 1,
+                          color: name ? "#CCFF00" : "rgba(255,255,255,0.35)",
+                        }}
+                        className="pointer-events-none absolute left-4 top-3.5 origin-left text-sm"
+                      >
+                        Tu nombre completo
+                      </motion.label>
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        style={{ height: 60 }}
+                        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 pb-3 pt-5 text-white outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className={`${ibmPlexMono.className} block text-xs uppercase tracking-wider text-white/40`}>
+                        Fecha de nacimiento
+                      </label>
                       <input
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                         max={new Date().toISOString().slice(0, 10)}
-                        style={{ height: 52 }}
-                        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.05] px-4 text-[15px] text-white outline-none transition-colors focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
+                        style={{ height: 52, colorScheme: "dark" }}
+                        className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-[#CCFF00]"
                       />
                       <AnimatePresence>
-                        {edad !== null && (
-                          <motion.span
-                            initial={{ opacity: 0, y: 4 }}
+                        {edad !== null ? (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 4 }}
-                            className="mt-2 inline-block rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-3 py-1 text-sm font-bold text-[#CCFF00]"
+                            exit={{ opacity: 0 }}
+                            className="flex items-center gap-2"
                           >
-                            {edad} años 🎂
-                          </motion.span>
-                        )}
+                            <span className="text-lg font-black text-[#CCFF00]">{edad}</span>
+                            <span className="text-sm text-white/50">años 🎂</span>
+                          </motion.div>
+                        ) : null}
                       </AnimatePresence>
                     </div>
                   </div>
                 </Card>
 
-                <MainButton enabled={canStep1} onClick={goNext}>
+                <PrimaryButton enabled={canStep1} onClick={goNext}>
                   Continuar
-                </MainButton>
+                </PrimaryButton>
               </motion.div>
             )}
 
@@ -543,64 +644,49 @@ export default function CompletarPerfilClient({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={springTransition}
+                transition={stepTransition}
                 className="flex flex-col gap-5"
               >
                 <SectionTitle>Estilo de juego</SectionTitle>
 
-                <Card>
+                <Card index={0}>
                   <div className="flex flex-col gap-3">
                     <span className="text-sm font-bold text-white/70">Mano hábil</span>
                     <div className="flex gap-3">
-                      <WiggleChip
-                        selected={preferredHand === "derecha"}
-                        onClick={() => setPreferredHand("derecha")}
-                        emoji="🖐️"
-                        label="Diestro"
-                      />
-                      <WiggleChip
-                        selected={preferredHand === "izquierda"}
-                        onClick={() => setPreferredHand("izquierda")}
-                        emoji="🤚"
-                        label="Zurdo"
-                      />
+                      {HAND_OPTIONS.map((opt) => (
+                        <HandCard
+                          key={opt.id}
+                          selected={preferredHand === opt.id}
+                          onClick={() => setPreferredHand(opt.id)}
+                          emoji={opt.emoji}
+                          label={opt.label}
+                          sub={opt.sub}
+                        />
+                      ))}
                     </div>
                   </div>
                 </Card>
 
-                <Card>
+                <Card index={1}>
                   <div className="flex flex-col gap-3">
                     <span className="text-sm font-bold text-white/70">Posición en cancha</span>
                     <div className="flex gap-2">
-                      <WiggleChip
-                        selected={courtPosition === "drive"}
-                        onClick={() => setCourtPosition("drive")}
-                        emoji="🎯"
-                        label="Drive"
-                      />
-                      <WiggleChip
-                        selected={courtPosition === "reves"}
-                        onClick={() => setCourtPosition("reves")}
-                        emoji="🔄"
-                        label="Revés"
-                      />
-                      <WiggleChip
-                        selected={courtPosition === "ambas"}
-                        onClick={() => setCourtPosition("ambas")}
-                        emoji="↔️"
-                        label="Indistinto"
-                      />
+                      {POSITION_OPTIONS.map((opt) => (
+                        <PositionChip
+                          key={opt.id}
+                          selected={courtPosition === opt.id}
+                          onClick={() => setCourtPosition(opt.id)}
+                          emoji={opt.emoji}
+                          label={opt.label}
+                        />
+                      ))}
                     </div>
                   </div>
                 </Card>
 
-                <MainButton enabled={canStep2} onClick={goNext}>
+                <PrimaryButton enabled={canStep2} onClick={goNext}>
                   Continuar
-                </MainButton>
-
-                <div className="flex justify-start">
-                  <BackButton onClick={goBack} />
-                </div>
+                </PrimaryButton>
               </motion.div>
             )}
 
@@ -611,38 +697,39 @@ export default function CompletarPerfilClient({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={springTransition}
+                transition={stepTransition}
                 className="flex flex-col gap-5"
               >
                 <SectionTitle>Perfil deportivo</SectionTitle>
 
-                <Card>
+                <Card index={0}>
                   <div className="flex flex-col gap-3">
                     <span className="text-sm font-bold text-white/70">Género</span>
                     <div className="flex gap-3">
-                      <GenderCard
-                        selected={gender === "masculino"}
-                        onClick={() => setGender("masculino")}
-                        emoji="♂️"
-                        label="Caballeros"
-                      />
-                      <GenderCard
-                        selected={gender === "femenino"}
-                        onClick={() => setGender("femenino")}
-                        emoji="♀️"
-                        label="Damas"
-                      />
+                      {GENDER_OPTIONS.map((opt) => (
+                        <GenderCard
+                          key={opt.id}
+                          selected={gender === opt.id}
+                          onClick={() => setGender(opt.id)}
+                          emoji={opt.emoji}
+                          label={opt.label}
+                        />
+                      ))}
                     </div>
                   </div>
                 </Card>
 
-                <Card>
+                <HighlightCard index={1}>
+                  <p className="text-sm font-bold text-white">🏆 Elegí con honestidad</p>
+                  <p className="mt-1 text-xs leading-relaxed text-white/55">
+                    Si elegís una categoría que no es la tuya, no vas a poder unirte a partidos con tus amigos.
+                    Mejor empezar bien 😊
+                  </p>
+                </HighlightCard>
+
+                <Card index={2}>
                   <div className="flex flex-col gap-3">
                     <span className="text-sm font-bold text-white/70">Categoría</span>
-                    <div className="rounded-2xl border border-[#CCFF00]/30 bg-[#CCFF00]/5 px-4 py-3 text-[13px] leading-relaxed text-white/80">
-                      🏆 Elegí tu categoría con honestidad. Si mentís, no vas a poder unirte a partidos con tus
-                      amigos.
-                    </div>
                     <div className="grid grid-cols-4 gap-2">
                       {CATEGORIES.map((opt) => (
                         <CategoryChip
@@ -668,13 +755,9 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <MainButton enabled={canStep3} onClick={goNext}>
+                <PrimaryButton enabled={canStep3} onClick={goNext}>
                   Continuar
-                </MainButton>
-
-                <div className="flex justify-start">
-                  <BackButton onClick={goBack} />
-                </div>
+                </PrimaryButton>
               </motion.div>
             )}
 
@@ -685,42 +768,50 @@ export default function CompletarPerfilClient({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={springTransition}
+                transition={stepTransition}
                 className="flex flex-col gap-5"
               >
                 <SectionTitle>Contacto</SectionTitle>
 
-                <motion.div variants={itemVariants} className="rounded-2xl border border-[#CCFF00]/20 bg-[#CCFF00]/[0.04] p-4">
-                  <p className="text-sm font-semibold text-white">📱 Tu WhatsApp es clave</p>
-                  <p className="mt-1 text-xs leading-relaxed text-white/55">
-                    Es tu principal medio de comunicación con los clubes donde reservés. Te van a escribir para
-                    confirmar turnos, novedades y más.
-                  </p>
+                <motion.div
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="flex items-start gap-3 rounded-2xl border border-[#25D366]/30 p-4"
+                  style={{ background: "rgba(37,211,102,0.05)" }}
+                >
+                  <span className="shrink-0 text-2xl">💬</span>
+                  <div>
+                    <p className="text-sm font-bold text-white">Tu WhatsApp es clave</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/55">
+                      Es tu principal medio de comunicación con los clubes donde reservés. Te van a escribir para
+                      confirmar turnos y novedades. Tu número nunca se comparte públicamente.
+                    </p>
+                  </div>
                 </motion.div>
 
-                <Card>
-                  <div className="flex flex-col gap-3">
-                    <span className="text-sm font-bold text-white/70">WhatsApp</span>
-                    <div className="flex gap-2">
-                      <span
-                        style={{ height: 52 }}
-                        className="flex items-center rounded-2xl border border-white/[0.10] bg-white/[0.05] px-3 text-[15px] font-medium text-white/70"
-                      >
-                        +54
-                      </span>
-                      <input
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
-                        inputMode="numeric"
-                        placeholder="91122334455"
-                        style={{ height: 52 }}
-                        className="flex-1 rounded-2xl border border-white/[0.10] bg-white/[0.05] px-4 text-[15px] text-white placeholder:text-white/30 outline-none transition-colors focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00]/20"
-                      />
+                <Card index={1}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/[0.10] bg-white/[0.06] px-3"
+                      style={{ height: 52 }}
+                    >
+                      <span className="text-lg">💬</span>
+                      <span className={`${ibmPlexMono.className} text-sm text-white/70`}>+54</span>
                     </div>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      placeholder="91122334455"
+                      style={{ height: 52 }}
+                      className="flex-1 rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-white placeholder:text-white/25 outline-none focus:border-[#CCFF00]"
+                    />
                   </div>
                 </Card>
 
-                <Card>
+                <Card index={2}>
                   <div className="flex flex-col gap-3">
                     <span className="text-sm font-bold text-white/70">Provincia</span>
                     <SelectField
@@ -730,17 +821,17 @@ export default function CompletarPerfilClient({
                         setCity("");
                       }}
                     >
-                      <option value="" disabled style={{ backgroundColor: NAVY }} className="text-white/35">
+                      <option value="" disabled style={{ backgroundColor: BG }} className="text-white/35">
                         Seleccioná tu provincia
                       </option>
                       {ARGENTINA_PROVINCES.map((prov) => (
-                        <option key={prov.code} value={prov.name} style={{ backgroundColor: NAVY }} className="text-white">
+                        <option key={prov.code} value={prov.name} style={{ backgroundColor: BG }} className="text-white">
                           {prov.name}
                         </option>
                       ))}
                     </SelectField>
 
-                    <AnimatePresence initial={false}>
+                    <AnimatePresence>
                       {province ? (
                         <motion.div
                           key="city-field"
@@ -753,7 +844,7 @@ export default function CompletarPerfilClient({
                           <div className="flex flex-col gap-3 pt-3">
                             <span className="text-sm font-bold text-white/70">Ciudad</span>
                             <SelectField value={city} onChange={(e) => setCity(e.target.value)}>
-                              <option value="" disabled style={{ backgroundColor: NAVY }} className="text-white/35">
+                              <option value="" disabled style={{ backgroundColor: BG }} className="text-white/35">
                                 Seleccioná tu ciudad
                               </option>
                               {(ARGENTINA_PROVINCES.find((prov) => prov.name === province)?.cities ?? []).map(
@@ -761,7 +852,7 @@ export default function CompletarPerfilClient({
                                   <option
                                     key={cityName}
                                     value={cityName}
-                                    style={{ backgroundColor: NAVY }}
+                                    style={{ backgroundColor: BG }}
                                     className="text-white"
                                   >
                                     {cityName}
@@ -776,13 +867,9 @@ export default function CompletarPerfilClient({
                   </div>
                 </Card>
 
-                <MainButton enabled={canStep4} onClick={goNext}>
+                <PrimaryButton enabled={canStep4} onClick={goNext}>
                   Continuar
-                </MainButton>
-
-                <div className="flex justify-start">
-                  <BackButton onClick={goBack} />
-                </div>
+                </PrimaryButton>
               </motion.div>
             )}
 
@@ -793,74 +880,53 @@ export default function CompletarPerfilClient({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={springTransition}
+                transition={stepTransition}
                 className="flex flex-col gap-5"
               >
                 <SectionTitle>Confirmación</SectionTitle>
 
                 <motion.div
-                  variants={itemVariants}
-                  className="flex flex-col items-center gap-4 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-md"
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                  className="rounded-3xl border border-white/[0.10] p-6 text-center"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    backdropFilter: "blur(20px)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.4)",
+                  }}
                 >
-                  <motion.div
-                    animate={{
-                      borderColor: ["rgba(204,255,0,0.4)", "rgba(204,255,0,0.85)", "rgba(204,255,0,0.4)"],
-                    }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                    className="h-20 w-20 overflow-hidden rounded-full border-2 bg-white/[0.06]"
-                  >
-                    {avatarPreview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: "rgba(204,255,0,0.10)" }}>
-                        <User size={24} style={{ color: LIME }} />
-                      </div>
-                    )}
-                  </motion.div>
+                  <AvatarCircle avatarPreview={avatarPreview} size={96} pulseInfinite />
 
-                  <div className="text-center">
-                    <p className={`${spaceGrotesk.className} text-[22px] font-black text-white`}>{name || "—"}</p>
-                    {edad !== null ? <p className="text-xs text-white/40">{edad} años</p> : null}
-                  </div>
+                  <p className="mt-4 text-[22px] font-black text-white">{name}</p>
+                  {edad ? <p className="text-sm text-white/40">{edad} años</p> : null}
 
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    {category ? (
+                  {category ? (
+                    <span className="mt-3 inline-block rounded-full bg-[#CCFF00] px-4 py-1.5 text-sm font-black text-[#06101E]">
+                      {category}
+                    </span>
+                  ) : null}
+
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {summaryPills.map((pill) => (
                       <span
-                        style={{ backgroundColor: LIME, color: DARK }}
-                        className="rounded-full px-3 py-1 text-sm font-black"
+                        key={pill}
+                        className="rounded-full border border-white/[0.10] bg-white/[0.08] px-3 py-1 text-xs text-white/70"
                       >
-                        {category} categoría
+                        {pill}
                       </span>
-                    ) : null}
-                    {positionLabel ? (
-                      <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-white/70">
-                        {positionLabel}
-                      </span>
-                    ) : null}
-                    {handLabel ? (
-                      <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-white/70">
-                        {handLabel}
-                      </span>
-                    ) : null}
+                    ))}
                   </div>
-
-                  <p className="flex items-center gap-1 text-sm text-white/55">
-                    📍 {[city, province].filter(Boolean).join(", ") || "Sin ubicación"}
-                  </p>
                 </motion.div>
 
-                <MainButton enabled pending={pending} pulse onClick={handleFinish}>
-                  ¡A jugar! →
-                </MainButton>
-
-                <div className="flex justify-start">
-                  <BackButton onClick={goBack} />
-                </div>
+                <FinalButton pending={pending} onClick={handleFinish} />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {step > 1 ? <BackButton onClick={goBack} /> : null}
       </div>
       <AppleToast message={toast} />
     </main>
