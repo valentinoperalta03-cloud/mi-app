@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { getDashboardData, type DashboardDayData } from "./actions";
-import TimelineGrid, { type TimelineCourt } from "./timeline-grid";
+import TimelineGrid, { TimelineLegend, type TimelineCourt } from "./timeline-grid";
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`);
@@ -46,6 +46,10 @@ export default function DashboardClient({
         {selectedDate === todayYmd ? (
           <span className="rounded-full bg-[#0085FC]/10 px-3 py-1 text-xs font-bold text-[#0085FC]">Hoy</span>
         ) : null}
+      </div>
+
+      <div className="mb-4">
+        <TimelineLegend />
       </div>
 
       <div className="flex items-center justify-between gap-3">

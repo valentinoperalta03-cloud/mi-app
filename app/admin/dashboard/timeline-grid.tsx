@@ -1,9 +1,10 @@
 import { minutesToClock } from "@/lib/court-slots";
 import NowLine from "./now-line";
 
-const BASE_UNIT_PX = 56;
-const COLUMN_MIN_WIDTH = 116;
-const TIME_AXIS_WIDTH = 52;
+const BASE_UNIT_PX = 40;
+const COLUMN_MIN_WIDTH = 104;
+const TIME_AXIS_WIDTH = 46;
+const CLOSED_COLOR = "#B91C1C";
 
 export type TimelineEventKind = "reserva" | "turno_fijo" | "entrenamiento" | "partido_abierto";
 
@@ -20,9 +21,11 @@ export type TimelineOpenRange = { startMin: number; endMin: number };
 
 export type TimelineCourt = { id: string; name: string };
 
+// verde = turno fijo, azul = reserva, morado = entrenamiento, lima = partido
+// abierto, rojo = cerrado (línea fina, ver closedGapsForCourt).
 const KIND_STYLE: Record<TimelineEventKind, { bg: string; border: string; color: string }> = {
-  turno_fijo: { bg: "rgba(0,133,252,0.15)", border: "#0085FC", color: "#0461C4" },
-  reserva: { bg: "rgba(34,197,94,0.15)", border: "#22C55E", color: "#15803D" },
+  turno_fijo: { bg: "rgba(34,197,94,0.15)", border: "#22C55E", color: "#15803D" },
+  reserva: { bg: "rgba(0,133,252,0.15)", border: "#0085FC", color: "#0461C4" },
   entrenamiento: { bg: "rgba(139,92,246,0.15)", border: "#8B5CF6", color: "#6D28D9" },
   partido_abierto: { bg: "rgba(204,255,0,0.15)", border: "#CCFF00", color: "#5A6B00" },
 };
@@ -37,6 +40,18 @@ const KIND_PRIORITY: Record<TimelineEventKind, number> = {
   reserva: 2,
   partido_abierto: 2,
 };
+
+export function TimelineLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[var(--text-secondary)]">
+      <LegendSwatch bg={KIND_STYLE.turno_fijo.bg} border={KIND_STYLE.turno_fijo.border} label="Turno fijo" />
+      <LegendSwatch bg={KIND_STYLE.reserva.bg} border={KIND_STYLE.reserva.border} label="Reserva" />
+      <LegendSwatch bg={KIND_STYLE.entrenamiento.bg} border={KIND_STYLE.entrenamiento.border} label="Entrenamiento" />
+      <LegendSwatch bg={KIND_STYLE.partido_abierto.bg} border={KIND_STYLE.partido_abierto.border} label="Partido abierto" />
+      <LegendSwatch bg="transparent" border={CLOSED_COLOR} label="Cerrado" />
+    </div>
+  );
+}
 
 function closedGapsForCourt(
   ranges: TimelineOpenRange[],
@@ -158,33 +173,36 @@ export default function TimelineGrid({
                     />
                   ))}
 
+                  {/* Cerrado: línea fina en el borde izquierdo en vez de un
+                     bloque sólido — marca la franja sin dominar visualmente
+                     la grilla compacta. */}
                   {gaps.map((g, i) => {
                     const heightPx = Math.max(pxFor(g.endMin) - pxFor(g.startMin) - 1, 0);
                     if (heightPx <= 0) return null;
                     return (
                       <div
                         key={`gap-${i}`}
-                        className="absolute inset-x-0 flex items-center justify-center overflow-hidden text-[10px] font-semibold"
+                        className="absolute inset-x-0 flex items-center overflow-hidden pl-1.5 text-[9px] font-semibold"
                         style={{
                           top: pxFor(g.startMin),
                           height: heightPx,
-                          background: "rgba(185,28,28,0.12)",
-                          borderLeft: "3px solid #B91C1C",
-                          color: "#B91C1C",
+                          borderLeft: `2px solid ${CLOSED_COLOR}`,
+                          color: CLOSED_COLOR,
+                          opacity: 0.75,
                         }}
                       >
-                        {heightPx >= 24 ? "Cerrado" : ""}
+                        {heightPx >= 16 ? "Cerrado" : ""}
                       </div>
                     );
                   })}
 
                   {courtEvents.map((ev) => {
                     const style = KIND_STYLE[ev.kind];
-                    const heightPx = Math.max(pxFor(ev.startMin + ev.durationMin) - pxFor(ev.startMin) - 1, 14);
+                    const heightPx = Math.max(pxFor(ev.startMin + ev.durationMin) - pxFor(ev.startMin) - 1, 12);
                     return (
                       <div
                         key={ev.id}
-                        className="absolute inset-x-0.5 overflow-hidden rounded-md px-1.5 py-1 text-[10px] font-semibold leading-tight"
+                        className="absolute inset-x-0.5 overflow-hidden rounded-md px-1.5 py-0.5 text-[9px] font-semibold leading-tight"
                         style={{
                           top: pxFor(ev.startMin),
                           height: heightPx,
@@ -203,15 +221,6 @@ export default function TimelineGrid({
             })}
           </div>
         </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[var(--text-secondary)]">
-        <LegendSwatch bg={KIND_STYLE.turno_fijo.bg} border={KIND_STYLE.turno_fijo.border} label="Turno fijo" />
-        <LegendSwatch bg={KIND_STYLE.reserva.bg} border={KIND_STYLE.reserva.border} label="Reserva" />
-        <LegendSwatch bg={KIND_STYLE.partido_abierto.bg} border={KIND_STYLE.partido_abierto.border} label="Partido abierto" />
-        <LegendSwatch bg={KIND_STYLE.entrenamiento.bg} border={KIND_STYLE.entrenamiento.border} label="Entrenamiento externo" />
-        <LegendSwatch bg="rgba(185,28,28,0.12)" border="#B91C1C" label="Cerrado" />
-        <LegendSwatch bg="transparent" border="var(--border-subtle)" label="Disponible" />
       </div>
     </div>
   );
