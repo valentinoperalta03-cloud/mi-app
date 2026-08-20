@@ -5,7 +5,7 @@ const BASE_UNIT_PX = 56;
 const COLUMN_MIN_WIDTH = 116;
 const TIME_AXIS_WIDTH = 52;
 
-export type TimelineEventKind = "reserva" | "turno_fijo" | "entrenamiento";
+export type TimelineEventKind = "reserva" | "turno_fijo" | "entrenamiento" | "partido_abierto";
 
 export type TimelineEvent = {
   id: string;
@@ -24,15 +24,18 @@ const KIND_STYLE: Record<TimelineEventKind, { bg: string; border: string; color:
   turno_fijo: { bg: "rgba(0,133,252,0.15)", border: "#0085FC", color: "#0461C4" },
   reserva: { bg: "rgba(34,197,94,0.15)", border: "#22C55E", color: "#15803D" },
   entrenamiento: { bg: "rgba(139,92,246,0.15)", border: "#8B5CF6", color: "#6D28D9" },
+  partido_abierto: { bg: "rgba(204,255,0,0.15)", border: "#CCFF00", color: "#5A6B00" },
 };
 
 // Prioridad de renderizado cuando dos eventos coinciden en el mismo horario:
-// reserva > turno fijo > entrenamiento (se dibujan en ese orden para que la
-// reserva quede arriba visualmente, sin necesitar z-index explícito).
+// reserva/partido abierto > turno fijo > entrenamiento (se dibujan en ese
+// orden para que la reserva quede arriba visualmente, sin necesitar z-index
+// explícito).
 const KIND_PRIORITY: Record<TimelineEventKind, number> = {
   entrenamiento: 0,
   turno_fijo: 1,
   reserva: 2,
+  partido_abierto: 2,
 };
 
 function closedGapsForCourt(
@@ -205,6 +208,7 @@ export default function TimelineGrid({
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[var(--text-secondary)]">
         <LegendSwatch bg={KIND_STYLE.turno_fijo.bg} border={KIND_STYLE.turno_fijo.border} label="Turno fijo" />
         <LegendSwatch bg={KIND_STYLE.reserva.bg} border={KIND_STYLE.reserva.border} label="Reserva" />
+        <LegendSwatch bg={KIND_STYLE.partido_abierto.bg} border={KIND_STYLE.partido_abierto.border} label="Partido abierto" />
         <LegendSwatch bg={KIND_STYLE.entrenamiento.bg} border={KIND_STYLE.entrenamiento.border} label="Entrenamiento externo" />
         <LegendSwatch bg="rgba(185,28,28,0.12)" border="#B91C1C" label="Cerrado" />
         <LegendSwatch bg="transparent" border="var(--border-subtle)" label="Disponible" />

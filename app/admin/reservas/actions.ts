@@ -15,6 +15,7 @@ import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { refundReservationPayment } from "@/lib/payment-refund";
 import { createClient } from "@/utils/supabase/server";
+import { getClubAvailability, type ClubAvailabilityResult } from "../../(club)/[slug]/actions";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -650,5 +651,18 @@ export async function cancelarPartidoDesdeAdmin(matchId: string): Promise<AdminA
 
   revalidatePath("/admin/reservas");
   return { ok: true };
+}
+
+/**
+ * Disponibilidad real para el modal "Abrir partido" del admin. Reusa
+ * getClubAvailability (misma lógica de bloqueo por reservas/partidos/turnos
+ * fijos/court_blocks que usa la página pública del club) verificando antes
+ * que el club pedido pertenezca al admin logueado.
+ */
+export async function getAdminClubAvailability(clubId: string, dateStr: string): Promise<ClubAvailabilityResult> {
+  const supabase = await createClient();
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId || !ctx.clubIds.includes(clubId)) return { slots: [], prices: {} };
+  return getClubAvailability(clubId, dateStr);
 }
 

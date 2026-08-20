@@ -18,10 +18,10 @@ import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkAdminOnboardingStatus } from "@/lib/admin/onboarding-status";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import CurrentArTime from "./current-ar-time";
-import TimelineGrid, { type TimelineEvent, type TimelineOpenRange } from "./timeline-grid";
+import DashboardClient from "./dashboard-client";
+import { buildDashboardTimelineData } from "./dashboard-timeline-data";
 
 /** Kicker de las 4 métricas: azul #0085FC en claro, lima #CCFF00 en oscuro (token --admin-accent-lima). */
 const metricKicker =
@@ -189,54 +189,6 @@ export default async function AdminDashboardPage({
     list.push({ playerId: p.player_id, name: fixedSlotPlayerNameById.get(p.player_id) ?? "Jugador" });
     fixedSlotPlayersById.set(p.fixed_slot_id, list);
   }
-
-  // Franjas horarias por cancha para hoy (vista cronológica) — sin franjas
-  // propias, cada cancha cae al horario global del club.
-  const { data: timeRangesTodayRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.courtTimeRanges)
-        .select("court_id,day_of_week,open_time,close_time")
-        .in("court_id", ctx.courtIds)
-        .eq("day_of_week", todayDayOfWeek)
-    : { data: [] };
-  const timeRangesToday = (timeRangesTodayRaw ?? []) as Array<{
-    court_id: string;
-    open_time: string;
-    close_time: string;
-  }>;
-
-  // Entrenamientos externos de hoy — bloquean cancha pero no son visibles
-  // para jugadores; se excluyen de cualquier análisis de ocupación por
-  // reason='entrenamiento_externo'.
-  const { data: trainingCourtBlocksTodayRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.courtBlocks)
-        .select("id,court_id,blocked_time,reason")
-        .in("court_id", ctx.courtIds)
-        .eq("blocked_date", today)
-        .eq("reason", "entrenamiento_externo")
-    : { data: [] };
-  const trainingCourtBlocksToday = (trainingCourtBlocksTodayRaw ?? []) as Array<{
-    id: string;
-    court_id: string;
-    blocked_time: string;
-  }>;
-
-  const { data: trainingBlocksActiveTodayRaw } = ctx.clubIds.length
-    ? await supabase
-        .from(DB_TABLES.trainingBlocks)
-        .select("court_id,title,coach,start_time,end_time")
-        .in("club_id", ctx.clubIds)
-        .eq("is_active", true)
-        .eq("day_of_week", todayDayOfWeek)
-    : { data: [] };
-  const trainingBlocksActiveToday = (trainingBlocksActiveTodayRaw ?? []) as Array<{
-    court_id: string;
-    title: string;
-    coach: string | null;
-    start_time: string;
-    end_time: string;
-  }>;
 
   const { data: refundRequestedRaw } = ctx.courtIds.length
     ? await supabase
@@ -503,87 +455,15 @@ export default async function AdminDashboardPage({
         : "Sin confirmar";
 
   // --- Vista cronológica del día: franjas abiertas por cancha + eventos ---
-  const clubOpenMin = club?.open_time ? parseClockToMinutes(String(club.open_time).slice(0, 5)) : null;
-  const clubCloseMin = club?.close_time ? parseCloseTimeToMinutes(String(club.close_time).slice(0, 5)) : null;
-
-  const timeRangesByCourtToday = new Map<string, TimelineOpenRange[]>();
-  for (const r of timeRangesToday) {
-    const list = timeRangesByCourtToday.get(r.court_id) ?? [];
-    list.push({
-      startMin: parseClockToMinutes(String(r.open_time).slice(0, 5)),
-      endMin: parseCloseTimeToMinutes(String(r.close_time).slice(0, 5)),
-    });
-    timeRangesByCourtToday.set(r.court_id, list);
-  }
-
-  const openRangesByCourtId: Record<string, TimelineOpenRange[]> = {};
-  for (const court of ctx.courts) {
-    const custom = timeRangesByCourtToday.get(court.id);
-    if (custom && custom.length > 0) {
-      openRangesByCourtId[court.id] = custom;
-    } else if (clubOpenMin != null && clubCloseMin != null && clubCloseMin > clubOpenMin) {
-      openRangesByCourtId[court.id] = [{ startMin: clubOpenMin, endMin: clubCloseMin }];
-    } else {
-      openRangesByCourtId[court.id] = [{ startMin: 9 * 60, endMin: 22 * 60 + 30 }];
-    }
-  }
-
-  // Metadata de entrenamientos activos hoy (título/coach/duración real) por
-  // cancha+horario, para completar los court_blocks puntuales que no tienen
-  // esa info — si no matchea ninguno, es un entrenamiento puntual y se
-  // asume 90 min (mismo criterio que el resto de la app).
-  const trainingMetaByKey = new Map(
-    trainingBlocksActiveToday.map((t) => [
-      `${t.court_id}__${String(t.start_time).slice(0, 5)}`,
-      { title: t.title, coach: t.coach, endTime: String(t.end_time).slice(0, 5) },
-    ])
+  const dashboardCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
+  const dashboardTimelineData = await buildDashboardTimelineData(
+    supabase,
+    dashboardCourts,
+    ctx.courtIds,
+    ctx.clubIds,
+    club ? { open_time: club.open_time ?? null, close_time: club.close_time ?? null } : null,
+    today
   );
-
-  const timelineEvents: TimelineEvent[] = [];
-
-  for (const m of todayMatches) {
-    if (m.es_turno_fijo) continue;
-    if (String(m.match_status ?? "").toLowerCase() === "cancelled") continue;
-    const startMin = timeToMinutes(m.scheduled_time);
-    if (startMin < 0) continue;
-    timelineEvents.push({
-      id: `match-${m.id}`,
-      courtId: m.court_id,
-      startMin,
-      durationMin: m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90,
-      kind: "reserva",
-      label: m.owner_id ? ownerNameById.get(m.owner_id) ?? "Jugador" : "Jugador",
-    });
-  }
-
-  for (const slot of fixedSlotsToday) {
-    if (exceptedFixedSlotIdsToday.has(slot.id)) continue;
-    const startMin = timeToMinutes(slot.start_time);
-    if (startMin < 0) continue;
-    timelineEvents.push({
-      id: `fixed-${slot.id}`,
-      courtId: slot.court_id,
-      startMin,
-      durationMin: slot.duration_minutes && slot.duration_minutes > 0 ? slot.duration_minutes : 90,
-      kind: "turno_fijo",
-      label: slot.title?.trim() || "Turno fijo",
-    });
-  }
-
-  for (const b of trainingCourtBlocksToday) {
-    const startMin = timeToMinutes(b.blocked_time);
-    if (startMin < 0) continue;
-    const meta = trainingMetaByKey.get(`${b.court_id}__${String(b.blocked_time).slice(0, 5)}`);
-    const durationMin = meta ? Math.max(30, timeToMinutes(meta.endTime) - startMin) : 90;
-    timelineEvents.push({
-      id: `training-${b.id}`,
-      courtId: b.court_id,
-      startMin,
-      durationMin,
-      kind: "entrenamiento",
-      label: meta ? (meta.coach ? `${meta.title} · ${meta.coach}` : meta.title) : "Entrenamiento externo",
-    });
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -697,11 +577,7 @@ export default async function AdminDashboardPage({
         </section>
       ) : null}
 
-      <section className={adminCard}>
-        <p className={adminKicker}>Vista del día</p>
-        <p className="mb-3 mt-1 font-admin-display text-lg font-bold text-[var(--text-primary)]">Estado de tus canchas</p>
-        <TimelineGrid courts={ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }))} openRangesByCourtId={openRangesByCourtId} events={timelineEvents} />
-      </section>
+      <DashboardClient todayYmd={today} courts={dashboardCourts} initialData={dashboardTimelineData} />
 
       {nextMatch ? (
         <section className={`${adminCard} flex flex-wrap items-center justify-between gap-4`}>

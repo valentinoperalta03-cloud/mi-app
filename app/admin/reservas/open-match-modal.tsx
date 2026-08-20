@@ -4,9 +4,9 @@ import { addDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { adminButtonSecondary } from "@/components/admin/admin-premium";
-import { getClubAvailability, type AvailabilitySlot } from "../../(club)/[slug]/actions";
+import type { AvailabilitySlot } from "../../(club)/[slug]/actions";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { crearPartidoDesdeAdmin, type GuestPlayerInput } from "./actions";
+import { crearPartidoDesdeAdmin, getAdminClubAvailability, type GuestPlayerInput } from "./actions";
 import type { ReservasCourtOption } from "./reservas-tabs";
 
 const CATEGORY_OPTIONS = ["8va", "7ma", "6ta", "5ta", "4ta", "3ra", "2da", "1ra"];
@@ -66,7 +66,7 @@ export default function OpenMatchModal({
 
   useEffect(() => {
     startLoadingSlots(async () => {
-      const result = await getClubAvailability(clubId, selectedDate);
+      const result = await getAdminClubAvailability(clubId, selectedDate);
       setAvailability(result);
     });
   }, [clubId, selectedDate]);
