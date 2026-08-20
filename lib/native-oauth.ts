@@ -2,7 +2,7 @@ import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import type { Provider } from "@supabase/supabase-js";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
-import { resolveHomePath } from "@/lib/auth-redirect";
+import { resolvePostLoginPath } from "@/lib/auth-redirect";
 import { NATIVE_AUTH_CALLBACK_URL } from "@/lib/auth-site-url";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
@@ -184,6 +184,6 @@ export async function completeNativeOAuthFromDeepLink(
       redirectTo: `/login?kind=error&message=${encodeURIComponent("No se pudo obtener la sesión.")}`,
     };
   }
-  const home = safeNextPath(params.next) ?? (await resolveHomePath(supabase, user.id));
+  const home = await resolvePostLoginPath(supabase, user.id, safeNextPath(params.next));
   return { ok: true, redirectTo: home };
 }

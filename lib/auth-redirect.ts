@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { isOnboardingComplete } from "./onboarding-check";
 
 export async function resolveHomePath(
   supabase: SupabaseClient,
@@ -15,7 +16,29 @@ export async function resolveHomePath(
   if (ownedClub) {
     return "/admin/dashboard";
   }
+
+  const onboardingDone = await isOnboardingComplete(supabase, userId);
+  if (!onboardingDone) {
+    return "/completar-perfil";
+  }
   return "/home";
+}
+
+/**
+ * Resuelve el destino post-login respetando `?next=`, pero sin dejar que un jugador
+ * nuevo salte el onboarding: si resolveHomePath dice /completar-perfil, el next se
+ * reencadena como `?next=` de completar-perfil en vez de usarse directamente.
+ */
+export async function resolvePostLoginPath(
+  supabase: SupabaseClient,
+  userId: string,
+  next: string | null
+): Promise<string> {
+  const home = await resolveHomePath(supabase, userId);
+  if (home === "/completar-perfil") {
+    return next ? `/completar-perfil?next=${encodeURIComponent(next)}` : "/completar-perfil";
+  }
+  return next ?? home;
 }
 
 /** Valida `?next=` post-login: solo rutas internas relativas, nunca URLs externas. */

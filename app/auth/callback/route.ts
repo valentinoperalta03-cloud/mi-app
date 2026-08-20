@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { resolveHomePath } from "@/lib/auth-redirect";
+import { resolvePostLoginPath } from "@/lib/auth-redirect";
 import { formatAuthErrorMessage } from "@/lib/auth-errors";
 import { getAuthOriginFromRequest } from "@/lib/auth-site-url";
 import { createSupabaseRouteHandlerClient } from "@/utils/supabase/route-handler";
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
       }
 
-      const home = next ?? (await resolveHomePath(supabase, user.id));
+      const home = await resolvePostLoginPath(supabase, user.id, next);
       return redirectWithCookies(new URL(home, origin));
     }
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
         return redirectToLogin(origin, "No se pudo obtener la sesion.", redirectWithCookies);
       }
 
-      const home = next ?? (await resolveHomePath(supabase, user.id));
+      const home = await resolvePostLoginPath(supabase, user.id, next);
       return redirectWithCookies(new URL(home, origin));
     }
 
