@@ -7,23 +7,25 @@ import { XCircle } from "lucide-react";
 const WHATSAPP_LINK =
   "https://chat.whatsapp.com/HS4LSIVa1Xz3WR3RPYddCn?s=cl&p=i&ilr=2";
 
-const CARDS = [
+const DOT_PATTERN = {
+  backgroundImage: "radial-gradient(rgba(204,255,0,0.08) 1px, transparent 1px)",
+  backgroundSize: "28px 28px",
+};
+
+const PASOS = [
   {
-    numero: "01",
     emoji: "🔍",
     titulo: "Encontrás el club",
     descripcion:
       "Google Maps, Instagram, contactos, visitas, WhatsApp. Podés venderle a cualquier club de pádel de Argentina.",
   },
   {
-    numero: "02",
     emoji: "🎯",
     titulo: "Hacés la demo",
     descripcion:
       "Mostrás la app y el panel. Conectás PadeLibre con los problemas del dueño.",
   },
   {
-    numero: "03",
     emoji: "💰",
     titulo: "Cobrás $100.000",
     descripcion:
@@ -37,6 +39,12 @@ const GANANCIAS = [
   { clubes: "5 clubes", monto: "$500.000", porcentaje: 25 },
   { clubes: "10 clubes", monto: "$1.000.000", porcentaje: 50 },
   { clubes: "20 clubes", monto: "$2.000.000", porcentaje: 100 },
+];
+
+const STATS = [
+  { valor: "$2M+", label: "Potencial mensual" },
+  { valor: "∞", label: "Sin límite de clubes" },
+  { valor: "$100k", label: "Por club cerrado" },
 ];
 
 const TRABAJO = [
@@ -146,7 +154,8 @@ function CtaButton({ children }: { children: React.ReactNode }) {
       href={WHATSAPP_LINK}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-8 block w-full rounded-2xl bg-[#CCFF00] py-4 text-center text-base font-black text-[#080F1A]"
+      className="mt-8 block w-full rounded-2xl bg-[#CCFF00] py-4 text-center text-base font-black text-[#06101E]"
+      style={{ boxShadow: "0 0 40px rgba(204,255,0,0.25)" }}
       animate={reduceMotion ? {} : { scale: [1, 1.015, 1] }}
       transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
     >
@@ -194,71 +203,74 @@ function GananciaFila({
   fila: (typeof GANANCIAS)[number];
   index: number;
 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduceMotion = useReducedMotion();
 
   return (
-    <FadeIn delay={index * 0.12}>
-      <div ref={ref}>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="font-mono text-xs text-white/50">{fila.clubes}</span>
-          <span className="font-mono text-sm font-bold text-[#CCFF00]">
-            {fila.monto}
-          </span>
-        </div>
-        <div className="h-1.5 w-full rounded-full bg-white/[0.06]">
-          <motion.div
-            className="h-1.5 rounded-full bg-[#CCFF00]"
-            initial={{ width: 0 }}
-            animate={inView ? { width: `${fila.porcentaje}%` } : { width: 0 }}
-            transition={{
-              duration: reduceMotion ? 0 : 1,
-              delay: reduceMotion ? 0 : index * 0.15,
-              ease: "easeOut",
-            }}
-          />
-        </div>
+    <motion.div
+      className="space-y-1.5"
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.12 }}
+    >
+      <div className="flex items-baseline justify-between">
+        <span className="font-mono text-xs text-white/50">{fila.clubes}</span>
+        <span className="font-mono text-base font-bold text-[#CCFF00]">
+          {fila.monto}
+        </span>
       </div>
-    </FadeIn>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <motion.div
+          className="h-full rounded-full bg-gradient-to-r from-[#CCFF00] to-[#99CC00]"
+          initial={{ width: 0 }}
+          whileInView={{ width: `${fila.porcentaje}%` }}
+          viewport={{ once: true }}
+          transition={{
+            duration: reduceMotion ? 0 : 1.2,
+            delay: reduceMotion ? 0 : index * 0.15,
+            ease: "easeOut",
+          }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+function LiveDot() {
+  return (
+    <span className="relative mr-2 flex h-2 w-2">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CCFF00] opacity-75" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#CCFF00]" />
+    </span>
   );
 }
 
 export default function YoVendoClient() {
   const reduceMotion = useReducedMotion();
   const contador = useCountUp(100000, 2000, !!reduceMotion);
-  const [activeCard, setActiveCard] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const cardWidth = el.scrollWidth / CARDS.length;
-    const index = Math.round(el.scrollLeft / cardWidth);
-    setActiveCard(Math.min(Math.max(index, 0), CARDS.length - 1));
-  };
 
   return (
     <div
-      className="min-h-screen bg-[#080F1A] text-white"
+      className="min-h-screen bg-[#06101E] text-white"
       style={{ fontFamily: "var(--font-space-grotesk), sans-serif" }}
     >
       {/* SECCIÓN 1 — Hero */}
-      <section
-        className="relative overflow-hidden px-5 pb-12 pt-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(204,255,0,0.15) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      >
-        <div
-          className="pointer-events-none absolute inset-0"
+      <section className="relative overflow-hidden px-5 pb-12 pt-10" style={DOT_PATTERN}>
+        <motion.div
+          className="pointer-events-none absolute left-1/2 top-[-100px] h-[400px] w-[400px] -translate-x-1/2 rounded-full"
           style={{
-            backgroundImage:
-              "radial-gradient(ellipse at 50% 0%, rgba(8,15,26,0.85), rgba(8,15,26,0.85))",
+            background:
+              "radial-gradient(circle, rgba(204,255,0,0.2), transparent 70%)",
+            filter: "blur(60px)",
           }}
+          animate={
+            reduceMotion
+              ? { opacity: 0.2 }
+              : { scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }
+          }
+          transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
         />
+
         <div className="relative mx-auto max-w-[480px]">
           <div className="flex items-center justify-center gap-2">
             <span className="text-lg">🎾</span>
@@ -295,57 +307,46 @@ export default function YoVendoClient() {
 
       {/* SECCIÓN 2 — Cómo funciona */}
       <section
-        className="border-y border-[#CCFF00]/[0.15] py-10"
-        style={{ backgroundColor: "#0D1A2E" }}
+        className="border-y border-[#CCFF00]/[0.12] px-5 py-12"
+        style={{
+          background: "linear-gradient(180deg, #0A1525 0%, #06101E 100%)",
+        }}
       >
-        <div className="mx-auto max-w-[480px] px-5">
+        <div className="mx-auto max-w-[480px]">
           <FadeIn>
             <p className="font-mono text-[11px] uppercase tracking-widest text-[#CCFF00]/70">
               Cómo funciona
             </p>
           </FadeIn>
-        </div>
 
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="mt-6 flex gap-4 overflow-x-auto px-5 pb-2"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
-          {CARDS.map((card) => (
-            <div
-              key={card.numero}
-              className="relative min-w-[80vw] shrink-0 rounded-3xl border border-white/[0.07] bg-[#080F1A] p-6"
-              style={{ scrollSnapAlign: "start" }}
-            >
-              <span className="absolute right-4 top-2 text-[80px] font-black leading-none text-[#CCFF00]/[0.15]">
-                {card.numero}
-              </span>
-              <span className="relative text-3xl">{card.emoji}</span>
-              <p className="relative mt-2 text-lg font-bold text-white">
-                {card.titulo}
-              </p>
-              <p className="relative mt-2 text-sm leading-relaxed text-white/55">
-                {card.descripcion}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex justify-center gap-1.5">
-          {CARDS.map((card, i) => (
-            <span
-              key={card.numero}
-              className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                i === activeCard ? "bg-[#CCFF00]" : "bg-white/20"
-              }`}
-            />
-          ))}
+          <div className="mt-6 flex flex-col gap-4">
+            {PASOS.map((paso, i) => (
+              <motion.div
+                key={paso.titulo}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0D1A2E] to-[#080F1A] p-6"
+              >
+                <span className="pointer-events-none absolute right-4 top-2 select-none text-[80px] font-black leading-none text-[#CCFF00]/[0.06]">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="relative text-3xl">{paso.emoji}</span>
+                <p className="relative mt-3 text-lg font-bold text-white">
+                  {paso.titulo}
+                </p>
+                <p className="relative mt-1 text-sm leading-relaxed text-white/55">
+                  {paso.descripcion}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* SECCIÓN 3 — Gráfico de ganancias */}
-      <section className="px-5 py-12" style={{ backgroundColor: "#080F1A" }}>
+      {/* SECCIÓN 3 — Tu potencial */}
+      <section className="px-5 py-12" style={{ backgroundColor: "#06101E" }}>
         <div className="mx-auto max-w-[480px]">
           <FadeIn className="text-center">
             <h2 className="text-[32px] font-black text-white">Tu potencial.</h2>
@@ -358,6 +359,24 @@ export default function YoVendoClient() {
             ))}
           </div>
 
+          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-white/[0.06] pt-6">
+            {STATS.map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                className="text-center"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <p className="text-[22px] font-black text-[#CCFF00]">{stat.valor}</p>
+                <p className="mt-0.5 text-[10px] leading-tight text-white/40">
+                  {stat.label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
           <FadeIn delay={GANANCIAS.length * 0.12} className="mt-10 text-center">
             <p className="text-[24px] font-black text-white/20">Sin techo.</p>
           </FadeIn>
@@ -365,7 +384,12 @@ export default function YoVendoClient() {
       </section>
 
       {/* SECCIÓN 4 — Tu trabajo */}
-      <section className="px-5 py-12" style={{ backgroundColor: "#0D1A2E" }}>
+      <section
+        className="px-5 py-12"
+        style={{
+          background: "linear-gradient(180deg, #0A1525 0%, #06101E 100%)",
+        }}
+      >
         <div className="mx-auto max-w-[480px]">
           <FadeIn>
             <p className="font-mono text-[11px] uppercase tracking-widest text-[#CCFF00]/70">
@@ -383,11 +407,14 @@ export default function YoVendoClient() {
                       : "border-l border-transparent"
                   }`}
                 >
-                  <span className="absolute -left-4 top-0 flex h-9 w-9 items-center justify-center rounded-full bg-[#CCFF00] text-sm font-black text-[#080F1A]">
+                  <span
+                    className="absolute -left-4 top-0 flex h-9 w-9 items-center justify-center rounded-full bg-[#CCFF00] text-sm font-black text-[#06101E]"
+                    style={{ boxShadow: "0 0 20px rgba(204,255,0,0.4)" }}
+                  >
                     {i + 1}
                   </span>
                 </div>
-                <div className="ml-2 mb-6 flex-1 rounded-2xl border border-white/[0.06] bg-[#080F1A] p-4">
+                <div className="ml-2 mb-6 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-sm">
                   <p className="text-sm font-bold text-white">{paso.titulo}</p>
                   <p className="mt-1 text-xs leading-relaxed text-white/55">
                     {paso.descripcion}
@@ -399,49 +426,62 @@ export default function YoVendoClient() {
         </div>
       </section>
 
-      {/* SECCIÓN 5 — Ventajas */}
-      <section
-        className="border-t border-[#CCFF00]/[0.12] px-5 py-12"
-        style={{ backgroundColor: "#080F1A" }}
-      >
-        <div className="mx-auto max-w-[480px]">
+      {/* SECCIÓN 5 — Por qué funciona */}
+      <section className="relative overflow-hidden px-5 py-12" style={{ backgroundColor: "#06101E" }}>
+        <div
+          className="pointer-events-none absolute -right-[50px] -top-[50px] h-[300px] w-[300px] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(0,133,252,0.12), transparent 70%)",
+            filter: "blur(40px)",
+          }}
+        />
+
+        <div className="relative mx-auto max-w-[480px]">
           <FadeIn>
             <h2 className="text-[28px] font-black text-white">Por qué funciona.</h2>
           </FadeIn>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             {VENTAJAS.map((v, i) => (
-              <FadeIn key={v.titulo} delay={i * 0.08}>
-                <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#0D1A2E] to-[#080F1A] p-4 transition-colors hover:border-[#CCFF00]/25">
-                  <span className="text-[32px]">{v.emoji}</span>
-                  <p className="mt-3 text-sm font-bold text-white">{v.titulo}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-white/50">
-                    {v.descripcion}
-                  </p>
-                </div>
-              </FadeIn>
+              <motion.div
+                key={v.titulo}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ borderColor: "rgba(204,255,0,0.25)" }}
+                className="flex flex-col rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#0D1A2E] to-[#080F1A] p-4"
+                style={{ minHeight: 160 }}
+              >
+                <span className="text-[32px]">{v.emoji}</span>
+                <p className="mt-3 text-sm font-bold text-white">{v.titulo}</p>
+                <p className="mt-1.5 flex-1 text-xs leading-relaxed text-white/50">
+                  {v.descripcion}
+                </p>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* SECCIÓN 6 — Lo que NO hacés */}
-      <section className="px-5 py-12" style={{ backgroundColor: "#0D1A2E" }}>
+      {/* SECCIÓN 6 — Enfocate en vender */}
+      <section className="px-5 py-12" style={{ backgroundColor: "#0A1525" }}>
         <div className="mx-auto max-w-[480px]">
           <FadeIn>
-            <h2 className="text-[24px] font-black text-white">Enfocate en vender.</h2>
+            <h2 className="text-[28px] font-black text-white">Enfocate en vender.</h2>
             <p className="mt-1 text-sm text-white/40">El resto lo hace PadeLibre.</p>
           </FadeIn>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#080F1A]">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#06101E]">
             {NO_HACES.map((item, i) => (
               <FadeIn key={item} delay={i * 0.06}>
                 <div
-                  className={`flex items-center gap-3 px-5 py-3.5 ${
-                    i < NO_HACES.length - 1 ? "border-b border-white/[0.05]" : ""
+                  className={`flex items-center gap-3 border-l-2 border-rose-500/30 px-5 py-3.5 transition-colors hover:bg-white/[0.04] ${
+                    i < NO_HACES.length - 1 ? "border-b border-b-white/[0.05]" : ""
                   }`}
                 >
-                  <XCircle className="shrink-0 text-rose-500/60" size={16} />
+                  <XCircle className="shrink-0 text-rose-400" size={16} />
                   <span className="text-sm text-white/60">{item}</span>
                 </div>
               </FadeIn>
@@ -451,7 +491,7 @@ export default function YoVendoClient() {
       </section>
 
       {/* SECCIÓN 7 — Cuándo cobrás */}
-      <section className="px-5 py-12" style={{ backgroundColor: "#080F1A" }}>
+      <section className="px-5 py-12" style={{ backgroundColor: "#06101E" }}>
         <div className="mx-auto max-w-[480px]">
           <FadeIn>
             <div className="rounded-3xl border border-[#CCFF00]/20 bg-gradient-to-br from-[#CCFF00]/[0.06] to-transparent p-6">
@@ -467,7 +507,7 @@ export default function YoVendoClient() {
                 ].map((texto, i) => (
                   <FadeIn key={texto} delay={i * 0.12} className="flex items-center gap-2">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#CCFF00]">
-                      <span className="text-xs font-black text-[#080F1A]">✓</span>
+                      <span className="text-xs font-black text-[#06101E]">✓</span>
                     </span>
                     <span className="text-sm text-white/80">{texto}</span>
                   </FadeIn>
@@ -488,16 +528,17 @@ export default function YoVendoClient() {
         className="px-5 py-16 text-center"
         style={{
           background:
-            "linear-gradient(135deg, #0D1A2E 0%, #080F1A 50%, rgba(204,255,0,0.04) 100%)",
+            "radial-gradient(ellipse at center, rgba(204,255,0,0.08) 0%, #06101E 70%)",
         }}
       >
         <div className="mx-auto max-w-[480px]">
           <FadeIn>
-            <span className="inline-block rounded-full border border-[#CCFF00]/20 bg-[#CCFF00]/10 px-4 py-1.5 font-mono text-[11px] text-[#CCFF00]/70">
+            <span className="inline-flex items-center rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/[0.08] px-4 py-1.5 font-mono text-[11px] text-[#CCFF00]/70">
+              <LiveDot />
               12 vendedores activos en Argentina 🇦🇷
             </span>
 
-            <h2 className="mt-6 text-[32px] font-black text-white">
+            <h2 className="mt-6 text-[36px] font-black text-white">
               ¿Querés ser parte?
             </h2>
             <p className="mt-3 text-center text-sm leading-relaxed text-white/55">
