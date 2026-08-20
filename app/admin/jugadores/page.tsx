@@ -3,6 +3,7 @@ import { es } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminPageHeader from "@/components/admin/admin-page-header";
+import AnalysisPinGate from "@/components/admin/analysis-pin-gate";
 import { adminAccentBar, adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { PlayerAvatar } from "@/components/admin/admin-status-pills";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -276,6 +277,7 @@ export default async function AdminJugadoresPage() {
         subtitle="Actividad y retención de tu comunidad"
       />
 
+      <AnalysisPinGate clubId={ctx.clubIds[0] ?? null}>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className={adminCard}>
           <p className={adminKicker}>Total jugadores únicos (mes)</p>
@@ -313,6 +315,7 @@ export default async function AdminJugadoresPage() {
       </section>
 
       <JugadoresClient list={list} blockedUserIds={blockedUserIds} />
+      </AnalysisPinGate>
     </div>
   );
 }

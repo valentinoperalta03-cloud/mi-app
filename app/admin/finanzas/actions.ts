@@ -17,13 +17,13 @@ export async function updateFinancePin(formData: FormData) {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/finanzas?pin_error=no_club");
+  if (!ctx.clubIds.length) redirect("/admin/config/general?pin_error=no_club");
 
   if (!/^\d{4,6}$/.test(newPin)) {
-    redirect(`/admin/finanzas?pin_error=${enc("El nuevo PIN debe tener entre 4 y 6 dígitos.")}`);
+    redirect(`/admin/config/general?pin_error=${enc("El nuevo PIN debe tener entre 4 y 6 dígitos.")}`);
   }
   if (newPin !== confirmPin) {
-    redirect(`/admin/finanzas?pin_error=${enc("La confirmación del PIN no coincide.")}`);
+    redirect(`/admin/config/general?pin_error=${enc("La confirmación del PIN no coincide.")}`);
   }
 
   const clubId = ctx.clubIds[0];
@@ -40,10 +40,10 @@ export async function updateFinancePin(formData: FormData) {
 
   if (storedPin) {
     if (!currentPin) {
-      redirect(`/admin/finanzas?pin_error=${enc("Ingresá el PIN actual.")}`);
+      redirect(`/admin/config/general?pin_error=${enc("Ingresá el PIN actual.")}`);
     }
     if (currentPin !== storedPin) {
-      redirect(`/admin/finanzas?pin_error=${enc("El PIN actual es incorrecto.")}`);
+      redirect(`/admin/config/general?pin_error=${enc("El PIN actual es incorrecto.")}`);
     }
   }
 
@@ -53,8 +53,8 @@ export async function updateFinancePin(formData: FormData) {
     .eq("id", clubId)
     .eq("owner_id", ctx.userId);
   if (error) {
-    redirect(`/admin/finanzas?pin_error=${enc(error.message)}`);
+    redirect(`/admin/config/general?pin_error=${enc(error.message)}`);
   }
 
-  redirect("/admin/finanzas?pin_saved=1");
+  redirect("/admin/config/general?pin_saved=1");
 }

@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminPageHeader from "@/components/admin/admin-page-header";
+import AnalysisPinGate from "@/components/admin/analysis-pin-gate";
 import { adminAccentBar, adminCard, adminKicker, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -237,6 +238,7 @@ export default async function AdminAnalyticsPage() {
         subtitle="Estadísticas de los últimos 30 días"
       />
 
+      <AnalysisPinGate clubId={mainClubId || null}>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className={`${adminCard} ${adminAccentBar}`}>
           <p className={adminKicker}>Tasa de ocupación global</p>
@@ -406,6 +408,7 @@ export default async function AdminAnalyticsPage() {
           </ul>
         </div>
       </section>
+      </AnalysisPinGate>
     </div>
   );
 }

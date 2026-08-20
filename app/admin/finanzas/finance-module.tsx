@@ -2,7 +2,7 @@
 
 import { endOfMonth, parseISO, startOfMonth, startOfWeek, subDays, subMonths } from "date-fns";
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
 import type { MatchMoneyRow } from "@/lib/admin/finance-math";
@@ -14,13 +14,11 @@ import {
   sumByCourt,
   totalPaid,
 } from "@/lib/admin/finance-math";
-import { adminAccentBar, adminButtonSecondary, adminCard, adminCTAPrimary, adminKicker, adminPressable } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { SkeletonBlock } from "@/components/admin/ui-skeleton";
 
 const CACHE_PREFIX = "admin_finance_matches_v1:";
 const CACHE_TTL_MS = 90_000;
-
-const btnSecondary = `${adminButtonSecondary} bg-[var(--bg-card)] shadow-sm ${adminPressable}`;
 
 type Court = { id: string; name: string | null };
 type FinanceRow = MatchMoneyRow & {
@@ -120,11 +118,6 @@ function FinanceDataSkeleton() {
 }
 
 export default function FinanceModule({ courtIds, courts }: { courtIds: string[]; courts: Court[] }) {
-  const [unlocked, setUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
-  const [pinChecking, setPinChecking] = useState(false);
-  const [clubId, setClubId] = useState<string | null>(null);
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -162,12 +155,11 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchPaid hidrata el módulo tras desbloquear PIN
-    if (unlocked) void fetchPaid();
-  }, [unlocked, fetchPaid]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchPaid hidrata el modulo al montar
+    void fetchPaid();
+  }, [fetchPaid]);
 
   useEffect(() => {
-    if (!unlocked) return;
     let cancelled = false;
     void (async () => {
       const ids = courtIdsRef.current;
@@ -196,54 +188,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
     return () => {
       cancelled = true;
     };
-  }, [unlocked, courtIds]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadClubId() {
-      if (courtIds.length === 0) {
-        if (!cancelled) setClubId(null);
-        return;
-      }
-      const supabase = createClient();
-      const { data: courtRow } = await supabase
-        .from(DB_TABLES.courts)
-        .select("club_id")
-        .in("id", courtIds)
-        .limit(1)
-        .maybeSingle();
-      const id = String((courtRow as { club_id?: string | null } | null)?.club_id ?? "");
-      if (!cancelled) setClubId(id || null);
-    }
-    void loadClubId();
-    return () => {
-      cancelled = true;
-    };
   }, [courtIds]);
-
-  async function tryPin(e: FormEvent) {
-    e.preventDefault();
-    if (!clubId) {
-      setPinError(pinInput !== "1234");
-      if (pinInput === "1234") {
-        setUnlocked(true);
-        setPinInput("");
-      }
-      return;
-    }
-    setPinChecking(true);
-    const supabase = createClient();
-    // finance_pin nunca se manda al browser: la verificacion corre en Postgres via RPC.
-    const { data: ok } = await supabase.rpc("verify_finance_pin", { p_club_id: clubId, p_pin: pinInput });
-    setPinChecking(false);
-    if (ok) {
-      setUnlocked(true);
-      setPinError(false);
-      setPinInput("");
-    } else {
-      setPinError(true);
-    }
-  }
 
   const courtName = useMemo(() => new Map(courts.map((c) => [c.id, c.name ?? "Cancha"])), [courts]);
 
@@ -293,50 +238,8 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
         }).length,
     [rows, thisMonthEnd, thisMonthStart]
   );
-  if (!unlocked) {
-    return (
-      <form
-        onSubmit={tryPin}
-        className={`mx-auto max-w-sm space-y-5 ${adminCard}`}
-      >
-        <h2 className="font-admin-display text-lg font-bold text-[var(--text-primary)]">Módulo financiero</h2>
-        <p className="text-sm font-medium text-[var(--text-tertiary)]">
-          Ingresá el PIN de administrador (6 dígitos) para ver agregados de ingresos.
-        </p>
-        <input
-          type="password"
-          inputMode="numeric"
-          maxLength={6}
-          value={pinInput}
-          onChange={(e) => {
-            setPinInput(e.target.value.replace(/\D/g, "").slice(0, 6));
-            setPinError(false);
-          }}
-          className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-4 py-3 text-center text-lg font-semibold tracking-widest outline-none transition-shadow focus:border-[#0085FC]/30 focus:ring-2 focus:ring-[#0085FC]/20"
-          placeholder="······"
-          autoComplete="one-time-code"
-        />
-        {pinError ? (
-          <p className="text-sm font-medium text-rose-600">PIN incorrecto.</p>
-        ) : null}
-        <button type="submit" disabled={pinChecking} className={`w-full ${adminCTAPrimary}`}>
-          {pinChecking ? "Verificando..." : "Desbloquear"}
-        </button>
-      </form>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
-      <div className={`${adminCard} flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between`}>
-        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-          Sesión financiera activa (solo este dispositivo)
-        </p>
-        <button type="button" onClick={() => setUnlocked(false)} className={btnSecondary}>
-          Cerrar sesión financiera
-        </button>
-      </div>
-
       {loadError ? (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-5 text-sm font-medium text-rose-800 shadow-sm">
           {loadError}
