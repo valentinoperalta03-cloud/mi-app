@@ -1,102 +1,114 @@
-# CLAUDE.md
+# Padelibre — Claude Code Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 1. Project
+SaaS B2B2C para clubes y jugadores de pádel en Argentina.
+Stack: Next.js 16 (App Router) · TypeScript · Tailwind CSS · Supabase · Mercado Pago · Capacitor 8 (iOS/Android)
 
-## Important: Next.js Version
+## 2. Business rules (non-negotiable)
+- Solo pádel. Sin otros deportes.
+- Clubes pagan ARS $50.000/mes. Trial 15 días.
+- Padelibre NO cobra comisión. 100% de reservas va al club via MP.
+- Clubes pueden configurar seña (monto fijo o porcentaje).
+- Experiencias separadas: club owner en /admin/*, jugador en /home y rutas de jugador.
 
-This project uses **Next.js 16.2.2**, which has breaking changes from earlier versions. APIs, conventions, and file structure may differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## 3. Tipos de match (crítico)
+- `match_type: 'reservation'` → reserva de cancha. Solo visible en /reservas del jugador y /admin/reservas. NUNCA en feed público.
+- `match_type: 'amistoso'` → partido abierto. Visible en /buscar-partido y /[slug]/partidos.
+- ELO eliminado completamente. No usar: level_logic, level-evolution-elo, technical-score, apply-match-technical-rating, match-level, matchResults, playerRatings.
+- `created_by_club: true` → partido abierto creado desde el panel admin del club.
+- `guest_name` en match_participants → jugador agregado por el club sin cuenta en la app.
 
-## Commands
+## 4. Flujo de pagos
+- Reserva de cancha: jugador paga seña online via MP → cancha confirmada → saldo restante se paga en el club.
+- Partido abierto (jugadores): el 4to jugador paga la seña completa → cancha confirmada para todos.
+- Partido abierto (club): sin pago de seña, los jugadores se anotan gratis.
+- Webhook MP en /api/mp/webhook-unified maneja todos los pagos.
 
-```bash
-npm run dev      # Start dev server (localhost:3000)
-npm run build    # Production build
-npm run lint     # Run ESLint (eslint-config-next)
-npm start        # Start production server
-```
+## 5. Rutas principales
 
-No test suite is configured.
+/[slug] → página pública del club
+/[slug]/reservar → reserva de cancha (jugador logueado)
+/[slug]/partidos → abrir/unirse a partidos del club
+/admin/* → panel del club (owner)
+/admin/reservas → gestión reservas + partidos abiertos (2 tabs)
+/admin/config/servicios → servicios del club (20 opciones)
+/home → dashboard del jugador
+/buscar-partido → feed de partidos abiertos por ciudad
+/reservas → reservas + partidos del jugador (2 tabs)
+/comunidad/para-ti → feed de posts + partidos abiertos
+/comunidad/jugadores → jugadores agrupados por categoría
+/completar-perfil → onboarding del jugador (obligatorio)
 
-## Architecture
 
-**FaltaUno** is a padel (paddle tennis) club management and matchmaking app. All UI is in Spanish. The app uses Next.js App Router with Supabase for database, auth, and real-time features.
+## 6. User roles
+- Club owner: /admin/* (middleware protege estas rutas)
+- Jugador: /home y rutas de jugador
+- No mezclar ni bypassear el middleware.
 
-### Route Groups & User Roles
+## 7. Database
+Todos los nombres de tablas vienen de `lib/db-tables.ts`. Nunca hardcodear.
+Tablas principales activas:
+- profiles, clubs, courts, court_time_ranges
+- matches, match_participants, match_join_requests
+- payments, notifications, posts
+- user_favorites, match_feedback
+- training_blocks, court_blocks
+- tournaments, tournament_participants
 
-Role is determined at login: if a user owns a club (`clubs.owner_id`), they land on `/admin/dashboard`; otherwise `/home`. The middleware (`middleware.ts`) enforces this separation — admins can't access jugador routes (except `/perfil`) and vice versa.
+Tablas legacy (existen en DB pero ya no se escriben):
+- matchResults, matchResultConfirmations, playerRatings, levelEvolution
 
-| Area | Routes | Audience |
-|------|--------|----------|
-| Player app | `/home`, `/partidos`, `/reservas`, `/clubes`, `/comunidad`, `/perfil`, `/notificaciones` | Registered players |
-| Admin dashboard | `/admin/dashboard`, `/admin/canchas`, `/admin/reservas`, `/admin/jugadores`, `/admin/analytics`, `/admin/finanzas`, `/admin/config` | Club owners |
-| Public / auth | `/login`, `/verificar-email`, `/auth/*` | Unauthenticated |
+## 8. Módulos clave
 
-### Supabase Integration
+lib/auth-redirect.ts → routing post-login
+lib/db-tables.ts → nombres de tablas
+lib/court-slots.ts → disponibilidad de canchas
+lib/deposit-utils.ts → cálculo de seña
+lib/mercadopago.ts → Mercado Pago
+lib/mp-preference.ts → crear preferencia MP
+lib/notifications.ts → push notifications
+lib/matches.ts → queries de matches
+lib/club-notify.ts → notificar al club
+lib/datetime-ar.ts → timezone Argentina (-03:00)
+lib/match-conflict.ts → cancelar partido abierto al reservar cancha
+lib/admin/onboarding-status.ts → estado del onboarding del admin (9 fases)
 
-Two client variants live in `utils/supabase/`:
-- **Server client** — used in Server Components and API routes (uses service role key for privileged operations)
-- **Middleware client** — `createMiddlewareClient` in `utils/supabase/middleware.ts`, used by `middleware.ts` to refresh sessions and read cookies
 
-Never use the browser client in Server Components. When redirecting in middleware, always copy Supabase session cookies via `redirectPreservingSupabaseCookies` (already defined in `middleware.ts`) to avoid session loss or redirect loops.
+## 9. Supabase clients
+- Server Components/actions → createClient()
+- Service role (bypass RLS) → createServiceClient()
+- Middleware → middleware client
+- Nunca usar browser client en Server Components.
 
-### Database Tables
+## 10. Sistema visual
+Admin: navy #0A1628, lima #CCFF00, Space Grotesk + IBM Plex Mono
+Jugador: variables CSS (--bg-app, --bg-card, --text-primary, etc.)
+Página pública /[slug]: navy #0A1628, misma estética que admin
 
-All table names are centralized in [`lib/db-tables.ts`](lib/db-tables.ts). Always import from there instead of using raw strings. Key tables:
+## 11. Reglas de código
+- Leer archivos relevantes antes de cambiar cualquier cosa.
+- No modificar archivos ni funcionalidades no relacionadas con la tarea.
+- No hacer refactors "por limpieza" salvo que sean necesarios para el cambio.
+- Reusar componentes y módulos existentes antes de crear nuevos.
+- Cambios mínimos y específicos al feature pedido.
+- No cambiar estructura de DB sin necesidad explícita.
+- No exponer service-role credentials al cliente.
+- Todo el UI en español rioplatense.
+- Preservar comportamiento existente salvo que se pida cambiarlo.
+- Sé conciso. No expliques código obvio ni repitas contexto.
+- Si una decisión puede afectar pagos, autenticación, permisos, DB o lógica existente → detenerse y preguntar antes de asumir.
+- Para cambios visuales o simples → implementar directamente sin pedir confirmación innecesaria.
 
-- `profiles` — user data and level/ELO rating
-- `clubs` / `courts` / `court_schedules` / `court_blocks` — club and court management
-- `matches` / `match_players` / `match_participants` / `match_join_requests` / `match_join_votes` — match lifecycle
-- `match_results` / `match_result_confirmations` / `player_ratings` — post-match scoring
-- `payments` — Mercado Pago transactions
-- `messages` — real-time chat (Realtime must be enabled in Supabase dashboard)
-- `notifications` / `posts` / `user_favorites` / `level_evolution` — social features
+## 12. Efficiency
+- No leer el repositorio completo.
+- Buscar primero archivos directamente relacionados con la tarea.
+- Leer documentación adicional solo cuando sea relevante.
+- No repetir búsquedas de archivos ya inspeccionados.
+- Antes de crear algo nuevo, buscar si ya existe una implementación reutilizable.
 
-### Key `lib/` Modules
-
-| File | Responsibility |
-|------|---------------|
-| `auth-redirect.ts` | `resolveHomePath` (role detection), path-type guards |
-| `db-tables.ts` | Single source of truth for Supabase table names |
-| `level-logic.ts` / `level-evolution-elo.ts` | Player ELO / level calculation |
-| `technical-score.ts` / `apply-match-technical-rating.ts` | Post-match skill rating |
-| `court-slots.ts` | Court availability slot computation |
-| `mercadopago.ts` | Payment processing (100% to the club, no per-transaction fee) |
-| `notifications.ts` | In-app notification creation helpers |
-| `matches.ts` / `match-level.ts` | Match filtering and level-based matching |
-
-### Payments
-
-PadeLibre is B2B SaaS: clubs pay a fixed **$50,000 ARS/month subscription** (see `app/api/mp/subscriptions/`), and there are no per-transaction commissions. 100% of every reservation payment goes directly to the club's own Mercado Pago account — PadeLibre never takes a cut. Clubs can optionally require a deposit (seña) to confirm a reservation, configured per club via `clubs.deposit_type` / `clubs.deposit_value` (see `lib/deposit-utils.ts`); when unset, the player pays the full price upfront. API routes live under `app/api/mp/`. Test credentials are in `.env.local`; production keys are separate.
-
-### AI Chatbot
-
-An in-app padel/app-specific chatbot is served from `app/api/ai/` using the Anthropic API. The key is in `.env`.
-
-## Environment Variables
-
-Required in `.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- Mercado Pago keys (access token + public key, test and prod)
-- `ANTHROPIC_API_KEY` (in `.env`)
-- `INVITE_SECRET` — firma HMAC de los links de invitación a partidos privados (`lib/invite-token.ts`)
-
-## Skill routing
-
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
-
-Key routing rules:
-- Product ideas/brainstorming → invoke /office-hours
-- Strategy/scope → invoke /plan-ceo-review
-- Architecture → invoke /plan-eng-review
-- Design system/plan review → invoke /design-consultation or /plan-design-review
-- Full review pipeline → invoke /autoplan
-- Bugs/errors → invoke /investigate
-- QA/testing site behavior → invoke /qa or /qa-only
-- Code review/diff check → invoke /review
-- Visual polish → invoke /design-review
-- Ship/deploy/PR → invoke /ship or /land-and-deploy
-- Save progress → invoke /context-save
-- Resume context → invoke /context-restore
-- Author a backlog-ready spec/issue → invoke /spec
+## 13. Antes de codear
+1. Leer los archivos relevantes.
+2. Identificar patrones existentes.
+3. Hacer el cambio más pequeño y correcto.
+4. Correr lint/build cuando el cambio lo requiera.
+5. Reportar qué cambió y qué queda pendiente.
