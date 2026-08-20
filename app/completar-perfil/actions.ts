@@ -10,6 +10,7 @@ import { createClient } from "@/utils/supabase/server";
 
 type CompletarPerfilPayload = {
   name: string;
+  age?: number | null;
   gender: "masculino" | "femenino";
   avatarUrl?: string | null;
   preferredHand: "derecha" | "izquierda" | "ambas";
@@ -19,6 +20,7 @@ type CompletarPerfilPayload = {
   phone: string;
   province: string;
   city: string;
+  next?: string | null;
 };
 
 export type CompletarPerfilResult = { ok: boolean; message: string };
@@ -27,6 +29,10 @@ export async function completarPerfilAction(
   payload: CompletarPerfilPayload
 ): Promise<CompletarPerfilResult> {
   const name = sanitizeText(payload.name ?? "", 120);
+  const age =
+    typeof payload.age === "number" && Number.isInteger(payload.age) && payload.age > 0 && payload.age < 120
+      ? payload.age
+      : null;
   const avatarUrl = String(payload.avatarUrl ?? "").trim();
   const gender = String(payload.gender ?? "").trim().toLowerCase();
   const preferredHand = String(payload.preferredHand ?? "").trim().toLowerCase();
@@ -82,6 +88,7 @@ export async function completarPerfilAction(
     .from(DB_TABLES.profiles)
     .update({
       name,
+      age,
       gender,
       avatar_url: avatarUrl || null,
       preferred_hand: preferredHand,
@@ -100,5 +107,6 @@ export async function completarPerfilAction(
   revalidatePath("/completar-perfil");
   revalidatePath(`/jugador/${user.id}`);
 
-  redirect("/home");
+  const next = sanitizeText(payload.next ?? "", 200);
+  redirect(next && next.startsWith("/") ? next : "/home");
 }

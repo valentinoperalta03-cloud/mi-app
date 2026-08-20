@@ -2,7 +2,13 @@
 
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import Image from "next/image";
-import { Camera, ChevronLeft, Loader2 } from "lucide-react";
+import {
+  Camera,
+  ChevronLeft,
+  Loader2,
+  Hand,
+  Users,
+} from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppleToast } from "@/components/apple-toast";
@@ -14,6 +20,8 @@ const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] 
 const ibmPlexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["500", "600"] });
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const NAVY = "#0A1628";
+const LIME = "#CCFF00";
 
 const CATEGORIES: { value: string; description: string }[] = [
   { value: "8va", description: "Recién empezás a jugar" },
@@ -26,60 +34,17 @@ const CATEGORIES: { value: string; description: string }[] = [
   { value: "1ra", description: "Jugador de élite, torneos nacionales" },
 ];
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <span className="text-[15px] font-bold text-white">{children}</span>;
-}
+type Step = 1 | 2 | 3 | 4 | 5;
 
-function Chip({
-  label,
-  selected,
-  onClick,
-  minHeight = 48,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-  minHeight?: number;
-}) {
-  const [bump, setBump] = useState(0);
-  return (
-    <motion.button
-      key={bump}
-      type="button"
-      onClick={() => {
-        onClick();
-        setBump((b) => b + 1);
-      }}
-      style={{ minHeight }}
-      initial={{ scale: 1 }}
-      animate={selected ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`flex flex-1 items-center justify-center rounded-xl border px-3 text-sm transition-colors duration-150 hover:bg-white/[0.12] ${
-        selected
-          ? "border-[#0085FC] bg-[#0085FC]/20 font-bold text-white"
-          : "border-white/[0.12] bg-white/[0.08] text-white/75"
-      }`}
-    >
-      {label}
-    </motion.button>
-  );
-}
-
-function ProgressIndicator({ step }: { step: 1 | 2 }) {
-  return (
-    <div className="flex w-full flex-col items-center gap-2">
-      <span className={`${ibmPlexMono.className} text-[11px] uppercase tracking-[0.12em] text-white/40`}>
-        Paso {step} de 2
-      </span>
-      <div className="h-[3px] w-full rounded-full bg-white/10">
-        <motion.div
-          className="h-full rounded-full bg-[#CCFF00]"
-          animate={{ width: step === 1 ? "50%" : "100%" }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-        />
-      </div>
-    </div>
-  );
+function calcularEdad(fechaNacimiento: string): number | null {
+  if (!fechaNacimiento) return null;
+  const hoy = new Date();
+  const nac = new Date(fechaNacimiento);
+  if (Number.isNaN(nac.getTime())) return null;
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const m = hoy.getMonth() - nac.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+  return edad > 0 && edad < 120 ? edad : null;
 }
 
 const slideVariants = {
@@ -87,6 +52,127 @@ const slideVariants = {
   center: { x: 0, opacity: 1 },
   exit: { x: -40, opacity: 0 },
 };
+
+function Kicker({ step }: { step: Step }) {
+  return (
+    <span className={`${ibmPlexMono.className} text-[11px] font-medium uppercase tracking-[0.2em] text-[#CCFF00]/70`}>
+      Paso {step} / 5
+    </span>
+  );
+}
+
+function ProgressBar({ step }: { step: Step }) {
+  return (
+    <div className="flex w-full gap-1.5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <div key={s} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/10">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ backgroundColor: LIME }}
+            initial={false}
+            animate={{ width: s <= step ? "100%" : "0%" }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h1 className={`${spaceGrotesk.className} text-[26px] font-black uppercase tracking-tight text-white`}>
+      {children}
+    </h1>
+  );
+}
+
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const { className, style, ...rest } = props;
+  return (
+    <input
+      {...rest}
+      style={{ height: 52, ...style }}
+      className={`w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-[15px] text-white placeholder:text-white/30 outline-none transition-colors focus:border-[#CCFF00] ${className ?? ""}`}
+    />
+  );
+}
+
+function BigChip({
+  selected,
+  onClick,
+  icon,
+  label,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ height: 80 }}
+      className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border transition-colors duration-150 ${
+        selected
+          ? `border-transparent bg-[#CCFF00] font-black text-[#0A1628]`
+          : "border-white/[0.10] bg-white/[0.06] text-white/70 hover:bg-white/[0.10]"
+      }`}
+    >
+      {icon}
+      <span className="text-sm font-bold">{label}</span>
+    </button>
+  );
+}
+
+function SmallChip({
+  selected,
+  onClick,
+  label,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-xl border py-3 text-sm font-bold transition-colors duration-150 ${
+        selected
+          ? `border-transparent bg-[#CCFF00] text-[#0A1628]`
+          : "border-white/[0.10] bg-white/[0.06] text-white/70 hover:bg-white/[0.10]"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function CategoryChip({
+  selected,
+  onClick,
+  label,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl py-3 text-sm font-bold transition-colors duration-150 ${
+        selected
+          ? `bg-[#CCFF00] text-[#0A1628]`
+          : "border border-white/[0.10] bg-white/[0.06] text-white/70 hover:bg-white/[0.10]"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 function MainButton({
   enabled,
@@ -100,52 +186,65 @@ function MainButton({
   children: React.ReactNode;
 }) {
   return (
-    <motion.div
-      key={enabled ? "enabled" : "disabled"}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!enabled || pending}
+      className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#CCFF00] py-4 text-base font-black uppercase tracking-wide text-[#0A1628] transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${spaceGrotesk.className}`}
     >
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={!enabled || pending}
-        style={{
-          minHeight: 56,
-          boxShadow: enabled ? "0 4px 20px rgba(0,133,252,0.40)" : "none",
-        }}
-        className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-[#0085FC] to-[#0461C4] text-base font-bold text-white disabled:cursor-not-allowed disabled:opacity-40 ${spaceGrotesk.className}`}
-      >
-        {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-        {children}
-      </button>
-    </motion.div>
+      {pending ? <Loader2 size={16} className="animate-spin" /> : null}
+      {children}
+    </button>
   );
 }
 
-export default function CompletarPerfilClient() {
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Volver"
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-white transition hover:bg-white/[0.14]"
+    >
+      <ChevronLeft size={18} />
+    </button>
+  );
+}
+
+export default function CompletarPerfilClient({
+  next,
+  googleAvatarUrl,
+}: {
+  next?: string;
+  googleAvatarUrl?: string | null;
+}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<Step>(1);
 
-  // Pantalla 1 — sobre vos
+  // Paso 1
   const [name, setName] = useState("");
-  const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [birthDate, setBirthDate] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(googleAvatarUrl ?? "");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(googleAvatarUrl ?? null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // Paso 2
+  const [gender, setGender] = useState<"masculino" | "femenino" | "">("");
+  const [category, setCategory] = useState("");
+
+  // Paso 3
+  const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "">("");
+  const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
+
+  // Paso 4
   const [phone, setPhone] = useState("");
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
 
-  // Pantalla 2 — tu juego
-  const [preferredHand, setPreferredHand] = useState<"derecha" | "izquierda" | "ambas" | "">("");
-  const [courtPosition, setCourtPosition] = useState<"drive" | "reves" | "ambas" | "">("");
-  const [preferredSchedule, setPreferredSchedule] = useState<"manana" | "tarde" | "noche" | "cualquiera" | "">("");
-  const [category, setCategory] = useState("");
+  const edad = calcularEdad(birthDate);
 
   function showToast(message: string) {
     setToast(message);
@@ -192,34 +291,38 @@ export default function CompletarPerfilClient() {
     }
   }
 
-  const canSubmitStep1 = Boolean(
-    name.trim() && gender && phone.replace(/\D/g, "").length >= 8 && province
-  );
-  const canSubmitStep2 = Boolean(preferredHand && courtPosition && preferredSchedule && category);
+  const canStep1 = Boolean(name.trim() && birthDate && edad !== null);
+  const canStep2 = Boolean(gender && category);
+  const canStep3 = Boolean(preferredHand && courtPosition);
+  const canStep4 = Boolean(phone.replace(/\D/g, "").length >= 8 && province);
 
-  function goToStep2() {
-    if (!canSubmitStep1) return;
-    setStep(2);
+  function goNext() {
+    if (step === 1 && !canStep1) return;
+    if (step === 2 && !canStep2) return;
+    if (step === 3 && !canStep3) return;
+    if (step === 4 && !canStep4) return;
+    setStep((s) => (s < 5 ? ((s + 1) as Step) : s));
   }
 
-  function goToStep1() {
-    setStep(1);
+  function goBack() {
+    setStep((s) => (s > 1 ? ((s - 1) as Step) : s));
   }
 
   function handleFinish() {
-    if (!canSubmitStep2) return;
     startTransition(async () => {
       const res = await completarPerfilAction({
         name: name.trim(),
+        age: edad,
         gender: gender as "masculino" | "femenino",
         avatarUrl: avatarUrl || null,
-        preferredHand: preferredHand as "derecha" | "izquierda" | "ambas",
+        preferredHand: preferredHand as "derecha" | "izquierda",
         courtPosition: courtPosition as "drive" | "reves" | "ambas",
-        preferredSchedule: preferredSchedule as "manana" | "tarde" | "noche" | "cualquiera",
+        preferredSchedule: "cualquiera",
         category,
         phone: `+54${phone.replace(/\D/g, "")}`,
         province,
         city: city.trim(),
+        next: next || null,
       });
       if (res && !res.ok) {
         showToast(res.message);
@@ -227,17 +330,23 @@ export default function CompletarPerfilClient() {
     });
   }
 
+  const categoryDescription = CATEGORIES.find((c) => c.value === category)?.description;
+
   return (
-    <main className="min-h-dvh" style={{ backgroundColor: "#0C1829" }}>
+    <main className="relative min-h-dvh" style={{ backgroundColor: NAVY }}>
+      <div style={{ backgroundColor: LIME }} className="h-[2px] w-full" />
       <div className="mx-auto flex min-h-dvh w-full max-w-[420px] flex-col gap-8 px-5 py-6">
         <div className="flex flex-col items-center gap-5">
           <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-lg" />
-          <ProgressIndicator step={step} />
+          <div className="flex w-full flex-col items-center gap-2">
+            <Kicker step={step} />
+            <ProgressBar step={step} />
+          </div>
         </div>
 
         <div className="relative flex-1 overflow-hidden">
           <AnimatePresence mode="wait" initial={false}>
-            {step === 1 ? (
+            {step === 1 && (
               <motion.div
                 key="step1"
                 variants={slideVariants}
@@ -247,34 +356,27 @@ export default function CompletarPerfilClient() {
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className="flex flex-col gap-8"
               >
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <span style={{ fontSize: 80, lineHeight: 1 }}>🎾</span>
-                  <div>
-                    <h1 className={`${spaceGrotesk.className} text-[28px] font-bold text-white`}>
-                      ¡Hola! Contanos sobre vos
-                    </h1>
-                    <p className="mt-1.5 text-sm text-white/55">
-                      Solo te pedimos esto una vez. Después siempre entrás directo.
-                    </p>
-                  </div>
-                </div>
+                <SectionTitle>Datos personales</SectionTitle>
 
-                <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu nombre</SectionLabel>
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/[0.12] bg-white/[0.08]"
+                <div className="flex flex-col items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-white/[0.10] bg-white/[0.06]"
+                  >
+                    {avatarPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <Camera size={26} className="text-white/40" />
+                    )}
+                    <span
+                      style={{ backgroundColor: LIME }}
+                      className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2"
                     >
-                      {avatarPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
-                      ) : (
-                        <Camera size={22} className="text-white/40" />
-                      )}
-                    </button>
-                  </div>
+                      <Camera size={13} color={NAVY} />
+                    </span>
+                  </button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -286,117 +388,37 @@ export default function CompletarPerfilClient() {
                       await handleAvatarUpload(file);
                     }}
                   />
-                  <p className="text-center text-xs text-white/40">
-                    {uploadingAvatar ? "Subiendo foto…" : "Agregar foto (opcional)"}
+                  <p className="text-xs text-white/40">
+                    {uploadingAvatar ? "Subiendo foto…" : "Tocá para cambiar tu foto"}
                   </p>
-                  <input
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <TextInput
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Tu nombre completo"
-                    style={{ height: 52 }}
-                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
                   />
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu género</SectionLabel>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setGender("masculino")}
-                      style={{ height: 56 }}
-                      className={`w-1/2 rounded-2xl border text-[15px] font-semibold transition-colors duration-200 ${
-                        gender === "masculino"
-                          ? "border-transparent bg-[#0085FC] font-bold text-white"
-                          : "border-white/[0.12] bg-white/[0.08] text-white/75"
-                      }`}
-                    >
-                      ♂ Masculino
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGender("femenino")}
-                      style={{ height: 56 }}
-                      className={`w-1/2 rounded-2xl border text-[15px] font-semibold transition-colors duration-200 ${
-                        gender === "femenino"
-                          ? "border-transparent bg-[#0085FC] font-bold text-white"
-                          : "border-white/[0.12] bg-white/[0.08] text-white/75"
-                      }`}
-                    >
-                      ♀ Femenino
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu teléfono</SectionLabel>
-                  <p className="text-[13px] leading-relaxed text-white/55">
-                    Los clubes donde reservés van a poder escribirte si hay alguna novedad. Tu número nunca se
-                    comparte públicamente.
-                  </p>
-                  <div className="flex gap-2">
-                    <span
-                      style={{ height: 52 }}
-                      className="flex items-center rounded-2xl border border-white/[0.12] bg-white/[0.08] px-3 text-[15px] font-medium text-white/70"
-                    >
-                      +54
-                    </span>
-                    <input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
-                      inputMode="numeric"
-                      placeholder="91122334455"
-                      style={{ height: 52 }}
-                      className="flex-1 rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0085FC]"
+                  <div>
+                    <TextInput
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
                     />
+                    {edad !== null ? (
+                      <p className="mt-2 text-sm font-bold text-[#CCFF00]">{edad} años</p>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <SectionLabel>¿Dónde jugás?</SectionLabel>
-                  <select
-                    value={province}
-                    onChange={(e) => {
-                      setProvince(e.target.value);
-                      setCity("");
-                    }}
-                    style={{ height: 52 }}
-                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white outline-none focus:border-[#0085FC]"
-                  >
-                    <option value="" disabled className="bg-[#0C1829] text-white/35">
-                      Seleccioná tu provincia
-                    </option>
-                    {ARGENTINA_PROVINCES.map((prov) => (
-                      <option key={prov.code} value={prov.name} className="bg-[#0C1829] text-white">
-                        {prov.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    disabled={!province}
-                    style={{ height: 52 }}
-                    className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.08] px-4 text-[15px] text-white outline-none focus:border-[#0085FC] disabled:opacity-40"
-                  >
-                    <option value="" disabled className="bg-[#0C1829] text-white/35">
-                      {province ? "Seleccioná tu ciudad" : "Elegí primero tu provincia"}
-                    </option>
-                    {(ARGENTINA_PROVINCES.find((prov) => prov.name === province)?.cities ?? []).map(
-                      (cityName) => (
-                        <option key={cityName} value={cityName} className="bg-[#0C1829] text-white">
-                          {cityName}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-
-                <MainButton enabled={canSubmitStep1} onClick={goToStep2}>
-                  Continuar — casi listo 👊
+                <MainButton enabled={canStep1} onClick={goNext}>
+                  Continuar
                 </MainButton>
               </motion.div>
-            ) : (
+            )}
+
+            {step === 2 && (
               <motion.div
                 key="step2"
                 variants={slideVariants}
@@ -406,52 +428,92 @@ export default function CompletarPerfilClient() {
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className="flex flex-col gap-8"
               >
-                <button
-                  type="button"
-                  onClick={goToStep1}
-                  className="flex items-center gap-1 self-start text-sm font-medium text-white/50 transition hover:text-white/80"
-                >
-                  <ChevronLeft size={16} />
-                  Volver
-                </button>
+                <SectionTitle>Perfil deportivo</SectionTitle>
 
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <span style={{ fontSize: 80, lineHeight: 1 }}>⚡</span>
-                  <div>
-                    <h1 className={`${spaceGrotesk.className} text-[28px] font-bold text-white`}>¿Cómo jugás?</h1>
-                    <p className="mt-1.5 text-sm text-white/55">
-                      Esto nos ayuda a encontrarte los mejores partidos.
-                    </p>
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-bold text-white/70">Género</span>
+                  <div className="flex gap-3">
+                    <BigChip
+                      selected={gender === "masculino"}
+                      onClick={() => setGender("masculino")}
+                      icon={<Users size={20} />}
+                      label="Caballeros"
+                    />
+                    <BigChip
+                      selected={gender === "femenino"}
+                      onClick={() => setGender("femenino")}
+                      icon={<Users size={20} />}
+                      label="Damas"
+                    />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu mano hábil</SectionLabel>
-                  <div className="flex gap-2">
-                    {[
-                      { id: "derecha", label: "Derecha" },
-                      { id: "izquierda", label: "Izquierda" },
-                      { id: "ambas", label: "Ambas" },
-                    ].map((opt) => (
-                      <Chip
-                        key={opt.id}
-                        label={opt.label}
-                        selected={preferredHand === opt.id}
-                        onClick={() => setPreferredHand(opt.id as "derecha" | "izquierda" | "ambas")}
+                  <span className="text-sm font-bold text-white/70">Categoría</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CATEGORIES.map((opt) => (
+                      <CategoryChip
+                        key={opt.value}
+                        label={opt.value}
+                        selected={category === opt.value}
+                        onClick={() => setCategory(opt.value)}
                       />
                     ))}
                   </div>
+                  {categoryDescription ? (
+                    <p className="text-xs text-white/50">{categoryDescription}</p>
+                  ) : null}
+                </div>
+
+                <MainButton enabled={canStep2} onClick={goNext}>
+                  Continuar
+                </MainButton>
+
+                <div className="flex justify-start">
+                  <BackButton onClick={goBack} />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col gap-8"
+              >
+                <SectionTitle>Estilo de juego</SectionTitle>
+
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-bold text-white/70">Mano hábil</span>
+                  <div className="flex gap-3">
+                    <BigChip
+                      selected={preferredHand === "derecha"}
+                      onClick={() => setPreferredHand("derecha")}
+                      icon={<Hand size={20} />}
+                      label="Diestro"
+                    />
+                    <BigChip
+                      selected={preferredHand === "izquierda"}
+                      onClick={() => setPreferredHand("izquierda")}
+                      icon={<Hand size={20} className="-scale-x-100" />}
+                      label="Zurdo"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu posición en cancha</SectionLabel>
+                  <span className="text-sm font-bold text-white/70">Posición en cancha</span>
                   <div className="flex gap-2">
                     {[
                       { id: "drive", label: "Drive" },
                       { id: "reves", label: "Revés" },
-                      { id: "ambas", label: "Ambas" },
+                      { id: "ambas", label: "Indistinto" },
                     ].map((opt) => (
-                      <Chip
+                      <SmallChip
                         key={opt.id}
                         label={opt.label}
                         selected={courtPosition === opt.id}
@@ -461,57 +523,155 @@ export default function CompletarPerfilClient() {
                   </div>
                 </div>
 
+                <MainButton enabled={canStep3} onClick={goNext}>
+                  Continuar
+                </MainButton>
+
+                <div className="flex justify-start">
+                  <BackButton onClick={goBack} />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col gap-8"
+              >
+                <SectionTitle>Contacto</SectionTitle>
+
                 <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu horario favorito</SectionLabel>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "manana", label: "Mañana" },
-                      { id: "tarde", label: "Tarde" },
-                      { id: "noche", label: "Noche" },
-                      { id: "cualquiera", label: "Cualquiera" },
-                    ].map((opt) => (
-                      <Chip
-                        key={opt.id}
-                        label={opt.label}
-                        selected={preferredSchedule === opt.id}
-                        onClick={() => setPreferredSchedule(opt.id as "manana" | "tarde" | "noche" | "cualquiera")}
-                      />
-                    ))}
+                  <span className="text-sm font-bold text-white/70">WhatsApp</span>
+                  <div className="flex gap-2">
+                    <span
+                      style={{ height: 52 }}
+                      className="flex items-center rounded-2xl border border-white/[0.10] bg-white/[0.06] px-3 text-[15px] font-medium text-white/70"
+                    >
+                      +54
+                    </span>
+                    <TextInput
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      placeholder="91122334455"
+                      className="flex-1"
+                    />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <SectionLabel>Tu categoría</SectionLabel>
-                  <div
-                    style={{ borderLeftWidth: 3, borderLeftColor: "#FFC107", backgroundColor: "rgba(255,193,7,0.10)" }}
-                    className="rounded-[10px] px-4 py-3 text-[13px] leading-relaxed"
+                  <span className="text-sm font-bold text-white/70">Provincia</span>
+                  <select
+                    value={province}
+                    onChange={(e) => {
+                      setProvince(e.target.value);
+                      setCity("");
+                    }}
+                    style={{ height: 52 }}
+                    className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-[15px] text-white outline-none focus:border-[#CCFF00]"
                   >
-                    <span style={{ color: "#FFC107" }}>
-                      ⚠️ Elegí tu categoría con honestidad. Si mentís, no vas a poder unirte a partidos con tus
-                      amigos.
+                    <option value="" disabled style={{ backgroundColor: NAVY }} className="text-white/35">
+                      Seleccioná tu provincia
+                    </option>
+                    {ARGENTINA_PROVINCES.map((prov) => (
+                      <option key={prov.code} value={prov.name} style={{ backgroundColor: NAVY }} className="text-white">
+                        {prov.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <span className="text-sm font-bold text-white/70">Ciudad</span>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    disabled={!province}
+                    style={{ height: 52 }}
+                    className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.06] px-4 text-[15px] text-white outline-none focus:border-[#CCFF00] disabled:opacity-40"
+                  >
+                    <option value="" disabled style={{ backgroundColor: NAVY }} className="text-white/35">
+                      {province ? "Seleccioná tu ciudad" : "Elegí primero tu provincia"}
+                    </option>
+                    {(ARGENTINA_PROVINCES.find((prov) => prov.name === province)?.cities ?? []).map(
+                      (cityName) => (
+                        <option key={cityName} value={cityName} style={{ backgroundColor: NAVY }} className="text-white">
+                          {cityName}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <MainButton enabled={canStep4} onClick={goNext}>
+                  Continuar
+                </MainButton>
+
+                <div className="flex justify-start">
+                  <BackButton onClick={goBack} />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.div
+                key="step5"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex flex-col gap-8"
+              >
+                <SectionTitle>Confirmación</SectionTitle>
+
+                <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/[0.10] bg-white/[0.06] p-6">
+                  <div className="h-20 w-20 overflow-hidden rounded-full border border-white/[0.10] bg-white/[0.08]">
+                    {avatarPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Camera size={22} className="text-white/40" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className={`${spaceGrotesk.className} text-lg font-bold text-white`}>{name || "—"}</p>
+                    {edad !== null ? <p className="text-xs text-white/40">{edad} años</p> : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {category ? (
+                      <span
+                        style={{ backgroundColor: LIME, color: NAVY }}
+                        className="rounded-full px-3 py-1 text-xs font-black uppercase"
+                      >
+                        {category} categoría
+                      </span>
+                    ) : null}
+                    <span className="rounded-full border border-white/[0.10] bg-white/[0.06] px-3 py-1 text-xs font-bold text-white/70">
+                      {courtPosition === "drive" ? "Drive" : courtPosition === "reves" ? "Revés" : "Indistinto"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {CATEGORIES.map((opt) => (
-                      <Chip
-                        key={opt.value}
-                        label={opt.value}
-                        selected={category === opt.value}
-                        onClick={() => setCategory(opt.value)}
-                        minHeight={44}
-                      />
-                    ))}
-                  </div>
-                  {category ? (
-                    <p className="text-xs text-white/50">
-                      {CATEGORIES.find((c) => c.value === category)?.description}
-                    </p>
-                  ) : null}
+
+                  <p className="text-sm text-white/50">
+                    {[city, province].filter(Boolean).join(", ") || "Sin ubicación"}
+                  </p>
                 </div>
 
-                <MainButton enabled={canSubmitStep2} pending={pending} onClick={handleFinish}>
-                  ¡Listo, a jugar! 🎾
+                <MainButton enabled pending={pending} onClick={handleFinish}>
+                  Comenzar ahora →
                 </MainButton>
+
+                <div className="flex justify-start">
+                  <BackButton onClick={goBack} />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

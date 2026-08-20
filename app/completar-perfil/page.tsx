@@ -5,7 +5,11 @@ import CompletarPerfilClient from "./completar-perfil-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function CompletarPerfilPage() {
+export default async function CompletarPerfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,7 +24,11 @@ export default async function CompletarPerfilPage() {
   const onboardingCompleted = Boolean(
     (profile as { onboarding_completed?: boolean | null } | null)?.onboarding_completed
   );
-  if (onboardingCompleted) redirect("/home");
+  const sp = await searchParams;
+  const next = sp.next ?? "";
+  if (onboardingCompleted) redirect(next && next.startsWith("/") ? next : "/home");
 
-  return <CompletarPerfilClient />;
+  return (
+    <CompletarPerfilClient next={next} googleAvatarUrl={user.user_metadata?.avatar_url ?? null} />
+  );
 }
