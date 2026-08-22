@@ -1,24 +1,43 @@
-﻿"use client";
+"use client";
 
-import { useActionState, useState } from "react";
-import { adminCTAPrimary } from "@/components/admin/admin-premium";
-import { MAX_PAIRS_OPTIONS, PENA_MAX_PLAYERS_OPTIONS, PENA_WHAT_INCLUDES_OPTIONS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
-import { eloBandMax, eloBandMin } from "@/lib/tournament-utils";
-import { LEVEL_HIERARCHY } from "@/lib/match-level";
-import TournamentDepositFields from "@/components/admin/tournament-deposit-fields";
+import { useActionState, useEffect, useState } from "react";
+import { adminCard, adminCTAPrimary } from "@/components/admin/admin-premium";
+import { MAX_PAIRS_OPTIONS } from "@/lib/tournament-constants";
 import { createTournamentAction, type CreateTournamentState } from "./actions";
 
 const initial: CreateTournamentState = { ok: false, message: "" };
 
-export default function TorneoForm({ clubId }: { clubId: string }) {
-  const [state, formAction, pending] = useActionState(createTournamentAction, initial);
-  const [clubPrice, setClubPrice] = useState(0);
-  const [tournamentType, setTournamentType] = useState(TOURNAMENT_TYPE_OPTIONS[0]?.value ?? "americano");
-  const [consolationBracket, setConsolationBracket] = useState(false);
+export default function TorneoFormInline({
+  clubId,
+  onSuccess,
+}: {
+  clubId: string;
+  onSuccess?: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(
+    createTournamentAction,
+    initial,
+  );
+  const [startDate, setStartDate] = useState("");
+
+  useEffect(() => {
+    if (state.ok) onSuccess?.();
+  }, [state.ok, onSuccess]);
 
   return (
-    <form action={formAction} className="mt-4 space-y-4 text-sm">
+    <form action={formAction} className={`${adminCard} space-y-4 text-sm`}>
       <input type="hidden" name="club_id" value={clubId} />
+      {/* Torneo simplificado: siempre "americano", torneo de un solo día. Para
+          eliminación/peña o fechas personalizadas, usar el detalle del torneo. */}
+      <input type="hidden" name="tournament_type" value="americano" />
+      <input type="hidden" name="start_time" value="09:00" />
+      <input type="hidden" name="end_date" value={startDate} />
+      <input
+        type="hidden"
+        name="registration_deadline"
+        value={startDate ? `${startDate}T00:00` : ""}
+      />
+
       {state.message && !state.ok ? (
         <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           {state.message}
@@ -26,7 +45,9 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       ) : null}
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Nombre</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Nombre del torneo
+        </span>
         <input
           name="name"
           required
@@ -35,108 +56,43 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Tipo</span>
-        <select
-          name="tournament_type"
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Fecha de inicio
+        </span>
+        <input
+          type="date"
+          name="start_date"
           required
-          value={tournamentType}
-          onChange={(e) => setTournamentType(e.target.value as typeof tournamentType)}
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Precio de inscripción (ARS, por pareja)
+        </span>
+        <input
+          type="number"
+          name="price_per_pair"
+          min={0}
+          step="100"
+          defaultValue={0}
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Máximo de parejas
+        </span>
+        <select
+          name="max_pairs"
+          defaultValue={16}
           className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
         >
-          {TOURNAMENT_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {tournamentType === "eliminacion" ? (
-        <label className="flex items-start gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2.5">
-          <input
-            type="checkbox"
-            name="consolation_bracket"
-            value="true"
-            checked={consolationBracket}
-            onChange={(e) => setConsolationBracket(e.target.checked)}
-            className="mt-0.5"
-          />
-          <span>
-            <span className="block text-sm font-semibold text-[var(--text-primary)]">Activar Copa de Plata 🥈</span>
-            <span className="mt-0.5 block text-xs text-[var(--text-tertiary)]">
-              Los perdedores de la primera ronda compiten en una llave paralela por la Copa de Plata.
-            </span>
-          </span>
-        </label>
-      ) : null}
-
-      {tournamentType === "pena" ? (
-        <>
-          <fieldset>
-            <legend className="text-xs font-semibold text-[var(--text-secondary)]">¿Qué incluye?</legend>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PENA_WHAT_INCLUDES_OPTIONS.map((opt) => (
-                <label
-                  key={opt}
-                  className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2"
-                >
-                  <input type="checkbox" name="what_includes" value={opt} />
-                  <span className="text-sm text-[var(--text-primary)]">{opt}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">Formato de juego</span>
-            <input
-              name="game_format"
-              placeholder="Set a 6, Tie Break, etc."
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-            />
-          </label>
-        </>
-      ) : null}
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Descripción (opcional)</span>
-        <textarea
-          name="description"
-          rows={2}
-          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-        />
-      </label>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Inicio (fecha)</span>
-          <input type="date" name="start_date" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Fin (fecha)</span>
-          <input type="date" name="end_date" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
-        </label>
-      </div>
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Hora de inicio</span>
-        <input type="time" name="start_time" required className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]" />
-      </label>
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Cierre de inscripción</span>
-        <input
-          type="datetime-local"
-          name="registration_deadline"
-          required
-          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-        />
-      </label>
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">{tournamentType === "pena" ? "Máx. jugadores" : "Máx. parejas"}</span>
-        <select name="max_pairs" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
-          {(tournamentType === "pena" ? PENA_MAX_PLAYERS_OPTIONS : MAX_PAIRS_OPTIONS).map((n) => (
+          {MAX_PAIRS_OPTIONS.map((n) => (
             <option key={n} value={n}>
               {n}
             </option>
@@ -144,80 +100,12 @@ export default function TorneoForm({ clubId }: { clubId: string }) {
         </select>
       </label>
 
-      <div className="block">
-        <label htmlFor="price_per_pair" className="text-xs font-semibold text-[var(--text-secondary)]">
-          {tournamentType === "pena" ? "Precio por jugador (ARS, para el club)" : "Precio por pareja (ARS, para el club)"}
-        </label>
-        <input
-          id="price_per_pair"
-          type="number"
-          name="price_per_pair"
-          min={0}
-          step="100"
-          defaultValue={0}
-          onChange={(e) => setClubPrice(Number(e.target.value) || 0)}
-          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-        />
-        <p className="mt-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          Los jugadores verán{" "}
-          <span className="font-bold">
-            ${clubPrice.toLocaleString("es-AR")} por {tournamentType === "pena" ? "jugador" : "pareja"}
-          </span>
-          . Ese monto va entero a tu cuenta de Mercado Pago.
-        </p>
-      </div>
-
-      <TournamentDepositFields pricePerPair={clubPrice} />
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Premio (opcional)</span>
-        <input
-          name="prize"
-          placeholder="Recomendamos agregar un premio visible para los jugadores"
-          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-        />
-      </label>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Categoría mínima (ELO)</span>
-          <select name="category_min" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
-            <option value="">Libre (sin piso)</option>
-            {LEVEL_HIERARCHY.map((label, idx) => (
-              <option key={label} value={eloBandMin(idx)}>
-                {label.split("·")[0]?.trim()}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Categoría máxima (ELO)</span>
-          <select name="category_max" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
-            <option value="">Libre (sin techo)</option>
-            {LEVEL_HIERARCHY.map((label, idx) => (
-              <option key={`m-${label}`} value={eloBandMax(idx)}>
-                {label.split("·")[0]?.trim()} (hasta {eloBandMax(idx)})
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Horas de cancelación</span>
-        <select name="cancellation_hours" className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]">
-          <option value={24}>24</option>
-          <option value={48}>48</option>
-          <option value={72}>72</option>
-        </select>
-      </label>
-
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !startDate}
         className={`w-full text-center ${adminCTAPrimary} disabled:opacity-50`}
       >
-        {pending ? "Guardando…" : "Crear torneo"}
+        {pending ? "Creando…" : "Crear torneo"}
       </button>
     </form>
   );
