@@ -17,11 +17,12 @@ import {
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import type { CourtTimeRangeInput } from "@/lib/court-slots";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
 import { createClient } from "@/utils/supabase/server";
 import { deactivateTrainingBlockAction, deleteExternalTrainingBlockRowAction } from "./actions";
 import ClasePublicaModal from "./clase-publica-modal";
-import TrainingBlockForm from "./training-block-form";
+import TrainingWizard from "./training-wizard-client";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,22 @@ export default async function AdminClasesPage() {
   if (!ctx?.userId) redirect("/login");
   if (ctx.clubIds.length === 0) redirect("/admin/club");
   const clubId = ctx.clubIds[0]!;
+
+  const { data: clubHoursRow } = await supabase
+    .from(DB_TABLES.clubs)
+    .select("open_time,close_time")
+    .eq("id", clubId)
+    .maybeSingle();
+  const clubOpen = String((clubHoursRow as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
+  const clubClose = String((clubHoursRow as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
+
+  const { data: courtTimeRangesRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtTimeRanges)
+        .select("court_id,day_of_week,open_time,close_time")
+        .in("court_id", ctx.courtIds)
+    : { data: [] };
+  const courtTimeRanges = (courtTimeRangesRaw ?? []) as CourtTimeRangeInput[];
 
   const { data: coachesRaw } = await supabase
     .from(DB_TABLES.practiceCoaches)
@@ -120,30 +137,35 @@ export default async function AdminClasesPage() {
     return !activeTrainingKeys.has(key);
   });
 
-  const externalTrainingItems: ExternalTrainingItem[] = [
-    ...trainingBlocks.map((t) => ({
-      key: `training-${t.id}`,
-      title: t.title,
-      courtName: courtNameById.get(t.court_id) ?? "Cancha",
+  const punctualItems: ExternalTrainingItem[] = punctualCourtBlocks.map((b) => ({
+    key: `block-${b.id}`,
+    title: "Entrenamiento externo",
+    courtName: courtNameById.get(b.court_id) ?? "Cancha",
+    scheduleLabel: `${format(parseISO(b.blocked_date), "d MMM yyyy", { locale: es })} · ${String(b.blocked_time).slice(0, 5)} hs`,
+    coach: null,
+    modality: null,
+    formAction: deleteExternalTrainingBlockRowAction,
+    hiddenFieldName: "court_block_id",
+    hiddenFieldValue: b.id,
+  }));
+
+  // Agrupar los turnos recurrentes por profesor (título del training_block)
+  // para mostrar un solo encabezado con todos sus horarios debajo.
+  type ProfessorSchedule = { trainingBlockId: string; scheduleLabel: string; courtName: string; modality: string | null };
+  type ProfessorGroup = { key: string; professorName: string; schedules: ProfessorSchedule[] };
+  const professorGroupMap = new Map<string, ProfessorGroup>();
+  for (const t of trainingBlocks) {
+    const professorName = (t.coach && t.coach.trim()) || t.title;
+    const group = professorGroupMap.get(professorName) ?? { key: professorName, professorName, schedules: [] };
+    group.schedules.push({
+      trainingBlockId: t.id,
       scheduleLabel: `${DAY_LABELS[t.day_of_week]} · ${String(t.start_time).slice(0, 5)} - ${String(t.end_time).slice(0, 5)}`,
-      coach: t.coach,
+      courtName: courtNameById.get(t.court_id) ?? "Cancha",
       modality: t.modality,
-      formAction: deactivateTrainingBlockAction,
-      hiddenFieldName: "training_block_id",
-      hiddenFieldValue: t.id,
-    })),
-    ...punctualCourtBlocks.map((b) => ({
-      key: `block-${b.id}`,
-      title: "Entrenamiento externo",
-      courtName: courtNameById.get(b.court_id) ?? "Cancha",
-      scheduleLabel: `${format(parseISO(b.blocked_date), "d MMM yyyy", { locale: es })} · ${String(b.blocked_time).slice(0, 5)} hs`,
-      coach: null as string | null,
-      modality: null as string | null,
-      formAction: deleteExternalTrainingBlockRowAction,
-      hiddenFieldName: "court_block_id",
-      hiddenFieldValue: b.id,
-    })),
-  ];
+    });
+    professorGroupMap.set(professorName, group);
+  }
+  const professorGroups = Array.from(professorGroupMap.values());
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,31 +175,71 @@ export default async function AdminClasesPage() {
         subtitle="Clases públicas y entrenamientos externos de tu club"
       />
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`${adminCard} border-l-4 border-l-[#0085FC]`}>
+          <div className="mb-2 flex items-center gap-2">
+            <Dumbbell size={18} className="text-[#0085FC]" />
+            <p className="font-bold text-[var(--text-primary)]">Entrenamientos externos</p>
+          </div>
+          <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+            Son los horarios donde un profesor particular usa tu cancha para dar clases privadas.
+            Bloquean la cancha automáticamente para que no aparezca disponible para reservas.
+            Los jugadores NO los ven en la app.
+          </p>
+        </div>
+        <div className={`${adminCard} border-l-4 border-l-[#CCFF00]`}>
+          <div className="mb-2 flex items-center gap-2">
+            <GraduationCap size={18} className="text-[#CCFF00]" />
+            <p className="font-bold text-[var(--text-primary)]">Clases públicas</p>
+          </div>
+          <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+            Son clases que publicás para que los jugadores se inscriban desde la app.
+            Tienen precio, cupos y horarios visibles. Los jugadores pueden reservar su lugar
+            y pagar online o en el club.
+          </p>
+        </div>
+      </div>
+
       <section>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Dumbbell size={18} className="text-[#0085FC]" />
-            <div>
-              <h2 className={adminSectionLabel}>Entrenamientos externos</h2>
-              <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
-                Solo registro del club, no visible para jugadores.
-              </p>
-            </div>
-          </div>
-          <TrainingBlockForm courts={courtOptions} />
+          <h2 className={adminSectionLabel}>Entrenamientos externos</h2>
+          <TrainingWizard courts={courtOptions} timeRanges={courtTimeRanges} clubOpen={clubOpen} clubClose={clubClose} />
         </div>
 
         <ul className="mt-3 space-y-2">
-          {externalTrainingItems.length === 0 ? (
+          {professorGroups.length === 0 && punctualItems.length === 0 ? (
             <li className={adminEmptyState}>Todavía no registraste entrenamientos externos.</li>
           ) : null}
-          {externalTrainingItems.map((item) => (
+          {professorGroups.map((group) => (
+            <li key={group.key} className={adminCard}>
+              <p className="font-semibold text-[var(--text-primary)]">{group.professorName}</p>
+              <ul className="mt-2 space-y-1.5">
+                {group.schedules.map((s) => (
+                  <li
+                    key={s.trainingBlockId}
+                    className="flex items-center justify-between gap-3 text-xs text-[var(--text-tertiary)]"
+                  >
+                    <span>
+                      {s.scheduleLabel} · {s.courtName}
+                      {s.modality ? ` · ${s.modality}` : ""}
+                    </span>
+                    <form action={deactivateTrainingBlockAction}>
+                      <input type="hidden" name="training_block_id" value={s.trainingBlockId} />
+                      <button type="submit" className={adminCTADangerCompact}>
+                        Desactivar
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+          {punctualItems.map((item) => (
             <li key={item.key} className={`${adminCard} flex items-start justify-between gap-3`}>
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">{item.title}</p>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                   {item.courtName} · {item.scheduleLabel}
-                  {item.coach ? ` · Prof. ${item.coach}` : ""}
                   {item.modality ? ` · ${item.modality}` : ""}
                 </p>
               </div>
