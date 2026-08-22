@@ -24,7 +24,13 @@ const DAY_LABELS = [
   "Sábado",
 ];
 
-export default async function AdminClasesPage() {
+export default async function AdminClasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const sp = await searchParams;
+  const errorParam = sp.error ?? "";
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
@@ -175,6 +181,7 @@ export default async function AdminClasesPage() {
     };
     group.schedules.push({
       trainingBlockId: t.id,
+      dayOfWeek: t.day_of_week,
       scheduleLabel: `${DAY_LABELS[t.day_of_week]} · ${String(t.start_time).slice(0, 5)} - ${String(t.end_time).slice(0, 5)}`,
       courtName: courtNameById.get(t.court_id) ?? "Cancha",
       modality: t.modality,
@@ -194,6 +201,7 @@ export default async function AdminClasesPage() {
       professorGroups={professorGroups}
       punctualItems={punctualItems}
       practices={practices}
+      errorParam={errorParam}
     />
   );
 }

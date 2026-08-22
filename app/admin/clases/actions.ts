@@ -376,15 +376,17 @@ export async function liberarFechaPuntualAction(
 
   if (training && ctx.clubIds.includes(training.club_id)) {
     const fechaDayOfWeek = new Date(`${fecha}T12:00:00`).getDay();
-    if (fechaDayOfWeek === training.day_of_week) {
-      await supabase
-        .from(DB_TABLES.courtBlocks)
-        .delete()
-        .eq("court_id", training.court_id)
-        .eq("blocked_date", fecha)
-        .eq("blocked_time", String(training.start_time).slice(0, 5))
-        .eq("reason", "entrenamiento_externo");
+    if (fechaDayOfWeek !== training.day_of_week) {
+      redirect("/admin/clases?error=dia_incorrecto");
     }
+
+    await supabase
+      .from(DB_TABLES.courtBlocks)
+      .delete()
+      .eq("court_id", training.court_id)
+      .eq("blocked_date", fecha)
+      .eq("blocked_time", String(training.start_time).slice(0, 5))
+      .eq("reason", "entrenamiento_externo");
   }
 
   revalidatePath("/admin/clases");

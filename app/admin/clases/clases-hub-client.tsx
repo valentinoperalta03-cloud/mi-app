@@ -37,6 +37,7 @@ type Coach = { id: string; name: string };
 
 export type ProfessorSchedule = {
   trainingBlockId: string;
+  dayOfWeek: number;
   scheduleLabel: string;
   courtName: string;
   modality: string | null;
@@ -69,6 +70,16 @@ export type PracticeRow = {
 
 type View = "hub" | "entrenamientos" | "clases";
 
+const DAY_NAMES = [
+  "Domingo",
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+];
+
 function HubBackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -96,6 +107,7 @@ export default function ClasesHubClient({
   professorGroups,
   punctualItems,
   practices,
+  errorParam,
 }: {
   clubId: string;
   courtOptions: Court[];
@@ -106,6 +118,7 @@ export default function ClasesHubClient({
   professorGroups: ProfessorGroup[];
   punctualItems: PunctualTrainingItem[];
   practices: PracticeRow[];
+  errorParam?: string;
 }) {
   const [view, setView] = useState<View>("hub");
   const [showWizard, setShowWizard] = useState(false);
@@ -140,6 +153,13 @@ export default function ClasesHubClient({
           }
         />
 
+        {errorParam === "dia_incorrecto" ? (
+          <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-200">
+            Esa fecha no coincide con el día de semana de este turno. Elegí una
+            fecha que caiga en el día correcto.
+          </p>
+        ) : null}
+
         {showWizard ? (
           <TrainingWizard
             courts={courtOptions}
@@ -171,28 +191,37 @@ export default function ClasesHubClient({
                         {s.modality ? ` · ${s.modality}` : ""}
                       </span>
                       <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
+                            ¿Qué {DAY_NAMES[s.dayOfWeek]} no viene?
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              name="fecha"
+                              min={todayYmd}
+                              required
+                              form={`liberar-${s.trainingBlockId}`}
+                              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                            />
+                            <button
+                              type="submit"
+                              form={`liberar-${s.trainingBlockId}`}
+                              className="whitespace-nowrap rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"
+                            >
+                              Liberar ese día
+                            </button>
+                          </div>
+                        </div>
                         <form
+                          id={`liberar-${s.trainingBlockId}`}
                           action={liberarFechaPuntualAction}
-                          className="flex items-center gap-1"
                         >
                           <input
                             type="hidden"
                             name="training_block_id"
                             value={s.trainingBlockId}
                           />
-                          <input
-                            type="date"
-                            name="fecha"
-                            min={todayYmd}
-                            required
-                            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
-                          />
-                          <button
-                            type="submit"
-                            className="ml-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
-                          >
-                            Liberar fecha
-                          </button>
                         </form>
                         <form action={deactivateTrainingBlockAction}>
                           <input
