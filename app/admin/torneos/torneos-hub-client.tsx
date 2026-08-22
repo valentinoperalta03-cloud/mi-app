@@ -31,6 +31,27 @@ export type TorneoRow = {
 
 type View = "lista" | "nuevo";
 
+const FLOW_STEPS = [
+  {
+    step: "01",
+    icon: "📋",
+    title: "Creás y publicás",
+    desc: "Configurás tipo, fecha, precio y categorías. Los jugadores se inscriben y pagan desde la app.",
+  },
+  {
+    step: "02",
+    icon: "⚡",
+    title: "Generás el fixture",
+    desc: "Con un click, la app arma el cuadro automáticamente según las inscripciones recibidas.",
+  },
+  {
+    step: "03",
+    icon: "🏆",
+    title: "Cargás resultados",
+    desc: "Ingresás el resultado de cada partido. El ranking o bracket se actualiza en tiempo real.",
+  },
+];
+
 function typeLabel(t: string) {
   return TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === t)?.badge ?? t;
 }
@@ -120,25 +141,71 @@ export default function TorneosHubClient({
         }
       />
 
-      <AdminGuideBox title="¿Cómo crear un torneo?">
-        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
-          <li>
-            Creá el torneo con nombre, fecha, precio de inscripción y cantidad
-            máxima de parejas.
-          </li>
-          <li>
-            Publicalo para que los jugadores se inscriban desde la app y paguen
-            online.
-          </li>
-          <li>
-            Una vez cerradas las inscripciones, generá el fixture
-            automáticamente.
-          </li>
-          <li>
-            Cargá los resultados de cada partido para que el cuadro se actualice
-            en tiempo real.
-          </li>
-        </ol>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {FLOW_STEPS.map((item) => (
+          <div key={item.step} className={`${adminCard} flex flex-col gap-2`}>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">
+                {item.step}
+              </span>
+              <span className="text-xl">{item.icon}</span>
+            </div>
+            <p className="text-sm font-bold text-[var(--text-primary)]">
+              {item.title}
+            </p>
+            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+              {item.desc}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <AdminGuideBox title="¿Cómo funciona un torneo en PadeLibre?">
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">El club hace:</p>
+          <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
+            <li>Creá el torneo (tipo, fecha, precio, categorías).</li>
+            <li>
+              Lo publicás → los jugadores se inscriben y pagan desde la app.
+            </li>
+            <li>Cerrás las inscripciones cuando están completas.</li>
+            <li>Generás el fixture automáticamente con un click.</li>
+            <li>Cargás los resultados de cada partido.</li>
+            <li>El cuadro se actualiza en tiempo real para todos.</li>
+          </ol>
+        </div>
+
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">
+            La app hace automáticamente:
+          </p>
+          <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
+            <li>Recibe los pagos de inscripción vía Mercado Pago.</li>
+            <li>Arma las parejas y el fixture según el tipo de torneo.</li>
+            <li>Muestra el cuadro en vivo a todos los jugadores.</li>
+            <li>Notifica a cada pareja cuándo y contra quién juegan.</li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">
+            Por tipo de torneo:
+          </p>
+          <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
+            <li>
+              <span className="font-semibold">🏆 Americano:</span> todos juegan
+              contra todos. Se rankea por puntos al final.
+            </li>
+            <li>
+              <span className="font-semibold">⚡ Eliminación directa:</span>{" "}
+              bracket. El que pierde, queda afuera.
+            </li>
+            <li>
+              <span className="font-semibold">🎉 Peña:</span> formato social,
+              sin ranking. Ideal con comida y bebida.
+            </li>
+          </ul>
+        </div>
       </AdminGuideBox>
 
       {torneos.length === 0 ? (
