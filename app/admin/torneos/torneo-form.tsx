@@ -134,11 +134,18 @@ export default function TorneoFormInline({
                 key={opt.value}
                 type="button"
                 onClick={() => setType(opt.value)}
-                className={`${adminCard} ${adminPressable} flex flex-col gap-2 text-left transition ${
-                  type === opt.value ? "ring-2 ring-[#0085FC]" : ""
+                className={`${adminCard} ${adminPressable} flex cursor-pointer flex-col gap-2 text-left transition ${
+                  type === opt.value
+                    ? "border-[#0085FC]/30 bg-[#0085FC]/10 ring-2 ring-[#0085FC]"
+                    : "hover:bg-[var(--bg-subtle)]"
                 }`}
               >
-                <span className="text-2xl">{TYPE_EMOJI[opt.value]}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">{TYPE_EMOJI[opt.value]}</span>
+                  {type === opt.value ? (
+                    <span className="font-bold text-[#0085FC]">✓</span>
+                  ) : null}
+                </div>
                 <p className="font-bold text-[var(--text-primary)]">
                   {opt.label}
                 </p>
