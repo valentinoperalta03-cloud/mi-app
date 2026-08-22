@@ -75,6 +75,18 @@ export async function createTournamentAction(
   const gameFormat = isPena
     ? String(formData.get("game_format") ?? "").trim() || null
     : null;
+  const hasFinals = formData.get("has_finals") !== "false";
+  const matchFormat =
+    String(formData.get("match_format") ?? "set").trim() || "set";
+  const matchDurationRaw = Number(formData.get("match_duration_minutes") ?? 0);
+  const multiDay = formData.get("multi_day") === "true";
+  const numCourtsRaw = Number(formData.get("num_courts") ?? 0);
+  const numCourts =
+    Number.isFinite(numCourtsRaw) && numCourtsRaw > 0
+      ? Math.floor(numCourtsRaw)
+      : null;
+  const foodIncluded =
+    String(formData.get("food_included") ?? "").trim() || null;
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
   if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
@@ -149,6 +161,15 @@ export async function createTournamentAction(
       consolation_bracket: consolationBracket,
       what_includes: whatIncludes,
       game_format: gameFormat,
+      has_finals: hasFinals,
+      match_format: matchFormat,
+      match_duration_minutes:
+        matchFormat === "tiempo" && matchDurationRaw > 0
+          ? Math.floor(matchDurationRaw)
+          : null,
+      multi_day: multiDay,
+      num_courts: numCourts,
+      food_included: foodIncluded,
       is_individual: isPena,
       prize,
       start_date: startDate,

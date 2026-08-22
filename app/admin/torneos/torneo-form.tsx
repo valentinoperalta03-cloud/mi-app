@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   adminCard,
   adminCTAPrimary,
+  adminKicker,
   adminPressable,
 } from "@/components/admin/admin-premium";
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
@@ -29,6 +30,59 @@ const TYPE_DESCRIPTION: Record<TournamentTypeKey, string> = {
   eliminacion: "Eliminación directa. El que pierde queda afuera.",
   pena: "Formato social con comida y bebida incluida.",
 };
+
+function chip(active: boolean) {
+  return `rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+    active
+      ? "border-[#0085FC]/30 bg-[#0085FC]/10 text-[#0085FC]"
+      : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+  }`;
+}
+
+function CategoryChips({
+  selectedCategories,
+  onToggle,
+  onClear,
+}: {
+  selectedCategories: string[];
+  onToggle: (cat: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div>
+      <span className="text-xs font-semibold text-[var(--text-secondary)]">
+        Categorías permitidas
+      </span>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onClear}
+          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            selectedCategories.length === 0
+              ? "border-transparent bg-[#0085FC] text-white"
+              : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+          }`}
+        >
+          Todas
+        </button>
+        {CATEGORY_OPTIONS.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => onToggle(cat)}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              selectedCategories.includes(cat)
+                ? "border-transparent bg-[#0085FC] text-white"
+                : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
   return (
@@ -63,6 +117,14 @@ export default function TorneoFormInline({
   const [maxPlayers, setMaxPlayers] = useState(16);
   const [selectedIncludes, setSelectedIncludes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [hasFinals, setHasFinals] = useState(true);
+  const [matchFormat, setMatchFormat] = useState<"set" | "tiempo">("set");
+  const [matchDuration, setMatchDuration] = useState(20);
+  const [consolationBracket, setConsolationBracket] = useState(false);
+  const [multiDay, setMultiDay] = useState(false);
+  const [endDate, setEndDate] = useState("");
+  const [numCourts, setNumCourts] = useState(2);
+  const [foodIncluded, setFoodIncluded] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -72,6 +134,8 @@ export default function TorneoFormInline({
   const typeLabel =
     TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
   const effectiveDeadline = deadline || startDate;
+  const effectiveEndDate =
+    type === "eliminacion" && multiDay ? endDate || startDate : startDate;
 
   function toggleInclude(item: string) {
     setSelectedIncludes((prev) =>
@@ -94,12 +158,20 @@ export default function TorneoFormInline({
       fd.set("name", name.trim());
       fd.set("start_date", startDate);
       fd.set("start_time", startTime);
-      fd.set("end_date", startDate);
+      fd.set("end_date", effectiveEndDate);
       fd.set("registration_deadline", `${effectiveDeadline}T00:00`);
       fd.set("price_per_pair", String(price));
       fd.set("max_pairs", String(type === "pena" ? maxPlayers : maxPairs));
+      fd.set("has_finals", String(hasFinals));
+      fd.set("match_format", matchFormat);
+      if (matchFormat === "tiempo")
+        fd.set("match_duration_minutes", String(matchDuration));
+      fd.set("consolation_bracket", String(consolationBracket));
+      fd.set("multi_day", String(multiDay));
       if (type === "pena") {
         selectedIncludes.forEach((item) => fd.append("what_includes", item));
+        fd.set("num_courts", String(numCourts));
+        if (foodIncluded.trim()) fd.set("food_included", foodIncluded.trim());
       } else {
         selectedCategories.forEach((c) => fd.append("allowed_categories", c));
       }
@@ -266,7 +338,7 @@ export default function TorneoFormInline({
                 >
                   {PENA_MAX_PLAYERS_OPTIONS.map((n) => (
                     <option key={n} value={n}>
-                      {n}
+                      {n} jugadores
                     </option>
                   ))}
                 </select>
@@ -294,6 +366,148 @@ export default function TorneoFormInline({
                   ))}
                 </div>
               </fieldset>
+
+              <div>
+                <label className={adminKicker}>Cantidad de canchas</label>
+                <div className="mt-2 flex gap-2">
+                  {[2, 3, 4, 5, 6].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNumCourts(n)}
+                      className={chip(numCourts === n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={adminKicker}>Partidos</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("set")}
+                    className={chip(matchFormat === "set")}
+                  >
+                    🎾 A un set
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("tiempo")}
+                    className={chip(matchFormat === "tiempo")}
+                  >
+                    ⏱️ Por tiempo
+                  </button>
+                </div>
+                {matchFormat === "tiempo" ? (
+                  <div className="mt-2">
+                    <label className={adminKicker}>Duración (minutos)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={30}
+                      step={5}
+                      value={matchDuration}
+                      onChange={(e) => setMatchDuration(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <label className={adminKicker}>¿Incluye algo? (opcional)</label>
+                <p className="mb-1 text-xs text-[var(--text-tertiary)]">
+                  Ej: &quot;Pizza y bebida&quot;, &quot;Asado&quot;,
+                  &quot;Empanadas&quot;
+                </p>
+                <input
+                  type="text"
+                  value={foodIncluded}
+                  onChange={(e) => setFoodIncluded(e.target.value)}
+                  placeholder="Describí qué incluye la peña..."
+                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                />
+              </div>
+            </>
+          ) : type === "eliminacion" ? (
+            <>
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Máximo de parejas
+                </span>
+                <select
+                  value={maxPairs}
+                  onChange={(e) => setMaxPairs(Number(e.target.value))}
+                  className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                >
+                  {MAX_PAIRS_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n} parejas
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <CategoryChips
+                selectedCategories={selectedCategories}
+                onToggle={toggleCategory}
+                onClear={() => setSelectedCategories([])}
+              />
+
+              <div>
+                <label className={adminKicker}>¿Copa de plata?</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConsolationBracket(true)}
+                    className={chip(consolationBracket)}
+                  >
+                    🥈 Sí — los eliminados en 1ra ronda juegan copa de plata
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConsolationBracket(false)}
+                    className={chip(!consolationBracket)}
+                  >
+                    ❌ No
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className={adminKicker}>¿Es de varios días?</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMultiDay(false)}
+                    className={chip(!multiDay)}
+                  >
+                    📅 Un solo día
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiDay(true)}
+                    className={chip(multiDay)}
+                  >
+                    📅📅 Varios días
+                  </button>
+                </div>
+                {multiDay ? (
+                  <div className="mt-2">
+                    <label className={adminKicker}>Fecha de fin</label>
+                    <input
+                      type="date"
+                      value={endDate || startDate}
+                      min={startDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                    />
+                  </div>
+                ) : null}
+              </div>
             </>
           ) : (
             <>
@@ -308,43 +522,70 @@ export default function TorneoFormInline({
                 >
                   {MAX_PAIRS_OPTIONS.map((n) => (
                     <option key={n} value={n}>
-                      {n}
+                      {n} parejas
                     </option>
                   ))}
                 </select>
               </label>
 
+              <CategoryChips
+                selectedCategories={selectedCategories}
+                onToggle={toggleCategory}
+                onClear={() => setSelectedCategories([])}
+              />
+
               <div>
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Categoría del torneo
-                </span>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <label className={adminKicker}>¿Cómo termina el torneo?</label>
+                <div className="mt-2 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedCategories([])}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      selectedCategories.length === 0
-                        ? "border-transparent bg-[#0085FC] text-white"
-                        : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-                    }`}
+                    onClick={() => setHasFinals(true)}
+                    className={chip(hasFinals)}
                   >
-                    Todas
+                    🏆 Con final y 3er puesto
                   </button>
-                  {CATEGORY_OPTIONS.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => toggleCategory(cat)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        selectedCategories.includes(cat)
-                          ? "border-transparent bg-[#0085FC] text-white"
-                          : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setHasFinals(false)}
+                    className={chip(!hasFinals)}
+                  >
+                    📊 Solo ranking por puntos
+                  </button>
                 </div>
+              </div>
+
+              <div>
+                <label className={adminKicker}>Formato de partidos</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("set")}
+                    className={chip(matchFormat === "set")}
+                  >
+                    🎾 A un set
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("tiempo")}
+                    className={chip(matchFormat === "tiempo")}
+                  >
+                    ⏱️ Por tiempo
+                  </button>
+                </div>
+                {matchFormat === "tiempo" ? (
+                  <div className="mt-2">
+                    <label className={adminKicker}>Duración (minutos)</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={60}
+                      step={5}
+                      value={matchDuration}
+                      onChange={(e) => setMatchDuration(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                    />
+                  </div>
+                ) : null}
               </div>
             </>
           )}
