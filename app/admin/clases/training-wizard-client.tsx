@@ -136,27 +136,13 @@ function TrainingWizardDialog({
   }
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-50 backdrop-blur-sm"
-        style={{ background: "rgba(0,0,0,0.60)" }}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div
-        className="fixed max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl"
-        style={{
-          zIndex: 51,
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: step === 2 ? "min(760px, 95vw)" : "min(480px, 90vw)",
-          background: "var(--bg-card)",
-        }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="training-wizard-title"
-      >
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-[var(--bg-app)]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="training-wizard-title"
+    >
+      <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <h2 id="training-wizard-title" className="font-admin-display text-lg font-bold text-[var(--text-primary)]">
             Registrar entrenamiento externo
@@ -322,7 +308,7 @@ function TrainingWizardDialog({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
