@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
+import { parseClockToMinutes } from "@/lib/court-slots";
 import { adminCTAPrimary, adminKicker } from "@/components/admin/admin-premium";
 import { addExceptionToFixedSlot, createFixedSlot, deleteFixedSlot, updateFixedSlot } from "./actions";
 
@@ -36,18 +37,33 @@ function cellKey(dayOfWeek: number, courtId: string, time: string) {
 
 export default function TurnosFijosGrid({
   courts,
-  times,
+  availableSlotsByCourtAndDay,
   cells,
   initialDay,
 }: {
   courts: GridCourt[];
-  times: string[];
+  availableSlotsByCourtAndDay: Record<string, Record<number, string[]>>;
   cells: Record<string, GridCell>;
   initialDay: number;
 }) {
   const [activeDay, setActiveDay] = useState(initialDay);
   const [modalCtx, setModalCtx] = useState<ModalContext | null>(null);
   const [editCell, setEditCell] = useState<GridCell | null>(null);
+
+  // Filas de la grilla para el día activo: unión de los horarios disponibles
+  // de todas las canchas + los horarios de turnos fijos ya existentes (por si
+  // quedaron fuera del rango vigente de court_time_ranges/horario de club).
+  const rowTimes = useMemo(() => {
+    const all = new Set<string>();
+    for (const court of courts) {
+      for (const t of availableSlotsByCourtAndDay[court.id]?.[activeDay] ?? []) all.add(t);
+    }
+    for (const key of Object.keys(cells)) {
+      const [dayStr, , time] = key.split("__");
+      if (Number(dayStr) === activeDay) all.add(time);
+    }
+    return Array.from(all).sort((a, b) => parseClockToMinutes(a) - parseClockToMinutes(b));
+  }, [courts, availableSlotsByCourtAndDay, activeDay, cells]);
 
   return (
     <div className="space-y-4">
@@ -89,7 +105,7 @@ export default function TurnosFijosGrid({
                 ))}
               </div>
 
-              {times.map((time) => (
+              {rowTimes.map((time) => (
                 <div
                   key={time}
                   className="grid"
@@ -101,11 +117,12 @@ export default function TurnosFijosGrid({
                   {courts.map((court) => {
                     const key = cellKey(activeDay, court.id, time);
                     const cell = cells[key];
+                    const available = availableSlotsByCourtAndDay[court.id]?.[activeDay]?.includes(time) ?? false;
                     return (
                       <div key={key} className="border-b border-r border-[var(--border-subtle)] p-1.5 last:border-r-0">
                         {cell ? (
                           <OccupiedCell cell={cell} onEdit={() => setEditCell(cell)} />
-                        ) : (
+                        ) : available ? (
                           <button
                             type="button"
                             onClick={() =>
@@ -115,6 +132,12 @@ export default function TurnosFijosGrid({
                           >
                             + Turno fijo
                           </button>
+                        ) : (
+                          <div
+                            className="h-full min-h-16 w-full rounded-xl opacity-30"
+                            style={{ background: "var(--bg-subtle)" }}
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                     );

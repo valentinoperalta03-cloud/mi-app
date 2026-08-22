@@ -7,9 +7,16 @@ import { adminCard, adminTip } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { minutesToClock, parseClockToMinutes } from "@/lib/court-slots";
+import { buildSlotsForDay, type CourtTimeRangeInput } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import TurnosFijosGrid, { type GridCell } from "./turnos-grid-client";
+
+const FIXED_SLOT_DURATION_MINUTES = 90;
+
+/** 2023-01-01 fue domingo — ancla para pedirle a buildSlotsForDay el día de semana que necesitamos. */
+function referenceDateForDow(dayOfWeek: number): Date {
+  return new Date(2023, 0, 1 + dayOfWeek);
+}
 
 /** Próxima fecha (yyyy-MM-dd) en la que cae ese día de semana, a partir de hoy. */
 function nextDateForDay(dayOfWeek: number, todayYmd: string): string {
@@ -35,19 +42,40 @@ export default async function AdminTurnosFijosPage() {
   const todayYmd = getTodayYmdInArgentina();
   const initialDay = new Date(`${todayYmd}T12:00:00`).getDay();
 
-  const { data: clubOpenRow } = await supabase
+  const { data: clubHoursRow } = await supabase
     .from(DB_TABLES.clubs)
-    .select("open_time")
+    .select("open_time,close_time")
     .eq("id", ctx.clubIds[0])
     .maybeSingle();
-  const clubOpenTime =
-    String((clubOpenRow as { open_time?: string | null } | null)?.open_time ?? "09:00")
-      .trim()
-      .slice(0, 5) || "09:00";
-  const rawOpenMin = parseClockToMinutes(clubOpenTime);
-  const times: string[] = [];
-  for (let t = rawOpenMin; t < 24 * 60; t += 90) {
-    times.push(minutesToClock(t));
+  const clubOpenTime = String((clubHoursRow as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
+  const clubCloseTime = String((clubHoursRow as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
+  const clubBounds = { open_time: clubOpenTime || null, close_time: clubCloseTime || null };
+
+  const { data: courtTimeRangesRaw } = ctx.courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtTimeRanges)
+        .select("court_id,day_of_week,open_time,close_time")
+        .in("court_id", ctx.courtIds)
+    : { data: [] };
+  const courtTimeRanges = (courtTimeRangesRaw ?? []) as CourtTimeRangeInput[];
+
+  // Mismo criterio que buildTurnsForDay (court-prices-client.tsx): franjas
+  // propias de court_time_ranges por cancha/día, con fallback al horario del
+  // club — así turnos fijos y precios/horarios de canchas usan la misma
+  // disponibilidad real en vez de un horario fijo de 90min hasta medianoche.
+  const availableSlotsByCourtAndDay: Record<string, Record<number, string[]>> = {};
+  for (const courtId of ctx.courtIds) {
+    availableSlotsByCourtAndDay[courtId] = {};
+    for (let day = 0; day <= 6; day++) {
+      const slots = buildSlotsForDay(
+        [courtId],
+        referenceDateForDow(day),
+        courtTimeRanges,
+        clubBounds,
+        FIXED_SLOT_DURATION_MINUTES
+      );
+      availableSlotsByCourtAndDay[courtId][day] = slots.map((s) => s.time);
+    }
   }
 
   const { data: slotsRaw } = ctx.courtIds.length
@@ -161,7 +189,12 @@ export default async function AdminTurnosFijosPage() {
       </AdminGuideBox>
 
       <section className={adminCard}>
-        <TurnosFijosGrid courts={gridCourts} times={times} cells={cells} initialDay={initialDay} />
+        <TurnosFijosGrid
+          courts={gridCourts}
+          availableSlotsByCourtAndDay={availableSlotsByCourtAndDay}
+          cells={cells}
+          initialDay={initialDay}
+        />
       </section>
     </div>
   );
