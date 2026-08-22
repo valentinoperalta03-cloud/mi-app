@@ -14,7 +14,15 @@ import ClasesHubClient, {
 
 export const dynamic = "force-dynamic";
 
-const DAY_LABELS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_LABELS = [
+  "Domingo",
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+];
 
 export default async function AdminClasesPage() {
   const supabase = await createClient();
@@ -28,8 +36,16 @@ export default async function AdminClasesPage() {
     .select("open_time,close_time")
     .eq("id", clubId)
     .maybeSingle();
-  const clubOpen = String((clubHoursRow as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
-  const clubClose = String((clubHoursRow as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
+  const clubOpen = String(
+    (clubHoursRow as { open_time?: string | null } | null)?.open_time ?? "",
+  )
+    .trim()
+    .slice(0, 5);
+  const clubClose = String(
+    (clubHoursRow as { close_time?: string | null } | null)?.close_time ?? "",
+  )
+    .trim()
+    .slice(0, 5);
 
   const { data: courtTimeRangesRaw } = ctx.courtIds.length
     ? await supabase
@@ -48,13 +64,18 @@ export default async function AdminClasesPage() {
 
   const { data: rows } = await supabase
     .from(DB_TABLES.practices)
-    .select("id, title, status, recurrence_type, start_date, end_date, max_spots, price_base")
+    .select(
+      "id, title, status, recurrence_type, start_date, end_date, max_spots, price_base",
+    )
     .in("club_id", ctx.clubIds)
     .order("created_at", { ascending: false });
 
   const practiceIds = ((rows ?? []) as { id: string }[]).map((r) => r.id);
   const { data: sessionCounts } = practiceIds.length
-    ? await supabase.from(DB_TABLES.practiceSessions).select("practice_id").in("practice_id", practiceIds)
+    ? await supabase
+        .from(DB_TABLES.practiceSessions)
+        .select("practice_id")
+        .in("practice_id", practiceIds)
     : { data: [] };
   const sessionsBy = new Map<string, number>();
   for (const s of (sessionCounts ?? []) as { practice_id: string }[]) {
@@ -74,7 +95,10 @@ export default async function AdminClasesPage() {
     }>
   ).map((p) => ({ ...p, sessionCount: sessionsBy.get(p.id) ?? 0 }));
 
-  const courtOptions = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
+  const courtOptions = ctx.courts.map((c) => ({
+    id: c.id,
+    name: c.name ?? "Cancha",
+  }));
   const courtNameById = new Map(courtOptions.map((c) => [c.id, c.name]));
 
   const { data: trainingBlocksRaw } = await supabase
@@ -118,7 +142,10 @@ export default async function AdminClasesPage() {
   // ocurrencia acá, se excluyen los que matchean cancha+horario+día de semana
   // de algún training_block activo, y ese training_block se muestra una sola vez.
   const activeTrainingKeys = new Set(
-    trainingBlocks.map((t) => `${t.court_id}__${t.day_of_week}__${String(t.start_time).slice(0, 5)}`)
+    trainingBlocks.map(
+      (t) =>
+        `${t.court_id}__${t.day_of_week}__${String(t.start_time).slice(0, 5)}`,
+    ),
   );
   const punctualCourtBlocks = externalCourtBlocks.filter((b) => {
     const dow = new Date(`${b.blocked_date}T12:00:00`).getDay();
@@ -126,20 +153,26 @@ export default async function AdminClasesPage() {
     return !activeTrainingKeys.has(key);
   });
 
-  const punctualItems: PunctualTrainingItem[] = punctualCourtBlocks.map((b) => ({
-    key: `block-${b.id}`,
-    title: "Entrenamiento externo",
-    courtName: courtNameById.get(b.court_id) ?? "Cancha",
-    scheduleLabel: `${format(parseISO(b.blocked_date), "d MMM yyyy", { locale: es })} · ${String(b.blocked_time).slice(0, 5)} hs`,
-    courtBlockId: b.id,
-  }));
+  const punctualItems: PunctualTrainingItem[] = punctualCourtBlocks.map(
+    (b) => ({
+      key: `block-${b.id}`,
+      title: "Entrenamiento externo",
+      courtName: courtNameById.get(b.court_id) ?? "Cancha",
+      scheduleLabel: `${format(parseISO(b.blocked_date), "d MMM yyyy", { locale: es })} · ${String(b.blocked_time).slice(0, 5)} hs`,
+      courtBlockId: b.id,
+    }),
+  );
 
   // Agrupar los turnos recurrentes por profesor (título del training_block)
   // para mostrar un solo encabezado con todos sus horarios debajo.
   const professorGroupMap = new Map<string, ProfessorGroup>();
   for (const t of trainingBlocks) {
     const professorName = (t.coach && t.coach.trim()) || t.title;
-    const group = professorGroupMap.get(professorName) ?? { key: professorName, professorName, schedules: [] };
+    const group = professorGroupMap.get(professorName) ?? {
+      key: professorName,
+      professorName,
+      schedules: [],
+    };
     group.schedules.push({
       trainingBlockId: t.id,
       scheduleLabel: `${DAY_LABELS[t.day_of_week]} · ${String(t.start_time).slice(0, 5)} - ${String(t.end_time).slice(0, 5)}`,
