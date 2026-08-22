@@ -343,51 +343,31 @@ export async function deactivateTrainingBlockAction(
   redirect("/admin/clases");
 }
 
-// Libera una única fecha puntual de un training_block recurrente (ej. "el
-// profesor no viene el 15/03") sin desactivar el turno para las semanas
-// siguientes — solo borra el court_block de esa fecha exacta.
-export async function liberarFechaPuntualAction(
+// Libera un horario puntual dentro de la franja de un training_block (ej. "el
+// profesor no da la clase de las 09:00 el 15/03") sin desactivar el turno
+// para las semanas siguientes — solo borra el court_block de esa fecha+hora.
+export async function liberarHorarioPuntualAction(
   formData: FormData,
 ): Promise<void> {
-  const trainingBlockId = String(
-    formData.get("training_block_id") ?? "",
-  ).trim();
+  const courtId = String(formData.get("court_id") ?? "").trim();
   const fecha = String(formData.get("fecha") ?? "").trim();
-  if (!trainingBlockId || !fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-    redirect("/admin/clases");
-  }
+  const hora = String(formData.get("hora") ?? "").trim();
+
+  if (!courtId || !fecha || !hora) redirect("/admin/clases");
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: row } = await supabase
-    .from(DB_TABLES.trainingBlocks)
-    .select("id,club_id,court_id,day_of_week,start_time")
-    .eq("id", trainingBlockId)
-    .maybeSingle();
-  const training = row as {
-    id: string;
-    club_id: string;
-    court_id: string;
-    day_of_week: number;
-    start_time: string;
-  } | null;
+  if (!ctx.courtIds.includes(courtId)) redirect("/admin/clases");
 
-  if (training && ctx.clubIds.includes(training.club_id)) {
-    const fechaDayOfWeek = new Date(`${fecha}T12:00:00`).getDay();
-    if (fechaDayOfWeek !== training.day_of_week) {
-      redirect("/admin/clases?error=dia_incorrecto");
-    }
-
-    await supabase
-      .from(DB_TABLES.courtBlocks)
-      .delete()
-      .eq("court_id", training.court_id)
-      .eq("blocked_date", fecha)
-      .eq("blocked_time", String(training.start_time).slice(0, 5))
-      .eq("reason", "entrenamiento_externo");
-  }
+  await supabase
+    .from(DB_TABLES.courtBlocks)
+    .delete()
+    .eq("court_id", courtId)
+    .eq("blocked_date", fecha)
+    .eq("blocked_time", hora)
+    .eq("reason", "entrenamiento_externo");
 
   revalidatePath("/admin/clases");
   redirect("/admin/clases");

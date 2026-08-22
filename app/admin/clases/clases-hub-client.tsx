@@ -27,7 +27,7 @@ import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
 import {
   deactivateTrainingBlockAction,
   deleteExternalTrainingBlockRowAction,
-  liberarFechaPuntualAction,
+  liberarHorarioPuntualAction,
 } from "./actions";
 import ClasePublicaInline from "./clase-publica-modal";
 import TrainingWizard from "./training-wizard-client";
@@ -37,7 +37,9 @@ type Coach = { id: string; name: string };
 
 export type ProfessorSchedule = {
   trainingBlockId: string;
-  dayOfWeek: number;
+  courtId: string;
+  startTime: string;
+  endTime: string;
   scheduleLabel: string;
   courtName: string;
   modality: string | null;
@@ -70,15 +72,22 @@ export type PracticeRow = {
 
 type View = "hub" | "entrenamientos" | "clases";
 
-const DAY_NAMES = [
-  "Domingo",
-  "Lunes",
-  "Martes",
-  "Miércoles",
-  "Jueves",
-  "Viernes",
-  "Sábado",
-];
+function generateTimeSlots(startTime: string, endTime: string): string[] {
+  const slots: string[] = [];
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  let current = sh * 60 + (sm || 0);
+  const end = eh * 60 + (em || 0);
+  while (current < end) {
+    const h = Math.floor(current / 60)
+      .toString()
+      .padStart(2, "0");
+    const m = (current % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    current += 30;
+  }
+  return slots;
+}
 
 function HubBackButton({ onClick }: { onClick: () => void }) {
   return (
@@ -107,7 +116,6 @@ export default function ClasesHubClient({
   professorGroups,
   punctualItems,
   practices,
-  errorParam,
 }: {
   clubId: string;
   courtOptions: Court[];
@@ -118,11 +126,11 @@ export default function ClasesHubClient({
   professorGroups: ProfessorGroup[];
   punctualItems: PunctualTrainingItem[];
   practices: PracticeRow[];
-  errorParam?: string;
 }) {
   const [view, setView] = useState<View>("hub");
   const [showWizard, setShowWizard] = useState(false);
   const [showClaseForm, setShowClaseForm] = useState(false);
+  const [liberarOpen, setLiberarOpen] = useState<string | null>(null);
   const todayYmd = getTodayYmdInArgentina();
 
   if (view === "entrenamientos") {
@@ -132,6 +140,7 @@ export default function ClasesHubClient({
           onClick={() => {
             setShowWizard(false);
             setShowClaseForm(false);
+            setLiberarOpen(null);
             setView("hub");
           }}
         />
@@ -152,13 +161,6 @@ export default function ClasesHubClient({
             )
           }
         />
-
-        {errorParam === "dia_incorrecto" ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm font-medium text-rose-800 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-200">
-            Esa fecha no coincide con el día de semana de este turno. Elegí una
-            fecha que caiga en el día correcto.
-          </p>
-        ) : null}
 
         {showWizard ? (
           <TrainingWizard
@@ -184,59 +186,98 @@ export default function ClasesHubClient({
                   {group.schedules.map((s) => (
                     <div
                       key={s.trainingBlockId}
-                      className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] py-2 last:border-0"
+                      className="border-b border-[var(--border-subtle)] py-3 last:border-0"
                     >
-                      <span className="text-sm text-[var(--text-secondary)]">
-                        {s.scheduleLabel} · {s.courtName}
-                        {s.modality ? ` · ${s.modality}` : ""}
-                      </span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
-                            ¿Qué {DAY_NAMES[s.dayOfWeek]} no viene?
-                          </span>
-                          <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-[var(--text-secondary)]">
+                          {s.scheduleLabel} · {s.courtName}
+                          {s.modality ? ` · ${s.modality}` : ""}
+                        </span>
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setLiberarOpen(
+                                liberarOpen === s.trainingBlockId
+                                  ? null
+                                  : s.trainingBlockId,
+                              )
+                            }
+                            className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"
+                          >
+                            Liberar horario
+                          </button>
+                          <form action={deactivateTrainingBlockAction}>
+                            <input
+                              type="hidden"
+                              name="training_block_id"
+                              value={s.trainingBlockId}
+                            />
+                            <button
+                              type="submit"
+                              className={adminCTADangerCompact}
+                            >
+                              Desactivar
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+
+                      {liberarOpen === s.trainingBlockId ? (
+                        <form
+                          action={liberarHorarioPuntualAction}
+                          className="mt-3 flex flex-wrap items-end gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3"
+                        >
+                          <input
+                            type="hidden"
+                            name="court_id"
+                            value={s.courtId}
+                          />
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
+                              Fecha
+                            </label>
                             <input
                               type="date"
                               name="fecha"
                               min={todayYmd}
                               required
-                              form={`liberar-${s.trainingBlockId}`}
-                              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
                             />
-                            <button
-                              type="submit"
-                              form={`liberar-${s.trainingBlockId}`}
-                              className="whitespace-nowrap rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-300"
-                            >
-                              Liberar ese día
-                            </button>
                           </div>
-                        </div>
-                        <form
-                          id={`liberar-${s.trainingBlockId}`}
-                          action={liberarFechaPuntualAction}
-                        >
-                          <input
-                            type="hidden"
-                            name="training_block_id"
-                            value={s.trainingBlockId}
-                          />
-                        </form>
-                        <form action={deactivateTrainingBlockAction}>
-                          <input
-                            type="hidden"
-                            name="training_block_id"
-                            value={s.trainingBlockId}
-                          />
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-tertiary)]">
+                              Horario a liberar
+                            </label>
+                            <select
+                              name="hora"
+                              required
+                              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
+                            >
+                              {generateTimeSlots(s.startTime, s.endTime).map(
+                                (slot) => (
+                                  <option key={slot} value={slot}>
+                                    {slot}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </div>
                           <button
                             type="submit"
-                            className={adminCTADangerCompact}
+                            className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white"
                           >
-                            Desactivar
+                            Confirmar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLiberarOpen(null)}
+                            className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-tertiary)]"
+                          >
+                            Cancelar
                           </button>
                         </form>
-                      </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -280,6 +321,7 @@ export default function ClasesHubClient({
           onClick={() => {
             setShowWizard(false);
             setShowClaseForm(false);
+            setLiberarOpen(null);
             setView("hub");
           }}
         />
