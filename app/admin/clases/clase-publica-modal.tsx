@@ -2,7 +2,6 @@
 
 import { X } from "lucide-react";
 import { adminCard } from "@/components/admin/admin-premium";
-import AddCoachForm from "./add-coach-form";
 import ClaseForm from "./clase-form";
 
 type Court = { id: string; name: string };
@@ -35,7 +34,6 @@ export default function ClasePublicaInline({
         </button>
       </div>
 
-      <AddCoachForm clubId={clubId} />
       <ClaseForm
         clubId={clubId}
         courts={courts}

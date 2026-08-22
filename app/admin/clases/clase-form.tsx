@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useState } from "react";
 import { adminCTAPrimary } from "@/components/admin/admin-premium";
 import {
-  PRACTICE_MODALITY_OPTIONS,
   PRACTICE_RECURRENCE_OPTIONS,
   WEEKDAY_OPTIONS,
 } from "@/lib/practice-constants";
@@ -25,7 +24,10 @@ export default function ClaseForm({
   coaches: Coach[];
   onSuccess?: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(createPracticeAction, initial);
+  const [state, formAction, pending] = useActionState(
+    createPracticeAction,
+    initial,
+  );
   const [recurrence, setRecurrence] = useState<"once" | "weekly">("once");
 
   useEffect(() => {
@@ -42,7 +44,9 @@ export default function ClaseForm({
       ) : null}
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Título</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Título
+        </span>
         <input
           name="title"
           required
@@ -51,16 +55,9 @@ export default function ClaseForm({
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Descripción (opcional)</span>
-        <textarea
-          name="description"
-          rows={2}
-          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-        />
-      </label>
-
-      <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Tipo de fecha</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Tipo de fecha
+        </span>
         <select
           name="recurrence_type"
           required
@@ -90,7 +87,9 @@ export default function ClaseForm({
         </label>
         {recurrence === "weekly" ? (
           <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">Hasta</span>
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+              Hasta
+            </span>
             <input
               type="date"
               name="end_date"
@@ -105,14 +104,21 @@ export default function ClaseForm({
 
       {recurrence === "weekly" ? (
         <fieldset>
-          <legend className="text-xs font-semibold text-[var(--text-secondary)]">Días de la semana</legend>
+          <legend className="text-xs font-semibold text-[var(--text-secondary)]">
+            Días de la semana
+          </legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {WEEKDAY_OPTIONS.map((d) => (
               <label
                 key={d.value}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium"
               >
-                <input type="checkbox" name="weekly_days" value={String(d.value)} className="rounded" />
+                <input
+                  type="checkbox"
+                  name="weekly_days"
+                  value={String(d.value)}
+                  className="rounded"
+                />
                 {d.label}
               </label>
             ))}
@@ -121,7 +127,9 @@ export default function ClaseForm({
       ) : null}
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Hora</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Hora
+        </span>
         <input
           type="time"
           name="start_time"
@@ -130,36 +138,25 @@ export default function ClaseForm({
         />
       </label>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Modalidad</span>
-          <select
-            name="modality"
-            className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-          >
-            {PRACTICE_MODALITY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">Cupos</span>
-          <input
-            type="number"
-            name="max_spots"
-            min={1}
-            max={20}
-            defaultValue={4}
-            required
-            className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-          />
-        </label>
-      </div>
+      <label className="block">
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Cupos
+        </span>
+        <input
+          type="number"
+          name="max_spots"
+          min={1}
+          max={20}
+          defaultValue={4}
+          required
+          className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+        />
+      </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Precio base (ARS, lo que recibe el club)</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Precio base (ARS, lo que recibe el club)
+        </span>
         <input
           type="number"
           name="price_base"
@@ -172,7 +169,9 @@ export default function ClaseForm({
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Profesor (opcional)</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Profesor (opcional)
+        </span>
         <select
           name="coach_id"
           className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
@@ -187,7 +186,9 @@ export default function ClaseForm({
       </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-[var(--text-secondary)]">Cancha (opcional)</span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Cancha (opcional)
+        </span>
         <select
           name="court_id"
           className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"

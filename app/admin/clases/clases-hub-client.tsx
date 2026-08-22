@@ -22,10 +22,12 @@ import {
   adminPressable,
 } from "@/components/admin/admin-premium";
 import type { CourtTimeRangeInput } from "@/lib/court-slots";
+import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { PRACTICE_STATUS_LABELS } from "@/lib/practice-constants";
 import {
   deactivateTrainingBlockAction,
   deleteExternalTrainingBlockRowAction,
+  liberarFechaPuntualAction,
 } from "./actions";
 import ClasePublicaInline from "./clase-publica-modal";
 import TrainingWizard from "./training-wizard-client";
@@ -108,6 +110,7 @@ export default function ClasesHubClient({
   const [view, setView] = useState<View>("hub");
   const [showWizard, setShowWizard] = useState(false);
   const [showClaseForm, setShowClaseForm] = useState(false);
+  const todayYmd = getTodayYmdInArgentina();
 
   if (view === "entrenamientos") {
     return (
@@ -157,29 +160,57 @@ export default function ClasesHubClient({
                 <p className="font-semibold text-[var(--text-primary)]">
                   {group.professorName}
                 </p>
-                <ul className="mt-2 space-y-1.5">
+                <div className="mt-2">
                   {group.schedules.map((s) => (
-                    <li
+                    <div
                       key={s.trainingBlockId}
-                      className="flex items-center justify-between gap-3 text-xs text-[var(--text-tertiary)]"
+                      className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] py-2 last:border-0"
                     >
-                      <span>
+                      <span className="text-sm text-[var(--text-secondary)]">
                         {s.scheduleLabel} · {s.courtName}
                         {s.modality ? ` · ${s.modality}` : ""}
                       </span>
-                      <form action={deactivateTrainingBlockAction}>
-                        <input
-                          type="hidden"
-                          name="training_block_id"
-                          value={s.trainingBlockId}
-                        />
-                        <button type="submit" className={adminCTADangerCompact}>
-                          Desactivar
-                        </button>
-                      </form>
-                    </li>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <form
+                          action={liberarFechaPuntualAction}
+                          className="flex items-center gap-1"
+                        >
+                          <input
+                            type="hidden"
+                            name="training_block_id"
+                            value={s.trainingBlockId}
+                          />
+                          <input
+                            type="date"
+                            name="fecha"
+                            min={todayYmd}
+                            required
+                            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                          />
+                          <button
+                            type="submit"
+                            className="ml-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                          >
+                            Liberar fecha
+                          </button>
+                        </form>
+                        <form action={deactivateTrainingBlockAction}>
+                          <input
+                            type="hidden"
+                            name="training_block_id"
+                            value={s.trainingBlockId}
+                          />
+                          <button
+                            type="submit"
+                            className={adminCTADangerCompact}
+                          >
+                            Desactivar
+                          </button>
+                        </form>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </li>
             ))}
             {punctualItems.map((item) => (
