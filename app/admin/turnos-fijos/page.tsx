@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminGuideBox from "@/components/admin/admin-guide-box";
 import AdminPageHeader from "@/components/admin/admin-page-header";
-import { adminCard, adminTip } from "@/components/admin/admin-premium";
+import { adminCard } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -163,29 +163,21 @@ export default async function AdminTurnosFijosPage() {
       />
 
       <AdminGuideBox title="¿Cómo funcionan los turnos fijos?">
-        <div>
-          <p className="font-bold text-[var(--text-primary)]">¿Qué es un turno fijo?</p>
-          <p className="mt-1 leading-relaxed">
-            Un horario recurrente que se repite todas las semanas en el mismo día y hora. Tocá una celda libre en
-            la grilla, ponele un título (ej. el apellido del grupo) y, si querés, asignale hasta 4 jugadores.
-          </p>
-        </div>
-        <div>
-          <p className="font-bold text-[var(--text-primary)]">No viene esta semana</p>
-          <p className="mt-1 leading-relaxed">
-            Libera la cancha solo para la próxima fecha de ese turno, sin afectar las semanas siguientes.
-          </p>
-        </div>
-        <div>
-          <p className="font-bold text-[var(--text-primary)]">Dar de baja</p>
-          <p className="mt-1 leading-relaxed">
-            Termina el turno fijo para siempre y cancela todos los partidos futuros ya generados.
-          </p>
-        </div>
-        <div className={adminTip}>
-          <span className="font-bold">Consejo:</span> los turnos con jugadores asignados les avisan a los
-          jugadores y les recuerdan confirmar asistencia. Los turnos sin jugadores solo reservan la cancha.
-        </div>
+        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
+          <li>
+            Un turno fijo es un horario reservado de forma recurrente para los mismos jugadores todas las
+            semanas.
+          </li>
+          <li>
+            Asignás hasta 4 jugadores por turno. Cada semana el sistema les manda una notificación para que
+            confirmen.
+          </li>
+          <li>
+            Si un jugador no puede venir esa semana, puede marcar <strong>&quot;No vengo&quot;</strong> sin
+            cancelar el turno para siempre.
+          </li>
+          <li>El cobro lo registrás manualmente desde &quot;Cobros y pagos&quot; cada vez que vienen.</li>
+        </ol>
       </AdminGuideBox>
 
       <section className={adminCard}>

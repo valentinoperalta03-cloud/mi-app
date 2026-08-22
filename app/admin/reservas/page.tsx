@@ -2,6 +2,7 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
@@ -390,6 +391,18 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
         title="Gestión de reservas"
         subtitle="Vista por canchas para operar el día sin fricción"
       />
+
+      <AdminGuideBox title="¿Cómo gestionar reservas?">
+        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
+          <li>Las reservas online llegan automáticamente cuando un jugador paga la seña por Mercado Pago.</li>
+          <li>Las reservas manuales las cargás vos desde el botón <strong>&quot;Nueva reserva&quot;</strong>.</li>
+          <li>Desde <strong>&quot;Cobros y pagos&quot;</strong> registrás los cobros en efectivo o transferencia del día.</li>
+          <li>
+            Los partidos abiertos aparecen en la tab <strong>&quot;Partidos abiertos&quot;</strong> — se confirman
+            cuando se completan los 4 jugadores.
+          </li>
+        </ol>
+      </AdminGuideBox>
 
       <ReservasTabs
         openMatches={openMatches}

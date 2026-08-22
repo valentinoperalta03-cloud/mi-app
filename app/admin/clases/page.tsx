@@ -200,6 +200,21 @@ export default async function AdminClasesPage() {
         </div>
       </div>
 
+      <AdminGuideBox title="¿Cuál es la diferencia entre entrenamientos y clases?">
+        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
+          <li>
+            <strong>Entrenamientos externos:</strong> un profesor particular usa tu cancha. Bloquea el horario
+            automáticamente. Los jugadores NO los ven.
+          </li>
+          <li>
+            <strong>Clases públicas:</strong> las publicás para que los jugadores se inscriban y paguen desde la
+            app.
+          </li>
+          <li>Para los entrenamientos, usá el wizard de profesores para asignar horarios fácilmente.</li>
+          <li>Para las clases, creá la clase con precio, cupos y horario, y publicala cuando esté lista.</li>
+        </ol>
+      </AdminGuideBox>
+
       <section>
         <div className="flex items-start justify-between gap-3">
           <h2 className={adminSectionLabel}>Entrenamientos externos</h2>

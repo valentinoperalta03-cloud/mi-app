@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
+import AdminGuideBox from "@/components/admin/admin-guide-box";
 import { adminAccentBar, adminCard, adminKicker, adminSubtitle, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -79,6 +80,25 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
         <h1 className={adminTitle}>{(court as { name?: string | null }).name ?? "Cancha"}</h1>
         <p className={adminSubtitle}>Configurá franjas horarias y el precio de cada turno de 90 min.</p>
       </header>
+
+      <AdminGuideBox title="¿Cómo configurar horarios y precios?">
+        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
+          <li>
+            Primero configurá las franjas horarias de cada día — los horarios en que la cancha está disponible
+            para reservar.
+          </li>
+          <li>Podés tener hasta 4 franjas por día (ej: mañana 07:00-13:00 y tarde 16:00-22:00).</li>
+          <li>
+            Usá <strong>&quot;Aplicar a todos los días&quot;</strong> para copiar la misma franja a toda la
+            semana de una vez.
+          </li>
+          <li>
+            Después configurá el precio por turno (90 min) para cada franja. Podés tener precios distintos por
+            día y horario.
+          </li>
+          <li>Si no configurás franjas propias, se usa el horario general del club.</li>
+        </ol>
+      </AdminGuideBox>
 
       {clubOpen && clubClose ? (
         <div className="rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">

@@ -9,7 +9,6 @@ import {
   adminCard,
   adminCTAPrimary,
   adminSectionLabel,
-  adminTip,
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -63,58 +62,13 @@ export default async function AdminTorneosPage() {
         }
       />
 
-      <AdminGuideBox title="¿Cómo funciona la sección de torneos?">
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">¿Qué es un torneo en PadeLibre?</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Un torneo te permite organizar competencias para los jugadores de tu club. Los jugadores se inscriben y pagan a través de la app. Vos controlás el fixture y cargás los resultados.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Tipos de torneo</p>
-            <ul className="mt-1.5 space-y-1.5 text-[var(--text-secondary)]">
-              <li><span className="font-semibold">🏆 Americano:</span> Todas las parejas juegan entre sí. Gana quien más puntos acumule. Ideal para grupos pequeños (hasta 8 parejas).</li>
-              <li><span className="font-semibold">⚡ Eliminación directa:</span> El que pierde queda afuera. Requiere potencia de 2 de parejas (4, 8, 16…). Para muchos participantes. Opcionalmente podés activar la Copa de Plata 🥈, una llave paralela para los perdedores de primera ronda.</li>
-              <li><span className="font-semibold">🎉 Peña:</span> Evento social. Los jugadores se inscriben individualmente, sin competencia ni ranking. Se sortea una única ronda de parejas al iniciar.</li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Paso a paso para crear un torneo</p>
-            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[var(--text-secondary)]">
-              <li>Hacé clic en <strong>Crear</strong> y completá los datos: nombre, tipo, fechas, precio y categoría de nivel.</li>
-              <li>El torneo queda en estado <strong>Inscripción abierta</strong>. Los jugadores ven el torneo y pueden inscribirse pagando desde la app.</li>
-              <li>Cuando llegue la fecha, entrá al torneo y hacé clic en <strong>Iniciar torneo</strong>. Se genera el fixture automáticamente.</li>
-              <li>A medida que se juegan los partidos, ingresá los sets ganados de cada pareja y guardá. El ELO de los jugadores se actualiza solo.</li>
-              <li>Al terminar todas las rondas, hacé clic en <strong>Finalizar torneo</strong>.</li>
-            </ol>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Inscripción y pagos</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Los jugadores pagan con Mercado Pago directamente desde la app. El 100% del precio que configuraste va a tu cuenta.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Resultados y ELO</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Cargás los sets de cada partido (ej. 3–1). El sistema calcula automáticamente el cambio de nivel ELO de cada jugador. En torneos el multiplicador es mayor que en partidos comunes, así que un torneo puede mover más el nivel.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-bold text-[var(--text-primary)]">Cierre de inscripción</p>
-            <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
-              Las inscripciones se cierran automáticamente cuando se alcanza el máximo de parejas o cuando pasa la fecha límite que configuraste. Después de eso no se aceptan nuevos pagos.
-            </p>
-          </div>
-
-          <div className={adminTip}>
-            <span className="font-bold">Consejo:</span> Para eliminación directa, asegurate de tener exactamente 4, 8, 16 o 32 parejas pagadas antes de iniciar. Si tenés más inscriptos esperando, podés pedirles que completen el pago.
-          </div>
+      <AdminGuideBox title="¿Cómo crear un torneo?">
+        <ol className="list-decimal space-y-1.5 pl-4 text-[var(--text-secondary)]">
+          <li>Creá el torneo con nombre, fecha, precio de inscripción y cantidad máxima de parejas.</li>
+          <li>Publicalo para que los jugadores se inscriban desde la app y paguen online.</li>
+          <li>Una vez cerradas las inscripciones, generá el fixture automáticamente.</li>
+          <li>Cargá los resultados de cada partido para que el cuadro se actualice en tiempo real.</li>
+        </ol>
       </AdminGuideBox>
 
       <section>
