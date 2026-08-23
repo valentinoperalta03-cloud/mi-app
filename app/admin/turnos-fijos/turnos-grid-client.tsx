@@ -134,8 +134,7 @@ export default function TurnosFijosGrid({
                           </button>
                         ) : (
                           <div
-                            className="h-full min-h-16 w-full rounded-xl opacity-30"
-                            style={{ background: "var(--bg-subtle)" }}
+                            className="h-full min-h-16 w-full rounded-xl border border-rose-100 bg-rose-50 dark:border-rose-900/30 dark:bg-rose-950/20"
                             aria-hidden="true"
                           />
                         )}
