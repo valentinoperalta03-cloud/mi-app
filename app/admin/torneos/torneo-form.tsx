@@ -146,7 +146,9 @@ export default function TorneoFormInline({
   const [maxPlayers, setMaxPlayers] = useState(16);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [guaranteedMatches, setGuaranteedMatches] = useState(0);
-  const [matchFormat, setMatchFormat] = useState<"set" | "tiempo">("set");
+  const [matchFormat, setMatchFormat] = useState<
+    "set" | "tres_sets" | "tiempo"
+  >("set");
   const [matchDuration, setMatchDuration] = useState(20);
   const [tournamentNotes, setTournamentNotes] = useState("");
   const [hasFinals, setHasFinals] = useState(true);
@@ -275,6 +277,55 @@ export default function TorneoFormInline({
             selectedSlots={selectedSlotsByDate[date] ?? {}}
             onToggle={(courtId, time) => toggleSlot(date, courtId, time)}
           />
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderMatchFormatPicker(
+    label: string,
+    durationMin: number,
+    durationMax: number,
+  ) {
+    return (
+      <div>
+        <label className={adminKicker}>{label}</label>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMatchFormat("set")}
+            className={chip(matchFormat === "set")}
+          >
+            🎾 A un set
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatchFormat("tres_sets")}
+            className={chip(matchFormat === "tres_sets")}
+          >
+            🏆 Al mejor de 3 sets
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatchFormat("tiempo")}
+            className={chip(matchFormat === "tiempo")}
+          >
+            ⏱️ Por tiempo
+          </button>
+        </div>
+        {matchFormat === "tiempo" ? (
+          <div className="mt-2">
+            <label className={adminKicker}>Duración (minutos)</label>
+            <input
+              type="number"
+              min={durationMin}
+              max={durationMax}
+              step={5}
+              value={matchDuration}
+              onChange={(e) => setMatchDuration(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
         ) : null}
       </div>
     );
@@ -584,39 +635,7 @@ export default function TorneoFormInline({
                 </div>
               </div>
 
-              <div>
-                <label className={adminKicker}>Partidos</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("set")}
-                    className={chip(matchFormat === "set")}
-                  >
-                    🎾 A un set
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("tiempo")}
-                    className={chip(matchFormat === "tiempo")}
-                  >
-                    ⏱️ Por tiempo
-                  </button>
-                </div>
-                {matchFormat === "tiempo" ? (
-                  <div className="mt-2">
-                    <label className={adminKicker}>Duración (minutos)</label>
-                    <input
-                      type="number"
-                      min={5}
-                      max={30}
-                      step={5}
-                      value={matchDuration}
-                      onChange={(e) => setMatchDuration(Number(e.target.value))}
-                      className={inputClass}
-                    />
-                  </div>
-                ) : null}
-              </div>
+              {renderMatchFormatPicker("Partidos", 5, 30)}
 
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--text-secondary)]">
@@ -687,39 +706,7 @@ export default function TorneoFormInline({
                 />
               </label>
 
-              <div>
-                <label className={adminKicker}>Formato de partidos</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("set")}
-                    className={chip(matchFormat === "set")}
-                  >
-                    🎾 A un set
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("tiempo")}
-                    className={chip(matchFormat === "tiempo")}
-                  >
-                    ⏱️ Por tiempo
-                  </button>
-                </div>
-                {matchFormat === "tiempo" ? (
-                  <div className="mt-2">
-                    <label className={adminKicker}>Duración (minutos)</label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={60}
-                      step={5}
-                      value={matchDuration}
-                      onChange={(e) => setMatchDuration(Number(e.target.value))}
-                      className={inputClass}
-                    />
-                  </div>
-                ) : null}
-              </div>
+              {renderMatchFormatPicker("Formato de partidos", 10, 60)}
 
               <div>
                 <label className={adminKicker}>¿Copa de plata?</label>
@@ -842,39 +829,7 @@ export default function TorneoFormInline({
                 />
               </label>
 
-              <div>
-                <label className={adminKicker}>Formato de partidos</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("set")}
-                    className={chip(matchFormat === "set")}
-                  >
-                    🎾 A un set
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFormat("tiempo")}
-                    className={chip(matchFormat === "tiempo")}
-                  >
-                    ⏱️ Por tiempo
-                  </button>
-                </div>
-                {matchFormat === "tiempo" ? (
-                  <div className="mt-2">
-                    <label className={adminKicker}>Duración (minutos)</label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={60}
-                      step={5}
-                      value={matchDuration}
-                      onChange={(e) => setMatchDuration(Number(e.target.value))}
-                      className={inputClass}
-                    />
-                  </div>
-                ) : null}
-              </div>
+              {renderMatchFormatPicker("Formato de partidos", 10, 60)}
 
               <div>
                 <label className={adminKicker}>¿Cómo se organiza?</label>

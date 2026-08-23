@@ -102,9 +102,15 @@ export async function getCourtAvailabilityForDate(
 
   const timeRanges = (timeRangesRaw ?? []) as CourtTimeRangeInput[];
   const clubBounds = club as ClubHoursBounds | null;
-  const slots = buildSlotsForDay(courtIds, dayDate, timeRanges, clubBounds).map(
-    (g) => g.time,
-  );
+  // Torneos necesitan granularidad de 30 min (no los 90 min de una reserva
+  // normal de cancha) para poder acomodar partidos cortos/por tiempo.
+  const slots = buildSlotsForDay(
+    courtIds,
+    dayDate,
+    timeRanges,
+    clubBounds,
+    30,
+  ).map((g) => g.time);
 
   const occupiedByCourtAndSlot: Record<string, Record<string, string>> = {};
   function mark(

@@ -4,7 +4,10 @@ import { es } from "date-fns/locale";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
 import { DB_TABLES } from "@/lib/db-tables";
-import { TOURNAMENT_STATUS_LABELS, TOURNAMENT_TYPE_OPTIONS } from "@/lib/tournament-constants";
+import {
+  TOURNAMENT_STATUS_LABELS,
+  TOURNAMENT_TYPE_OPTIONS,
+} from "@/lib/tournament-constants";
 import { formatCategoryRange } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 
@@ -12,14 +15,23 @@ export const dynamic = "force-dynamic";
 
 type Filter = "all" | "open" | "in_progress" | "finished";
 
-export default async function TorneosPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
+export default async function TorneosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ f?: string }>;
+}) {
   const sp = await searchParams;
   const f = (sp.f as Filter) ?? "all";
   const supabase = await createClient();
 
   let q = supabase
     .from(DB_TABLES.tournaments)
-    .select("id, name, tournament_type, status, start_date, start_time, max_pairs, price_per_pair, prize, registration_deadline, category_min, category_max, is_individual, clubs(name, logo_url)")
+    .select(
+      "id, name, tournament_type, status, start_date, start_time, max_pairs, price_per_pair, prize, registration_deadline, category_min, category_max, is_individual, clubs(name, logo_url)",
+    )
+    // Un torneo cancelado no debe aparecer nunca para el jugador, en ninguna
+    // pestaña — "Finalizados" sigue siendo un estado válido para mostrar.
+    .neq("status", "cancelled")
     .order("start_date", { ascending: true });
 
   if (f === "open") q = q.eq("status", "open");
@@ -27,24 +39,29 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
   else if (f === "finished") q = q.eq("status", "finished");
 
   const { data: rows } = await q;
-  const list = ((rows ?? []) as unknown as Array<{
-    id: string;
-    name: string;
-    tournament_type: string;
-    status: string;
-    start_date: string;
-    start_time: string;
-    max_pairs: number;
-    price_per_pair: number;
-    prize: string | null;
-    registration_deadline: string;
-    category_min: number | null;
-    category_max: number | null;
-    is_individual: boolean;
-    clubs: { name: string | null; logo_url: string | null }[] | { name: string | null; logo_url: string | null } | null;
-  }>).map((row) => {
+  const list = (
+    (rows ?? []) as unknown as Array<{
+      id: string;
+      name: string;
+      tournament_type: string;
+      status: string;
+      start_date: string;
+      start_time: string;
+      max_pairs: number;
+      price_per_pair: number;
+      prize: string | null;
+      registration_deadline: string;
+      category_min: number | null;
+      category_max: number | null;
+      is_individual: boolean;
+      clubs:
+        | { name: string | null; logo_url: string | null }[]
+        | { name: string | null; logo_url: string | null }
+        | null;
+    }>
+  ).map((row) => {
     const c = row.clubs;
-    const club = Array.isArray(c) ? c[0] ?? null : c;
+    const club = Array.isArray(c) ? (c[0] ?? null) : c;
     return { ...row, clubs: club };
   });
 
@@ -105,7 +122,9 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
         {list.map((t) => {
           const badge = t.is_individual
             ? "🎉 Peña Social"
-            : TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === t.tournament_type)?.badge ?? t.tournament_type;
+            : (TOURNAMENT_TYPE_OPTIONS.find(
+                (o) => o.value === t.tournament_type,
+              )?.badge ?? t.tournament_type);
           const st = t.status;
           const stLabel = TOURNAMENT_STATUS_LABELS[st] ?? st;
           const stClass =
@@ -114,7 +133,9 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
               : st === "in_progress"
                 ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
                 : "bg-slate-500/15 text-slate-600 dark:text-slate-300";
-          const dt = parseISO(`${t.start_date}T${String(t.start_time).slice(0, 5)}:00`);
+          const dt = parseISO(
+            `${t.start_date}T${String(t.start_time).slice(0, 5)}:00`,
+          );
           const dateLabel = format(dt, "EEEE d 'de' MMMM", { locale: es });
           const timeLabel = format(dt, "HH:mm");
           const n = countMap.get(t.id) ?? 0;
@@ -129,7 +150,11 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-subtle)] ring-1 ring-black/5 dark:ring-white/10 sm:h-16 sm:w-16">
                     {club?.logo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element -- URLs externas de storage
-                      <img src={club.logo_url} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={club.logo_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-base font-semibold text-[#0461C4]">
                         {(club?.name ?? "C").slice(0, 1).toUpperCase()}
@@ -137,23 +162,38 @@ export default async function TorneosPage({ searchParams }: { searchParams: Prom
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{club?.name ?? "Club"}</p>
-                    <h2 className="line-clamp-2 text-base font-semibold leading-snug break-words text-[var(--text-primary)]">{t.name}</h2>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                      {club?.name ?? "Club"}
+                    </p>
+                    <h2 className="line-clamp-2 text-base font-semibold leading-snug break-words text-[var(--text-primary)]">
+                      {t.name}
+                    </h2>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
                         {badge}
                       </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${stClass}`}>{stLabel}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${stClass}`}
+                      >
+                        {stLabel}
+                      </span>
                     </div>
                     <p className="mt-2 text-xs capitalize text-[var(--text-secondary)]">
                       {dateLabel} · {timeLabel}hs
                     </p>
                     <p className="mt-1 break-words text-xs text-[var(--text-tertiary)]">
-                      ${Math.round(Number(t.price_per_pair)).toLocaleString("es-AR")} / {t.is_individual ? "jugador" : "pareja"} · {n}/
-                      {t.max_pairs} {t.is_individual ? "jugadores" : "parejas"} · {formatCategoryRange(t.category_min, t.category_max)}
+                      $
+                      {Math.round(Number(t.price_per_pair)).toLocaleString(
+                        "es-AR",
+                      )}{" "}
+                      / {t.is_individual ? "jugador" : "pareja"} · {n}/
+                      {t.max_pairs} {t.is_individual ? "jugadores" : "parejas"}{" "}
+                      · {formatCategoryRange(t.category_min, t.category_max)}
                     </p>
                     {t.prize ? (
-                      <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">🏅 Premio: {t.prize}</p>
+                      <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                        🏅 Premio: {t.prize}
+                      </p>
                     ) : null}
                   </div>
                 </div>
