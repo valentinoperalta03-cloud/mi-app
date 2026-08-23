@@ -284,6 +284,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         {courtList.length > 0 ? (
           <TournamentScheduler
             tournamentId={id}
+            clubId={tour.club_id}
             courts={courtList}
             matches={bracketMatches.map((m) => ({
               id: m.id,
@@ -706,6 +707,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
               {courtList.length > 0 ? (
                 <TournamentScheduler
                   tournamentId={id}
+                  clubId={tour.club_id}
                   courts={courtList}
                   matches={matchRows.map((m) => ({
                     id: m.id,
@@ -794,6 +796,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           {tour.status === "in_progress" && courtList.length > 0 && (
             <TournamentScheduler
               tournamentId={id}
+              clubId={tour.club_id}
               courts={courtList}
               matches={americanoRegularMatches.map((m) => ({
                 id: m.id,
