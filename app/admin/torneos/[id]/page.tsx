@@ -25,6 +25,7 @@ import {
   TOURNAMENT_TYPE_OPTIONS,
 } from "@/lib/tournament-constants";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
+import { CopyLinkButton } from "@/components/copy-link-button";
 import {
   buildAmericanoRanking,
   type MatchForRanking,
@@ -59,7 +60,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included",
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes",
     )
     .eq("id", id)
     .maybeSingle();
@@ -95,6 +96,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     multi_day: boolean | null;
     num_courts: number | null;
     food_included: string | null;
+    contact_phone: string | null;
+    prizes: Array<{ position: number; description: string }> | null;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
@@ -395,6 +398,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     numCourts: tour.num_courts,
     foodIncluded: tour.food_included,
     whatIncludes: tour.what_includes ?? [],
+    contactPhone: tour.contact_phone,
+    prizes: tour.prizes,
   };
 
   return (
@@ -534,6 +539,10 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
             className={adminCTADangerCompact}
           />
         ) : null}
+        <CopyLinkButton
+          url={`${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online"}/torneos/${id}`}
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+        />
       </section>
 
       <section>

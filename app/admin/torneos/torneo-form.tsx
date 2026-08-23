@@ -125,6 +125,9 @@ export default function TorneoFormInline({
   const [endDate, setEndDate] = useState("");
   const [numCourts, setNumCourts] = useState(2);
   const [foodIncluded, setFoodIncluded] = useState("");
+  const [hasPrizes, setHasPrizes] = useState(false);
+  const [prizes, setPrizes] = useState<string[]>(["", ""]);
+  const [contactPhone, setContactPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -174,6 +177,17 @@ export default function TorneoFormInline({
         if (foodIncluded.trim()) fd.set("food_included", foodIncluded.trim());
       } else {
         selectedCategories.forEach((c) => fd.append("allowed_categories", c));
+      }
+      if (contactPhone.trim()) fd.set("contact_phone", `+54${contactPhone}`);
+      if (hasPrizes && prizes.some((p) => p.trim())) {
+        fd.set(
+          "prizes",
+          JSON.stringify(
+            prizes
+              .map((p, i) => ({ position: i + 1, description: p.trim() }))
+              .filter((p) => p.description),
+          ),
+        );
       }
 
       const result = await createTournamentAction(
@@ -589,6 +603,98 @@ export default function TorneoFormInline({
               </div>
             </>
           )}
+
+          <div>
+            <label className={adminKicker}>
+              Teléfono de contacto para consultas
+            </label>
+            <p className="mb-1 text-xs text-[var(--text-tertiary)]">
+              Los jugadores van a poder escribirte por WhatsApp con este número.
+            </p>
+            <div className="flex gap-2">
+              <span className="flex items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-sm text-[var(--text-secondary)]">
+                +54
+              </span>
+              <input
+                type="tel"
+                value={contactPhone}
+                onChange={(e) =>
+                  setContactPhone(e.target.value.replace(/\D/g, ""))
+                }
+                placeholder="91122334455"
+                className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className={adminKicker}>¿Hay premios?</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setHasPrizes(true)}
+                className={chip(hasPrizes)}
+              >
+                🏆 Sí, hay premios
+              </button>
+              <button
+                type="button"
+                onClick={() => setHasPrizes(false)}
+                className={chip(!hasPrizes)}
+              >
+                Sin premios
+              </button>
+            </div>
+            {hasPrizes ? (
+              <div className="space-y-2">
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  Describí el premio para cada puesto. Podés agregar los que
+                  quieras.
+                </p>
+                {prizes.map((prize, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-24 shrink-0 text-sm font-semibold text-[var(--text-secondary)]">
+                      {i === 0
+                        ? "🥇 1er"
+                        : i === 1
+                          ? "🥈 2do"
+                          : i === 2
+                            ? "🥉 3er"
+                            : `🏅 ${i + 1}to`}
+                    </span>
+                    <input
+                      value={prize}
+                      onChange={(e) => {
+                        const next = [...prizes];
+                        next[i] = e.target.value;
+                        setPrizes(next);
+                      }}
+                      placeholder="Ej: Copa + $50.000"
+                      className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    />
+                    {prizes.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPrizes(prizes.filter((_, j) => j !== i))
+                        }
+                        className="text-sm font-bold text-rose-500"
+                      >
+                        ✕
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPrizes([...prizes, ""])}
+                  className="text-sm font-semibold text-[#0085FC] hover:underline"
+                >
+                  + Agregar puesto
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-3 text-xs text-[var(--text-secondary)]">
             {typeLabel} · {name || "Sin nombre"} · {startDate || "Sin fecha"} ·

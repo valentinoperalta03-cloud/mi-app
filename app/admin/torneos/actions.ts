@@ -87,6 +87,17 @@ export async function createTournamentAction(
       : null;
   const foodIncluded =
     String(formData.get("food_included") ?? "").trim() || null;
+  const contactPhone =
+    String(formData.get("contact_phone") ?? "").trim() || null;
+  const prizesRaw = String(formData.get("prizes") ?? "").trim();
+  let prizes: unknown = null;
+  if (prizesRaw) {
+    try {
+      prizes = JSON.parse(prizesRaw);
+    } catch {
+      return { ok: false, message: "Premios inválidos." };
+    }
+  }
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
   if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
@@ -170,6 +181,8 @@ export async function createTournamentAction(
       multi_day: multiDay,
       num_courts: numCourts,
       food_included: foodIncluded,
+      contact_phone: contactPhone,
+      prizes,
       is_individual: isPena,
       prize,
       start_date: startDate,

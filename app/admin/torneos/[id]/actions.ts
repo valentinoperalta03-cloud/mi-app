@@ -468,6 +468,17 @@ export async function updateTournamentAction(
         .map((v) => String(v).trim())
         .filter(Boolean)
     : [];
+  const contactPhone =
+    String(formData.get("contact_phone") ?? "").trim() || null;
+  const prizesRaw = String(formData.get("prizes") ?? "").trim();
+  let prizes: unknown = null;
+  if (prizesRaw) {
+    try {
+      prizes = JSON.parse(prizesRaw);
+    } catch {
+      return { ok: false, message: "Premios inválidos." };
+    }
+  }
 
   const service = createServiceClient();
   const { error } = await service
@@ -493,6 +504,8 @@ export async function updateTournamentAction(
       num_courts: numCourts,
       food_included: foodIncluded,
       what_includes: whatIncludes,
+      contact_phone: contactPhone,
+      prizes,
     })
     .eq("id", tournamentId);
 
