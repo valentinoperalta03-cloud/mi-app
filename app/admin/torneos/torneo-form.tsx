@@ -17,7 +17,7 @@ import {
 } from "@/lib/tournament-constants";
 import { createTournamentAction } from "./actions";
 
-const CATEGORY_OPTIONS = PROFILE_CATEGORIES.slice().reverse();
+export const CATEGORY_OPTIONS = PROFILE_CATEGORIES.slice().reverse();
 
 const TYPE_EMOJI: Record<TournamentTypeKey, string> = {
   americano: "🏆",
@@ -31,7 +31,7 @@ const TYPE_DESCRIPTION: Record<TournamentTypeKey, string> = {
   pena: "Formato social con comida y bebida incluida.",
 };
 
-function chip(active: boolean) {
+export function chip(active: boolean) {
   return `rounded-xl border px-3 py-2 text-sm font-semibold transition ${
     active
       ? "border-[#0085FC]/30 bg-[#0085FC]/10 text-[#0085FC]"
@@ -39,7 +39,7 @@ function chip(active: boolean) {
   }`;
 }
 
-function CategoryChips({
+export function CategoryChips({
   selectedCategories,
   onToggle,
   onClear,
