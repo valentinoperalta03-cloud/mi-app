@@ -150,15 +150,9 @@ export default function TournamentConfigSection({
             </div>
             <div>
               <p className={adminKicker}>¿Qué incluye?</p>
-              {tournament.whatIncludes.length > 0 || tournament.foodIncluded ? (
-                <p className="text-[var(--text-secondary)]">
-                  {[...tournament.whatIncludes, tournament.foodIncluded]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              ) : (
-                <p className="text-[var(--text-secondary)]">Sin especificar</p>
-              )}
+              <p className="text-[var(--text-secondary)]">
+                {tournament.foodIncluded || "Sin especificar"}
+              </p>
             </div>
           </>
         ) : null}

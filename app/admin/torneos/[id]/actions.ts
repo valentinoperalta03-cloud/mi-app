@@ -17,6 +17,11 @@ import {
   buildEliminationFixture,
   buildPenaFirstRound,
 } from "@/lib/tournament/fixture";
+import { FINAL_ROUND, THIRD_PLACE_ROUND } from "@/lib/tournament/rounds";
+import {
+  buildAmericanoRanking,
+  type MatchForRanking,
+} from "@/lib/tournament/ranking";
 import { validatePairsForType } from "@/lib/tournament/validation";
 import type { TournamentTypeKey } from "@/lib/tournament-constants";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -30,7 +35,7 @@ async function assertTournamentOwner(
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, status, tournament_type, group_chat_id, consolation_bracket",
+      "id, club_id, name, status, tournament_type, group_chat_id, consolation_bracket, has_finals",
     )
     .eq("id", tournamentId)
     .maybeSingle();
@@ -214,17 +219,25 @@ export async function finishTournamentAction(
   if (!gate.ok) return gate;
   const service = createServiceClient();
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
+  const tournamentType = String(
+    (gate.row as { tournament_type?: string }).tournament_type ?? "",
+  );
 
-  const { count } = await service
-    .from(DB_TABLES.tournamentMatches)
-    .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId)
-    .neq("status", "finished");
-  if ((count ?? 0) > 0) {
-    return {
-      ok: false,
-      message: `Hay ${count} partido${count === 1 ? "" : "s"} sin resultado. Cargalos antes de cerrar el torneo.`,
-    };
+  // Las peñas no cargan resultados (saveTournamentMatchAction las rechaza),
+  // así que nunca tendrían partidos en status 'finished' — sin esta excepción
+  // el torneo queda bloqueado para siempre en "Finalizar".
+  if (tournamentType !== "pena") {
+    const { count } = await service
+      .from(DB_TABLES.tournamentMatches)
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId)
+      .neq("status", "finished");
+    if ((count ?? 0) > 0) {
+      return {
+        ok: false,
+        message: `Hay ${count} partido${count === 1 ? "" : "s"} sin resultado. Cargalos antes de cerrar el torneo.`,
+      };
+    }
   }
 
   await service
@@ -484,6 +497,64 @@ export async function updateTournamentAction(
   return { ok: true, message: "Torneo actualizado." };
 }
 
+/**
+ * Si el torneo es americano con `has_finals`, y ya terminaron todos los
+ * partidos de todos-contra-todos (round < FINAL_ROUND) sin que la Final ya
+ * exista, genera 1er-vs-2do (Final) y 3ro-vs-4to (3er puesto) según la tabla
+ * de posiciones acumulada hasta ese momento.
+ */
+async function maybeGenerateAmericanoFinals(
+  service: SupabaseClient,
+  tournamentId: string,
+  hasFinals: boolean,
+): Promise<void> {
+  if (!hasFinals) return;
+
+  const { data: allMatches } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .select("id, round, pair1_id, pair2_id, pair1_score, pair2_score, status")
+    .eq("tournament_id", tournamentId);
+  const rows = (allMatches ?? []) as Array<{
+    id: string;
+    round: number;
+    pair1_id: string | null;
+    pair2_id: string | null;
+    pair1_score: number | null;
+    pair2_score: number | null;
+    status: string;
+  }>;
+
+  const regular = rows.filter((m) => m.round < FINAL_ROUND);
+  const alreadyGenerated = rows.some((m) => m.round >= FINAL_ROUND);
+  if (alreadyGenerated || regular.length === 0) return;
+  if (regular.some((m) => m.status !== "finished")) return;
+
+  const ranking = buildAmericanoRanking(regular as MatchForRanking[]);
+  if (ranking.length < 2) return;
+
+  const toInsert: Array<Record<string, unknown>> = [
+    {
+      tournament_id: tournamentId,
+      round: FINAL_ROUND,
+      round_name: "Final",
+      pair1_id: ranking[0].pairId,
+      pair2_id: ranking[1].pairId,
+      status: "pending",
+    },
+  ];
+  if (ranking.length >= 4) {
+    toInsert.push({
+      tournament_id: tournamentId,
+      round: THIRD_PLACE_ROUND,
+      round_name: "3er puesto",
+      pair1_id: ranking[2].pairId,
+      pair2_id: ranking[3].pairId,
+      status: "pending",
+    });
+  }
+  await service.from(DB_TABLES.tournamentMatches).insert(toInsert);
+}
+
 export async function saveTournamentMatchAction(
   tournamentId: string,
   matchId: string,
@@ -576,6 +647,15 @@ export async function saveTournamentMatchAction(
       setsJson: setsJson ?? [],
       tournamentName: tname,
     });
+  }
+
+  if (
+    res.ok &&
+    (gate.row as { tournament_type?: string }).tournament_type === "americano"
+  ) {
+    const hasFinals =
+      (gate.row as { has_finals?: boolean | null }).has_finals ?? true;
+    await maybeGenerateAmericanoFinals(service, tournamentId, hasFinals);
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);

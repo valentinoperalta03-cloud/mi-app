@@ -25,7 +25,10 @@ import {
   TOURNAMENT_TYPE_OPTIONS,
 } from "@/lib/tournament-constants";
 import { TournamentRealtimeRefresh } from "@/components/tournament-realtime-refresh";
-import { formatCategoryRange } from "@/lib/tournament-utils";
+import {
+  buildAmericanoRanking,
+  type MatchForRanking,
+} from "@/lib/tournament/ranking";
 import {
   cancelRegistrationAction,
   cancelTournamentFormAction,
@@ -34,11 +37,14 @@ import {
   startTournamentFormAction,
   updatePenaMatchPairsAction,
 } from "./actions";
+import { FINAL_ROUND } from "@/lib/tournament/rounds";
 import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
+import { ConfirmActionButton } from "./confirm-action-button";
 import { ReorderRegistrations } from "./reorder-registrations";
 import { TournamentScheduler } from "./TournamentScheduler";
 import type { EditableTournament } from "./edit-tournament-form";
 import TournamentConfigSection from "./tournament-config-section";
+import { WinnerPickerButtons } from "./winner-picker-buttons";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -181,6 +187,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     pair1_score: number | null;
     pair2_score: number | null;
     status: string;
+    winner_pair_id: string | null;
     court_id: string | null;
     scheduled_date: string | null;
     scheduled_time: string | null;
@@ -189,6 +196,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   type MatchRow = (typeof matchRows)[number];
   const goldMatches = matchRows.filter((m) => (m.bracket ?? "gold") === "gold");
   const silverMatches = matchRows.filter((m) => m.bracket === "silver");
+  const americanoRegularMatches = matchRows.filter(
+    (m) => m.round < FINAL_ROUND,
+  );
+  const americanoFinalMatches = matchRows.filter((m) => m.round >= FINAL_ROUND);
+  const useWinnerPicker =
+    tour.tournament_type === "americano" && tour.match_format === "tiempo";
 
   function matchCard(m: MatchRow) {
     return (
@@ -215,7 +228,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
               ? "En curso"
               : "Pendiente"}
         </span>
-        {m.pair1_id && m.pair2_id ? (
+        {m.pair1_id && m.pair2_id && useWinnerPicker ? (
+          <WinnerPickerButtons
+            tournamentId={id}
+            matchId={m.id}
+            pair1Name={pairNameMap.get(m.pair1_id) ?? "Pareja 1"}
+            pair2Name={pairNameMap.get(m.pair2_id) ?? "Pareja 2"}
+          />
+        ) : m.pair1_id && m.pair2_id ? (
           <form
             action={saveTournamentMatchFormAction}
             className="mt-2 grid gap-2 sm:grid-cols-4"
@@ -302,6 +322,58 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           ? adminBadgeError
           : adminBadgeNeutral;
 
+  function bindCancelRegistration(registrationId: string) {
+    const fd = new FormData();
+    fd.set("registration_id", registrationId);
+    fd.set("tournament_id", id);
+    return cancelRegistrationAction.bind(null, fd);
+  }
+  const cancelTournamentBound = (() => {
+    const fd = new FormData();
+    fd.set("tournament_id", id);
+    return cancelTournamentFormAction.bind(null, fd);
+  })();
+
+  function nextPowerOf2(n: number): number {
+    let p = 1;
+    while (p < n) p *= 2;
+    return p;
+  }
+  const paidCount = approved.length;
+  const isPowerOf2 = paidCount > 0 && (paidCount & (paidCount - 1)) === 0;
+  const showPowerOf2Warning =
+    tour.status === "open" &&
+    tour.tournament_type === "eliminacion" &&
+    paidCount > 0 &&
+    !isPowerOf2;
+
+  // Campeón americano: gana la Final si existe y ya se jugó; si no, 1er lugar del round-robin.
+  const americanoFinalMatch =
+    americanoFinalMatches.find((m) => m.round === FINAL_ROUND) ?? null;
+  const americanoRanking = buildAmericanoRanking(
+    americanoRegularMatches as MatchForRanking[],
+  );
+  const americanoChampionName =
+    americanoFinalMatch?.status === "finished" &&
+    americanoFinalMatch.winner_pair_id
+      ? (pairNameMap.get(americanoFinalMatch.winner_pair_id) ?? null)
+      : americanoRanking[0]
+        ? (pairNameMap.get(americanoRanking[0].pairId) ?? null)
+        : null;
+
+  // Campeón eliminación: ganador de la Final = partido de mayor `round` en la llave de oro.
+  const eliminacionFinalMatch = goldMatches.length
+    ? goldMatches.reduce(
+        (max, m) => (m.round > max.round ? m : max),
+        goldMatches[0],
+      )
+    : null;
+  const eliminacionChampionName =
+    eliminacionFinalMatch?.status === "finished" &&
+    eliminacionFinalMatch.winner_pair_id
+      ? (pairNameMap.get(eliminacionFinalMatch.winner_pair_id) ?? null)
+      : null;
+
   const editableTournament: EditableTournament = {
     id,
     tournamentType: tour.tournament_type,
@@ -358,13 +430,13 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         {tour.is_individual ? (
           <div className="mt-2 text-xs text-[var(--text-tertiary)]">
             {tour.game_format ? <p>Formato: {tour.game_format}</p> : null}
-            {tour.what_includes && tour.what_includes.length > 0 ? (
-              <p>Incluye: {tour.what_includes.join(", ")}</p>
-            ) : null}
           </div>
         ) : null}
         <p className="mt-2 text-xs text-[var(--text-tertiary)]">
-          Categoría: {formatCategoryRange(tour.category_min, tour.category_max)}
+          Categoría:{" "}
+          {tour.allowed_categories && tour.allowed_categories.length > 0
+            ? tour.allowed_categories.join(" · ")
+            : "Todas las categorías"}
         </p>
         <div className="mt-2">
           <p className="text-sm font-semibold text-[var(--text-secondary)]">
@@ -428,6 +500,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         editable={tour.status === "open"}
       />
 
+      {showPowerOf2Warning ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          ⚠️ Tenés {paidCount} pareja{paidCount !== 1 ? "s" : ""} pagas. Para
+          eliminación directa necesitás una potencia de 2 (8, 16, 32...).
+          Próxima válida: {nextPowerOf2(paidCount)}.
+        </div>
+      ) : null}
+
       <section className="flex flex-wrap gap-2">
         {tour.status === "open" ? (
           <form action={startTournamentFormAction}>
@@ -446,12 +526,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           </form>
         ) : null}
         {tour.status !== "finished" && tour.status !== "cancelled" ? (
-          <form action={cancelTournamentFormAction}>
-            <input type="hidden" name="tournament_id" value={id} />
-            <button type="submit" className={adminCTADangerCompact}>
-              Cancelar torneo
-            </button>
-          </form>
+          <ConfirmActionButton
+            action={cancelTournamentBound}
+            confirmText="¿Seguro que querés cancelar el torneo? Esta acción no se puede deshacer."
+            label="Cancelar torneo"
+            className={adminCTADangerCompact}
+          />
         ) : null}
       </section>
 
@@ -492,13 +572,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                   amountPending={r.amount_pending}
                 />
                 {tour.status === "open" ? (
-                  <form action={cancelRegistrationAction}>
-                    <input type="hidden" name="registration_id" value={r.id} />
-                    <input type="hidden" name="tournament_id" value={id} />
-                    <button type="submit" className={adminCTADangerCompact}>
-                      Bajar pareja
-                    </button>
-                  </form>
+                  <ConfirmActionButton
+                    action={bindCancelRegistration(r.id)}
+                    confirmText="¿Seguro que querés bajar esta pareja del torneo?"
+                    label="Bajar pareja"
+                    className={adminCTADangerCompact}
+                  />
                 ) : null}
               </div>
             </li>
@@ -526,13 +605,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                   amountPending={r.amount_pending}
                 />
                 {tour.status === "open" ? (
-                  <form action={cancelRegistrationAction}>
-                    <input type="hidden" name="registration_id" value={r.id} />
-                    <input type="hidden" name="tournament_id" value={id} />
-                    <button type="submit" className={adminCTADangerCompact}>
-                      Bajar pareja
-                    </button>
-                  </form>
+                  <ConfirmActionButton
+                    action={bindCancelRegistration(r.id)}
+                    confirmText="¿Seguro que querés bajar esta pareja del torneo?"
+                    label="Bajar pareja"
+                    className={adminCTADangerCompact}
+                  />
                 ) : null}
               </div>
             </li>
@@ -558,13 +636,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                     : ""}
                 </span>
                 {tour.status === "open" ? (
-                  <form action={cancelRegistrationAction}>
-                    <input type="hidden" name="registration_id" value={r.id} />
-                    <input type="hidden" name="tournament_id" value={id} />
-                    <button type="submit" className={adminCTADangerCompact}>
-                      Bajar pareja
-                    </button>
-                  </form>
+                  <ConfirmActionButton
+                    action={bindCancelRegistration(r.id)}
+                    confirmText="¿Seguro que querés bajar esta pareja del torneo?"
+                    label="Bajar pareja"
+                    className={adminCTADangerCompact}
+                  />
                 ) : null}
               </li>
             ))}
@@ -572,15 +649,40 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
+      {tour.status === "finished" ? (
+        <div
+          className={`${adminCard} border-[#CCFF00]/30 bg-[#CCFF00]/[0.04] text-center`}
+        >
+          <p className="mb-2 text-3xl">🏆</p>
+          {tour.tournament_type === "pena" ? (
+            <>
+              <p className={adminKicker}>Peña finalizada</p>
+              <p className="mt-1 text-lg font-black text-[var(--text-primary)]">
+                🎉 ¡Peña finalizada! Gracias a todos los participantes.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className={adminKicker}>Campeón del torneo</p>
+              <p className="mt-1 text-xl font-black text-[var(--text-primary)]">
+                {(tour.tournament_type === "americano"
+                  ? americanoChampionName
+                  : eliminacionChampionName) ?? "Por determinar"}
+              </p>
+            </>
+          )}
+        </div>
+      ) : null}
+
       {tour.tournament_type === "americano" &&
-        tour.status === "in_progress" && (
+        (tour.status === "in_progress" || tour.status === "finished") && (
           <AmericanoLeaderboard
-            matches={matchRows}
+            matches={americanoRegularMatches}
             pairNames={Object.fromEntries(pairNameMap)}
           />
         )}
 
-      {tour.status === "in_progress" &&
+      {(tour.status === "in_progress" || tour.status === "finished") &&
       tour.tournament_type === "eliminacion" ? (
         <>
           {bracketSection("🥇 Llave de Oro", goldMatches)}
@@ -693,7 +795,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
             <TournamentScheduler
               tournamentId={id}
               courts={courtList}
-              matches={matchRows.map((m) => ({
+              matches={americanoRegularMatches.map((m) => ({
                 id: m.id,
                 round_name: m.round_name,
                 pair1_name: m.pair1_id
@@ -715,12 +817,24 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
               Fixture
             </h2>
             <p className="text-xs text-[var(--text-tertiary)]">
-              ~{courtHours} h de cancha estimadas · {matchRows.length} partidos
+              ~{courtHours} h de cancha estimadas ·{" "}
+              {americanoRegularMatches.length} partidos
             </p>
             <ul className="mt-3 space-y-3">
-              {matchRows.map((m) => matchCard(m))}
+              {americanoRegularMatches.map((m) => matchCard(m))}
             </ul>
           </section>
+
+          {americanoFinalMatches.length > 0 ? (
+            <section>
+              <h3 className="font-bold text-[var(--text-primary)]">
+                🏆 Finales
+              </h3>
+              <ul className="mt-3 space-y-3">
+                {americanoFinalMatches.map((m) => matchCard(m))}
+              </ul>
+            </section>
+          ) : null}
         </>
       )}
     </div>
