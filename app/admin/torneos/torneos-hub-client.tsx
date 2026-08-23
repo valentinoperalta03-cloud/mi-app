@@ -103,9 +103,11 @@ function HubBackButton({ onClick }: { onClick: () => void }) {
 export default function TorneosHubClient({
   clubId,
   torneos,
+  courts,
 }: {
   clubId: string;
   torneos: TorneoRow[];
+  courts: { id: string; name: string }[];
 }) {
   const [view, setView] = useState<View>("lista");
 
@@ -118,7 +120,11 @@ export default function TorneosHubClient({
           title="Crear torneo"
           subtitle="Completá los datos del torneo"
         />
-        <TorneoFormInline clubId={clubId} onSuccess={() => setView("lista")} />
+        <TorneoFormInline
+          clubId={clubId}
+          courts={courts}
+          onSuccess={() => setView("lista")}
+        />
       </div>
     );
   }

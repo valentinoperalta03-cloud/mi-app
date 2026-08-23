@@ -13,13 +13,21 @@ export default async function AdminTorneosPage() {
   if (ctx.clubIds.length === 0) redirect("/admin/club");
   const clubId = ctx.clubIds[0]!;
 
-  const { data: rows } = await supabase
-    .from(DB_TABLES.tournaments)
-    .select(
-      "id, name, tournament_type, start_date, end_date, status, max_pairs, club_id",
-    )
-    .in("club_id", ctx.clubIds)
-    .order("start_date", { ascending: false });
+  const [{ data: rows }, { data: courtRows }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.tournaments)
+      .select(
+        "id, name, tournament_type, start_date, end_date, status, max_pairs, club_id",
+      )
+      .in("club_id", ctx.clubIds)
+      .order("start_date", { ascending: false }),
+    supabase
+      .from(DB_TABLES.courts)
+      .select("id, name")
+      .eq("club_id", clubId)
+      .order("name", { ascending: true }),
+  ]);
+  const courts = (courtRows ?? []) as Array<{ id: string; name: string }>;
 
   const ids = ((rows ?? []) as { id: string }[]).map((r) => r.id);
   const { data: counts } = ids.length
@@ -56,5 +64,5 @@ export default async function AdminTorneosPage() {
     registeredCount: countBy.get(t.id) ?? 0,
   }));
 
-  return <TorneosHubClient clubId={clubId} torneos={torneos} />;
+  return <TorneosHubClient clubId={clubId} torneos={torneos} courts={courts} />;
 }

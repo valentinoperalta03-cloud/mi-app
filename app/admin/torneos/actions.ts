@@ -6,7 +6,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
 import type { TournamentTypeKey } from "@/lib/tournament-constants";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type CreateTournamentState = {
   ok: boolean;
@@ -98,6 +98,38 @@ export async function createTournamentAction(
       return { ok: false, message: "Premios inválidos." };
     }
   }
+  const guaranteedMatchesRaw = Number(formData.get("guaranteed_matches") ?? 0);
+  const guaranteedMatches =
+    Number.isFinite(guaranteedMatchesRaw) && guaranteedMatchesRaw > 0
+      ? Math.floor(guaranteedMatchesRaw)
+      : null;
+  const tournamentNotes =
+    String(formData.get("tournament_notes") ?? "").trim() || null;
+  const matchesPerDayRaw = Number(formData.get("matches_per_day") ?? 0);
+  const matchesPerDay =
+    Number.isFinite(matchesPerDayRaw) && matchesPerDayRaw > 0
+      ? Math.floor(matchesPerDayRaw)
+      : null;
+  const quarterfinalsDate =
+    String(formData.get("quarterfinals_date") ?? "").trim() || null;
+  const semifinalsDate =
+    String(formData.get("semifinals_date") ?? "").trim() || null;
+  const finalsDate = String(formData.get("finals_date") ?? "").trim() || null;
+  const courtBlocksRaw = String(
+    formData.get("tournament_court_blocks") ?? "",
+  ).trim();
+  let courtBlocks: Array<{ date: string; courtId: string; time: string }> = [];
+  if (courtBlocksRaw) {
+    try {
+      courtBlocks = JSON.parse(courtBlocksRaw) as Array<{
+        date: string;
+        courtId: string;
+        time: string;
+      }>;
+    } catch {
+      return { ok: false, message: "Horarios bloqueados inválidos." };
+    }
+  }
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
   if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
@@ -183,6 +215,12 @@ export async function createTournamentAction(
       food_included: foodIncluded,
       contact_phone: contactPhone,
       prizes,
+      guaranteed_matches: guaranteedMatches,
+      tournament_notes: tournamentNotes,
+      matches_per_day: matchesPerDay,
+      quarterfinals_date: quarterfinalsDate,
+      semifinals_date: semifinalsDate,
+      finals_date: finalsDate,
       is_individual: isPena,
       prize,
       start_date: startDate,
@@ -204,6 +242,24 @@ export async function createTournamentAction(
       message: error?.message ?? "No se pudo crear el torneo.",
     };
 
+  const tournamentId = (inserted as { id: string }).id;
+
+  if (courtBlocks.length > 0) {
+    // court_blocks se escribe con el service client (no el cliente del
+    // usuario): mismo patrón que assignTournamentMatchSlot en
+    // app/admin/torneos/[id]/actions.ts para evitar depender de grants por
+    // columna/tabla que no están garantizados para authenticated.
+    const service = createServiceClient();
+    await service.from(DB_TABLES.courtBlocks).insert(
+      courtBlocks.map((b) => ({
+        court_id: b.courtId,
+        blocked_date: b.date,
+        blocked_time: b.time,
+        reason: "torneo",
+      })),
+    );
+  }
+
   revalidatePath("/admin/torneos");
-  redirect(`/admin/torneos/${(inserted as { id: string }).id}`);
+  redirect(`/admin/torneos/${tournamentId}`);
 }

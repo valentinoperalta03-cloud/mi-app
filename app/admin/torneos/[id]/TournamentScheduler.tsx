@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { adminCard } from "@/components/admin/admin-premium";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import {
-  assignTournamentMatchSlot,
-  getCourtAvailabilityForDate,
-} from "./actions";
+import { getCourtAvailabilityForDate } from "@/lib/tournament-availability";
+import { AvailabilityGrid } from "../availability-grid";
+import { assignTournamentMatchSlot } from "./actions";
 
 type Court = { id: string; name: string };
 
@@ -32,86 +31,6 @@ type Availability = {
   slots: string[];
   occupiedByCourtAndSlot: Record<string, Record<string, string>>;
 };
-
-function AvailabilityGrid({
-  courts,
-  slots,
-  occupiedByCourtAndSlot,
-  selectedCourtId,
-  selectedTime,
-  onSelect,
-}: {
-  courts: Court[];
-  slots: string[];
-  occupiedByCourtAndSlot: Record<string, Record<string, string>>;
-  selectedCourtId: string | null;
-  selectedTime: string | null;
-  onSelect: (courtId: string, time: string) => void;
-}) {
-  if (slots.length === 0) {
-    return (
-      <p className="text-xs text-[var(--text-tertiary)]">
-        No hay horarios configurados para esta fecha.
-      </p>
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr>
-            <th className="w-16 py-1 text-left font-mono text-[var(--text-tertiary)]">
-              Hora
-            </th>
-            {courts.map((c) => (
-              <th
-                key={c.id}
-                className="px-2 py-1 text-center font-semibold text-[var(--text-secondary)]"
-              >
-                {c.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {slots.map((slot) => (
-            <tr key={slot} className="border-t border-[var(--border-subtle)]">
-              <td className="py-1.5 pr-3 font-mono text-[var(--text-tertiary)]">
-                {slot}
-              </td>
-              {courts.map((court) => {
-                const motivo = occupiedByCourtAndSlot[court.id]?.[slot];
-                const isSelected =
-                  selectedCourtId === court.id && selectedTime === slot;
-                const isOcupado = Boolean(motivo);
-
-                return (
-                  <td key={court.id} className="px-1 py-1">
-                    <button
-                      type="button"
-                      disabled={isOcupado}
-                      onClick={() => !isOcupado && onSelect(court.id, slot)}
-                      className={`w-full rounded-lg px-2 py-1.5 text-center text-[10px] font-semibold transition ${
-                        isSelected
-                          ? "bg-[#0085FC] text-white"
-                          : isOcupado
-                            ? "cursor-not-allowed bg-rose-500/15 text-rose-400"
-                            : "cursor-pointer bg-[var(--bg-subtle)] text-[var(--text-tertiary)] hover:bg-[#0085FC]/15 hover:text-[#0085FC]"
-                      }`}
-                    >
-                      {isSelected ? "✓ Asignado" : isOcupado ? motivo : "Libre"}
-                    </button>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 function MatchSchedulerCard({
   tournamentId,

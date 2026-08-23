@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   adminCard,
   adminCTAPrimary,
@@ -8,16 +10,24 @@ import {
   adminPressable,
 } from "@/components/admin/admin-premium";
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
+import { getCourtAvailabilityForDate } from "@/lib/tournament-availability";
 import {
   MAX_PAIRS_OPTIONS,
   PENA_MAX_PLAYERS_OPTIONS,
-  PENA_WHAT_INCLUDES_OPTIONS,
   TOURNAMENT_TYPE_OPTIONS,
   type TournamentTypeKey,
 } from "@/lib/tournament-constants";
+import { AvailabilityGrid } from "./availability-grid";
 import { createTournamentAction } from "./actions";
 
 export const CATEGORY_OPTIONS = PROFILE_CATEGORIES.slice().reverse();
+
+type Court = { id: string; name: string };
+
+type Availability = {
+  slots: string[];
+  occupiedByCourtAndSlot: Record<string, Record<string, string>>;
+};
 
 const TYPE_EMOJI: Record<TournamentTypeKey, string> = {
   americano: "🏆",
@@ -84,10 +94,10 @@ export function CategoryChips({
   );
 }
 
-function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
+function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
   return (
     <div className="mb-6 flex gap-1.5">
-      {[1, 2, 3].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
           className={`h-1 flex-1 rounded-full transition-colors ${
@@ -99,56 +109,174 @@ function ProgressBar({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
+const inputClass =
+  "mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]";
+
 export default function TorneoFormInline({
   clubId,
+  courts,
   onSuccess,
 }: {
   clubId: string;
+  courts: Court[];
   onSuccess?: () => void;
 }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [type, setType] = useState<TournamentTypeKey>("americano");
+
+  // Paso 2 — fechas + disponibilidad
   const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [deadline, setDeadline] = useState("");
   const [price, setPrice] = useState(0);
+  const [deadline, setDeadline] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
+  const [multiDay, setMultiDay] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [extraDates, setExtraDates] = useState<string[]>([]);
+  const [newExtraDate, setNewExtraDate] = useState("");
+  const [availabilityByDate, setAvailabilityByDate] = useState<
+    Record<string, Availability>
+  >({});
+  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
+  const [selectedSlotsByDate, setSelectedSlotsByDate] = useState<
+    Record<string, Record<string, boolean>>
+  >({});
+
+  // Paso 3 — modalidad
   const [maxPairs, setMaxPairs] = useState(16);
   const [maxPlayers, setMaxPlayers] = useState(16);
-  const [selectedIncludes, setSelectedIncludes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [hasFinals, setHasFinals] = useState(true);
+  const [guaranteedMatches, setGuaranteedMatches] = useState(0);
   const [matchFormat, setMatchFormat] = useState<"set" | "tiempo">("set");
   const [matchDuration, setMatchDuration] = useState(20);
+  const [tournamentNotes, setTournamentNotes] = useState("");
+  const [hasFinals, setHasFinals] = useState(true);
   const [consolationBracket, setConsolationBracket] = useState(false);
-  const [multiDay, setMultiDay] = useState(false);
-  const [endDate, setEndDate] = useState("");
+  const [matchesPerDay, setMatchesPerDay] = useState(0);
+  const [quarterfinalsDate, setQuarterfinalsDate] = useState("");
+  const [semifinalsDate, setSemifinalsDate] = useState("");
+  const [finalsDate, setFinalsDate] = useState("");
   const [numCourts, setNumCourts] = useState(2);
   const [foodIncluded, setFoodIncluded] = useState("");
+
+  // Paso 4 — premios + contacto
   const [hasPrizes, setHasPrizes] = useState(false);
   const [prizes, setPrizes] = useState<string[]>(["", ""]);
   const [contactPhone, setContactPhone] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const canStep2 = Boolean(name.trim() && startDate);
   const priceLabel =
     type === "pena" ? "Precio por jugador (ARS)" : "Precio por pareja (ARS)";
-  const typeLabel =
-    TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
   const effectiveDeadline = deadline || startDate;
-  const effectiveEndDate =
-    type === "eliminacion" && multiDay ? endDate || startDate : startDate;
 
-  function toggleInclude(item: string) {
-    setSelectedIncludes((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
-    );
-  }
+  const selectedDates =
+    type === "eliminacion" && multiDay
+      ? [startDate, ...extraDates].filter(Boolean)
+      : startDate
+        ? [startDate]
+        : [];
+  const effectiveEndDate =
+    selectedDates.length > 0
+      ? selectedDates[selectedDates.length - 1]
+      : startDate;
+
+  const totalSelectedSlots = Object.values(selectedSlotsByDate).flatMap((m) =>
+    Object.values(m).filter(Boolean),
+  ).length;
+  const canStep2 = Boolean(name.trim() && startDate && totalSelectedSlots > 0);
 
   function toggleCategory(cat: string) {
     setSelectedCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
+    );
+  }
+
+  async function loadAvailability(date: string) {
+    if (!date || !courts.length) return;
+    setLoadingDates((prev) => new Set(prev).add(date));
+    const courtIds = courts.map((c) => c.id);
+    const avail = await getCourtAvailabilityForDate(clubId, courtIds, date);
+    setAvailabilityByDate((prev) => ({ ...prev, [date]: avail }));
+    setLoadingDates((prev) => {
+      const next = new Set(prev);
+      next.delete(date);
+      return next;
+    });
+  }
+
+  function handleStartDateChange(date: string) {
+    setStartDate(date);
+    if (date) void loadAvailability(date);
+  }
+
+  function addExtraDate() {
+    if (
+      !newExtraDate ||
+      newExtraDate === startDate ||
+      extraDates.includes(newExtraDate)
+    )
+      return;
+    setExtraDates((prev) => [...prev, newExtraDate]);
+    void loadAvailability(newExtraDate);
+    setNewExtraDate("");
+  }
+
+  function removeExtraDate(date: string) {
+    setExtraDates((prev) => prev.filter((d) => d !== date));
+    setSelectedSlotsByDate((prev) => {
+      const next = { ...prev };
+      delete next[date];
+      return next;
+    });
+  }
+
+  function toggleSlot(date: string, courtId: string, time: string) {
+    const key = `${courtId}:${time}`;
+    setSelectedSlotsByDate((prev) => ({
+      ...prev,
+      [date]: {
+        ...(prev[date] ?? {}),
+        [key]: !(prev[date]?.[key] ?? false),
+      },
+    }));
+  }
+
+  function renderDateAvailability(date: string, removable: boolean) {
+    if (!date) return null;
+    const avail = availabilityByDate[date];
+    return (
+      <div key={date} className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold capitalize text-[var(--text-primary)]">
+            {format(parseISO(date), "EEEE d 'de' MMMM", { locale: es })}
+          </p>
+          {removable ? (
+            <button
+              type="button"
+              onClick={() => removeExtraDate(date)}
+              className="text-xs font-bold text-rose-500"
+            >
+              ✕ Quitar
+            </button>
+          ) : null}
+        </div>
+        {loadingDates.has(date) ? (
+          <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#0085FC] border-t-transparent" />
+            Cargando disponibilidad...
+          </div>
+        ) : avail ? (
+          <AvailabilityGrid
+            courts={courts}
+            slots={avail.slots}
+            occupiedByCourtAndSlot={avail.occupiedByCourtAndSlot}
+            multiSelect
+            selectedSlots={selectedSlotsByDate[date] ?? {}}
+            onToggle={(courtId, time) => toggleSlot(date, courtId, time)}
+          />
+        ) : null}
+      </div>
     );
   }
 
@@ -170,14 +298,26 @@ export default function TorneoFormInline({
       if (matchFormat === "tiempo")
         fd.set("match_duration_minutes", String(matchDuration));
       fd.set("consolation_bracket", String(consolationBracket));
-      fd.set("multi_day", String(multiDay));
+      fd.set("multi_day", String(type === "eliminacion" && multiDay));
+      if (guaranteedMatches > 0)
+        fd.set("guaranteed_matches", String(guaranteedMatches));
+
+      selectedCategories.forEach((c) => fd.append("allowed_categories", c));
       if (type === "pena") {
-        selectedIncludes.forEach((item) => fd.append("what_includes", item));
         fd.set("num_courts", String(numCourts));
         if (foodIncluded.trim()) fd.set("food_included", foodIncluded.trim());
-      } else {
-        selectedCategories.forEach((c) => fd.append("allowed_categories", c));
       }
+
+      if (type === "americano" && tournamentNotes.trim()) {
+        fd.set("tournament_notes", tournamentNotes.trim());
+      }
+      if (type === "eliminacion" && multiDay) {
+        if (matchesPerDay > 0) fd.set("matches_per_day", String(matchesPerDay));
+        if (quarterfinalsDate) fd.set("quarterfinals_date", quarterfinalsDate);
+        if (semifinalsDate) fd.set("semifinals_date", semifinalsDate);
+        if (finalsDate) fd.set("finals_date", finalsDate);
+      }
+
       if (contactPhone.trim()) fd.set("contact_phone", `+54${contactPhone}`);
       if (hasPrizes && prizes.some((p) => p.trim())) {
         fd.set(
@@ -189,6 +329,18 @@ export default function TorneoFormInline({
           ),
         );
       }
+
+      const slots = Object.entries(selectedSlotsByDate).flatMap(
+        ([date, slotMap]) =>
+          Object.entries(slotMap)
+            .filter(([, selected]) => selected)
+            .map(([key]) => {
+              const [courtId, time] = key.split(":");
+              return { date, courtId, time };
+            }),
+      );
+      if (slots.length > 0)
+        fd.set("tournament_court_blocks", JSON.stringify(slots));
 
       const result = await createTournamentAction(
         { ok: false, message: "" },
@@ -262,44 +414,7 @@ export default function TorneoFormInline({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">
-              Fecha de inicio
-            </span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">
-              Hora de inicio
-            </span>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">
-              Fecha límite de inscripción
-            </span>
-            <input
-              type="date"
-              value={effectiveDeadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+              className={inputClass}
             />
           </label>
 
@@ -313,9 +428,99 @@ export default function TorneoFormInline({
               step="100"
               value={price}
               onChange={(e) => setPrice(Number(e.target.value) || 0)}
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+              className={inputClass}
             />
           </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+              Fecha límite de inscripción
+            </span>
+            <input
+              type="date"
+              value={effectiveDeadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+              Hora de inicio
+            </span>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+
+          {type === "eliminacion" ? (
+            <div>
+              <label className={adminKicker}>¿Es de varios días?</label>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMultiDay(false)}
+                  className={chip(!multiDay)}
+                >
+                  📅 Un solo día
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMultiDay(true)}
+                  className={chip(multiDay)}
+                >
+                  📅📅 Varios días
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <label className="block">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+              Fecha del torneo
+            </span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => handleStartDateChange(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </label>
+
+          <div className="space-y-4">
+            {renderDateAvailability(startDate, false)}
+            {type === "eliminacion" && multiDay
+              ? extraDates.map((d) => renderDateAvailability(d, true))
+              : null}
+          </div>
+
+          {type === "eliminacion" && multiDay ? (
+            <div className="flex items-end gap-2">
+              <label className="block flex-1">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Agregar otro día
+                </span>
+                <input
+                  type="date"
+                  value={newExtraDate}
+                  min={startDate}
+                  onChange={(e) => setNewExtraDate(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={addExtraDate}
+                className="rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold text-[#0085FC]"
+              >
+                + Agregar día
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex gap-2 pt-2">
             <button
@@ -341,45 +546,27 @@ export default function TorneoFormInline({
         <div className="space-y-4 text-sm">
           {type === "pena" ? (
             <>
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Máximo de jugadores
-                </span>
-                <select
-                  value={maxPlayers}
-                  onChange={(e) => setMaxPlayers(Number(e.target.value))}
-                  className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-                >
+              <div>
+                <label className={adminKicker}>Cantidad de jugadores</label>
+                <div className="mt-2 flex flex-wrap gap-2">
                   {PENA_MAX_PLAYERS_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} jugadores
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <fieldset>
-                <legend className="text-xs font-semibold text-[var(--text-secondary)]">
-                  ¿Qué incluye?
-                </legend>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {PENA_WHAT_INCLUDES_OPTIONS.map((opt) => (
-                    <label
-                      key={opt}
-                      className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2"
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setMaxPlayers(n)}
+                      className={chip(maxPlayers === n)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedIncludes.includes(opt)}
-                        onChange={() => toggleInclude(opt)}
-                      />
-                      <span className="text-sm text-[var(--text-primary)]">
-                        {opt}
-                      </span>
-                    </label>
+                      {n}
+                    </button>
                   ))}
                 </div>
-              </fieldset>
+              </div>
+
+              <CategoryChips
+                selectedCategories={selectedCategories}
+                onToggle={toggleCategory}
+                onClear={() => setSelectedCategories([])}
+              />
 
               <div>
                 <label className={adminKicker}>Cantidad de canchas</label>
@@ -425,45 +612,59 @@ export default function TorneoFormInline({
                       step={5}
                       value={matchDuration}
                       onChange={(e) => setMatchDuration(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                      className={inputClass}
                     />
                   </div>
                 ) : null}
               </div>
 
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Partidos garantizados
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={guaranteedMatches}
+                  onChange={(e) =>
+                    setGuaranteedMatches(Number(e.target.value) || 0)
+                  }
+                  className={inputClass}
+                />
+              </label>
+
               <div>
-                <label className={adminKicker}>¿Incluye algo? (opcional)</label>
+                <label className={adminKicker}>¿Incluye algo?</label>
                 <p className="mb-1 text-xs text-[var(--text-tertiary)]">
-                  Ej: &quot;Pizza y bebida&quot;, &quot;Asado&quot;,
-                  &quot;Empanadas&quot;
+                  Ej: &quot;Pizza y bebida&quot;, &quot;asado con entrada
+                  libre&quot;...
                 </p>
                 <input
                   type="text"
                   value={foodIncluded}
                   onChange={(e) => setFoodIncluded(e.target.value)}
-                  placeholder="Describí qué incluye la peña..."
+                  placeholder="Ej: Pizza y bebida, asado con entrada libre..."
                   className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
                 />
               </div>
             </>
           ) : type === "eliminacion" ? (
             <>
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Máximo de parejas
-                </span>
-                <select
-                  value={maxPairs}
-                  onChange={(e) => setMaxPairs(Number(e.target.value))}
-                  className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-                >
+              <div>
+                <label className={adminKicker}>Cantidad de parejas</label>
+                <div className="mt-2 flex flex-wrap gap-2">
                   {MAX_PAIRS_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} parejas
-                    </option>
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setMaxPairs(n)}
+                      className={chip(maxPairs === n)}
+                    >
+                      {n}
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
 
               <CategoryChips
                 selectedCategories={selectedCategories}
@@ -471,102 +672,20 @@ export default function TorneoFormInline({
                 onClear={() => setSelectedCategories([])}
               />
 
-              <div>
-                <label className={adminKicker}>¿Copa de plata?</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setConsolationBracket(true)}
-                    className={chip(consolationBracket)}
-                  >
-                    🥈 Sí — los eliminados en 1ra ronda juegan copa de plata
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConsolationBracket(false)}
-                    className={chip(!consolationBracket)}
-                  >
-                    ❌ No
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className={adminKicker}>¿Es de varios días?</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMultiDay(false)}
-                    className={chip(!multiDay)}
-                  >
-                    📅 Un solo día
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMultiDay(true)}
-                    className={chip(multiDay)}
-                  >
-                    📅📅 Varios días
-                  </button>
-                </div>
-                {multiDay ? (
-                  <div className="mt-2">
-                    <label className={adminKicker}>Fecha de fin</label>
-                    <input
-                      type="date"
-                      value={endDate || startDate}
-                      min={startDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <>
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Máximo de parejas
+                  Partidos garantizados
                 </span>
-                <select
-                  value={maxPairs}
-                  onChange={(e) => setMaxPairs(Number(e.target.value))}
-                  className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
-                >
-                  {MAX_PAIRS_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} parejas
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="number"
+                  min={0}
+                  value={guaranteedMatches}
+                  onChange={(e) =>
+                    setGuaranteedMatches(Number(e.target.value) || 0)
+                  }
+                  className={inputClass}
+                />
               </label>
-
-              <CategoryChips
-                selectedCategories={selectedCategories}
-                onToggle={toggleCategory}
-                onClear={() => setSelectedCategories([])}
-              />
-
-              <div>
-                <label className={adminKicker}>¿Cómo termina el torneo?</label>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setHasFinals(true)}
-                    className={chip(hasFinals)}
-                  >
-                    🏆 Con final y 3er puesto
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHasFinals(false)}
-                    className={chip(!hasFinals)}
-                  >
-                    📊 Solo ranking por puntos
-                  </button>
-                </div>
-              </div>
 
               <div>
                 <label className={adminKicker}>Formato de partidos</label>
@@ -596,14 +715,221 @@ export default function TorneoFormInline({
                       step={5}
                       value={matchDuration}
                       onChange={(e) => setMatchDuration(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                      className={inputClass}
                     />
                   </div>
                 ) : null}
               </div>
+
+              <div>
+                <label className={adminKicker}>¿Copa de plata?</label>
+                <p className="mb-1 text-xs text-[var(--text-tertiary)]">
+                  Copa de Oro: el campeón. Copa de Plata: los eliminados en 1ra
+                  ronda juegan su propio bracket.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConsolationBracket(true)}
+                    className={chip(consolationBracket)}
+                  >
+                    🥈 Sí
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConsolationBracket(false)}
+                    className={chip(!consolationBracket)}
+                  >
+                    ❌ No
+                  </button>
+                </div>
+              </div>
+
+              {multiDay ? (
+                <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] p-3">
+                  <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                    Cronograma multi-día
+                  </p>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      Partidos por día
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={matchesPerDay}
+                      onChange={(e) =>
+                        setMatchesPerDay(Number(e.target.value) || 0)
+                      }
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      Fecha cuartos de final
+                    </span>
+                    <input
+                      type="date"
+                      value={quarterfinalsDate}
+                      onChange={(e) => setQuarterfinalsDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      Fecha semifinales
+                    </span>
+                    <input
+                      type="date"
+                      value={semifinalsDate}
+                      onChange={(e) => setSemifinalsDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                      Fecha final
+                    </span>
+                    <input
+                      type="date"
+                      value={finalsDate}
+                      onChange={(e) => setFinalsDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Cantidad de parejas
+                </span>
+                <input
+                  type="number"
+                  min={4}
+                  max={64}
+                  value={maxPairs}
+                  onChange={(e) => setMaxPairs(Number(e.target.value) || 0)}
+                  placeholder="Ej: 12"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  Para eliminación directa se recomienda potencia de 2 (8, 16,
+                  32, 64)
+                </p>
+              </label>
+
+              <CategoryChips
+                selectedCategories={selectedCategories}
+                onToggle={toggleCategory}
+                onClear={() => setSelectedCategories([])}
+              />
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Partidos garantizados
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={guaranteedMatches}
+                  onChange={(e) =>
+                    setGuaranteedMatches(Number(e.target.value) || 0)
+                  }
+                  className={inputClass}
+                />
+              </label>
+
+              <div>
+                <label className={adminKicker}>Formato de partidos</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("set")}
+                    className={chip(matchFormat === "set")}
+                  >
+                    🎾 A un set
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFormat("tiempo")}
+                    className={chip(matchFormat === "tiempo")}
+                  >
+                    ⏱️ Por tiempo
+                  </button>
+                </div>
+                {matchFormat === "tiempo" ? (
+                  <div className="mt-2">
+                    <label className={adminKicker}>Duración (minutos)</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={60}
+                      step={5}
+                      value={matchDuration}
+                      onChange={(e) => setMatchDuration(Number(e.target.value))}
+                      className={inputClass}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <label className={adminKicker}>¿Cómo se organiza?</label>
+                <textarea
+                  value={tournamentNotes}
+                  onChange={(e) => setTournamentNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Dos grupos de 8 parejas, pasan las 2 mejores de cada grupo a semifinales"
+                  className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                />
+              </div>
+
+              <div>
+                <label className={adminKicker}>¿Cómo termina el torneo?</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHasFinals(true)}
+                    className={chip(hasFinals)}
+                  >
+                    🏆 Con final y 3er puesto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHasFinals(false)}
+                    className={chip(!hasFinals)}
+                  >
+                    📊 Solo ranking por puntos
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="flex-1 rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              ← Volver
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className={`flex-1 ${adminCTAPrimary}`}
+            >
+              Continuar →
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 4 ? (
+        <div className="space-y-4 text-sm">
           <div>
             <label className={adminKicker}>
               Teléfono de contacto para consultas
@@ -696,18 +1022,72 @@ export default function TorneoFormInline({
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-3 text-xs text-[var(--text-secondary)]">
-            {typeLabel} · {name || "Sin nombre"} · {startDate || "Sin fecha"} ·
-            ${price.toLocaleString("es-AR")} ·{" "}
-            {type === "pena"
-              ? `${maxPlayers} jugadores`
-              : `${maxPairs} parejas`}
+          <div
+            className={`${adminCard} space-y-3 border-[#0085FC]/20 bg-[#0085FC]/[0.03]`}
+          >
+            <p className={adminKicker}>Resumen del torneo</p>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
+              {name || "Sin nombre"}
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-[var(--text-tertiary)]">Tipo</p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {type === "americano"
+                    ? "🏆 Americano"
+                    : type === "eliminacion"
+                      ? "⚡ Eliminación"
+                      : "🎉 Peña"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-tertiary)]">Fecha</p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {selectedDates[0]
+                    ? format(parseISO(selectedDates[0]), "d MMM yyyy", {
+                        locale: es,
+                      })
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-tertiary)]">Precio</p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  ${price.toLocaleString("es-AR")}{" "}
+                  {type === "pena" ? "por jugador" : "por pareja"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  Canchas bloqueadas
+                </p>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {totalSelectedSlots} slots
+                </p>
+              </div>
+            </div>
+            {selectedCategories.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {selectedCategories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="rounded-full bg-[#CCFF00] px-2 py-0.5 text-[11px] font-black text-[#0A1628]"
+                  >
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-xs text-[var(--text-tertiary)]">
+                Todas las categorías
+              </span>
+            )}
           </div>
 
           <div className="flex gap-2 pt-2">
             <button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => setStep(3)}
               className="flex-1 rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)]"
             >
               ← Volver

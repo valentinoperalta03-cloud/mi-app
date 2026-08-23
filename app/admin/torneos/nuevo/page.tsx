@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import TorneoForm from "../torneo-form";
 
@@ -14,6 +15,14 @@ export default async function AdminTorneoNuevoPage() {
   if (!ctx?.userId) redirect("/login");
   if (ctx.clubIds.length === 0) redirect("/admin/club");
 
+  const clubId = ctx.clubIds[0]!;
+  const { data: courtRows } = await supabase
+    .from(DB_TABLES.courts)
+    .select("id, name")
+    .eq("club_id", clubId)
+    .order("name", { ascending: true });
+  const courts = (courtRows ?? []) as Array<{ id: string; name: string }>;
+
   return (
     <div className="mx-auto max-w-lg px-4 pb-28 pt-6 md:pb-10">
       <Link
@@ -24,7 +33,7 @@ export default async function AdminTorneoNuevoPage() {
         Volver
       </Link>
       <h1 className={`mt-4 ${adminTitle}`}>Crear torneo</h1>
-      <TorneoForm clubId={ctx.clubIds[0]!} />
+      <TorneoForm clubId={clubId} courts={courts} />
     </div>
   );
 }
