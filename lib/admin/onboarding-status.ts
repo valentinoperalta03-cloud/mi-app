@@ -39,7 +39,7 @@ type ClubOnboardingRow = {
 
 export async function checkAdminOnboardingStatus(
   supabase: SupabaseClient,
-  clubId: string
+  clubId: string,
 ): Promise<AdminOnboardingStatus> {
   const { data: courtRows } = await supabase
     .from(DB_TABLES.courts)
@@ -51,28 +51,46 @@ export async function checkAdminOnboardingStatus(
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services"
+        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services",
       )
       .eq("id", clubId)
       .maybeSingle(),
     courtIds.length
-      ? supabase.from(DB_TABLES.courtTimeRanges).select("id").in("court_id", courtIds).limit(1)
+      ? supabase
+          .from(DB_TABLES.courtTimeRanges)
+          .select("id")
+          .in("court_id", courtIds)
+          .limit(1)
       : Promise.resolve({ data: [] as { id: string }[] }),
     // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
-    createServiceClient().from(DB_TABLES.clubs).select("mp_access_token").eq("id", clubId).maybeSingle(),
-    supabase.from(DB_TABLES.trainingBlocks).select("id").eq("club_id", clubId).limit(1),
+    createServiceClient()
+      .from(DB_TABLES.clubs)
+      .select("mp_access_token")
+      .eq("id", clubId)
+      .maybeSingle(),
+    supabase
+      .from(DB_TABLES.trainingBlocks)
+      .select("id")
+      .eq("club_id", clubId)
+      .limit(1),
   ]);
 
   const club = clubRes.data as ClubOnboardingRow | null;
   const hasCourts = courtIds.length > 0;
-  const hasTimeRanges = ((timeRangesRes.data ?? []) as { id: string }[]).length > 0;
+  const hasTimeRanges =
+    ((timeRangesRes.data ?? []) as { id: string }[]).length > 0;
   const hasMp = Boolean(
-    (mpRes.data as { mp_access_token?: string | null } | null)?.mp_access_token?.trim()
+    (
+      mpRes.data as { mp_access_token?: string | null } | null
+    )?.mp_access_token?.trim(),
   );
   const hasDeposit = Number(club?.deposit_value ?? 0) > 0;
   const hasServices = (club?.services ?? []).length > 0;
-  const hasSocials = Boolean(club?.instagram || club?.whatsapp || club?.facebook || club?.tiktok);
-  const hasTrainingBlocks = ((trainingBlocksRes.data ?? []) as { id: string }[]).length > 0;
+  const hasSocials = Boolean(
+    club?.instagram || club?.whatsapp || club?.facebook || club?.tiktok,
+  );
+  const hasTrainingBlocks =
+    ((trainingBlocksRes.data ?? []) as { id: string }[]).length > 0;
 
   const phases: AdminOnboardingPhase[] = [
     {
@@ -80,7 +98,7 @@ export async function checkAdminOnboardingStatus(
       phase: 1,
       title: "Información del club",
       description: "Nombre, descripción, ubicación, horarios y fotos",
-      completed: Boolean(club?.description?.trim() && club?.city?.trim()),
+      completed: Boolean(club?.city?.trim()),
       href: "/admin/config/informacion",
     },
     {

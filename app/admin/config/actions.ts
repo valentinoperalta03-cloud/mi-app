@@ -4,25 +4,37 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function enc(msg: string) {
   return encodeURIComponent(msg);
 }
 
 const VALID_OPEN = new Set([
-  "07:30", "08:00", "08:30", "09:00", "09:30",
-  "10:00", "10:30", "11:00", "11:30", "12:00",
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
 ]);
 
 export async function saveClubHours(formData: FormData) {
-  const open = String(formData.get("open_time") ?? "").trim().slice(0, 5);
+  const open = String(formData.get("open_time") ?? "")
+    .trim()
+    .slice(0, 5);
   // El cierre siempre es medianoche: los turnos de 90 min se generan
   // automáticamente hasta el slot 22:30→00:00.
   const close = "00:00";
 
   if (!VALID_OPEN.has(open)) {
-    redirect(`/admin/config/informacion?error=${enc("Horario de apertura no válido.")}`);
+    redirect(
+      `/admin/config/informacion?error=${enc("Horario de apertura no válido.")}`,
+    );
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
@@ -82,7 +94,8 @@ export async function savePaymentMethods(formData: FormData) {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/config/pagos?payments_error=no_club");
+  if (!ctx.clubIds.length)
+    redirect("/admin/config/pagos?payments_error=no_club");
 
   const clubId = ctx.clubIds[0];
   const payload = {
@@ -92,7 +105,11 @@ export async function savePaymentMethods(formData: FormData) {
     bank_cbu: getField(formData, "bank_cbu") || null,
   };
 
-  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  const { error } = await supabase
+    .from(DB_TABLES.clubs)
+    .update(payload)
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
   if (error) {
     redirect(`/admin/config/pagos?payments_error=${enc(error.message)}`);
   }
@@ -105,19 +122,31 @@ export async function saveCancellationPolicy(formData: FormData) {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.length) redirect("/admin/config/informacion?policy_error=no_club");
+  if (!ctx.clubIds.length)
+    redirect("/admin/config/informacion?policy_error=no_club");
 
   const clubId = ctx.clubIds[0];
   const policy = getField(formData, "cancellation_policy");
   const hoursRaw = getField(formData, "cancellation_hours");
   const hours = hoursRaw === "" ? null : Number(hoursRaw);
 
-  const payload: { cancellation_policy: string | null; cancellation_hours?: number | null } = {
+  const payload: {
+    cancellation_policy: string | null;
+    cancellation_hours?: number | null;
+  } = {
     cancellation_policy: policy || null,
     cancellation_hours: Number.isFinite(hours) ? hours : null,
   };
 
-  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  // cancellation_hours no tiene GRANT UPDATE para authenticated (ver
+  // 20260713130000_fix_clubs_billing_column_grants.sql) — el UPDATE con el
+  // cliente normal falla entero por esa columna y ni cancellation_policy se
+  // guarda. Se usa el service client, que bypassea esos grants por columna.
+  const { error } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .update(payload)
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
   if (error) {
     redirect(`/admin/config/informacion?policy_error=${enc(error.message)}`);
   }
