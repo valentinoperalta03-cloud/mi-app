@@ -13,6 +13,17 @@ export type DashboardTimelineData = {
   events: TimelineEvent[];
 };
 
+export type DashboardTimelineMatchRow = {
+  id: string;
+  court_id: string;
+  owner_id: string | null;
+  scheduled_time: string | null;
+  match_status: string | null;
+  match_type: string | null;
+  es_turno_fijo: boolean | null;
+  duration_minutes: number | null;
+};
+
 export function timeToMinutes(value: string | null): number {
   const t = String(value ?? "").slice(0, 5);
   const [hRaw, mRaw] = t.split(":");
@@ -28,33 +39,36 @@ export function timeToMinutes(value: string | null): number {
  * inicial del dashboard (hoy) como por getDashboardData al navegar días, para
  * que ambos caminos produzcan exactamente el mismo resultado.
  */
+/**
+ * `todayMatches`, si se pasa, reemplaza la query interna de matches del día
+ * (el caller ya la trajo, p.ej. el dashboard del día de hoy) — evita traer la
+ * misma tabla dos veces en el mismo request. Solo válido cuando `dateStr`
+ * coincide con la fecha de esas filas; el caller es responsable de eso.
+ */
 export async function buildDashboardTimelineData(
   supabase: SupabaseClient,
   courts: DashboardCourtCtx[],
   courtIds: string[],
   clubIds: string[],
   clubBounds: DashboardClubBounds | null,
-  dateStr: string
+  dateStr: string,
+  todayMatches?: DashboardTimelineMatchRow[]
 ): Promise<DashboardTimelineData> {
   const dayOfWeek = new Date(`${dateStr}T12:00:00`).getDay();
 
-  const { data: matchesRaw } = courtIds.length
-    ? await supabase
-        .from(DB_TABLES.matches)
-        .select("id,court_id,owner_id,scheduled_time,match_status,match_type,es_turno_fijo,duration_minutes")
-        .in("court_id", courtIds)
-        .eq("scheduled_date", dateStr)
-    : { data: [] };
-  const matches = (matchesRaw ?? []) as Array<{
-    id: string;
-    court_id: string;
-    owner_id: string | null;
-    scheduled_time: string | null;
-    match_status: string | null;
-    match_type: string | null;
-    es_turno_fijo: boolean | null;
-    duration_minutes: number | null;
-  }>;
+  let matches: DashboardTimelineMatchRow[];
+  if (todayMatches) {
+    matches = todayMatches;
+  } else {
+    const { data: matchesRaw } = courtIds.length
+      ? await supabase
+          .from(DB_TABLES.matches)
+          .select("id,court_id,owner_id,scheduled_time,match_status,match_type,es_turno_fijo,duration_minutes")
+          .in("court_id", courtIds)
+          .eq("scheduled_date", dateStr)
+      : { data: [] };
+    matches = (matchesRaw ?? []) as DashboardTimelineMatchRow[];
+  }
 
   const { data: fixedSlotsRaw } = courtIds.length
     ? await supabase

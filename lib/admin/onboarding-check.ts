@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createServiceClient } from "@/utils/supabase/server";
@@ -48,7 +49,10 @@ type ClubOnboardingRow = {
  * Estado de onboarding para un club (checklist y si puede recibir reservas).
  * Horarios: `clubs.open_time` / `clubs.close_time` (preferido) o texto `business_hours` legacy.
  */
-export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: string) {
+export const checkOnboardingStatus = cache(async function checkOnboardingStatus(
+  supabase: SupabaseClient,
+  clubId: string,
+) {
   const { data: club, error: clubErr } = await supabase
     .from(DB_TABLES.clubs)
     .select(
@@ -138,4 +142,4 @@ export async function checkOnboardingStatus(supabase: SupabaseClient, clubId: st
     club: c,
     onboardingCompleted: alreadyOnboarded || canReceiveReservations,
   };
-}
+});

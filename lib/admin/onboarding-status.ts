@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createServiceClient } from "@/utils/supabase/server";
@@ -37,7 +38,7 @@ type ClubOnboardingRow = {
   services: string[] | null;
 };
 
-export async function checkAdminOnboardingStatus(
+export const checkAdminOnboardingStatus = cache(async function checkAdminOnboardingStatus(
   supabase: SupabaseClient,
   clubId: string,
 ): Promise<AdminOnboardingStatus> {
@@ -177,4 +178,4 @@ export async function checkAdminOnboardingStatus(
     clubId,
     clubName: club?.name ?? "Tu club",
   };
-}
+});

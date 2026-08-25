@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import {
   CalendarCheck,
@@ -9,19 +10,23 @@ import {
 } from "lucide-react";
 import { adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { PaymentStatusPill } from "@/components/admin/admin-status-pills";
-import OnboardingChecklist from "@/components/admin/onboarding-checklist";
 import DashboardClubLink from "./dashboard-club-link";
 import FixedSlotTodayCard, { type TodayFixedSlotCard } from "./fixed-slot-today-card";
 import SuperadminEntryLink from "@/components/superadmin/superadmin-entry-link";
-import { formatDateInArgentina, getTodayYmdInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
+import {
+  formatDateInArgentina,
+  getTodayYmdInArgentina,
+  utcMsForArgentinaWallClock,
+} from "@/lib/datetime-ar";
+import { minutesToClock } from "@/lib/court-slots";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
-import { checkAdminOnboardingStatus } from "@/lib/admin/onboarding-status";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import CurrentArTime from "./current-ar-time";
-import DashboardClient from "./dashboard-client";
-import { buildDashboardTimelineData } from "./dashboard-timeline-data";
+import OnboardingSection from "./onboarding-section";
+import TimelineSection from "./timeline-section";
+import type { DashboardTimelineMatchRow } from "./dashboard-timeline-data";
 
 /** Kicker de las 4 métricas: azul #0085FC en claro, lima #CCFF00 en oscuro (token --admin-accent-lima). */
 const metricKicker =
@@ -58,6 +63,19 @@ function timeToMinutes(value: string | null): number {
   return h * 60 + m;
 }
 
+function TimelineSkeleton() {
+  return (
+    <div className={`${adminCard} h-[420px] animate-pulse`}>
+      <div className="h-5 w-40 rounded bg-[var(--bg-subtle)]" />
+      <div className="mt-6 h-72 rounded-xl bg-[var(--bg-subtle)]" />
+    </div>
+  );
+}
+
+function OnboardingSkeleton() {
+  return <div className="h-24 animate-pulse rounded-3xl bg-[var(--bg-subtle)]" />;
+}
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {
@@ -73,6 +91,7 @@ export default async function AdminDashboardPage({
 
   const today = getTodayYmdInArgentina();
   const arNow = getArgentinaNow();
+  const nowClock = minutesToClock(arNow.minutes);
   const weekdayDateLabelRaw = formatDateInArgentina(`${today}T12:00:00`, {
     weekday: "long",
     day: "2-digit",
@@ -82,51 +101,130 @@ export default async function AdminDashboardPage({
   const weekAgoDate = new Date(`${today}T12:00:00`);
   weekAgoDate.setDate(weekAgoDate.getDate() - 7);
   const weekAgo = weekAgoDate.toISOString().slice(0, 10);
+  const todayDayOfWeek = new Date(`${today}T12:00:00`).getDay();
+  const todayStartIso = new Date(utcMsForArgentinaWallClock(today, "00:00")).toISOString();
 
-  const { data: clubInfoRaw } = await supabase
+  type ClubRow = {
+    id: string;
+    name: string | null;
+    logo_url: string | null;
+    onboarding_completed?: boolean | null;
+    open_time?: string | null;
+    close_time?: string | null;
+    slug?: string | null;
+  };
+  type TodayMatchRow = DashboardTimelineMatchRow & {
+    payment_status: string | null;
+    scheduled_date: string | null;
+    fixed_slot_id: string | null;
+    courts: { name: string | null } | { name: string | null }[] | null;
+  };
+  type FixedSlotRow = {
+    id: string;
+    court_id: string;
+    title: string | null;
+    start_time: string | null;
+    duration_minutes: number | null;
+  };
+  type NextMatchRow = {
+    id: string;
+    owner_id: string | null;
+    court_id: string;
+    payment_status: string | null;
+    scheduled_time: string | null;
+    courts: { name: string | null } | { name: string | null }[] | null;
+    match_status: string | null;
+  };
+
+  // --- Grupo A: queries independientes entre sí, solo dependen de ctx/today ---
+  const clubPromise = supabase
     .from(DB_TABLES.clubs)
     .select("id,name,logo_url,onboarding_completed,open_time,close_time,slug")
     .in("id", ctx.clubIds)
     .order("name", { ascending: true })
     .limit(1);
-  const club = ((clubInfoRaw ?? [])[0] ?? null) as
-    | {
-        id: string;
-        name: string | null;
-        logo_url: string | null;
-        onboarding_completed?: boolean | null;
-        open_time?: string | null;
-        close_time?: string | null;
-        slug?: string | null;
-      }
-    | null;
-  const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
-  const clubSlug = club?.slug?.trim() || null;
 
-  const { data: todayMatchesRaw } = ctx.courtIds.length
-    ? await supabase
+  const todayMatchesPromise = ctx.courtIds.length
+    ? supabase
         .from(DB_TABLES.matches)
         .select(
           "id,court_id,owner_id,payment_status,scheduled_time,scheduled_date,match_status,match_type,es_turno_fijo,fixed_slot_id,duration_minutes,courts(name)"
         )
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
-    : { data: [] };
-  const todayMatches = (todayMatchesRaw ?? []) as Array<{
-    id: string;
-    court_id: string;
-    owner_id: string | null;
-    payment_status: string | null;
-    scheduled_time: string | null;
-    scheduled_date: string | null;
-    match_status: string | null;
-    match_type: string | null;
-    es_turno_fijo: boolean | null;
-    fixed_slot_id: string | null;
-    duration_minutes: number | null;
-    courts: { name: string | null } | { name: string | null }[] | null;
-  }>;
-  const todayDayOfWeek = new Date(`${today}T12:00:00`).getDay();
+    : Promise.resolve({ data: [] as TodayMatchRow[] });
+
+  const fixedSlotsTodayPromise = ctx.courtIds.length
+    ? supabase
+        .from(DB_TABLES.fixedSlots)
+        .select("id,court_id,title,start_time,duration_minutes")
+        .in("court_id", ctx.courtIds)
+        .eq("is_active", true)
+        .eq("day_of_week", todayDayOfWeek)
+    : Promise.resolve({ data: [] as FixedSlotRow[] });
+
+  const refundRequestedPromise = ctx.courtIds.length
+    ? supabase
+        .from(DB_TABLES.payments)
+        .select("id,matches!inner(court_id)")
+        .eq("status", "refund_requested")
+        .in("matches.court_id", ctx.courtIds)
+    : Promise.resolve({ data: [] as Array<{ id: string }> });
+
+  const cancelledTodayPromise = ctx.courtIds.length
+    ? supabase
+        .from(DB_TABLES.matches)
+        .select("id")
+        .in("court_id", ctx.courtIds)
+        .eq("scheduled_date", today)
+        .eq("match_status", "cancelled")
+    : Promise.resolve({ data: [] as Array<{ id: string }> });
+
+  const paymentsTodayPromise = ctx.courtIds.length
+    ? supabase
+        .from(DB_TABLES.payments)
+        .select("id,amount,status,matches!inner(court_id)")
+        .in("matches.court_id", ctx.courtIds)
+        .gte("created_at", todayStartIso)
+    : Promise.resolve({ data: [] as Array<{ id: string; amount: number | null; status: string | null }> });
+
+  // Solo el próximo turno (>= ahora) — antes traía hasta 20 filas y filtraba en JS.
+  const nextMatchPromise = ctx.courtIds.length
+    ? supabase
+        .from(DB_TABLES.matches)
+        .select("id,owner_id,court_id,payment_status,scheduled_time,courts(name),match_status")
+        .in("court_id", ctx.courtIds)
+        .eq("scheduled_date", today)
+        .neq("match_status", "cancelled")
+        .gte("scheduled_time", nowClock)
+        .order("scheduled_time", { ascending: true })
+        .limit(1)
+        .maybeSingle()
+    : Promise.resolve({ data: null as NextMatchRow | null });
+
+  const [
+    { data: clubInfoRaw },
+    { data: todayMatchesRaw },
+    { data: fixedSlotsTodayRaw },
+    { data: refundRequestedRaw },
+    { data: cancelledTodayRaw },
+    { data: paymentsTodayRaw },
+    { data: nextMatchRaw },
+  ] = await Promise.all([
+    clubPromise,
+    todayMatchesPromise,
+    fixedSlotsTodayPromise,
+    refundRequestedPromise,
+    cancelledTodayPromise,
+    paymentsTodayPromise,
+    nextMatchPromise,
+  ]);
+
+  const club = ((clubInfoRaw ?? [])[0] ?? null) as ClubRow | null;
+  const clubName = String(club?.name ?? "Mi club").trim() || "Mi club";
+  const clubSlug = club?.slug?.trim() || null;
+
+  const todayMatches = (todayMatchesRaw ?? []) as TodayMatchRow[];
   const todayMatchIds = todayMatches.map((m) => m.id);
   const matchByFixedSlotId = new Map(
     todayMatches
@@ -134,49 +232,156 @@ export default async function AdminDashboardPage({
       .map((m) => [String(m.fixed_slot_id), m])
   );
 
-  const { data: fixedSlotsTodayRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.fixedSlots)
-        .select("id,court_id,title,start_time,duration_minutes")
-        .in("court_id", ctx.courtIds)
-        .eq("is_active", true)
-        .eq("day_of_week", todayDayOfWeek)
-    : { data: [] };
-  const fixedSlotsToday = (fixedSlotsTodayRaw ?? []) as Array<{
-    id: string;
-    court_id: string;
-    title: string | null;
-    start_time: string | null;
-    duration_minutes: number | null;
-  }>;
+  const fixedSlotsToday = (fixedSlotsTodayRaw ?? []) as FixedSlotRow[];
   const fixedSlotsTodayCount = fixedSlotsToday.length;
-
   const fixedSlotIdsToday = fixedSlotsToday.map((s) => s.id);
-  const { data: fixedExceptionsTodayRaw } = fixedSlotIdsToday.length
-    ? await supabase
+
+  const refundRequestedCount = (refundRequestedRaw ?? []).length;
+  const cancelledTodayCount = (cancelledTodayRaw ?? []).length;
+
+  const paymentsToday = (paymentsTodayRaw ?? []) as Array<{
+    id: string;
+    amount: number | null;
+    status: string | null;
+  }>;
+  const approvedPaymentsToday = paymentsToday.filter((p) => String(p.status ?? "").toLowerCase() === "approved");
+  const paidAmountToday = approvedPaymentsToday.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+  const paidCountToday = approvedPaymentsToday.length;
+  const pendingPaymentsCountToday = paymentsToday.filter(
+    (p) => String(p.status ?? "").toLowerCase() === "pending"
+  ).length;
+
+  const nextMatch = (nextMatchRaw ?? null) as NextMatchRow | null;
+
+  // Owners de reservas de hoy (no turno fijo) — se necesitan para la grilla
+  // cronológica ("nombre del jugador" en cada bloque de reserva), además del
+  // owner del próximo turno.
+  const reservaOwnerIdsToday = todayMatches
+    .filter((m) => !m.es_turno_fijo && String(m.match_status ?? "").toLowerCase() !== "cancelled")
+    .map((m) => m.owner_id)
+    .filter((id): id is string => Boolean(id));
+  const ownerIdsForNext = Array.from(
+    new Set([nextMatch?.owner_id, ...reservaOwnerIdsToday].filter((id): id is string => Boolean(id)))
+  );
+
+  const ownerIdsWeek = Array.from(
+    new Set(
+      todayMatches
+        .filter((m) => String(m.scheduled_date ?? "") >= weekAgo)
+        .map((m) => m.owner_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  // --- Grupo B: dependen de resultados del grupo A, independientes entre sí ---
+  const fixedExceptionsTodayPromise = fixedSlotIdsToday.length
+    ? supabase
         .from(DB_TABLES.fixedSlotExceptions)
         .select("fixed_slot_id")
         .in("fixed_slot_id", fixedSlotIdsToday)
         .eq("exception_date", today)
-    : { data: [] };
+    : Promise.resolve({ data: [] as Array<{ fixed_slot_id: string }> });
+
+  const fixedSlotPlayersTodayPromise = fixedSlotIdsToday.length
+    ? supabase
+        .from(DB_TABLES.fixedSlotPlayers)
+        .select("fixed_slot_id,player_id")
+        .in("fixed_slot_id", fixedSlotIdsToday)
+    : Promise.resolve({ data: [] as Array<{ fixed_slot_id: string; player_id: string }> });
+
+  const participantsTodayPromise = todayMatchIds.length
+    ? supabase
+        .from(DB_TABLES.matchParticipants)
+        .select("match_id,player_id,attendance_status")
+        .in("match_id", todayMatchIds)
+    : Promise.resolve({
+        data: [] as Array<{ match_id: string; player_id: string; attendance_status: string | null }>,
+      });
+
+  const nextOwnerProfilePromise = ownerIdsForNext.length
+    ? supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", ownerIdsForNext)
+    : Promise.resolve({ data: [] as Array<{ user_id: string; name: string | null }> });
+
+  const newPlayersWeekPromise = ownerIdsWeek.length
+    ? supabase
+        .from(DB_TABLES.profiles)
+        .select("user_id")
+        .in("user_id", ownerIdsWeek)
+        .gte("created_at", `${weekAgo}T00:00:00`)
+    : Promise.resolve({ data: [] as Array<{ user_id: string }> });
+
+  const onboardingStatusPromise = club?.id ? checkOnboardingStatus(supabase, club.id) : Promise.resolve(null);
+
+  const [
+    { data: fixedExceptionsTodayRaw },
+    { data: fixedSlotPlayersTodayRaw },
+    { data: participantsTodayRaw },
+    { data: nextOwnerProfileRaw },
+    { data: newPlayersWeekRaw },
+    onboardingStatus,
+  ] = await Promise.all([
+    fixedExceptionsTodayPromise,
+    fixedSlotPlayersTodayPromise,
+    participantsTodayPromise,
+    nextOwnerProfilePromise,
+    newPlayersWeekPromise,
+    onboardingStatusPromise,
+  ]);
+
   const exceptedFixedSlotIdsToday = new Set(
     ((fixedExceptionsTodayRaw ?? []) as Array<{ fixed_slot_id: string }>).map((e) => e.fixed_slot_id)
   );
 
-  const { data: fixedSlotPlayersTodayRaw } = fixedSlotIdsToday.length
-    ? await supabase
-        .from(DB_TABLES.fixedSlotPlayers)
-        .select("fixed_slot_id,player_id")
-        .in("fixed_slot_id", fixedSlotIdsToday)
-    : { data: [] };
   const fixedSlotPlayersToday = (fixedSlotPlayersTodayRaw ?? []) as Array<{
     fixed_slot_id: string;
     player_id: string;
   }>;
   const fixedSlotPlayerIds = Array.from(new Set(fixedSlotPlayersToday.map((p) => p.player_id)));
-  const { data: fixedSlotPlayerProfilesRaw } = fixedSlotPlayerIds.length
-    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", fixedSlotPlayerIds)
-    : { data: [] };
+
+  const participantsToday = (participantsTodayRaw ?? []) as Array<{
+    match_id: string;
+    player_id: string;
+    attendance_status: string | null;
+  }>;
+  const participantIds = Array.from(new Set(participantsToday.map((p) => p.player_id)));
+
+  const ownerNameById = new Map(
+    ((nextOwnerProfileRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
+      p.user_id,
+      p.name?.trim() || "Jugador",
+    ])
+  );
+
+  const newPlayersWeekCount = (newPlayersWeekRaw ?? []).length;
+
+  const clubOnboardingCompletedFromDb = Boolean(club?.onboarding_completed);
+  if (club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && onboardingStatus.allCompleted) {
+    await supabase
+      .from(DB_TABLES.clubs)
+      .update({ onboarding_completed: true })
+      .eq("id", club.id)
+      .eq("owner_id", ctx.userId);
+  }
+
+  // --- Grupo C: dependen de resultados del grupo B, independientes entre sí ---
+  const fixedSlotPlayerProfilesPromise = fixedSlotPlayerIds.length
+    ? supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", fixedSlotPlayerIds)
+    : Promise.resolve({ data: [] as Array<{ user_id: string; name: string | null }> });
+
+  const participantPaymentsPromise =
+    participantIds.length && todayMatchIds.length
+      ? supabase
+          .from(DB_TABLES.payments)
+          .select("match_id,user_id,status")
+          .in("match_id", todayMatchIds)
+          .in("user_id", participantIds)
+      : Promise.resolve({ data: [] as Array<{ match_id: string; user_id: string; status: string | null }> });
+
+  const [{ data: fixedSlotPlayerProfilesRaw }, { data: participantPaymentsRaw }] = await Promise.all([
+    fixedSlotPlayerProfilesPromise,
+    participantPaymentsPromise,
+  ]);
+
   const fixedSlotPlayerNameById = new Map(
     ((fixedSlotPlayerProfilesRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
       p.user_id,
@@ -190,106 +395,15 @@ export default async function AdminDashboardPage({
     fixedSlotPlayersById.set(p.fixed_slot_id, list);
   }
 
-  const { data: refundRequestedRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.payments)
-        .select("id,matches!inner(court_id)")
-        .eq("status", "refund_requested")
-        .in("matches.court_id", ctx.courtIds)
-    : { data: [] };
-  const refundRequestedCount = (refundRequestedRaw ?? []).length;
-
-  const { data: cancelledTodayRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.matches)
-        .select("id")
-        .in("court_id", ctx.courtIds)
-        .eq("scheduled_date", today)
-        .eq("match_status", "cancelled")
-    : { data: [] };
-  const cancelledTodayCount = (cancelledTodayRaw ?? []).length;
-
-  // Pagos confirmados hoy — límite de "hoy" anclado a medianoche ART (no a
-  // medianoche del huso del server), igual criterio que el resto de la página.
-  const todayStartIso = new Date(utcMsForArgentinaWallClock(today, "00:00")).toISOString();
-  const { data: paymentsTodayRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.payments)
-        .select("id,amount,status,matches!inner(court_id)")
-        .in("matches.court_id", ctx.courtIds)
-        .gte("created_at", todayStartIso)
-    : { data: [] };
-  const paymentsToday = (paymentsTodayRaw ?? []) as Array<{
-    id: string;
-    amount: number | null;
+  const participantPayments = (participantPaymentsRaw ?? []) as Array<{
+    match_id: string;
+    user_id: string;
     status: string | null;
   }>;
-  const approvedPaymentsToday = paymentsToday.filter((p) => String(p.status ?? "").toLowerCase() === "approved");
-  const paidAmountToday = approvedPaymentsToday.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
-  const paidCountToday = approvedPaymentsToday.length;
-  const pendingPaymentsCountToday = paymentsToday.filter(
-    (p) => String(p.status ?? "").toLowerCase() === "pending"
-  ).length;
-
-  const { data: nextMatchRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.matches)
-        .select("id,owner_id,court_id,payment_status,scheduled_time,courts(name),match_status")
-        .in("court_id", ctx.courtIds)
-        .eq("scheduled_date", today)
-        .neq("match_status", "cancelled")
-        .order("scheduled_time", { ascending: true })
-        .limit(20)
-    : { data: [] };
-  const nextMatchRows = (nextMatchRaw ?? []) as Array<{
-    id: string;
-    owner_id: string | null;
-    court_id: string;
-    payment_status: string | null;
-    scheduled_time: string | null;
-    courts: { name: string | null } | { name: string | null }[] | null;
-    match_status: string | null;
-  }>;
-  const nextMatch =
-    nextMatchRows.find((m) => {
-      const min = timeToMinutes(m.scheduled_time);
-      return min >= arNow.minutes;
-    }) ?? null;
-
-  // Owners de reservas de hoy (no turno fijo) — se necesitan para la grilla
-  // cronológica ("nombre del jugador" en cada bloque de reserva), además del
-  // owner del próximo turno.
-  const reservaOwnerIdsToday = todayMatches
-    .filter((m) => !m.es_turno_fijo && String(m.match_status ?? "").toLowerCase() !== "cancelled")
-    .map((m) => m.owner_id)
-    .filter((id): id is string => Boolean(id));
-  const ownerIdsForNext = Array.from(
-    new Set([nextMatch?.owner_id, ...reservaOwnerIdsToday].filter((id): id is string => Boolean(id)))
-  );
-  const { data: nextOwnerProfileRaw } = ownerIdsForNext.length
-    ? await supabase
-        .from(DB_TABLES.profiles)
-        .select("user_id,name")
-        .in("user_id", ownerIdsForNext)
-    : { data: [] };
-  const ownerNameById = new Map(
-    ((nextOwnerProfileRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
-      p.user_id,
-      p.name?.trim() || "Jugador",
-    ])
-  );
-
-  const { data: participantsTodayRaw } = todayMatchIds.length
-    ? await supabase
-        .from(DB_TABLES.matchParticipants)
-        .select("match_id,player_id,attendance_status")
-        .in("match_id", todayMatchIds)
-    : { data: [] };
-  const participantsToday = (participantsTodayRaw ?? []) as Array<{
-    match_id: string;
-    player_id: string;
-    attendance_status: string | null;
-  }>;
+  const paymentMap = new Map<string, string>();
+  for (const pay of participantPayments) {
+    paymentMap.set(`${pay.match_id}:${pay.user_id}`, String(pay.status ?? "").toLowerCase());
+  }
 
   const todayFixedSlotCards: TodayFixedSlotCard[] = fixedSlotsToday.map((slot) => {
     const match = matchByFixedSlotId.get(slot.id) ?? null;
@@ -309,24 +423,6 @@ export default async function AdminDashboardPage({
     };
   });
 
-  const participantIds = Array.from(new Set(participantsToday.map((p) => p.player_id)));
-  const { data: participantPaymentsRaw } = participantIds.length && todayMatchIds.length
-    ? await supabase
-        .from(DB_TABLES.payments)
-        .select("match_id,user_id,status")
-        .in("match_id", todayMatchIds)
-        .in("user_id", participantIds)
-    : { data: [] };
-  const participantPayments = (participantPaymentsRaw ?? []) as Array<{
-    match_id: string;
-    user_id: string;
-    status: string | null;
-  }>;
-  const paymentMap = new Map<string, string>();
-  for (const pay of participantPayments) {
-    paymentMap.set(`${pay.match_id}:${pay.user_id}`, String(pay.status ?? "").toLowerCase());
-  }
-
   const occupiedNowCount = new Set(
     todayMatches
       .filter((m) => {
@@ -338,7 +434,6 @@ export default async function AdminDashboardPage({
       .map((m) => m.court_id)
   ).size;
   const totalCourts = ctx.courtIds.length;
-  const occupiedPct = totalCourts > 0 ? Math.round((occupiedNowCount / totalCourts) * 100) : 0;
 
   const reservationMatchesToday = todayMatches.filter(
     (m) => m.match_type === "reservation" && String(m.match_status ?? "").toLowerCase() !== "cancelled"
@@ -362,34 +457,6 @@ export default async function AdminDashboardPage({
 
   const reservasSinPagoHoyAlert = reservasPendientes;
   const turnosFijosSinConfirmarAlert = turnosFijosSinConfirmar;
-
-  const ownerIdsWeek = Array.from(
-    new Set(
-      todayMatches
-        .filter((m) => String(m.scheduled_date ?? "") >= weekAgo)
-        .map((m) => m.owner_id)
-        .filter((id): id is string => Boolean(id))
-    )
-  );
-  const { data: newPlayersWeekRaw } = ownerIdsWeek.length
-    ? await supabase
-        .from(DB_TABLES.profiles)
-        .select("user_id")
-        .in("user_id", ownerIdsWeek)
-        .gte("created_at", `${weekAgo}T00:00:00`)
-    : { data: [] };
-  const newPlayersWeekCount = (newPlayersWeekRaw ?? []).length;
-
-  const clubOnboardingCompletedFromDb = Boolean(club?.onboarding_completed);
-  const onboardingStatus = club?.id ? await checkOnboardingStatus(supabase, club.id) : null;
-  if (club?.id && onboardingStatus && !clubOnboardingCompletedFromDb && onboardingStatus.allCompleted) {
-    await supabase
-      .from(DB_TABLES.clubs)
-      .update({ onboarding_completed: true })
-      .eq("id", club.id)
-      .eq("owner_id", ctx.userId);
-  }
-  const onboardingPhasesStatus = club?.id ? await checkAdminOnboardingStatus(supabase, club.id) : null;
 
   const criticalAlerts = [
     onboardingStatus && !onboardingStatus.hasMpConnected
@@ -454,16 +521,7 @@ export default async function AdminDashboardPage({
         ? "Pendiente"
         : "Sin confirmar";
 
-  // --- Vista cronológica del día: franjas abiertas por cancha + eventos ---
   const dashboardCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
-  const dashboardTimelineData = await buildDashboardTimelineData(
-    supabase,
-    dashboardCourts,
-    ctx.courtIds,
-    ctx.clubIds,
-    club ? { open_time: club.open_time ?? null, close_time: club.close_time ?? null } : null,
-    today
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -472,8 +530,10 @@ export default async function AdminDashboardPage({
           ¡Suscripción activada! Bienvenido a PadeLibre.
         </div>
       ) : null}
-      {onboardingPhasesStatus && !onboardingPhasesStatus.allComplete ? (
-        <OnboardingChecklist status={onboardingPhasesStatus} />
+      {club?.id ? (
+        <Suspense fallback={<OnboardingSkeleton />}>
+          <OnboardingSection supabase={supabase} clubId={club.id} />
+        </Suspense>
       ) : null}
       <section className="px-1 pt-2">
         <h1 className="font-admin-display text-[28px] font-bold text-[var(--text-primary)]">Hola, {clubName} 👋</h1>
@@ -577,7 +637,17 @@ export default async function AdminDashboardPage({
         </section>
       ) : null}
 
-      <DashboardClient todayYmd={today} courts={dashboardCourts} initialData={dashboardTimelineData} />
+      <Suspense fallback={<TimelineSkeleton />}>
+        <TimelineSection
+          supabase={supabase}
+          todayYmd={today}
+          courts={dashboardCourts}
+          courtIds={ctx.courtIds}
+          clubIds={ctx.clubIds}
+          clubBounds={club ? { open_time: club.open_time ?? null, close_time: club.close_time ?? null } : null}
+          todayMatches={todayMatches}
+        />
+      </Suspense>
 
       {nextMatch ? (
         <section className={`${adminCard} flex flex-wrap items-center justify-between gap-4`}>
