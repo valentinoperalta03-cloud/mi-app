@@ -46,7 +46,12 @@ export async function saveClubHours(formData: FormData) {
   const clubId = ctx.clubIds[0];
   const hoursText = `${open} - ${close}`;
 
-  const { error: clubErr } = await supabase
+  // Mismo patrón que saveCancellationPolicy/updateClubServices/
+  // updateClubSlugAction: el UPDATE va por service client porque
+  // authenticated puede no tener GRANT UPDATE vigente sobre todas las
+  // columnas de clubs (ver 20260713130000_fix_clubs_billing_column_grants.sql
+  // y sus fixes posteriores) — con el cliente normal fallaba "permission denied".
+  const { error: clubErr } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update({
       open_time: open,
