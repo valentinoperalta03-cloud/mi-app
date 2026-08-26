@@ -94,10 +94,10 @@ export function CategoryChips({
   );
 }
 
-function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 }) {
+function ProgressBar({ step }: { step: 1 | 2 | 3 | 4 | 5 }) {
   return (
     <div className="mb-6 flex gap-1.5">
-      {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
           className={`h-1 flex-1 rounded-full transition-colors ${
@@ -121,7 +121,7 @@ export default function TorneoFormInline({
   courts: Court[];
   onSuccess?: () => void;
 }) {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [type, setType] = useState<TournamentTypeKey>("americano");
 
   // Paso 2 — fechas + disponibilidad
@@ -160,7 +160,18 @@ export default function TorneoFormInline({
   const [numCourts, setNumCourts] = useState(2);
   const [foodIncluded, setFoodIncluded] = useState("");
 
-  // Paso 4 — premios + contacto
+  // Paso 4 — métodos de pago
+  const [acceptsMp, setAcceptsMp] = useState(true);
+  const [acceptsCash, setAcceptsCash] = useState(false);
+  const [acceptsTransfer, setAcceptsTransfer] = useState(false);
+  const [transferAlias, setTransferAlias] = useState("");
+  // Seña por MP: reusa requires_deposit/deposit_type/deposit_value (ya
+  // implementado en el checkout del jugador vía calculateDepositAmount), no
+  // se agrega una columna nueva para no duplicar esa lógica de cobro.
+  const [requiresDeposit, setRequiresDeposit] = useState(false);
+  const [depositPercentage, setDepositPercentage] = useState(50);
+
+  // Paso 5 — premios + contacto
   const [hasPrizes, setHasPrizes] = useState(false);
   const [prizes, setPrizes] = useState<string[]>(["", ""]);
   const [contactPhone, setContactPhone] = useState("");
@@ -187,6 +198,7 @@ export default function TorneoFormInline({
     Object.values(m).filter(Boolean),
   ).length;
   const canStep2 = Boolean(name.trim() && startDate && totalSelectedSlots > 0);
+  const canStep4 = acceptsMp || acceptsCash || acceptsTransfer;
 
   function toggleCategory(cat: string) {
     setSelectedCategories((prev) =>
@@ -367,6 +379,17 @@ export default function TorneoFormInline({
         if (quarterfinalsDate) fd.set("quarterfinals_date", quarterfinalsDate);
         if (semifinalsDate) fd.set("semifinals_date", semifinalsDate);
         if (finalsDate) fd.set("finals_date", finalsDate);
+      }
+
+      fd.set("accepts_mp", String(acceptsMp));
+      fd.set("accepts_cash", String(acceptsCash));
+      fd.set("accepts_transfer", String(acceptsTransfer));
+      if (acceptsTransfer && transferAlias.trim())
+        fd.set("transfer_alias", transferAlias.trim());
+      if (acceptsMp && requiresDeposit) {
+        fd.set("requires_deposit", "true");
+        fd.set("deposit_type", "percentage");
+        fd.set("deposit_value", String(depositPercentage));
       }
 
       if (contactPhone.trim()) fd.set("contact_phone", `+54${contactPhone}`);
@@ -885,6 +908,129 @@ export default function TorneoFormInline({
 
       {step === 4 ? (
         <div className="space-y-4 text-sm">
+          <div className="space-y-3">
+            <label className={adminKicker}>Métodos de pago aceptados</label>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              El jugador va a ver estas opciones al inscribirse.
+            </p>
+
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={acceptsMp}
+                onChange={(e) => setAcceptsMp(e.target.checked)}
+              />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                💳 Mercado Pago (online)
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={acceptsCash}
+                onChange={(e) => setAcceptsCash(e.target.checked)}
+              />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                💵 Efectivo (en el club)
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={acceptsTransfer}
+                onChange={(e) => setAcceptsTransfer(e.target.checked)}
+              />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                🏦 Transferencia bancaria
+              </span>
+            </label>
+
+            {acceptsTransfer ? (
+              <div className="ml-7 space-y-2">
+                <label className={adminKicker}>
+                  Alias o CBU para transferencias
+                </label>
+                <input
+                  type="text"
+                  value={transferAlias}
+                  onChange={(e) => setTransferAlias(e.target.value)}
+                  placeholder="Ej: catedral.padel o 0000003100097753669989"
+                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {acceptsMp ? (
+            <div className="space-y-2">
+              <label className={adminKicker}>¿Requiere seña por MP?</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRequiresDeposit(false)}
+                  className={chip(!requiresDeposit)}
+                >
+                  No — pago completo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequiresDeposit(true)}
+                  className={chip(requiresDeposit)}
+                >
+                  Sí — seña parcial
+                </button>
+              </div>
+              {requiresDeposit ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={10}
+                    max={90}
+                    step={5}
+                    value={depositPercentage}
+                    onChange={(e) =>
+                      setDepositPercentage(Number(e.target.value) || 0)
+                    }
+                    className="w-20 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                  />
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    % del total como seña
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!canStep4 ? (
+            <p className="text-xs text-rose-600 dark:text-rose-400">
+              Elegí al menos un método de pago.
+            </p>
+          ) : null}
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="flex-1 rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              ← Volver
+            </button>
+            <button
+              type="button"
+              disabled={!canStep4}
+              onClick={() => setStep(5)}
+              className={`flex-1 ${adminCTAPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              Continuar →
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === 5 ? (
+        <div className="space-y-4 text-sm">
           <div>
             <label className={adminKicker}>
               Teléfono de contacto para consultas
@@ -1042,7 +1188,7 @@ export default function TorneoFormInline({
           <div className="flex gap-2 pt-2">
             <button
               type="button"
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               className="flex-1 rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[var(--text-secondary)]"
             >
               ← Volver

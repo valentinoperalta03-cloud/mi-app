@@ -54,6 +54,11 @@ export async function createTournamentAction(
     .filter((c): c is (typeof PROFILE_CATEGORIES)[number] =>
       PROFILE_CATEGORIES.includes(c as (typeof PROFILE_CATEGORIES)[number]),
     );
+  const acceptsMp = formData.get("accepts_mp") !== "false";
+  const acceptsCash = formData.get("accepts_cash") === "true";
+  const acceptsTransfer = formData.get("accepts_transfer") === "true";
+  const transferAlias =
+    String(formData.get("transfer_alias") ?? "").trim() || null;
   const requiresDeposit = formData.get("requires_deposit") === "true";
   const depositTypeRaw = String(formData.get("deposit_type") ?? "").trim();
   const depositType =
@@ -142,6 +147,8 @@ export async function createTournamentAction(
     return { ok: false, message: "Máximo de parejas inválido." };
   if (!Number.isFinite(pricePerPair) || pricePerPair < 0)
     return { ok: false, message: "Precio inválido." };
+  if (!acceptsMp && !acceptsCash && !acceptsTransfer)
+    return { ok: false, message: "Elegí al menos un método de pago." };
   if (startDate > endDate)
     return {
       ok: false,
@@ -198,6 +205,10 @@ export async function createTournamentAction(
         allowedCategories.length > 0 ? allowedCategories : null,
       max_pairs: Math.floor(maxPairs),
       price_per_pair: pricePerPair,
+      accepts_mp: acceptsMp,
+      accepts_cash: acceptsCash,
+      accepts_transfer: acceptsTransfer,
+      transfer_alias: acceptsTransfer ? transferAlias : null,
       requires_deposit: requiresDeposit,
       deposit_type: requiresDeposit ? depositType : null,
       deposit_value: requiresDeposit ? depositValue : 0,

@@ -3,21 +3,37 @@
 import { useState, useTransition } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DB_TABLES } from "@/lib/db-tables";
-import { beginTournamentCheckoutAction } from "./actions";
+import { beginTournamentCheckoutAction, registerTournamentOfflineAction } from "./actions";
 import { nativeOpenUrl } from "@/lib/native-open";
 
 type Props = {
   tournamentId: string;
   isIndividual: boolean;
   canRegister: boolean;
+  acceptsMp: boolean;
+  acceptsCash: boolean;
+  acceptsTransfer: boolean;
+  transferAlias: string | null;
 };
 
-export default function TournamentRegisterForm({ tournamentId, isIndividual, canRegister }: Props) {
+export default function TournamentRegisterForm({
+  tournamentId,
+  isIndividual,
+  canRegister,
+  acceptsMp,
+  acceptsCash,
+  acceptsTransfer,
+  transferAlias,
+}: Props) {
   const [partnerQuery, setPartnerQuery] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [results, setResults] = useState<Array<{ user_id: string; name: string | null }>>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"mp" | "cash" | "transfer">(
+    acceptsMp ? "mp" : acceptsCash ? "cash" : "transfer"
+  );
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [registered, setRegistered] = useState(false);
 
   async function searchPlayers(q: string) {
     setPartnerQuery(q);
@@ -37,16 +53,36 @@ export default function TournamentRegisterForm({ tournamentId, isIndividual, can
     fd.set("tournament_id", tournamentId);
     fd.set("partner_user_id", isIndividual ? "" : partnerId);
     start(async () => {
-      const res = await beginTournamentCheckoutAction(fd);
+      if (paymentMethod === "mp") {
+        const res = await beginTournamentCheckoutAction(fd);
+        if (!res.ok) {
+          setMsg(res.message);
+          return;
+        }
+        if (res.url) await nativeOpenUrl(res.url);
+        return;
+      }
+      fd.set("payment_method", paymentMethod);
+      const res = await registerTournamentOfflineAction(fd);
       if (!res.ok) {
         setMsg(res.message);
         return;
       }
-      if (res.url) await nativeOpenUrl(res.url);
+      setRegistered(true);
     });
   }
 
   if (!canRegister) return null;
+
+  if (registered) {
+    return (
+      <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-medium text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
+        ¡Inscripción registrada! Pagá en el club{" "}
+        {paymentMethod === "transfer" && transferAlias ? `(alias: ${transferAlias}) ` : ""}
+        para confirmar tu lugar.
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
@@ -86,15 +122,69 @@ export default function TournamentRegisterForm({ tournamentId, isIndividual, can
         ) : (
           <p className="text-xs text-[var(--text-tertiary)]">Inscripción individual. Te asignamos pareja por sorteo el día de la peña.</p>
         )}
-        <p className="text-[11px] text-[var(--text-tertiary)]">
-          El pago se procesa con Mercado Pago. El 100% va directo a la cuenta del club, sin comisión de PadeLibre.
-        </p>
+
+        {acceptsCash || acceptsTransfer ? (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--text-primary)]">¿Cómo vas a pagar?</label>
+            <div className="flex flex-col gap-2">
+              {acceptsMp ? (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="mp"
+                    checked={paymentMethod === "mp"}
+                    onChange={() => setPaymentMethod("mp")}
+                  />
+                  <span className="text-sm">💳 Mercado Pago</span>
+                </label>
+              ) : null}
+              {acceptsCash ? (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="cash"
+                    checked={paymentMethod === "cash"}
+                    onChange={() => setPaymentMethod("cash")}
+                  />
+                  <span className="text-sm">💵 Efectivo en el club</span>
+                </label>
+              ) : null}
+              {acceptsTransfer ? (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="transfer"
+                    checked={paymentMethod === "transfer"}
+                    onChange={() => setPaymentMethod("transfer")}
+                  />
+                  <span className="text-sm">
+                    🏦 Transferencia
+                    {transferAlias ? ` — ${transferAlias}` : ""}
+                  </span>
+                </label>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {paymentMethod === "mp" ? (
+          <p className="text-[11px] text-[var(--text-tertiary)]">
+            El pago se procesa con Mercado Pago. El 100% va directo a la cuenta del club, sin comisión de PadeLibre.
+          </p>
+        ) : (
+          <p className="text-[11px] text-[var(--text-tertiary)]">
+            Tu lugar queda pendiente hasta que pagues en el club.
+          </p>
+        )}
         <button
           type="submit"
           disabled={pending || (!isIndividual && !partnerId)}
           className="btn-primary-gradient w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-50"
         >
-          {pending ? "Procesando…" : "Pagar inscripción"}
+          {pending ? "Procesando…" : paymentMethod === "mp" ? "Pagar inscripción" : "Confirmar inscripción"}
         </button>
       </form>
     </div>

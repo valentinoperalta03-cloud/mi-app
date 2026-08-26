@@ -85,7 +85,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, what_includes, game_format, is_individual, allowed_categories, prizes, contact_phone, clubs(name, logo_url, location, city, province)",
+      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, what_includes, game_format, is_individual, allowed_categories, prizes, contact_phone, accepts_mp, accepts_cash, accepts_transfer, transfer_alias, clubs(name, logo_url, location, city, province)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -136,6 +136,10 @@ export default async function TorneoDetallePage({ params }: PageProps) {
     allowed_categories: string[] | null;
     prizes: Array<{ position: number; description: string }> | null;
     contact_phone: string | null;
+    accepts_mp: boolean;
+    accepts_cash: boolean;
+    accepts_transfer: boolean;
+    transfer_alias: string | null;
     clubs: {
       name: string | null;
       logo_url: string | null;
@@ -443,6 +447,31 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         </p>
       </section>
 
+      <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
+        <p className="mb-2 text-sm font-bold text-[var(--text-primary)]">
+          💳 Métodos de pago
+        </p>
+        <div className="space-y-1.5">
+          {tour.accepts_mp ? (
+            <p className="text-sm text-[var(--text-secondary)]">
+              ✓ Mercado Pago
+              {tour.requires_deposit
+                ? ` (seña del ${tour.deposit_type === "percentage" ? `${tour.deposit_value}%` : `$${Number(tour.deposit_value).toLocaleString("es-AR")}`})`
+                : " (pago completo)"}
+            </p>
+          ) : null}
+          {tour.accepts_cash ? (
+            <p className="text-sm text-[var(--text-secondary)]">✓ Efectivo en el club</p>
+          ) : null}
+          {tour.accepts_transfer ? (
+            <p className="text-sm text-[var(--text-secondary)]">
+              ✓ Transferencia
+              {tour.transfer_alias ? ` — Alias: ${tour.transfer_alias}` : ""}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
       {already ? (
         <p className="mt-6 rounded-2xl bg-emerald-500/10 px-4 py-3 text-center text-sm font-medium text-emerald-800 dark:text-emerald-200">
           Ya estás inscripto en este torneo.
@@ -458,6 +487,10 @@ export default async function TorneoDetallePage({ params }: PageProps) {
               tournamentId={id}
               isIndividual={tour.is_individual}
               canRegister={canRegister}
+              acceptsMp={tour.accepts_mp}
+              acceptsCash={tour.accepts_cash}
+              acceptsTransfer={tour.accepts_transfer}
+              transferAlias={tour.transfer_alias}
             />
           )}
         </div>

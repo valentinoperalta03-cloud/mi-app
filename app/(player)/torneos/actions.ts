@@ -8,7 +8,48 @@ import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
 import { categoryToTournamentLevel, playerLevelInTournamentBounds } from "@/lib/tournament-utils";
 import { createClient } from "@/utils/supabase/server";
 
-export async function beginTournamentCheckoutAction(formData: FormData): Promise<{ ok: boolean; message: string; url?: string }> {
+type PaymentMethod = "mp" | "cash" | "transfer";
+
+type TournamentForRegistration = {
+  name: string;
+  tournament_type: string;
+  max_pairs: number;
+  price_per_pair: number;
+  status: string;
+  registration_deadline: string;
+  category_min: number | null;
+  category_max: number | null;
+  club_id: string;
+  requires_deposit: boolean;
+  deposit_type: "percentage" | "fixed" | null;
+  deposit_value: number;
+  is_individual: boolean;
+  accepts_mp: boolean;
+  accepts_cash: boolean;
+  accepts_transfer: boolean;
+};
+
+type PrepareResult =
+  | { ok: false; message: string }
+  | {
+      ok: true;
+      registrationId: string;
+      tournamentId: string;
+      tour: TournamentForRegistration;
+      clubName: string;
+    };
+
+/**
+ * Valida y crea la fila de tournament_registrations, compartida entre el
+ * checkout de Mercado Pago y el registro offline (efectivo/transferencia).
+ * Lo único que difiere entre métodos es qué pasa después del insert: MP
+ * genera una preferencia de pago, efectivo/transferencia queda pending sin
+ * mp_preference_id (mismo criterio que /admin/cobros usa para listarla).
+ */
+async function prepareTournamentRegistration(
+  formData: FormData,
+  method: PaymentMethod
+): Promise<PrepareResult> {
   const supabase = await createClient({ allowCookieWrites: true });
   const {
     data: { user },
@@ -23,26 +64,19 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max, requires_deposit, deposit_type, deposit_value, is_individual"
+      "id, club_id, name, tournament_type, max_pairs, price_per_pair, status, registration_deadline, category_min, category_max, requires_deposit, deposit_type, deposit_value, is_individual, accepts_mp, accepts_cash, accepts_transfer"
     )
     .eq("id", tournamentId)
     .maybeSingle();
   if (!t) return { ok: false, message: "Torneo no encontrado." };
-  const tour = t as {
-    name: string;
-    tournament_type: string;
-    max_pairs: number;
-    price_per_pair: number;
-    status: string;
-    registration_deadline: string;
-    category_min: number | null;
-    category_max: number | null;
-    club_id: string;
-    requires_deposit: boolean;
-    deposit_type: "percentage" | "fixed" | null;
-    deposit_value: number;
-    is_individual: boolean;
-  };
+  const tour = t as TournamentForRegistration;
+
+  if (method === "mp" && !tour.accepts_mp)
+    return { ok: false, message: "Este torneo no acepta pago por Mercado Pago." };
+  if (method === "cash" && !tour.accepts_cash)
+    return { ok: false, message: "Este torneo no acepta pago en efectivo." };
+  if (method === "transfer" && !tour.accepts_transfer)
+    return { ok: false, message: "Este torneo no acepta pago por transferencia." };
 
   if (await isClubSubscriptionBlocked(tour.club_id)) {
     return { ok: false, message: "Este club no puede recibir inscripciones en este momento." };
@@ -82,10 +116,6 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   const n = (approvedCount ?? 0) as number;
   if (n >= tour.max_pairs) return { ok: false, message: "Torneo completo." };
 
-  const chargeAmount = tour.requires_deposit
-    ? calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value))
-    : Number(tour.price_per_pair);
-
   const { data: existing } = await supabase
     .from(DB_TABLES.tournamentRegistrations)
     .select("id, payment_status")
@@ -120,6 +150,24 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
     .maybeSingle();
   const clubName = String((club as { name?: string | null } | null)?.name ?? "Club");
 
+  return { ok: true, registrationId, tournamentId, tour, clubName };
+}
+
+export async function beginTournamentCheckoutAction(formData: FormData): Promise<{ ok: boolean; message: string; url?: string }> {
+  const prep = await prepareTournamentRegistration(formData, "mp");
+  if (!prep.ok) return prep;
+  const { registrationId, tournamentId, tour, clubName } = prep;
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Iniciá sesión." };
+
+  const chargeAmount = tour.requires_deposit
+    ? calculateDepositAmount(Number(tour.price_per_pair), tour.deposit_type ?? "fixed", Number(tour.deposit_value))
+    : Number(tour.price_per_pair);
+
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
   const pref = await createTournamentMercadoPagoPreference({
     tournamentId,
@@ -148,4 +196,17 @@ export async function beginTournamentCheckoutAction(formData: FormData): Promise
   revalidatePath("/torneos");
   revalidatePath(`/torneos/${tournamentId}`);
   return { ok: true, message: "Redirigiendo a Mercado Pago…", url: pref.initPoint };
+}
+
+export async function registerTournamentOfflineAction(formData: FormData): Promise<{ ok: boolean; message: string }> {
+  const method = String(formData.get("payment_method") ?? "").trim() === "transfer" ? "transfer" : "cash";
+  const prep = await prepareTournamentRegistration(formData, method);
+  if (!prep.ok) return prep;
+
+  revalidatePath("/torneos");
+  revalidatePath(`/torneos/${prep.tournamentId}`);
+  return {
+    ok: true,
+    message: "¡Inscripción registrada! Pagá en el club para confirmar tu lugar.",
+  };
 }
