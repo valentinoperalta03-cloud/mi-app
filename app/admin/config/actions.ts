@@ -132,21 +132,14 @@ export async function saveCancellationPolicy(formData: FormData) {
 
   const clubId = ctx.clubIds[0];
   const policy = getField(formData, "cancellation_policy");
-  const hoursRaw = getField(formData, "cancellation_hours");
-  const hours = hoursRaw === "" ? null : Number(hoursRaw);
 
-  const payload: {
-    cancellation_policy: string | null;
-    cancellation_hours?: number | null;
-  } = {
+  const payload: { cancellation_policy: string | null } = {
     cancellation_policy: policy || null,
-    cancellation_hours: Number.isFinite(hours) ? hours : null,
   };
 
-  // cancellation_hours no tiene GRANT UPDATE para authenticated (ver
-  // 20260713130000_fix_clubs_billing_column_grants.sql) — el UPDATE con el
-  // cliente normal falla entero por esa columna y ni cancellation_policy se
-  // guarda. Se usa el service client, que bypassea esos grants por columna.
+  // clubs no tiene columna cancellation_hours (ver CLUB_ADMIN_COLUMNS_FALLBACK
+  // en app/admin/club/club-form.tsx) — el UPDATE la incluía y fallaba entero
+  // por columna inexistente, sin guardar ni cancellation_policy.
   const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update(payload)
