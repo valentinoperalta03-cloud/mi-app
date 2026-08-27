@@ -330,7 +330,7 @@ function EditModal({ ctx, onClose }: { ctx: EditContext; onClose: () => void }) 
                 type="button"
                 onClick={handleException}
                 disabled={actionPending}
-                className="w-full rounded-xl border border-amber-300/50 bg-amber-50/50 py-2.5 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-700/50 dark:bg-amber-950/20 dark:text-amber-300"
+                className="w-full rounded-xl border border-amber-400 bg-amber-400/20 py-2.5 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-amber-300"
               >
                 📅 No viene esta semana
               </button>
@@ -339,7 +339,7 @@ function EditModal({ ctx, onClose }: { ctx: EditContext; onClose: () => void }) 
               type="button"
               onClick={handleDelete}
               disabled={actionPending}
-              className="w-full rounded-xl border border-rose-200/50 bg-rose-50/50 py-2.5 text-sm font-semibold text-rose-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-800/50 dark:bg-rose-950/20 dark:text-rose-400"
+              className="w-full rounded-xl border border-rose-400 bg-rose-400/20 py-2.5 text-sm font-semibold text-rose-600 disabled:cursor-not-allowed disabled:opacity-60 dark:text-rose-400"
             >
               🗑 Dar de baja permanentemente
             </button>

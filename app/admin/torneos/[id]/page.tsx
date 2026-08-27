@@ -51,6 +51,62 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export const dynamic = "force-dynamic";
 
+type AdminWhatsAppTournamentInfo = {
+  id: string;
+  name: string;
+  tournament_type: string;
+  start_date: string;
+  start_time: string;
+  price_per_pair: number;
+  allowed_categories: string[] | null;
+  guaranteed_matches: number | null;
+  prizes: Array<{ position: number; description: string }> | null;
+};
+
+function buildAdminWhatsAppMessage(torneo: AdminWhatsAppTournamentInfo, siteUrl: string): string {
+  const badge =
+    TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === torneo.tournament_type)
+      ?.badge ?? torneo.tournament_type;
+
+  const lines: string[] = [];
+  lines.push(`🎾 *${torneo.name}*`);
+  lines.push(badge);
+  lines.push("");
+
+  if (torneo.start_date) {
+    const fecha = format(parseISO(torneo.start_date), "EEEE d 'de' MMMM yyyy", { locale: es });
+    const hora = torneo.start_time ? ` a las ${String(torneo.start_time).slice(0, 5)}hs` : "";
+    lines.push(`📅 ${fecha}${hora}`);
+  }
+
+  if (torneo.allowed_categories?.length) {
+    lines.push(`🎯 Categorías: ${torneo.allowed_categories.join(" · ")}`);
+  }
+
+  if (torneo.price_per_pair > 0) {
+    lines.push(`💰 Inscripción: $${Number(torneo.price_per_pair).toLocaleString("es-AR")} por pareja`);
+  }
+
+  if (torneo.guaranteed_matches) {
+    lines.push(`🎾 ${torneo.guaranteed_matches} partidos garantizados`);
+  }
+
+  if (torneo.prizes?.length) {
+    lines.push("");
+    lines.push("🏆 *Premios:*");
+    for (const p of torneo.prizes) {
+      const emoji = p.position === 1 ? "🥇" : p.position === 2 ? "🥈" : "🥉";
+      lines.push(`${emoji} ${p.description}`);
+    }
+  }
+
+  lines.push("");
+  lines.push("👇 Inscribite acá:");
+  lines.push(`${siteUrl}/torneos/${torneo.id}`);
+
+  return lines.join("\n");
+}
+
 export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
@@ -60,7 +116,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes",
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes, guaranteed_matches",
     )
     .eq("id", id)
     .maybeSingle();
@@ -98,6 +154,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     food_included: string | null;
     contact_phone: string | null;
     prizes: Array<{ position: number; description: string }> | null;
+    guaranteed_matches: number | null;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
@@ -312,6 +369,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     );
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online";
   const courtHours = Math.round((matchRows.length * 90) / 60);
   const penaPairs = regList
     .filter((r) => r.player2_id)
@@ -540,9 +598,32 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           />
         ) : null}
         <CopyLinkButton
-          url={`${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online"}/torneos/${id}`}
+          url={`${siteUrl}/torneos/${id}`}
           className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
         />
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(
+            buildAdminWhatsAppMessage(
+              {
+                id,
+                name: tour.name,
+                tournament_type: tour.tournament_type,
+                start_date: tour.start_date,
+                start_time: tour.start_time,
+                price_per_pair: tour.price_per_pair,
+                allowed_categories: tour.allowed_categories,
+                guaranteed_matches: tour.guaranteed_matches,
+                prizes: tour.prizes,
+              },
+              siteUrl,
+            ),
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-2xl border border-[#25D366]/30 bg-[#25D366]/[0.06] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[#25D366]/10"
+        >
+          💬 Compartir por WhatsApp
+        </a>
       </section>
 
       <section>
