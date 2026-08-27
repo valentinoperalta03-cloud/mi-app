@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { DB_TABLES } from "@/lib/db-tables";
 import { parseClockToMinutes } from "@/lib/court-slots";
 import { adminCTAPrimary, adminKicker } from "@/components/admin/admin-premium";
 import { addExceptionToFixedSlot, createFixedSlot, deleteFixedSlot, updateFixedSlot } from "./actions";
@@ -28,8 +26,11 @@ const DAY_OPTIONS = [
   { value: 0, label: "Domingo" },
 ];
 
-type PlayerResult = { user_id: string; name: string | null };
+/** Indexado por day_of_week (0=Domingo..6=Sabado), a diferencia de DAY_OPTIONS que ordena Lunes primero para los chips. */
+const DAY_LABELS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
 type ModalContext = { courtId: string; courtName: string; dayOfWeek: number; time: string };
+type EditContext = { cell: GridCell; courtId: string; courtName: string; dayOfWeek: number; time: string };
 
 function cellKey(dayOfWeek: number, courtId: string, time: string) {
   return `${dayOfWeek}__${courtId}__${time}`;
@@ -48,21 +49,22 @@ export default function TurnosFijosGrid({
 }) {
   const [activeDay, setActiveDay] = useState(initialDay);
   const [modalCtx, setModalCtx] = useState<ModalContext | null>(null);
-  const [editCell, setEditCell] = useState<GridCell | null>(null);
+  const [editCtx, setEditCtx] = useState<EditContext | null>(null);
 
-  // Filas de la grilla para el día activo: unión de los horarios disponibles
-  // de todas las canchas + los horarios de turnos fijos ya existentes (por si
-  // quedaron fuera del rango vigente de court_time_ranges/horario de club).
-  const rowTimes = useMemo(() => {
-    const all = new Set<string>();
+  // Slots por cancha para el día activo: unión de los horarios disponibles
+  // (court_time_ranges/horario de club) + los horarios de turnos fijos ya
+  // existentes de esa cancha, por si quedaron fuera del rango vigente.
+  const slotsByCourt = useMemo(() => {
+    const result: Record<string, string[]> = {};
     for (const court of courts) {
-      for (const t of availableSlotsByCourtAndDay[court.id]?.[activeDay] ?? []) all.add(t);
+      const set = new Set(availableSlotsByCourtAndDay[court.id]?.[activeDay] ?? []);
+      for (const key of Object.keys(cells)) {
+        const [dayStr, courtIdStr, time] = key.split("__");
+        if (Number(dayStr) === activeDay && courtIdStr === court.id) set.add(time);
+      }
+      result[court.id] = Array.from(set).sort((a, b) => parseClockToMinutes(a) - parseClockToMinutes(b));
     }
-    for (const key of Object.keys(cells)) {
-      const [dayStr, , time] = key.split("__");
-      if (Number(dayStr) === activeDay) all.add(time);
-    }
-    return Array.from(all).sort((a, b) => parseClockToMinutes(a) - parseClockToMinutes(b));
+    return result;
   }, [courts, availableSlotsByCourtAndDay, activeDay, cells]);
 
   return (
@@ -89,146 +91,173 @@ export default function TurnosFijosGrid({
           Cargá al menos una cancha para poder configurar turnos fijos.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--admin-card-border)]">
-          <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-              <div className="grid" style={{ gridTemplateColumns: `72px repeat(${courts.length}, minmax(160px, 1fr))` }}>
-                <div className="sticky left-0 z-10 border-b border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-3" />
-                {courts.map((court) => (
-                  <div
-                    key={court.id}
-                    className="border-b border-r border-white/15 px-3 py-3 text-sm font-semibold text-white last:border-r-0"
-                    style={{ background: "var(--admin-brand-gradient)" }}
-                  >
+        <div className="overflow-x-auto">
+          <div
+            className="grid min-w-[640px] gap-3"
+            style={{ gridTemplateColumns: `repeat(${courts.length}, minmax(0, 1fr))` }}
+          >
+            {courts.map((court) => {
+              const slots = slotsByCourt[court.id] ?? [];
+              return (
+                <div key={court.id} className="flex flex-col gap-2">
+                  <div className="rounded-xl bg-[#0085FC] px-3 py-2.5 text-center text-sm font-bold text-white">
                     {court.name}
                   </div>
-                ))}
-              </div>
 
-              {rowTimes.map((time) => (
-                <div
-                  key={time}
-                  className="grid"
-                  style={{ gridTemplateColumns: `72px repeat(${courts.length}, minmax(160px, 1fr))` }}
-                >
-                  <div className="sticky left-0 z-10 flex items-center justify-end border-b border-r border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)]">
-                    {time}
-                  </div>
-                  {courts.map((court) => {
-                    const key = cellKey(activeDay, court.id, time);
-                    const cell = cells[key];
-                    const available = availableSlotsByCourtAndDay[court.id]?.[activeDay]?.includes(time) ?? false;
-                    return (
-                      <div key={key} className="border-b border-r border-[var(--border-subtle)] p-1.5 last:border-r-0">
-                        {cell ? (
-                          <OccupiedCell cell={cell} onEdit={() => setEditCell(cell)} />
-                        ) : available ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setModalCtx({ courtId: court.id, courtName: court.name, dayOfWeek: activeDay, time })
-                            }
-                            className="flex h-full min-h-16 w-full cursor-pointer items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-transparent text-[11px] font-medium text-[var(--text-tertiary)] transition-all duration-200 hover:border-[#0085FC]/50 hover:bg-[#0085FC]/[0.06] hover:text-[#0461C4] active:scale-[0.97] dark:hover:text-sky-300"
-                          >
-                            + Turno fijo
-                          </button>
-                        ) : (
-                          <div
-                            className="h-full min-h-16 w-full rounded-xl border border-rose-100 bg-rose-50 dark:border-rose-900/30 dark:bg-rose-950/20"
-                            aria-hidden="true"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {slots.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-4 text-center text-[11px] text-[var(--text-tertiary)]">
+                      Sin horarios disponibles.
+                    </p>
+                  ) : (
+                    slots.map((slot) => {
+                      const cell = cells[cellKey(activeDay, court.id, slot)];
+                      return cell ? (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() =>
+                            setEditCtx({ cell, courtId: court.id, courtName: court.name, dayOfWeek: activeDay, time: slot })
+                          }
+                          className="cursor-pointer rounded-xl border-2 border-[#0085FC] bg-[#0085FC]/10 px-3 py-3 text-left transition-colors duration-200 hover:bg-[#0085FC]/20"
+                        >
+                          <p className="font-mono text-[11px] text-[#0461C4] dark:text-sky-300">{slot}hs</p>
+                          <p className="mt-0.5 truncate text-sm font-bold text-[var(--text-primary)]">
+                            {cell.title || "Turno fijo"}
+                          </p>
+                        </button>
+                      ) : (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setModalCtx({ courtId: court.id, courtName: court.name, dayOfWeek: activeDay, time: slot })}
+                          className="cursor-pointer rounded-xl border border-dashed border-[var(--border-subtle)] bg-transparent px-3 py-3 text-center text-xs text-[var(--text-tertiary)] transition-colors duration-200 hover:border-[#0085FC] hover:text-[#0461C4] dark:hover:text-sky-300"
+                        >
+                          <span className="block font-mono">{slot}hs</span>
+                          <span className="text-[10px]">+ Turno fijo</span>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {modalCtx ? <CreateModal ctx={modalCtx} onClose={() => setModalCtx(null)} /> : null}
-      {editCell ? <EditModal cell={editCell} onClose={() => setEditCell(null)} /> : null}
+      {editCtx ? <EditModal ctx={editCtx} onClose={() => setEditCtx(null)} /> : null}
     </div>
   );
 }
 
-// Tamaño fijo: mismas dimensiones que la celda vacía (min-h-16), sin filas de
-// botones adentro. Al hacer click abre el modal de edición — el hover solo
-// oscurece el fondo, nunca cambia el tamaño de la celda.
-function OccupiedCell({ cell, onEdit }: { cell: GridCell; onEdit: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onEdit}
-      className="flex h-full min-h-16 w-full cursor-pointer flex-col items-start justify-center gap-0.5 overflow-hidden rounded-xl border px-2.5 py-2 text-left transition-colors duration-200 hover:brightness-95 dark:hover:brightness-110"
-      style={{ background: "rgba(0,133,252,0.08)", borderColor: "rgba(0,133,252,0.25)" }}
-    >
-      <p className="w-full truncate text-xs font-bold text-[#0461C4] dark:text-sky-300">{cell.title}</p>
-      {cell.players.length > 0 ? (
-        <p className="w-full truncate text-[10px] text-[var(--text-tertiary)]">
-          {cell.players.map((p) => p.name).join(", ")}
-        </p>
-      ) : null}
-      {cell.hasExceptionForNext ? (
-        <span className="w-full truncate text-[9px] font-semibold text-amber-600 dark:text-amber-400">
-          Libre el {cell.nextDateLabel}
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-function EditModal({ cell, onClose }: { cell: GridCell; onClose: () => void }) {
-  const [title, setTitle] = useState(cell.title);
-  const [selected, setSelected] = useState<GridPlayer[]>(cell.players);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<PlayerResult[]>([]);
+function CreateModal({ ctx, onClose }: { ctx: ModalContext; onClose: () => void }) {
+  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [actionPending, setActionPending] = useState(false);
+  const [pending, setPending] = useState(false);
+  const dayLabel = DAY_LABELS[ctx.dayOfWeek] ?? "";
 
-  async function searchPlayers(next: string) {
-    setQuery(next);
-    if (next.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from(DB_TABLES.profiles)
-      .select("user_id,name")
-      .ilike("name", `%${next.trim()}%`)
-      .limit(4);
-    setResults((data ?? []) as PlayerResult[]);
-    setLoading(false);
-  }
-
-  function addPlayer(player: PlayerResult) {
-    if (selected.some((p) => p.playerId === player.user_id) || selected.length >= 4) return;
-    setSelected((prev) => [...prev, { playerId: player.user_id, name: player.name?.trim() || "Jugador" }]);
-    setQuery("");
-    setResults([]);
-  }
-
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
+  async function handleCreate() {
+    if (!title.trim()) return;
     setError(null);
-    setSubmitting(true);
+    setPending(true);
     const fd = new FormData();
-    fd.set("fixed_slot_id", cell.fixedSlotId);
+    fd.set("court_id", ctx.courtId);
+    fd.set("day_of_week", String(ctx.dayOfWeek));
+    fd.set("start_time", ctx.time);
+    fd.set("duration_minutes", "90");
     fd.set("title", title.trim());
-    fd.set("player_ids", JSON.stringify(selected.map((p) => p.playerId)));
-    const res = await updateFixedSlot(fd);
-    setSubmitting(false);
+    fd.set("players_payload", "[]");
+    const res = await createFixedSlot(fd);
+    setPending(false);
     if (res?.error) setError(res.error);
     else onClose();
   }
 
-  async function handleNoVieneEstaSemana() {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backdropFilter: "blur(4px)", background: "rgba(3,23,51,0.45)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-[var(--admin-card-radius)] border border-[var(--admin-card-border)] bg-[var(--admin-card-bg)] p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-4">
+          <div>
+            <p className={adminKicker}>
+              {dayLabel} · {ctx.time}hs · {ctx.courtName}
+            </p>
+            <h2 className="mt-1 text-lg font-bold text-[var(--text-primary)]">Nuevo turno fijo</h2>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[var(--text-secondary)]">Nombre del jugador</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder='Ej: "Peralta"'
+              autoFocus
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2.5 text-[var(--text-primary)] outline-none focus:border-[#0085FC]"
+            />
+          </div>
+
+          <p className="text-xs text-[var(--text-tertiary)]">⏱ Duración: 90 minutos</p>
+
+          {error ? (
+            <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-[var(--border-subtle)] py-2.5 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!title.trim() || pending}
+              className="flex-1 rounded-xl bg-[#0085FC] py-2.5 text-sm font-bold text-white disabled:opacity-40"
+            >
+              {pending ? "Guardando..." : "Guardar turno"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditModal({ ctx, onClose }: { ctx: EditContext; onClose: () => void }) {
+  const { cell } = ctx;
+  const [editTitle, setEditTitle] = useState(cell.title);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
+  const dayLabel = DAY_LABELS[ctx.dayOfWeek] ?? "";
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    if (!editTitle.trim()) return;
+    setError(null);
+    setPending(true);
+    const fd = new FormData();
+    fd.set("fixed_slot_id", cell.fixedSlotId);
+    fd.set("title", editTitle.trim());
+    fd.set("player_ids", JSON.stringify(cell.players.map((p) => p.playerId)));
+    const res = await updateFixedSlot(fd);
+    setPending(false);
+    if (res?.error) setError(res.error);
+    else onClose();
+  }
+
+  async function handleException() {
     if (!confirm(`¿No viene el ${cell.nextDateLabel}? La cancha queda libre ese día.`)) return;
     setActionPending(true);
     const fd = new FormData();
@@ -239,7 +268,7 @@ function EditModal({ cell, onClose }: { cell: GridCell; onClose: () => void }) {
     onClose();
   }
 
-  async function handleDarDeBaja() {
+  async function handleDelete() {
     if (!confirm("¿Dar de baja este turno fijo? Se cancelan todos los partidos futuros.")) return;
     setActionPending(true);
     const fd = new FormData();
@@ -259,74 +288,22 @@ function EditModal({ cell, onClose }: { cell: GridCell; onClose: () => void }) {
         className="w-full max-w-md rounded-[var(--admin-card-radius)] border border-[var(--admin-card-border)] bg-[var(--admin-card-bg)] p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className={adminKicker}>Editar turno fijo</p>
-        <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">{cell.title}</h3>
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <p className={adminKicker}>EDITAR TURNO FIJO</p>
+            <h2 className="mt-1 text-lg font-bold text-[var(--text-primary)]">{cell.title}</h2>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              {dayLabel} · {ctx.time}hs · {ctx.courtName}
+            </p>
+          </div>
 
-        <form onSubmit={handleSave} className="mt-4 space-y-4">
-          <label className="block text-sm font-semibold text-[var(--text-secondary)]">
-            Título
+          <div>
+            <label className="text-xs font-semibold text-[var(--text-secondary)]">Nombre del jugador</label>
             <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2.5 text-[var(--text-primary)] outline-none focus:border-[#0085FC]"
             />
-          </label>
-
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-[var(--text-secondary)]">Jugadores</p>
-            {selected.length > 0 ? (
-              <ul className="space-y-1.5">
-                {selected.map((p) => (
-                  <li
-                    key={p.playerId}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-1.5"
-                  >
-                    <span className="flex-1 text-sm font-medium text-[var(--text-secondary)]">{p.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
-                      aria-label={`Quitar a ${p.name}`}
-                      className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg text-sm font-bold text-rose-600 transition-all duration-200 hover:bg-rose-500/10 active:scale-95 dark:text-rose-300"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-[var(--text-tertiary)]">Sin jugadores asignados.</p>
-            )}
-
-            {selected.length < 4 ? (
-              <>
-                <input
-                  value={query}
-                  onChange={(e) => void searchPlayers(e.target.value)}
-                  placeholder="Buscar por nombre para agregar"
-                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                />
-                {loading ? <p className="text-xs text-[var(--text-tertiary)]">Buscando...</p> : null}
-                {results.length > 0 ? (
-                  <ul className="space-y-1 rounded-xl border border-[var(--border-subtle)] p-2">
-                    {results
-                      .filter((r) => !selected.some((p) => p.playerId === r.user_id))
-                      .map((r) => (
-                        <li key={r.user_id} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-[var(--text-secondary)]">{r.name ?? "Jugador"}</span>
-                          <button
-                            type="button"
-                            onClick={() => addPlayer(r)}
-                            className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[#0085FC]/30 bg-[#0085FC]/10 px-3 text-xs font-semibold text-[#0461C4] transition-all duration-200 hover:bg-[#0085FC]/20 active:scale-95"
-                          >
-                            Agregar
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
-                ) : null}
-              </>
-            ) : null}
           </div>
 
           {error ? (
@@ -335,208 +312,46 @@ function EditModal({ cell, onClose }: { cell: GridCell; onClose: () => void }) {
             </p>
           ) : null}
 
-          <div className="flex items-center gap-2">
+          <button
+            type="submit"
+            disabled={!editTitle.trim() || pending}
+            className="w-full rounded-xl bg-[#0085FC] py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          >
+            {pending ? "Guardando..." : "Guardar cambios"}
+          </button>
+
+          <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
+            {cell.hasExceptionForNext ? (
+              <p className="text-center text-xs font-medium text-[var(--text-tertiary)]">
+                Ya está libre el {cell.nextDateLabel}.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleException}
+                disabled={actionPending}
+                className="w-full rounded-xl border border-amber-300/50 bg-amber-50/50 py-2.5 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-700/50 dark:bg-amber-950/20 dark:text-amber-300"
+              >
+                📅 No viene esta semana
+              </button>
+            )}
             <button
               type="button"
-              onClick={onClose}
-              className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border border-[var(--border-strong)] px-4 text-sm font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-subtle)] active:scale-[0.97]"
+              onClick={handleDelete}
+              disabled={actionPending}
+              className="w-full rounded-xl border border-rose-200/50 bg-rose-50/50 py-2.5 text-sm font-semibold text-rose-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-800/50 dark:bg-rose-950/20 dark:text-rose-400"
             >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg ${adminCTAPrimary} disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {submitting ? "Guardando..." : "Guardar cambios"}
+              🗑 Dar de baja permanentemente
             </button>
           </div>
-        </form>
 
-        <div className="my-4 border-t border-[var(--border-subtle)]" />
-
-        <div className="space-y-2">
-          {cell.hasExceptionForNext ? (
-            <p className="text-center text-xs font-medium text-[var(--text-tertiary)]">
-              Ya está libre el {cell.nextDateLabel}.
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={handleNoVieneEstaSemana}
-              disabled={actionPending}
-              className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] px-4 text-sm font-semibold text-[var(--admin-alert-warning-text)] transition-all duration-200 hover:brightness-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:brightness-125"
-            >
-              No viene esta semana
-            </button>
-          )}
           <button
             type="button"
-            onClick={handleDarDeBaja}
-            disabled={actionPending}
-            className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] px-4 text-sm font-semibold text-rose-700 transition-all duration-200 hover:brightness-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 dark:text-rose-300 dark:hover:brightness-125"
+            onClick={onClose}
+            className="w-full text-center text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
           >
-            Dar de baja
+            Cancelar
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CreateModal({ ctx, onClose }: { ctx: ModalContext; onClose: () => void }) {
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<PlayerResult[]>([]);
-  const [selected, setSelected] = useState<GridPlayer[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const playersPayload = useMemo(() => JSON.stringify(selected.map((p) => ({ playerId: p.playerId }))), [selected]);
-  const dayLabel = DAY_OPTIONS.find((d) => d.value === ctx.dayOfWeek)?.label ?? "";
-
-  async function searchPlayers(next: string) {
-    setQuery(next);
-    if (next.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from(DB_TABLES.profiles)
-      .select("user_id,name")
-      .ilike("name", `%${next.trim()}%`)
-      .limit(4);
-    setResults((data ?? []) as PlayerResult[]);
-    setLoading(false);
-  }
-
-  function addPlayer(player: PlayerResult) {
-    if (selected.some((p) => p.playerId === player.user_id) || selected.length >= 4) return;
-    setSelected((prev) => [...prev, { playerId: player.user_id, name: player.name?.trim() || "Jugador" }]);
-    setQuery("");
-    setResults([]);
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backdropFilter: "blur(4px)", background: "rgba(3,23,51,0.45)" }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-[var(--admin-card-radius)] border border-[var(--admin-card-border)] bg-[var(--admin-card-bg)] p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className={adminKicker}>
-          {dayLabel} · {ctx.time}hs · {ctx.courtName}
-        </p>
-        <h3 className="mt-1 text-lg font-bold text-[var(--text-primary)]">Nuevo turno fijo</h3>
-
-        <form
-          action={async (formData) => {
-            setError(null);
-            setSubmitting(true);
-            const res = await createFixedSlot(formData);
-            setSubmitting(false);
-            if (res?.error) setError(res.error);
-            else onClose();
-          }}
-          className="mt-4 space-y-4"
-        >
-          <input type="hidden" name="court_id" value={ctx.courtId} />
-          <input type="hidden" name="day_of_week" value={ctx.dayOfWeek} />
-          <input type="hidden" name="start_time" value={ctx.time} />
-
-          <label className="block text-sm font-semibold text-[var(--text-secondary)]">
-            Título del turno
-            <input
-              name="title"
-              required
-              placeholder='Ej: "Peralta"'
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
-          </label>
-
-          <label className="block text-sm font-semibold text-[var(--text-secondary)]">
-            Duración (min)
-            <input
-              name="duration_minutes"
-              defaultValue="90"
-              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
-          </label>
-
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-[var(--text-secondary)]">Agregar jugadores (opcional)</p>
-            <input
-              value={query}
-              onChange={(e) => void searchPlayers(e.target.value)}
-              placeholder="Buscar por nombre"
-              className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
-            {loading ? <p className="text-xs text-[var(--text-tertiary)]">Buscando...</p> : null}
-            {results.length > 0 ? (
-              <ul className="space-y-1 rounded-xl border border-[var(--border-subtle)] p-2">
-                {results.map((r) => (
-                  <li key={r.user_id} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-[var(--text-secondary)]">{r.name ?? "Jugador"}</span>
-                    <button
-                      type="button"
-                      onClick={() => addPlayer(r)}
-                      className="rounded-lg border border-[#0085FC]/30 bg-[#0085FC]/10 px-2 py-1 text-xs font-semibold text-[#0461C4]"
-                    >
-                      Agregar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {selected.length > 0 ? (
-              <ul className="space-y-1.5">
-                {selected.map((p) => (
-                  <li
-                    key={p.playerId}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-1.5"
-                  >
-                    <span className="flex-1 text-sm font-medium text-[var(--text-secondary)]">{p.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setSelected((prev) => prev.filter((x) => x.playerId !== p.playerId))}
-                      className="text-xs font-semibold text-rose-600 dark:text-rose-300"
-                    >
-                      Quitar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-[var(--text-tertiary)]">
-                Podés crear el turno sin jugadores y sumarlos después.
-              </p>
-            )}
-          </div>
-
-          <input type="hidden" name="players_payload" value={playersPayload} />
-
-          {error ? (
-            <p className="rounded-xl border border-rose-200 bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-[var(--border-strong)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)]"
-            >
-              Cancelar
-            </button>
-            <button type="submit" disabled={submitting} className={`flex-1 ${adminCTAPrimary} disabled:opacity-60`}>
-              {submitting ? "Guardando..." : "Guardar turno fijo"}
-            </button>
-          </div>
         </form>
       </div>
     </div>
