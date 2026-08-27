@@ -58,6 +58,8 @@ export async function evaluateClubSubscriptionGate(
     if (trialEndDate && Date.now() > new Date(trialEndDate).getTime()) {
       blockReason = "trial_expired";
     }
+  } else if (status === "trial_expired") {
+    blockReason = "trial_expired";
   } else if (status === "past_due") {
     blockReason = "past_due";
   } else if (status === "paused") {

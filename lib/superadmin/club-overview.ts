@@ -1,5 +1,5 @@
 /** Fila de `superadmin_clubs_overview` (vista analítica). */
-export type SubscriptionStatus = "pending" | "trial" | "active" | "past_due" | "paused";
+export type SubscriptionStatus = "pending" | "trial" | "active" | "past_due" | "paused" | "trial_expired";
 
 export type SuperadminClubOverview = {
   id: string;
@@ -59,6 +59,8 @@ export function clubHealthLabel(row: Pick<SuperadminClubOverview, "is_active" | 
       return { tone: "danger", label: "Pago fallido" };
     case "paused":
       return { tone: "warn", label: "Pausado" };
+    case "trial_expired":
+      return { tone: "danger", label: "Trial vencido" };
     default:
       return { tone: "idle", label: "Sin datos" };
   }
@@ -84,6 +86,8 @@ export function subscriptionBadge(
       return { tone: "danger", label: "Pago fallido" };
     case "paused":
       return { tone: "warn", label: "Pausado" };
+    case "trial_expired":
+      return { tone: "danger", label: "Trial vencido" };
     case "pending":
     default:
       return { tone: "idle", label: "Sin tarjeta" };
