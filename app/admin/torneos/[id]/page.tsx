@@ -58,50 +58,80 @@ type AdminWhatsAppTournamentInfo = {
   start_date: string;
   start_time: string;
   price_per_pair: number;
+  max_pairs: number;
   allowed_categories: string[] | null;
   guaranteed_matches: number | null;
   prizes: Array<{ position: number; description: string }> | null;
+  match_format: string | null;
+  match_duration_minutes: number | null;
+  club_name: string | null;
+};
+
+const ADMIN_WHATSAPP_TIPO_LABELS: Record<string, string> = {
+  americano: "AMERICANO",
+  eliminacion: "ELIMINACIÓN DIRECTA",
+  pena: "PEÑA",
 };
 
 function buildAdminWhatsAppMessage(torneo: AdminWhatsAppTournamentInfo, siteUrl: string): string {
-  const badge =
-    TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === torneo.tournament_type)
-      ?.badge ?? torneo.tournament_type;
+  const tipo = ADMIN_WHATSAPP_TIPO_LABELS[torneo.tournament_type] ?? torneo.tournament_type.toUpperCase();
+  const cats = torneo.allowed_categories;
+  const catLabel = cats?.length ? cats.join(" · ") : "TODAS LAS CATEGORÍAS";
+  const nombre = torneo.name.toUpperCase();
 
   const lines: string[] = [];
-  lines.push(`🎾 *${torneo.name}*`);
-  lines.push(badge);
+
+  lines.push(`🏆 ${nombre} - ${tipo} ${catLabel} 🏆`);
   lines.push("");
 
   if (torneo.start_date) {
-    const fecha = format(parseISO(torneo.start_date), "EEEE d 'de' MMMM yyyy", { locale: es });
-    const hora = torneo.start_time ? ` a las ${String(torneo.start_time).slice(0, 5)}hs` : "";
-    lines.push(`📅 ${fecha}${hora}`);
+    const fecha = format(parseISO(torneo.start_date), "EEEE d 'de' MMMM", { locale: es });
+    lines.push(`📅 Día: ${fecha.charAt(0).toUpperCase() + fecha.slice(1)}`);
+  }
+  if (torneo.start_time) {
+    lines.push(`🕐 Horario: ${String(torneo.start_time).slice(0, 5)}hs`);
   }
 
-  if (torneo.allowed_categories?.length) {
-    lines.push(`🎯 Categorías: ${torneo.allowed_categories.join(" · ")}`);
+  if (torneo.club_name) {
+    lines.push(`📍 Lugar: ${torneo.club_name}`);
   }
 
-  if (torneo.price_per_pair > 0) {
-    lines.push(`💰 Inscripción: $${Number(torneo.price_per_pair).toLocaleString("es-AR")} por pareja`);
+  if (torneo.match_format) {
+    const formatLabel =
+      torneo.match_format === "set"
+        ? "1 set"
+        : torneo.match_format === "tres_sets"
+          ? "Al mejor de 3 sets"
+          : torneo.match_format === "tiempo"
+            ? `${torneo.match_duration_minutes ?? 20} minutos`
+            : torneo.match_format;
+    lines.push(`🎾 Metodología: ${formatLabel}`);
   }
 
   if (torneo.guaranteed_matches) {
-    lines.push(`🎾 ${torneo.guaranteed_matches} partidos garantizados`);
+    lines.push(`⚡ Partidos garantizados: ${torneo.guaranteed_matches} por pareja`);
   }
 
   if (torneo.prizes?.length) {
     lines.push("");
-    lines.push("🏆 *Premios:*");
+    lines.push("🏅 Premios:");
     for (const p of torneo.prizes) {
-      const emoji = p.position === 1 ? "🥇" : p.position === 2 ? "🥈" : "🥉";
-      lines.push(`${emoji} ${p.description}`);
+      const emoji = p.position === 1 ? "🥇" : p.position === 2 ? "🥈" : p.position === 3 ? "🥉" : "🏅";
+      lines.push(`   ${emoji} ${p.position}° puesto: ${p.description}`);
     }
   }
 
+  if (torneo.price_per_pair > 0) {
+    lines.push("");
+    lines.push(`💰 Inscripción: $${Number(torneo.price_per_pair).toLocaleString("es-AR")} por pareja`);
+  }
+
+  if (torneo.max_pairs > 0) {
+    lines.push(`👥 Cupos: ${torneo.max_pairs} parejas`);
+  }
+
   lines.push("");
-  lines.push("👇 Inscribite acá:");
+  lines.push("📲 Inscribite acá:");
   lines.push(`${siteUrl}/torneos/${torneo.id}`);
 
   return lines.join("\n");
@@ -116,7 +146,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes, guaranteed_matches",
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes, guaranteed_matches, clubs(name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -155,8 +185,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     contact_phone: string | null;
     prizes: Array<{ position: number; description: string }> | null;
     guaranteed_matches: number | null;
+    clubs: { name: string | null } | { name: string | null }[] | null;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
+
+  const clubNameRow = Array.isArray(tour.clubs) ? (tour.clubs[0] ?? null) : tour.clubs;
+  const clubName = clubNameRow?.name ?? null;
 
   const service = createServiceClient();
   const [{ data: regs }, { data: matches }, { data: courts }] =
@@ -611,9 +645,13 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
                 start_date: tour.start_date,
                 start_time: tour.start_time,
                 price_per_pair: tour.price_per_pair,
+                max_pairs: tour.max_pairs,
                 allowed_categories: tour.allowed_categories,
                 guaranteed_matches: tour.guaranteed_matches,
                 prizes: tour.prizes,
+                match_format: tour.match_format,
+                match_duration_minutes: tour.match_duration_minutes,
+                club_name: clubName,
               },
               siteUrl,
             ),
