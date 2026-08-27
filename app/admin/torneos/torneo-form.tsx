@@ -200,6 +200,14 @@ export default function TorneoFormInline({
   const canStep2 = Boolean(name.trim() && startDate && totalSelectedSlots > 0);
   const canStep4 = acceptsMp || acceptsCash || acceptsTransfer;
 
+  function handleRequiresDepositChange(value: boolean) {
+    setRequiresDeposit(value);
+    if (value) {
+      setAcceptsCash(false);
+      setAcceptsTransfer(false);
+    }
+  }
+
   function toggleCategory(cat: string) {
     setSelectedCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
@@ -925,10 +933,13 @@ export default function TorneoFormInline({
               </span>
             </label>
 
-            <label className="flex cursor-pointer items-center gap-3">
+            <label
+              className={`flex items-center gap-3 ${requiresDeposit ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+            >
               <input
                 type="checkbox"
                 checked={acceptsCash}
+                disabled={requiresDeposit}
                 onChange={(e) => setAcceptsCash(e.target.checked)}
               />
               <span className="text-sm font-semibold text-[var(--text-primary)]">
@@ -936,10 +947,13 @@ export default function TorneoFormInline({
               </span>
             </label>
 
-            <label className="flex cursor-pointer items-center gap-3">
+            <label
+              className={`flex items-center gap-3 ${requiresDeposit ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+            >
               <input
                 type="checkbox"
                 checked={acceptsTransfer}
+                disabled={requiresDeposit}
                 onChange={(e) => setAcceptsTransfer(e.target.checked)}
               />
               <span className="text-sm font-semibold text-[var(--text-primary)]">
@@ -969,19 +983,29 @@ export default function TorneoFormInline({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setRequiresDeposit(false)}
+                  onClick={() => handleRequiresDepositChange(false)}
                   className={chip(!requiresDeposit)}
                 >
                   No — pago completo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRequiresDeposit(true)}
+                  onClick={() => handleRequiresDepositChange(true)}
                   className={chip(requiresDeposit)}
                 >
                   Sí — seña parcial
                 </button>
               </div>
+              {requiresDeposit ? (
+                <div className="rounded-2xl border border-amber-300/30 bg-amber-400/[0.06] p-4">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    ⚠️ Con seña obligatoria solo se acepta Mercado Pago
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                    Para aceptar efectivo o transferencia, desactivá la seña parcial.
+                  </p>
+                </div>
+              ) : null}
               {requiresDeposit ? (
                 <div className="flex items-center gap-2">
                   <input

@@ -26,12 +26,12 @@ export const dynamic = "force-dynamic";
 
 type WhatsAppTournamentInfo = {
   name: string;
+  tournament_type: string;
   start_date: string;
   start_time: string;
-  price_per_pair: number;
+  guaranteed_matches: number | null;
   allowed_categories: string[] | null;
   prizes: Array<{ position: number; description: string }> | null;
-  clubs: { location: string | null; city: string | null } | null;
 };
 
 function buildWhatsAppMessage(
@@ -39,38 +39,47 @@ function buildWhatsAppMessage(
   tournamentId: string,
   siteUrl: string,
 ): string {
-  const lines = [
-    `🏆 *${torneo.name}*`,
-    `📅 ${format(parseISO(torneo.start_date), "EEEE d 'de' MMMM yyyy", { locale: es })}${
-      torneo.start_time
-        ? ` a las ${String(torneo.start_time).slice(0, 5)}hs`
-        : ""
-    }`,
-  ];
-  if (torneo.clubs?.location) {
-    lines.push(
-      `📍 ${[torneo.clubs.location, torneo.clubs.city].filter(Boolean).join(", ")}`,
-    );
-  }
+  const badge =
+    TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === torneo.tournament_type)
+      ?.badge ?? torneo.tournament_type;
+
+  const lines: string[] = [];
+
+  lines.push(`🎾 *${torneo.name}*`);
+  lines.push(badge);
+  lines.push("");
+
+  const fecha = torneo.start_date
+    ? format(parseISO(torneo.start_date), "EEEE d 'de' MMMM yyyy", { locale: es })
+    : null;
+  const hora = torneo.start_time ? `${String(torneo.start_time).slice(0, 5)}hs` : null;
+  if (fecha) lines.push(`📅 ${fecha}${hora ? ` a las ${hora}` : ""}`);
+
   if (torneo.allowed_categories?.length) {
     lines.push(`🎯 Categorías: ${torneo.allowed_categories.join(" · ")}`);
+  } else {
+    lines.push("🎯 Categorías: Todas");
   }
-  if (torneo.price_per_pair > 0) {
-    lines.push(
-      `💰 Inscripción: $${torneo.price_per_pair.toLocaleString("es-AR")} por pareja`,
-    );
+
+  if (torneo.guaranteed_matches) {
+    const n = torneo.guaranteed_matches;
+    lines.push(`🎾 ${n} partido${n !== 1 ? "s" : ""} garantizado${n !== 1 ? "s" : ""} por pareja`);
   }
+
   if (torneo.prizes?.length) {
-    lines.push(`🏆 Premios:`);
+    lines.push("");
+    lines.push("🏆 *Premios:*");
     for (const p of torneo.prizes) {
-      lines.push(
-        `  ${p.position === 1 ? "🥇" : p.position === 2 ? "🥈" : "🥉"} ${p.description}`,
-      );
+      const emoji =
+        p.position === 1 ? "🥇" : p.position === 2 ? "🥈" : p.position === 3 ? "🥉" : "🏅";
+      lines.push(`${emoji} ${p.description}`);
     }
   }
+
   lines.push("");
-  lines.push("Inscribite acá 👇");
+  lines.push("👇 Inscribite acá:");
   lines.push(`${siteUrl}/torneos/${tournamentId}`);
+
   return lines.join("\n");
 }
 
@@ -85,7 +94,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, what_includes, game_format, is_individual, allowed_categories, prizes, contact_phone, accepts_mp, accepts_cash, accepts_transfer, transfer_alias, clubs(name, logo_url, location, city, province)",
+      "id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, what_includes, game_format, is_individual, allowed_categories, prizes, contact_phone, accepts_mp, accepts_cash, accepts_transfer, transfer_alias, guaranteed_matches, clubs(name, logo_url, location, city, province)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -140,6 +149,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
     accepts_cash: boolean;
     accepts_transfer: boolean;
     transfer_alias: string | null;
+    guaranteed_matches: number | null;
     clubs: {
       name: string | null;
       logo_url: string | null;
@@ -263,6 +273,10 @@ export default async function TorneoDetallePage({ params }: PageProps) {
       )
     : priceDisplay;
   const saldoAmount = priceDisplay - depositAmount;
+  // Con seña obligatoria por MP solo se acepta ese método (ver torneo-form.tsx
+  // paso 4): se recalcula acá tambien por si el torneo se creo antes de ese fix.
+  const effectiveAcceptsCash = tour.accepts_cash && !tour.requires_deposit;
+  const effectiveAcceptsTransfer = tour.accepts_transfer && !tour.requires_deposit;
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
     "https://www.padelibre.online";
@@ -460,10 +474,10 @@ export default async function TorneoDetallePage({ params }: PageProps) {
                 : " (pago completo)"}
             </p>
           ) : null}
-          {tour.accepts_cash ? (
+          {effectiveAcceptsCash ? (
             <p className="text-sm text-[var(--text-secondary)]">✓ Efectivo en el club</p>
           ) : null}
-          {tour.accepts_transfer ? (
+          {effectiveAcceptsTransfer ? (
             <p className="text-sm text-[var(--text-secondary)]">
               ✓ Transferencia
               {tour.transfer_alias ? ` — Alias: ${tour.transfer_alias}` : ""}
@@ -488,8 +502,8 @@ export default async function TorneoDetallePage({ params }: PageProps) {
               isIndividual={tour.is_individual}
               canRegister={canRegister}
               acceptsMp={tour.accepts_mp}
-              acceptsCash={tour.accepts_cash}
-              acceptsTransfer={tour.accepts_transfer}
+              acceptsCash={effectiveAcceptsCash}
+              acceptsTransfer={effectiveAcceptsTransfer}
               transferAlias={tour.transfer_alias}
             />
           )}
