@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { ChevronLeft } from "lucide-react";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
@@ -9,12 +11,32 @@ import {
   adminCTADangerCompact,
   adminCTAPrimary,
   adminEmptyState,
+  adminKicker,
   adminPressable,
 } from "@/components/admin/admin-premium";
 import type { OwnerClub } from "@/lib/admin/owner-context";
+import { saveClubHours } from "@/app/admin/config/actions";
 import CourtImageUploader from "./court-image-uploader";
 import NewCourtForm from "./new-court-form";
-import { deleteCourt, updateCourt } from "./actions";
+import CourtTimeRangesClient, { type CourtTimeRange } from "./[id]/horarios/court-time-ranges-client";
+import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateCourt } from "./actions";
+
+export type { CourtTimeRange };
+
+// Debe coincidir con VALID_OPEN en app/admin/config/actions.ts (no exportable
+// desde ahí porque es un archivo "use server" — solo puede exportar funciones async).
+const VALID_OPEN_OPTIONS = [
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+] as const;
 
 export type CourtRow = {
   id: string;
@@ -42,6 +64,9 @@ export type CanchasHubClientProps = {
   blockedCourtIds: string[];
   closedDays: ClosedDayRow[];
   slotPricesByCourt: Array<[string, CourtSlotPrice[]]>;
+  clubOpenTime: string;
+  clubCloseTime: string;
+  timeRangesByCourt: Array<[string, CourtTimeRange[]]>;
   errorMessage: string;
 };
 
@@ -104,6 +129,10 @@ export default function CanchasHubClient(props: CanchasHubClientProps) {
 
   if (view === "canchas") {
     return <CanchasView {...props} onBack={() => setView("hub")} />;
+  }
+
+  if (view === "horarios") {
+    return <HorariosView {...props} onBack={() => setView("hub")} />;
   }
 
   return <PlaceholderView onBack={() => setView("hub")} />;
@@ -308,6 +337,157 @@ function CourtEditForm({ court }: { court: CourtRow }) {
         </button>
       </div>
     </form>
+  );
+}
+
+function HorariosView({
+  courts,
+  mainClubId,
+  closedDays,
+  clubOpenTime,
+  clubCloseTime,
+  timeRangesByCourt,
+  onBack,
+}: CanchasHubClientProps & { onBack: () => void }) {
+  const [expandedCourt, setExpandedCourt] = useState<string | null>(null);
+  const rangesMap = new Map(timeRangesByCourt);
+  const todayYmd = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <BackButton onBack={onBack} />
+      <AdminPageHeader
+        kicker="Canchas"
+        title="Horarios"
+        subtitle="Configurá cuándo está abierto el club y cada cancha"
+      />
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Horario general del club</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Horario de apertura</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Se aplica a todas las canchas que no tengan horario propio configurado.
+        </p>
+
+        <form action={saveClubHours} className="mt-4 space-y-3">
+          <input type="hidden" name="club_id" value={mainClubId} />
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">Hora de apertura</span>
+              <select
+                name="open_time"
+                defaultValue={VALID_OPEN_OPTIONS.includes(clubOpenTime as (typeof VALID_OPEN_OPTIONS)[number]) ? clubOpenTime : "09:00"}
+                className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              >
+                {VALID_OPEN_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t} hs
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <p className="text-xs text-[var(--text-tertiary)]">El sistema genera turnos de 90 min hasta las 00:00.</p>
+
+          <button type="submit" className={adminCTAPrimary}>
+            Guardar horario
+          </button>
+        </form>
+      </div>
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Días cerrados</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Días cerrados del club</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">El club no ofrecerá turnos en esas fechas.</p>
+
+        <form action={addClubClosedDayAction} className="mt-4 flex flex-wrap gap-2">
+          <input type="hidden" name="club_id" value={mainClubId} />
+          <input
+            type="date"
+            name="closed_date"
+            required
+            min={todayYmd}
+            className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+          />
+          <input
+            type="text"
+            name="reason"
+            placeholder="Motivo (opcional)"
+            className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+          />
+          <button type="submit" className={adminCTAPrimary}>
+            Marcar como cerrado
+          </button>
+        </form>
+
+        {closedDays.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--text-tertiary)]">No hay días cerrados futuros cargados.</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-2">
+            {closedDays.map((day) => (
+              <div
+                key={day.id}
+                className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] px-3 py-2"
+              >
+                <div>
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">
+                    {format(parseISO(`${day.closed_date}T12:00:00`), "d 'de' MMMM yyyy", { locale: es })}
+                  </span>
+                  {day.reason ? <span className="ml-2 text-xs text-[var(--text-tertiary)]">· {day.reason}</span> : null}
+                </div>
+                <form action={removeClubClosedDayAction}>
+                  <input type="hidden" name="closed_day_id" value={day.id} />
+                  <button type="submit" className="text-xs font-semibold text-rose-500 hover:text-rose-700">
+                    Eliminar
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Horarios por cancha</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Horarios específicos por cancha</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Por defecto todas las canchas usan el horario general del club. Podés personalizar el horario de cada
+          cancha si es necesario.
+        </p>
+
+        {courts.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--text-tertiary)]">Todavía no tenés canchas cargadas.</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3">
+            {courts.map((court) => (
+              <div key={court.id}>
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-[var(--text-primary)]">{court.name ?? "Cancha"}</p>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCourt(expandedCourt === court.id ? null : court.id)}
+                    className="text-sm font-semibold text-[#0085FC] hover:underline"
+                  >
+                    {expandedCourt === court.id ? "Cerrar" : "Personalizar horario"}
+                  </button>
+                </div>
+                {expandedCourt === court.id ? (
+                  <div className="mt-3">
+                    <CourtTimeRangesClient
+                      courtId={court.id}
+                      clubOpen={clubOpenTime}
+                      clubClose={clubCloseTime}
+                      initialRanges={rangesMap.get(court.id) ?? []}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

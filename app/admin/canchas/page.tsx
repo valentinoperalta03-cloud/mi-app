@@ -3,7 +3,7 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import CanchasHubClient, { type ClosedDayRow, type CourtRow, type CourtSlotPrice } from "./canchas-hub-client";
+import CanchasHubClient, { type ClosedDayRow, type CourtRow, type CourtSlotPrice, type CourtTimeRange } from "./canchas-hub-client";
 
 export default async function AdminCanchasPage({
   searchParams,
@@ -77,6 +77,31 @@ export default async function AdminCanchasPage({
     : { data: [] };
   const closedDays = (closedDaysRaw ?? []) as ClosedDayRow[];
 
+  const { data: clubHoursRow } = mainClubId
+    ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", mainClubId).maybeSingle()
+    : { data: null };
+  const clubOpenTime = String((clubHoursRow as { open_time?: string | null } | null)?.open_time ?? "").trim().slice(0, 5);
+  const clubCloseTime = String((clubHoursRow as { close_time?: string | null } | null)?.close_time ?? "").trim().slice(0, 5);
+
+  const { data: timeRangesRaw } = courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtTimeRanges)
+        .select("id,court_id,day_of_week,open_time,close_time")
+        .in("court_id", courtIds)
+    : { data: [] };
+  const timeRangesByCourt = new Map<string, CourtTimeRange[]>();
+  for (const row of (timeRangesRaw ?? []) as Array<{
+    id: string;
+    court_id: string;
+    day_of_week: number;
+    open_time: string;
+    close_time: string;
+  }>) {
+    const list = timeRangesByCourt.get(row.court_id) ?? [];
+    list.push({ id: row.id, day_of_week: row.day_of_week, open_time: row.open_time, close_time: row.close_time });
+    timeRangesByCourt.set(row.court_id, list);
+  }
+
   return (
     <CanchasHubClient
       courts={courts}
@@ -88,6 +113,9 @@ export default async function AdminCanchasPage({
       blockedCourtIds={Array.from(blockedCourtIds)}
       closedDays={closedDays}
       slotPricesByCourt={Array.from(slotPricesByCourt.entries())}
+      clubOpenTime={clubOpenTime}
+      clubCloseTime={clubCloseTime}
+      timeRangesByCourt={Array.from(timeRangesByCourt.entries())}
       errorMessage={error?.message ?? errorParam}
     />
   );
