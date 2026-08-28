@@ -122,7 +122,7 @@ function slotsInRange(from: string, to: string): string[] {
   let cur = fh * 60 + fm;
   const end = th * 60 + tm;
   while (cur < end) {
-    const h = Math.floor(cur / 60).toString().padStart(2, "0");
+    const h = (Math.floor(cur / 60) % 24).toString().padStart(2, "0");
     const m = (cur % 60).toString().padStart(2, "0");
     slots.push(`${h}:${m}`);
     cur += 90;
