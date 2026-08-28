@@ -11,6 +11,9 @@ function enc(msg: string) {
 }
 
 const VALID_OPEN = new Set([
+  "06:00",
+  "06:30",
+  "07:00",
   "07:30",
   "08:00",
   "08:30",

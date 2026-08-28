@@ -28,6 +28,9 @@ export type { CourtTimeRange, CourtPriceRow };
 // Debe coincidir con VALID_OPEN en app/admin/config/actions.ts (no exportable
 // desde ahí porque es un archivo "use server" — solo puede exportar funciones async).
 const VALID_OPEN_OPTIONS = [
+  "06:00",
+  "06:30",
+  "07:00",
   "07:30",
   "08:00",
   "08:30",
@@ -108,6 +111,14 @@ export default function CanchasHubClient(props: CanchasHubClientProps) {
           title="Mis canchas"
           subtitle="Todo lo que necesitás para gestionar tus canchas"
         />
+        <div className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/[0.04] p-4">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">📋 ¿Por dónde empezar?</p>
+          <ol className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
+            <li>1️⃣ <strong>Mis canchas</strong> — Creá y configurá cada cancha del club</li>
+            <li>2️⃣ <strong>Horarios</strong> — Definí cuándo está abierto el club y cada cancha</li>
+            <li>3️⃣ <strong>Precios y seña</strong> — Configurá los precios por horario y la seña</li>
+          </ol>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           {HUB_CARDS.map((card) => (
             <button
