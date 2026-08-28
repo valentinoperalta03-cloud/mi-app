@@ -104,6 +104,80 @@ export async function saveCourtHourlyPrices(formData: FormData): Promise<void> {
   redirect(`/admin/canchas/${courtId}/horarios?price_saved=1`);
 }
 
+export type BulkPriceInput = {
+  courtIds: string[];
+  days: number[];
+  fromTime: string;
+  toTime: string;
+  price: number;
+};
+
+export type BulkPriceState = { ok: boolean; error?: string; updated?: number };
+
+/** Genera los inicios de turno de 90 en 90 min entre from (inclusive) y to (exclusive). */
+function slotsInRange(from: string, to: string): string[] {
+  const slots: string[] = [];
+  const [fh, fm] = from.split(":").map(Number);
+  const [th, tm] = to.split(":").map(Number);
+  let cur = fh * 60 + fm;
+  const end = th * 60 + tm;
+  while (cur < end) {
+    const h = Math.floor(cur / 60).toString().padStart(2, "0");
+    const m = (cur % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    cur += 90;
+  }
+  return slots;
+}
+
+/** Aplica un mismo precio a varias canchas/días/franja de una sola vez (mismo destino que saveCourtHourlyPrices: court_schedules). */
+export async function applyBulkPricesAction(input: BulkPriceInput): Promise<BulkPriceState> {
+  const { courtIds, days, fromTime, toTime, price } = input;
+
+  if (!courtIds.length) return { ok: false, error: "Seleccioná al menos una cancha." };
+  if (!days.length) return { ok: false, error: "Seleccioná al menos un día." };
+  if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+    return { ok: false, error: "Día inválido." };
+  }
+  if (!Number.isFinite(price) || price <= 0) return { ok: false, error: "Precio inválido." };
+  const slots = slotsInRange(fromTime, toTime);
+  if (slots.length === 0) return { ok: false, error: "Franja horaria inválida." };
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) return { ok: false, error: "Sesión requerida." };
+  if (!courtIds.every((id) => ctx.courtIds.includes(id))) {
+    return { ok: false, error: "Alguna cancha no está autorizada." };
+  }
+
+  const rows = courtIds.flatMap((courtId) =>
+    days.flatMap((day) =>
+      slots.map((slot) => ({
+        court_id: courtId,
+        day_of_week: day,
+        start_time: slot,
+        end_time: minutesToClock(Math.min(parseClockToMinutes(slot) + 90, 24 * 60)),
+        price_override: price,
+        range_name: null,
+        open_time: null,
+        close_time: null,
+      }))
+    )
+  );
+
+  const { error } = await supabase
+    .from(DB_TABLES.courtSchedules)
+    .upsert(rows as never, { onConflict: "court_id,day_of_week,start_time" });
+  if (error) return { ok: false, error: error.message };
+
+  for (const courtId of courtIds) {
+    revalidatePath(`/admin/canchas/${courtId}/horarios`);
+  }
+  revalidatePath("/admin/canchas");
+
+  return { ok: true, updated: rows.length };
+}
+
 export type ApplyPricesState = { ok: boolean; message?: string };
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];

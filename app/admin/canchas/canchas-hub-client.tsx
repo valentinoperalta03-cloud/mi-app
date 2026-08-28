@@ -21,7 +21,24 @@ import CourtImageUploader from "./court-image-uploader";
 import NewCourtForm from "./new-court-form";
 import CourtTimeRangesClient, { type CourtTimeRange } from "./[id]/horarios/court-time-ranges-client";
 import CourtPricesClient, { type CourtPriceRow } from "./[id]/horarios/court-prices-client";
+import { applyBulkPricesAction } from "./[id]/precios/actions";
 import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
+
+// Slots de 90 en 90 desde 06:00 hasta 23:30.
+const ALL_SLOTS = Array.from({ length: 18 }, (_, i) => {
+  const totalMin = 360 + i * 90;
+  const h = Math.floor(totalMin / 60).toString().padStart(2, "0");
+  const m = (totalMin % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+});
+
+function chip(active: boolean) {
+  return `rounded-xl border px-3 py-1.5 text-sm font-semibold transition ${
+    active
+      ? "border-[#0085FC]/30 bg-[#0085FC]/10 text-[#0085FC]"
+      : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+  }`;
+}
 
 export type { CourtTimeRange, CourtPriceRow };
 
@@ -523,6 +540,39 @@ function PreciosView({
   const rangesMap = new Map(timeRangesByCourt);
   const pricesMap = new Map(priceSchedulesByCourt);
 
+  const [bulkCourts, setBulkCourts] = useState<string[]>([]);
+  const [bulkDays, setBulkDays] = useState<number[]>([]);
+  const [bulkFrom, setBulkFrom] = useState("08:00");
+  const [bulkTo, setBulkTo] = useState("17:00");
+  const [bulkPrice, setBulkPrice] = useState(0);
+  const [bulkPending, setBulkPending] = useState(false);
+
+  function toggleBulkCourt(id: string) {
+    setBulkCourts((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  }
+  function toggleBulkDay(day: number) {
+    setBulkDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  }
+
+  async function handleApplyBulkPrices() {
+    setBulkPending(true);
+    const result = await applyBulkPricesAction({
+      courtIds: bulkCourts,
+      days: bulkDays,
+      fromTime: bulkFrom,
+      toTime: bulkTo,
+      price: bulkPrice,
+    });
+    setBulkPending(false);
+    if (result.ok) {
+      alert(`✓ Precios actualizados en ${result.updated} turnos`);
+      setBulkCourts([]);
+      setBulkDays([]);
+    } else {
+      alert(result.error ?? "Error al aplicar precios");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <BackButton onBack={onBack} />
@@ -545,6 +595,126 @@ function PreciosView({
             Guardar
           </button>
         </form>
+      </div>
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Configuración masiva de precios</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Aplicar precio a múltiples canchas y días</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Seleccioná canchas, días y franja horaria para aplicar un precio de una sola vez.
+        </p>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className={adminKicker}>Canchas</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkCourts(courts.map((c) => c.id))}
+                className={chip(bulkCourts.length === courts.length && courts.length > 0)}
+              >
+                Todas las canchas
+              </button>
+              {courts.map((court) => (
+                <button
+                  key={court.id}
+                  type="button"
+                  onClick={() => toggleBulkCourt(court.id)}
+                  className={chip(bulkCourts.includes(court.id))}
+                >
+                  {court.name ?? "Cancha"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={adminKicker}>Días</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkDays([0, 1, 2, 3, 4, 5, 6])}
+                className={chip(bulkDays.length === 7)}
+              >
+                Todos los días
+              </button>
+              {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((label, i) => (
+                <button key={i} type="button" onClick={() => toggleBulkDay(i)} className={chip(bulkDays.includes(i))}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={adminKicker}>Desde</label>
+              <select
+                value={bulkFrom}
+                onChange={(e) => setBulkFrom(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              >
+                {ALL_SLOTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}hs
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={adminKicker}>Hasta</label>
+              <select
+                value={bulkTo}
+                onChange={(e) => setBulkTo(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              >
+                {ALL_SLOTS.filter((s) => s > bulkFrom).map((s) => (
+                  <option key={s} value={s}>
+                    {s}hs
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={adminKicker}>Precio por turno (ARS)</label>
+            <input
+              type="number"
+              min={0}
+              step={100}
+              value={bulkPrice}
+              onChange={(e) => setBulkPrice(Number(e.target.value))}
+              placeholder="Ej: 15000"
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
+            />
+          </div>
+
+          {bulkCourts.length > 0 && bulkDays.length > 0 && bulkPrice > 0 ? (
+            <div className="rounded-xl border border-[#0085FC]/20 bg-[#0085FC]/[0.04] p-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Se van a actualizar los turnos de <strong>{bulkFrom}hs a {bulkTo}hs</strong> en{" "}
+                <strong>
+                  {bulkCourts.length} cancha{bulkCourts.length !== 1 ? "s" : ""}
+                </strong>{" "}
+                para{" "}
+                <strong>
+                  {bulkDays.length} día{bulkDays.length !== 1 ? "s" : ""}
+                </strong>{" "}
+                con precio <strong>${bulkPrice.toLocaleString("es-AR")}</strong>.
+              </p>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleApplyBulkPrices}
+            disabled={bulkCourts.length === 0 || bulkDays.length === 0 || bulkPrice === 0 || bulkPending}
+            className={`w-full ${adminCTAPrimary} disabled:opacity-40`}
+          >
+            {bulkPending ? "Aplicando..." : "✓ Aplicar precios"}
+          </button>
+        </div>
       </div>
 
       <div className={adminCard}>
