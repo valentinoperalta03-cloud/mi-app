@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { utcMsForArgentinaWallClock, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
+import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 
@@ -170,6 +171,7 @@ export async function GET(req: Request) {
         log.warn({ event: "cron.incomplete_matches.cancel_skipped", matchId: m.id, err: cancelErr });
         continue;
       }
+      await insertFixedSlotExceptionIfNeeded(m.id);
 
       const { data: courtRow2 } = await supabase
         .from(DB_TABLES.courts)
