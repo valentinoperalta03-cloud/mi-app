@@ -222,10 +222,29 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
 
   useEffect(() => {
     if (!canReserveOnline) return;
-    startLoadingSlots(async () => {
-      const result = await getClubAvailability(club.id, selectedDate);
-      setAvailability(result);
-    });
+
+    function fetchAvailability(date: string) {
+      startLoadingSlots(async () => {
+        const result = await getClubAvailability(club.id, date);
+        setAvailability(result);
+      });
+    }
+
+    fetchAvailability(selectedDate);
+
+    function handleFocus() {
+      fetchAvailability(selectedDate);
+    }
+    function handleVisibility() {
+      if (document.visibilityState === "visible") fetchAvailability(selectedDate);
+    }
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [canReserveOnline, club.id, selectedDate]);
 
   const courtsById = useMemo(() => new Map(courts.map((c) => [c.id, c])), [courts]);
