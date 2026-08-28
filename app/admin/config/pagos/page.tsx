@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminFlashMessage from "@/components/admin/admin-flash-message";
 import AdminPageHeader from "@/components/admin/admin-page-header";
-import { adminAccentBar, adminCard } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminCard, adminKicker, adminPressable } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -99,6 +101,22 @@ export default async function AdminConfigPagosPage({ searchParams }: PageProps) 
           />
         </div>
       </section>
+
+      <Link
+        href="/admin/config/mp-connect"
+        className={`${adminCard} ${adminPressable} flex items-center justify-between gap-4`}
+      >
+        <div>
+          <p className={adminKicker}>Mercado Pago</p>
+          <p className="font-bold text-[var(--text-primary)] mt-1">
+            Conectar Mercado Pago
+          </p>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            Conectá tu cuenta de MP para recibir pagos online de reservas y torneos.
+          </p>
+        </div>
+        <ChevronRight size={20} className="shrink-0 text-[var(--text-tertiary)]" />
+      </Link>
     </div>
   );
 }
