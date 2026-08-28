@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { skipTrainingsAction } from "@/app/admin/config/actions";
 import type { AdminOnboardingStatus } from "@/lib/admin/onboarding-status";
 
 export type OnboardingChecklistProps = {
@@ -114,6 +115,16 @@ export default function OnboardingChecklist({ status }: OnboardingChecklistProps
                 </p>
                 {!phase.completed ? (
                   <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{phase.description}</p>
+                ) : null}
+                {phase.id === "entrenamientos" && !phase.completed && !isLocked ? (
+                  <form action={skipTrainingsAction}>
+                    <button
+                      type="submit"
+                      className="mt-1 text-xs text-[var(--text-tertiary)] underline hover:text-[var(--text-secondary)]"
+                    >
+                      No registramos entrenamientos
+                    </button>
+                  </form>
                 ) : null}
               </div>
 

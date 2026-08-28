@@ -152,3 +152,21 @@ export async function saveCancellationPolicy(formData: FormData) {
   revalidatePath("/admin/config/informacion");
   redirect("/admin/config/informacion?policy_saved=1");
 }
+
+export async function skipTrainingsAction(): Promise<void> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.length) redirect("/admin/dashboard");
+
+  const clubId = ctx.clubIds[0];
+
+  await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .update({ skip_trainings: true })
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/clases");
+}

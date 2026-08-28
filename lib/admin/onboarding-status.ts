@@ -35,6 +35,7 @@ type ClubOnboardingRow = {
   facebook: string | null;
   tiktok: string | null;
   services: string[] | null;
+  skip_trainings: boolean | null;
 };
 
 export async function checkAdminOnboardingStatus(
@@ -51,7 +52,7 @@ export async function checkAdminOnboardingStatus(
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services",
+        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services, skip_trainings",
       )
       .eq("id", clubId)
       .maybeSingle(),
@@ -90,6 +91,7 @@ export async function checkAdminOnboardingStatus(
     club?.instagram || club?.whatsapp || club?.facebook || club?.tiktok,
   );
   const hasTrainingBlocks =
+    club?.skip_trainings === true ||
     ((trainingBlocksRes.data ?? []) as { id: string }[]).length > 0;
 
   const phases: AdminOnboardingPhase[] = [
