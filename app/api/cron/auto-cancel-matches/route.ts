@@ -44,7 +44,8 @@ export async function GET(req: Request) {
     .select("id, scheduled_date, scheduled_time, owner_id, financial_status, incomplete_reminder_sent, courts(name)")
     .in("match_status", ["scheduled", "full"])
     .lte("scheduled_date", nowDate)
-    .neq("match_status", "cancelled");
+    .neq("match_status", "cancelled")
+    .or("es_turno_fijo.is.null,es_turno_fijo.eq.false");
 
   if (!matches?.length) {
     return NextResponse.json({ ok: true, processed: 0, notified: 0 });

@@ -10,6 +10,7 @@ import {
   parseClockToMinutes,
 } from "@/lib/court-slots";
 import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
+import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
@@ -61,6 +62,7 @@ export async function requestReservationRefundAction(formData: FormData): Promis
   }
 
   await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+  await insertFixedSlotExceptionIfNeeded(matchId);
 
   const { data: cancelledParticipants } = await supabase
     .from(DB_TABLES.matchParticipants)
@@ -121,6 +123,7 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
   }
 
   await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+  await insertFixedSlotExceptionIfNeeded(matchId);
 
   const { data: cancelledParticipants } = await supabase
     .from(DB_TABLES.matchParticipants)

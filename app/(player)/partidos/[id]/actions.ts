@@ -6,6 +6,7 @@ import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
+import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { isLevelCompatible } from "@/lib/match-level";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
 import { log } from "@/lib/logger";
@@ -836,6 +837,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
       })
       .eq("id", matchId);
     matchCancelled = true;
+    await insertFixedSlotExceptionIfNeeded(matchId);
 
     const courtId = String(m.court_id ?? "").trim();
     const clubId = await getClubIdForCourt(supabase, courtId);

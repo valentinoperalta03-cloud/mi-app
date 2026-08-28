@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { DB_TABLES } from "@/lib/db-tables";
 import { notifyClubOwner } from "@/lib/club-notify";
+import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { refundMercadoPagoPayment } from "@/lib/mercadopago";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { getClubAccessTokenForMatch } from "@/lib/payment-refund";
@@ -113,6 +114,7 @@ export async function declineFixedSlotAttendance(formData: FormData) {
   const courtId = String(typed?.court_id ?? "");
 
   await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+  await insertFixedSlotExceptionIfNeeded(matchId);
 
   const { data: profileRow } = await supabase
     .from(DB_TABLES.profiles)
@@ -306,6 +308,7 @@ export async function cancelReservation(formData: FormData) {
           console.error("[cancelReservation]", cancelNoRefundErr);
           redirect("/reservas?error=cancel");
         }
+        await insertFixedSlotExceptionIfNeeded(id);
         const tplNoRefund = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
         for (const uid of participantIds.length ? participantIds : [user.id]) {
           await createNotification(supabase, {
@@ -349,6 +352,7 @@ export async function cancelReservation(formData: FormData) {
         console.error("[cancelReservation]", cancelRefundErr);
         redirect("/reservas?error=cancel");
       }
+      await insertFixedSlotExceptionIfNeeded(id);
       const tplRefund = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
       for (const uid of participantIds.length ? participantIds : [user.id]) {
         await createNotification(supabase, {
@@ -383,6 +387,7 @@ export async function cancelReservation(formData: FormData) {
     console.error("[cancelReservation]", error);
     redirect("/reservas?error=cancel");
   }
+  await insertFixedSlotExceptionIfNeeded(id);
 
   const tpl = NOTIFICATION_TEMPLATES.reservation_cancelled(courtName);
   for (const uid of participantIds.length ? participantIds : [user.id]) {

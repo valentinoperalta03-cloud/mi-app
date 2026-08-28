@@ -49,6 +49,7 @@ export async function GET(req: Request) {
     .eq("payment_status", "pending")
     .in("match_status", ["pending", "scheduled", "reserved"])
     .in("match_type", ["reservation", "amistoso", "competitivo"])
+    .or("es_turno_fijo.is.null,es_turno_fijo.eq.false")
     .lt("created_at", warningThresholdIso);
 
   if (fetchErr) {
