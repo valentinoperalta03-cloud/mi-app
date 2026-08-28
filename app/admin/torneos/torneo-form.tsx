@@ -573,6 +573,19 @@ export default function TorneoFormInline({
             />
           </label>
 
+          <div className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/[0.04] p-4">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              📅 Los horarios del torneo son libres
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-tertiary)]">
+              Los torneos se pueden organizar en el horario que el administrador
+              decida, sin depender del horario de apertura del club. El único
+              impedimento para reservar un horario es que haya otra actividad
+              programada en esa cancha: una reserva, turno fijo, clase,
+              entrenamiento u otro torneo.
+            </p>
+          </div>
+
           <div className="space-y-4">
             {renderDateAvailability(startDate, false)}
             {type === "eliminacion" && multiDay

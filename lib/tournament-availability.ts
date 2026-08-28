@@ -3,22 +3,30 @@
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
-  buildSlotsForDay,
   parseClockToMinutes,
   parseCloseTimeToMinutes,
-  type ClubHoursBounds,
-  type CourtTimeRangeInput,
 } from "@/lib/court-slots";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
+/** Slots de 24hs cada 30 min: los torneos no dependen del horario comercial del club. */
+function generateFullDaySlots(): string[] {
+  const slots: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  return slots;
+}
+
 /**
- * Disponibilidad de canchas para una fecha puntual: slots generados a partir
- * de `court_time_ranges` (o el horario del club como fallback) menos lo ya
- * ocupado por reservas/partidos abiertos (`matches`), turnos fijos
- * (`fixed_slots` menos excepciones), entrenamientos (`training_blocks`) y
- * bloqueos puntuales (`court_blocks`, incluidos los de otros partidos de
- * torneo ya agendados con reason='torneo'). Compartida entre el wizard de
- * creación (`app/admin/torneos/torneo-form.tsx`) y el scheduler de partidos ya
+ * Disponibilidad de canchas para una fecha puntual: slots de 24hs (cada 30
+ * min, sin límite de horario comercial) menos lo ya ocupado por
+ * reservas/partidos abiertos (`matches`), turnos fijos (`fixed_slots` menos
+ * excepciones), entrenamientos (`training_blocks`) y bloqueos puntuales
+ * (`court_blocks`, incluidos los de otros partidos de torneo ya agendados
+ * con reason='torneo'). Compartida entre el wizard de creación
+ * (`app/admin/torneos/torneo-form.tsx`) y el scheduler de partidos ya
  * creados (`app/admin/torneos/[id]/TournamentScheduler.tsx`).
  */
 export async function getCourtAvailabilityForDate(
@@ -42,22 +50,11 @@ export async function getCourtAvailabilityForDate(
   const dayOfWeek = dayDate.getDay();
 
   const [
-    { data: club },
-    { data: timeRangesRaw },
     { data: matchesRaw },
     { data: fixedSlotsRaw },
     { data: trainingMetaRaw },
     { data: blocksRaw },
   ] = await Promise.all([
-    service
-      .from(DB_TABLES.clubs)
-      .select("open_time, close_time")
-      .eq("id", clubId)
-      .maybeSingle(),
-    service
-      .from(DB_TABLES.courtTimeRanges)
-      .select("court_id, day_of_week, open_time, close_time")
-      .in("court_id", courtIds),
     service
       .from(DB_TABLES.matches)
       .select(
@@ -100,17 +97,7 @@ export async function getCourtAvailabilityForDate(
     ),
   );
 
-  const timeRanges = (timeRangesRaw ?? []) as CourtTimeRangeInput[];
-  const clubBounds = club as ClubHoursBounds | null;
-  // Torneos necesitan granularidad de 30 min (no los 90 min de una reserva
-  // normal de cancha) para poder acomodar partidos cortos/por tiempo.
-  const slots = buildSlotsForDay(
-    courtIds,
-    dayDate,
-    timeRanges,
-    clubBounds,
-    30,
-  ).map((g) => g.time);
+  const slots = generateFullDaySlots();
 
   const occupiedByCourtAndSlot: Record<string, Record<string, string>> = {};
   function mark(

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export type AvailabilityCourt = { id: string; name: string };
 
 type CommonProps = {
@@ -30,6 +32,7 @@ type Props = SingleSelectProps | MultiSelectProps;
  * para bloquear varios horarios de una vez, antes de que el torneo exista. */
 export function AvailabilityGrid(props: Props) {
   const { courts, slots, occupiedByCourtAndSlot } = props;
+  const [showNightSlots, setShowNightSlots] = useState(false);
 
   if (slots.length === 0) {
     return (
@@ -38,6 +41,10 @@ export function AvailabilityGrid(props: Props) {
       </p>
     );
   }
+
+  const visibleSlots = showNightSlots
+    ? slots
+    : slots.filter((s) => s >= "06:00" && s <= "23:30");
 
   function isSelected(courtId: string, slot: string) {
     if (props.multiSelect) {
@@ -73,7 +80,7 @@ export function AvailabilityGrid(props: Props) {
           </tr>
         </thead>
         <tbody>
-          {slots.map((slot) => (
+          {visibleSlots.map((slot) => (
             <tr key={slot} className="border-t border-[var(--border-subtle)]">
               <td className="py-1.5 pr-3 font-mono text-[var(--text-tertiary)]">
                 {slot}
@@ -106,6 +113,13 @@ export function AvailabilityGrid(props: Props) {
           ))}
         </tbody>
       </table>
+      <button
+        type="button"
+        onClick={() => setShowNightSlots((v) => !v)}
+        className="mt-2 text-xs font-semibold text-[#0085FC] hover:underline"
+      >
+        {showNightSlots ? "Ver menos horarios" : "Ver más horarios (00:00 - 05:30)"}
+      </button>
     </div>
   );
 }
