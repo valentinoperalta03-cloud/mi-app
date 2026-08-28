@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminFlashMessage from "@/components/admin/admin-flash-message";
 import AdminPageHeader from "@/components/admin/admin-page-header";
-import { adminAccentBar, adminCard, adminKicker, adminTitle } from "@/components/admin/admin-premium";
+import { adminAccentBar, adminButtonSecondary, adminCard, adminKicker, adminTitle } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -10,7 +11,6 @@ import ConfigCancellationForm from "../config-cancellation-form";
 import ConfigClubDataForm from "../config-club-data-form";
 import ConfigClubLocationForm from "../config-club-location-form";
 import ConfigClubPhotosForm from "../config-club-photos-form";
-import ClubHoursForm from "../club-hours-form";
 import ConfigClubSlugForm from "./config-club-slug-form";
 import ConfigClubSocialsForm from "./config-club-socials-form";
 
@@ -140,8 +140,6 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
 
   const decode = (key?: string) => (key ? decodeURIComponent(key) : "");
 
-  const hoursOk = sp.hours_saved === "1" || sp.saved === "1";
-  const hoursErr = decode(sp.hours_error) || decode(sp.error);
   const dataOk = sp.data_saved === "1";
   const dataErr = decode(sp.data_error);
   const locationOk = sp.location_saved === "1";
@@ -197,15 +195,17 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
         </div>
       </section>
 
-      <section className={`${adminCard} p-6`}>
-        <p className={adminKicker}>Horarios</p>
-        <h2 className={adminTitle}>Horarios del club</h2>
-        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-          Seleccioná la apertura y el cierre del club. Todos los turnos son de 90 minutos y se aplican a todas las canchas automáticamente.
-        </p>
-        {flash(hoursOk, hoursErr)}
-        <ClubHoursForm defaultOpen={clubOpenDefault} />
-      </section>
+      <div className={`${adminCard} flex items-center justify-between gap-4`}>
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">Horarios del club</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Configurá el horario de apertura y franjas por cancha desde la sección Canchas.
+          </p>
+        </div>
+        <Link href="/admin/canchas" className={adminButtonSecondary}>
+          Ir a Canchas →
+        </Link>
+      </div>
 
       <section className={`${adminCard} p-6`}>
         <p className={adminKicker}>Datos</p>

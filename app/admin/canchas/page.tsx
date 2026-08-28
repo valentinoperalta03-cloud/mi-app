@@ -1,38 +1,9 @@
-﻿import Link from "next/link";
-import { redirect } from "next/navigation";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
-import AdminBackLink from "@/components/admin/admin-back-link";
-import { adminInputClass } from "@/components/admin/admin-form-input";
-import AdminPageHeader from "@/components/admin/admin-page-header";
-import {
-  adminBadgeError,
-  adminBadgeLima,
-  adminButtonSecondary,
-  adminCTADanger,
-  adminCTAPrimary,
-  adminCard,
-  adminEmptyState,
-  adminKicker,
-} from "@/components/admin/admin-premium";
-import ClubDepositFields from "@/components/admin/club-deposit-fields";
+﻿import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
-import CourtImageUploader from "./court-image-uploader";
-import NewCourtForm from "./new-court-form";
-
-type CourtRow = {
-  id: string;
-  name: string | null;
-  price: number | null;
-  club_id: string;
-  surface?: string | null;
-  indoor?: boolean | null;
-  image_url?: string | null;
-};
+import CanchasHubClient, { type ClosedDayRow, type CourtRow, type CourtSlotPrice } from "./canchas-hub-client";
 
 export default async function AdminCanchasPage({
   searchParams,
@@ -87,19 +58,13 @@ export default async function AdminCanchasPage({
         .order("start_time", { ascending: true })
     : { data: [] };
   const schedules = (schedulesRaw ?? []) as Array<{ court_id: string; start_time: string | null; price_override: number | null }>;
-  const slotPricesByCourt = new Map<string, Array<{ time: string; price: number }>>();
+  const slotPricesByCourt = new Map<string, CourtSlotPrice[]>();
   for (const row of schedules) {
     const time = String(row.start_time ?? "").slice(0, 5);
     if (!time || typeof row.price_override !== "number") continue;
     const list = slotPricesByCourt.get(row.court_id) ?? [];
     list.push({ time, price: row.price_override });
     slotPricesByCourt.set(row.court_id, list);
-  }
-
-  function getPriceSummary(courtId: string) {
-    const slots = slotPricesByCourt.get(courtId);
-    if (!slots || slots.length === 0) return "Sin precios por horario";
-    return slots.map((s) => `${s.time}: $${new Intl.NumberFormat("es-AR").format(s.price)}`).join(" · ");
   }
 
   const { data: closedDaysRaw } = mainClubId
@@ -110,218 +75,20 @@ export default async function AdminCanchasPage({
         .gte("closed_date", getTodayYmdInArgentina())
         .order("closed_date", { ascending: true })
     : { data: [] };
-  const closedDays = (closedDaysRaw ?? []) as Array<{ id: string; closed_date: string; reason: string | null }>;
+  const closedDays = (closedDaysRaw ?? []) as ClosedDayRow[];
 
   return (
-    <div className="flex flex-col gap-6">
-      <AdminBackLink />
-      <AdminPageHeader
-        kicker="Configuración"
-        title="Mis canchas"
-        subtitle="Gestioná precios, horarios y configuración de cada cancha"
-      />
-
-      {error ? (
-        <div className="rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-5 text-sm font-medium text-[var(--text-error)]">
-          {error.message}
-        </div>
-      ) : null}
-      {errorParam ? (
-        <div className="rounded-xl border-l-[3px] border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] p-5 text-sm font-medium text-[var(--text-error)]">
-          {errorParam}
-        </div>
-      ) : null}
-
-      {mainClubId ? (
-        <details className={`${adminCard} group`} open={clubDepositValue === 0}>
-          <summary className="cursor-pointer list-none text-sm font-semibold text-[#0461C4] marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="inline-flex items-center gap-2 rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 px-4 py-2 group-open:border-[#0085FC]/30">
-              Configuración de seña {clubDepositValue > 0 ? "✓" : "⚠️ Sin configurar"}
-            </span>
-          </summary>
-          <div className="mt-4 space-y-3 border-t border-[var(--border-subtle)] pt-4">
-            <p className="text-sm text-[var(--text-tertiary)]">
-              {clubDepositValue > 0
-                ? "Esta seña aplica a todas las canchas de tu club."
-                : "Todavía no configuraste la seña de tu club. Hasta que la configures, se cobra el 100% del turno por Mercado Pago al confirmar."}
-            </p>
-            <form action={updateClubDeposit} className="space-y-3">
-              <input type="hidden" name="club_id" value={mainClubId} />
-              <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
-              <button type="submit" className={adminCTAPrimary}>
-                Guardar
-              </button>
-            </form>
-          </div>
-        </details>
-      ) : null}
-
-      {ctx.clubs.length > 0 ? (
-        <NewCourtForm clubs={ctx.clubs} ownerUserId={ctx.userId} />
-      ) : (
-        <p className={`${adminCard} text-sm font-medium text-amber-800`}>
-          Necesitás un club asignado para crear canchas.
-        </p>
-      )}
-
-      {courts.length === 0 ? (
-        <p className={adminEmptyState}>
-          Todavía no tenés canchas. Creá la primera con el formulario de arriba.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {courts.map((c) => (
-            <li key={c.id} className={adminCard}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  {c.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- URL pública storage
-                    <img src={c.image_url} alt={c.name ?? "Cancha"} className="h-20 w-20 rounded-xl object-cover ring-1 ring-[var(--border-subtle)]" />
-                  ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-[var(--bg-subtle)] text-lg font-bold text-[var(--text-secondary)]">
-                      {(c.name ?? "C").slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xl font-bold text-[var(--text-primary)]">{c.name ?? "Cancha"}</p>
-                    <p className="text-base font-semibold text-[#0461C4]">${c.price ?? 0}/turno</p>
-                    <p className="mt-1">
-                      {blockedCourtIds.has(c.id) ? (
-                        <span className={adminBadgeError}>🔴 Bloqueada hoy</span>
-                      ) : (
-                        <span className={adminBadgeLima}>🟢 Disponible</span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">
-                      {getPriceSummary(c.id)}
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">
-                    {c.surface ? c.surface : "Superficie no definida"} · {c.indoor ? "Techada" : "Descubierta"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Link href={`/admin/canchas/${c.id}/horarios`} className={adminButtonSecondary}>
-                    Horarios y precios
-                  </Link>
-                </div>
-              </div>
-              <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-transparent p-4">
-                <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                  <span className={adminButtonSecondary}>Editar</span>
-                </summary>
-                <form action={updateCourt} className="mt-3 space-y-3">
-                  <input type="hidden" name="court_id" value={c.id} />
-                  <input
-                    name="name"
-                    type="text"
-                    required
-                    defaultValue={c.name ?? ""}
-                    className={adminInputClass}
-                  />
-                  <input
-                    name="price"
-                    type="number"
-                    min={0}
-                    required
-                    defaultValue={c.price ?? 0}
-                    className={adminInputClass}
-                  />
-                  <select
-                    name="surface"
-                    defaultValue={c.surface ?? "cemento"}
-                    className={adminInputClass}
-                  >
-                    <option value="cemento">Cemento</option>
-                    <option value="cristal">Cristal</option>
-                    <option value="cesped sintetico">Césped sintético</option>
-                    <option value="moqueta">Moqueta</option>
-                  </select>
-                  <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)]">
-                    <input type="checkbox" name="indoor" defaultChecked={Boolean(c.indoor)} className="h-4 w-4 rounded border-[var(--border-subtle)]" />
-                    Techada
-                  </label>
-                  <CourtImageUploader courtId={c.id} initialUrl={c.image_url ?? ""} label="Imagen de cancha" />
-                  <div className="flex flex-wrap gap-2">
-                    <button type="submit" className={adminCTAPrimary}>
-                      Guardar cambios
-                    </button>
-                    <button
-                      type="submit"
-                      formAction={deleteCourt}
-                      name="court_id"
-                      value={c.id}
-                      className={adminCTADanger}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </form>
-              </details>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {mainClubId ? (
-        <section className={`${adminCard} flex flex-col gap-4`}>
-          <div>
-            <p className={adminKicker}>Días cerrados del club</p>
-            <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-              El club no ofrecerá turnos en esas fechas (jugadores verán el día cerrado al reservar).
-            </p>
-          </div>
-          <form action={addClubClosedDayAction} className="flex flex-wrap items-end gap-3">
-            <label className={`flex flex-col gap-1 ${adminKicker}`}>
-              Fecha
-              <input
-                type="date"
-                name="closed_date"
-                required
-                min={getTodayYmdInArgentina()}
-                className={adminInputClass}
-              />
-            </label>
-            <label className={`flex min-w-[200px] flex-1 flex-col gap-1 ${adminKicker}`}>
-              Motivo (opcional)
-              <input
-                name="reason"
-                type="text"
-                placeholder="Ej: feriado, torneo interno"
-                className={adminInputClass}
-              />
-            </label>
-            <button type="submit" className={adminCTAPrimary}>
-              Marcar como cerrado
-            </button>
-          </form>
-          {closedDays.length === 0 ? (
-            <p className={adminEmptyState}>No hay días cerrados futuros cargados.</p>
-          ) : (
-            <ul className="divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)]">
-              {closedDays.map((row) => (
-                <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <div>
-                    <p className="font-semibold text-[var(--text-primary)]">
-                      {format(parseISO(`${row.closed_date}T12:00:00`), "EEEE d MMM yyyy", { locale: es })}
-                    </p>
-                    {row.reason ? <p className="text-[var(--text-tertiary)]">{row.reason}</p> : null}
-                  </div>
-                  <form action={removeClubClosedDayAction}>
-                    <input type="hidden" name="closed_day_id" value={row.id} />
-                    <button
-                      type="submit"
-                      className="rounded-full border border-rose-200 bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
-                    >
-                      Eliminar
-                    </button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-    </div>
+    <CanchasHubClient
+      courts={courts}
+      clubs={ctx.clubs}
+      userId={ctx.userId}
+      mainClubId={mainClubId}
+      clubDepositType={clubDepositType}
+      clubDepositValue={clubDepositValue}
+      blockedCourtIds={Array.from(blockedCourtIds)}
+      closedDays={closedDays}
+      slotPricesByCourt={Array.from(slotPricesByCourt.entries())}
+      errorMessage={error?.message ?? errorParam}
+    />
   );
 }
