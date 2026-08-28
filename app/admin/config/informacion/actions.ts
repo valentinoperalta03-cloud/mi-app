@@ -97,7 +97,7 @@ export async function updateClubSocialsAction(
     return { error: "No tenés permiso para editar este club." };
   }
 
-  const { error } = await supabase
+  const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update({
       instagram: instagram || null,

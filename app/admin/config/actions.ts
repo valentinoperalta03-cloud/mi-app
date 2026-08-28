@@ -110,7 +110,7 @@ export async function savePaymentMethods(formData: FormData) {
     bank_cbu: getField(formData, "bank_cbu") || null,
   };
 
-  const { error } = await supabase
+  const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update(payload)
     .eq("id", clubId)

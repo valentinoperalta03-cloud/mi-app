@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { buildClubLocationPayload } from "@/lib/locations";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -25,7 +25,7 @@ async function ownerClubContext() {
 }
 
 export async function saveClubLocation(formData: FormData) {
-  const { supabase, ctx, clubId } = await ownerClubContext();
+  const { ctx, clubId } = await ownerClubContext();
 
   const locationCountry = getField(formData, "country");
   const locationProvince = getField(formData, "province");
@@ -41,7 +41,11 @@ export async function saveClubLocation(formData: FormData) {
     city: locationCity,
   });
 
-  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  const { error } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .update(payload)
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
   if (error) {
     redirect(`/admin/config/informacion?location_error=${encodeURIComponent(error.message)}`);
   }
@@ -52,7 +56,7 @@ export async function saveClubLocation(formData: FormData) {
 }
 
 export async function saveClubData(formData: FormData) {
-  const { supabase, ctx, clubId } = await ownerClubContext();
+  const { ctx, clubId } = await ownerClubContext();
 
   const payload = {
     name: getField(formData, "name") || null,
@@ -64,7 +68,11 @@ export async function saveClubData(formData: FormData) {
     business_hours: getField(formData, "business_hours") || null,
   };
 
-  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  const { error } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .update(payload)
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
   if (error) {
     redirect(`/admin/config/informacion?data_error=${encodeURIComponent(error.message)}`);
   }
@@ -74,7 +82,7 @@ export async function saveClubData(formData: FormData) {
 }
 
 export async function saveClubPhotos(formData: FormData) {
-  const { supabase, ctx, clubId } = await ownerClubContext();
+  const { ctx, clubId } = await ownerClubContext();
 
   const payload = {
     logo_url: getField(formData, "logo_url") || null,
@@ -85,7 +93,11 @@ export async function saveClubPhotos(formData: FormData) {
     gallery_image_4: getField(formData, "gallery_image_4") || null,
   };
 
-  const { error } = await supabase.from(DB_TABLES.clubs).update(payload).eq("id", clubId).eq("owner_id", ctx.userId);
+  const { error } = await createServiceClient()
+    .from(DB_TABLES.clubs)
+    .update(payload)
+    .eq("id", clubId)
+    .eq("owner_id", ctx.userId);
   if (error) {
     redirect(`/admin/config/informacion?photos_error=${encodeURIComponent(error.message)}`);
   }
