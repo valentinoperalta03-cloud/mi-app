@@ -662,7 +662,7 @@ function PreciosView({
                 onChange={(e) => setBulkFrom(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
               >
-                {ALL_SLOTS.map((s) => (
+                {allSlots.map((s) => (
                   <option key={s} value={s}>
                     {s}hs
                   </option>
@@ -676,7 +676,7 @@ function PreciosView({
                 onChange={(e) => setBulkTo(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
               >
-                {ALL_SLOTS.filter((s) => s > bulkFrom).map((s) => (
+                {allSlots.filter((s) => s > bulkFrom).map((s) => (
                   <option key={s} value={s}>
                     {s}hs
                   </option>
