@@ -3,7 +3,13 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
-import CanchasHubClient, { type ClosedDayRow, type CourtRow, type CourtSlotPrice, type CourtTimeRange } from "./canchas-hub-client";
+import CanchasHubClient, {
+  type ClosedDayRow,
+  type CourtPriceRow,
+  type CourtRow,
+  type CourtSlotPrice,
+  type CourtTimeRange,
+} from "./canchas-hub-client";
 
 export default async function AdminCanchasPage({
   searchParams,
@@ -102,6 +108,28 @@ export default async function AdminCanchasPage({
     timeRangesByCourt.set(row.court_id, list);
   }
 
+  // Precios por horario/día de cada cancha (todas las filas con start_time,
+  // incluye day_of_week específico y legacy day_of_week IS NULL) — para CourtPricesClient.
+  const { data: priceSchedulesRaw } = courtIds.length
+    ? await supabase
+        .from(DB_TABLES.courtSchedules)
+        .select("court_id,day_of_week,start_time,price_override")
+        .in("court_id", courtIds)
+        .not("start_time", "is", null)
+    : { data: [] };
+  const priceSchedulesByCourt = new Map<string, CourtPriceRow[]>();
+  for (const row of (priceSchedulesRaw ?? []) as Array<{
+    court_id: string;
+    day_of_week: number | null;
+    start_time: string | null;
+    price_override: number | null;
+  }>) {
+    if (!row.start_time) continue;
+    const list = priceSchedulesByCourt.get(row.court_id) ?? [];
+    list.push({ dayOfWeek: row.day_of_week, startTime: String(row.start_time).slice(0, 5), price: Number(row.price_override ?? 0) });
+    priceSchedulesByCourt.set(row.court_id, list);
+  }
+
   return (
     <CanchasHubClient
       courts={courts}
@@ -116,6 +144,7 @@ export default async function AdminCanchasPage({
       clubOpenTime={clubOpenTime}
       clubCloseTime={clubCloseTime}
       timeRangesByCourt={Array.from(timeRangesByCourt.entries())}
+      priceSchedulesByCourt={Array.from(priceSchedulesByCourt.entries())}
       errorMessage={error?.message ?? errorParam}
     />
   );

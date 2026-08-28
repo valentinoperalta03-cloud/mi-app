@@ -16,12 +16,14 @@ import {
 } from "@/components/admin/admin-premium";
 import type { OwnerClub } from "@/lib/admin/owner-context";
 import { saveClubHours } from "@/app/admin/config/actions";
+import ClubDepositFields from "@/components/admin/club-deposit-fields";
 import CourtImageUploader from "./court-image-uploader";
 import NewCourtForm from "./new-court-form";
 import CourtTimeRangesClient, { type CourtTimeRange } from "./[id]/horarios/court-time-ranges-client";
-import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateCourt } from "./actions";
+import CourtPricesClient, { type CourtPriceRow } from "./[id]/horarios/court-prices-client";
+import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
 
-export type { CourtTimeRange };
+export type { CourtTimeRange, CourtPriceRow };
 
 // Debe coincidir con VALID_OPEN en app/admin/config/actions.ts (no exportable
 // desde ahí porque es un archivo "use server" — solo puede exportar funciones async).
@@ -67,6 +69,7 @@ export type CanchasHubClientProps = {
   clubOpenTime: string;
   clubCloseTime: string;
   timeRangesByCourt: Array<[string, CourtTimeRange[]]>;
+  priceSchedulesByCourt: Array<[string, CourtPriceRow[]]>;
   errorMessage: string;
 };
 
@@ -133,6 +136,10 @@ export default function CanchasHubClient(props: CanchasHubClientProps) {
 
   if (view === "horarios") {
     return <HorariosView {...props} onBack={() => setView("hub")} />;
+  }
+
+  if (view === "precios") {
+    return <PreciosView {...props} onBack={() => setView("hub")} />;
   }
 
   return <PlaceholderView onBack={() => setView("hub")} />;
@@ -479,6 +486,94 @@ function HorariosView({
                       clubOpen={clubOpenTime}
                       clubClose={clubCloseTime}
                       initialRanges={rangesMap.get(court.id) ?? []}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PreciosView({
+  courts,
+  mainClubId,
+  clubDepositType,
+  clubDepositValue,
+  clubOpenTime,
+  timeRangesByCourt,
+  priceSchedulesByCourt,
+  onBack,
+}: CanchasHubClientProps & { onBack: () => void }) {
+  const [expandedPriceCourt, setExpandedPriceCourt] = useState<string | null>(null);
+  const rangesMap = new Map(timeRangesByCourt);
+  const pricesMap = new Map(priceSchedulesByCourt);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <BackButton onBack={onBack} />
+      <AdminPageHeader
+        kicker="Canchas"
+        title="Precios y seña"
+        subtitle="Configurá los precios por horario y la seña para reservas"
+      />
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Seña para reservas</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Configuración de seña</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          La seña es el monto que el jugador paga online al reservar. El resto lo abona en el club.
+        </p>
+        <form action={updateClubDeposit} className="mt-4 space-y-3">
+          <input type="hidden" name="club_id" value={mainClubId} />
+          <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
+          <button type="submit" className={adminCTAPrimary}>
+            Guardar
+          </button>
+        </form>
+      </div>
+
+      <div className={adminCard}>
+        <p className={adminKicker}>Precios por horario</p>
+        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Precios por cancha</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Configurá el precio de cada turno según el horario y día de la semana. Si no configurás precios
+          específicos, se usa el precio base de la cancha.
+        </p>
+
+        {courts.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--text-tertiary)]">Todavía no tenés canchas cargadas.</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3">
+            {courts.map((court) => (
+              <div key={court.id} className="border-b border-[var(--border-subtle)] pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-[var(--text-primary)]">{court.name ?? "Cancha"}</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                      Precio base: ${Number(court.price ?? 0).toLocaleString("es-AR")}/turno
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPriceCourt(expandedPriceCourt === court.id ? null : court.id)}
+                    className="text-sm font-semibold text-[#0085FC] hover:underline"
+                  >
+                    {expandedPriceCourt === court.id ? "Cerrar" : "Configurar precios"}
+                  </button>
+                </div>
+
+                {expandedPriceCourt === court.id ? (
+                  <div className="mt-4">
+                    <CourtPricesClient
+                      courtId={court.id}
+                      clubOpen={clubOpenTime}
+                      basePrice={Number(court.price ?? 0)}
+                      timeRanges={rangesMap.get(court.id) ?? []}
+                      priceRows={pricesMap.get(court.id) ?? []}
                     />
                   </div>
                 ) : null}
