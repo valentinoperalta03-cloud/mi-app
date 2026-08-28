@@ -74,10 +74,9 @@ function cleanHandle(value: string): string {
 
 export async function updateClubSocialsAction(
   clubId: string,
-  socials: { instagram: string; whatsapp: string; facebook: string; tiktok: string }
+  socials: { instagram: string; facebook: string; tiktok: string }
 ): Promise<UpdateClubSocialsResult> {
   const instagram = cleanHandle(socials.instagram);
-  const whatsapp = String(socials.whatsapp ?? "").trim().replace(/\D/g, "");
   const facebook = cleanHandle(socials.facebook);
   const tiktok = cleanHandle(socials.tiktok);
 
@@ -101,7 +100,6 @@ export async function updateClubSocialsAction(
     .from(DB_TABLES.clubs)
     .update({
       instagram: instagram || null,
-      whatsapp: whatsapp || null,
       facebook: facebook || null,
       tiktok: tiktok || null,
     })

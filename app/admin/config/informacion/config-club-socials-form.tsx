@@ -11,7 +11,6 @@ type Props = {
   clubId: string;
   initial: {
     instagram: string;
-    whatsapp: string;
     facebook: string;
     tiktok: string;
   };
@@ -19,7 +18,6 @@ type Props = {
 
 export default function ConfigClubSocialsForm({ clubId, initial }: Props) {
   const [instagram, setInstagram] = useState(initial.instagram);
-  const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [facebook, setFacebook] = useState(initial.facebook);
   const [tiktok, setTiktok] = useState(initial.tiktok);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +28,7 @@ export default function ConfigClubSocialsForm({ clubId, initial }: Props) {
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      const res = await updateClubSocialsAction(clubId, { instagram, whatsapp, facebook, tiktok });
+      const res = await updateClubSocialsAction(clubId, { instagram, facebook, tiktok });
       if ("error" in res) {
         setError(res.error);
         return;
@@ -47,16 +45,6 @@ export default function ConfigClubSocialsForm({ clubId, initial }: Props) {
           value={instagram}
           onChange={(e) => setInstagram(e.target.value)}
           placeholder="@usuario"
-          className={inputClass}
-        />
-      </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-semibold text-[var(--text-secondary)]">WhatsApp</span>
-        <input
-          value={whatsapp}
-          onChange={(e) => setWhatsapp(e.target.value)}
-          placeholder="5493412571953"
-          inputMode="numeric"
           className={inputClass}
         />
       </label>

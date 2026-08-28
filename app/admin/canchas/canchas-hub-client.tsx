@@ -24,13 +24,20 @@ import CourtPricesClient, { type CourtPriceRow } from "./[id]/horarios/court-pri
 import { applyBulkPricesAction } from "./[id]/precios/actions";
 import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
 
-// Slots de 90 en 90 desde 06:00 hasta 23:30.
-const ALL_SLOTS = Array.from({ length: 18 }, (_, i) => {
-  const totalMin = 360 + i * 90;
-  const h = Math.floor(totalMin / 60).toString().padStart(2, "0");
-  const m = (totalMin % 60).toString().padStart(2, "0");
-  return `${h}:${m}`;
-});
+// Slots de 90 en 90 desde el open_time del club hasta 22:30 como máximo.
+function generateSlots(openTime: string): string[] {
+  const [oh, om] = openTime.split(":").map(Number);
+  const startMin = (Number.isNaN(oh) ? 9 : oh) * 60 + (Number.isNaN(om) ? 0 : om);
+  const endMin = 22 * 60 + 30;
+
+  const slots: string[] = [];
+  for (let cur = startMin; cur <= endMin; cur += 90) {
+    const h = Math.floor(cur / 60).toString().padStart(2, "0");
+    const m = (cur % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+  }
+  return slots;
+}
 
 function chip(active: boolean) {
   return `rounded-xl border px-3 py-1.5 text-sm font-semibold transition ${
@@ -539,6 +546,7 @@ function PreciosView({
   const [expandedPriceCourt, setExpandedPriceCourt] = useState<string | null>(null);
   const rangesMap = new Map(timeRangesByCourt);
   const pricesMap = new Map(priceSchedulesByCourt);
+  const allSlots = generateSlots(clubOpenTime);
 
   const [bulkCourts, setBulkCourts] = useState<string[]>([]);
   const [bulkDays, setBulkDays] = useState<number[]>([]);
