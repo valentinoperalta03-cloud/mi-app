@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { adminInputClass, adminLabelClass } from "@/components/admin/admin-form-input";
 import {
   adminBadgeBrand,
@@ -237,6 +237,13 @@ function RegistrarPagoModal({ item, onClose }: { item: PendingMatchItem; onClose
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   function handleConfirm() {
     const montoNum = Number(monto);
     if (!Number.isFinite(montoNum) || montoNum <= 0) {
@@ -261,7 +268,7 @@ function RegistrarPagoModal({ item, onClose }: { item: PendingMatchItem; onClose
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
