@@ -422,7 +422,10 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName, p
       <div className="h-0.5 w-full" style={{ backgroundColor: "#CCFF00" }} />
 
       <div className="relative mx-auto w-full max-w-[480px]">
-        <nav className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 py-4">
+        <nav
+          className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-4"
+          style={{ paddingTop: "max(1rem, calc(var(--cap-safe-top, env(safe-area-inset-top, 0px)) + 0.5rem))" }}
+        >
           <Link href={isLoggedIn ? "/home" : `/login?next=/${club.slug}`}>
             <Image src="/logo.png" alt="PadeLibre" width={24} height={24} className="rounded-md" />
           </Link>

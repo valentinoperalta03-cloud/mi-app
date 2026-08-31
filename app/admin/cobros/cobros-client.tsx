@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { adminInputClass, adminLabelClass } from "@/components/admin/admin-form-input";
 import {
   adminBadgeBrand,
@@ -266,9 +267,9 @@ function RegistrarPagoModal({ item, onClose }: { item: PendingMatchItem; onClose
   const methodBtnActive = `${methodBtn} border-[#0085FC] bg-[#0085FC]/10 text-[#0085FC]`;
   const methodBtnInactive = `${methodBtn} border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]`;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[3px]"
       onClick={onClose}
     >
       <div
@@ -338,6 +339,7 @@ function RegistrarPagoModal({ item, onClose }: { item: PendingMatchItem; onClose
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
