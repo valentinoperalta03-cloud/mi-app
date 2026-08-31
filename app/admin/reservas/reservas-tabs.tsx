@@ -4,6 +4,7 @@ import { useState } from "react";
 import { adminCTAPrimary, adminEmptyState } from "@/components/admin/admin-premium";
 import OpenMatchCard from "./open-match-card";
 import OpenMatchModal from "./open-match-modal";
+import NewReservationModal from "./new-reservation-modal";
 import ManagePlayersModal from "./manage-players-modal";
 
 export type OpenMatchParticipant = {
@@ -44,6 +45,7 @@ export default function ReservasTabs({
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("reservas");
   const [showOpenMatchModal, setShowOpenMatchModal] = useState(false);
+  const [showNewReservationModal, setShowNewReservationModal] = useState(false);
   const [manageMatch, setManageMatch] = useState<OpenMatchData | null>(null);
 
   return (
@@ -78,7 +80,16 @@ export default function ReservasTabs({
         </button>
       </div>
 
-      <div className={activeTab === "reservas" ? "flex flex-col gap-6" : "hidden"}>{children}</div>
+      <div className={activeTab === "reservas" ? "flex flex-col gap-6" : "hidden"}>
+        <button
+          type="button"
+          onClick={() => setShowNewReservationModal(true)}
+          className={`${adminCTAPrimary} self-start`}
+        >
+          + Nueva reserva
+        </button>
+        {children}
+      </div>
 
       {activeTab === "partidos" ? (
         <div className="flex flex-col gap-4">
@@ -104,6 +115,15 @@ export default function ReservasTabs({
           clubName={clubName}
           courts={courts}
           onClose={() => setShowOpenMatchModal(false)}
+        />
+      ) : null}
+
+      {showNewReservationModal ? (
+        <NewReservationModal
+          clubId={clubId}
+          clubName={clubName}
+          courts={courts}
+          onClose={() => setShowNewReservationModal(false)}
         />
       ) : null}
 

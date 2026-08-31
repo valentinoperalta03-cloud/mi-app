@@ -154,94 +154,112 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
 // ---------------------------------------------------------------------------
 // Reserva manual: el club anota una reserva desde el panel (ej. alguien que
-// reservó por teléfono). Antes /admin/reservas era solo lectura + bloqueo.
+// reservó por teléfono). Sin jugadores, sin búsqueda — la referencia visible
+// es texto libre (manual_reference). owner_id queda en el dueño del club
+// solo como necesidad técnica de la FK, nunca se lo presenta como "jugador".
 // ---------------------------------------------------------------------------
 
-export type PlayerSearchResult = { id: string; name: string; avatarUrl: string | null };
+export type AdminActionResult = { ok: true; matchId?: string } | { ok: false; error: string };
 
-export async function searchPlayersAction(query: string): Promise<PlayerSearchResult[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
+type CourtOwnershipResult =
+  | { error: string }
+  | { supabase: Awaited<ReturnType<typeof createClient>>; ctx: NonNullable<Awaited<ReturnType<typeof getOwnerAdminContext>>>; court: { id: string; name: string | null; club_id: string } };
 
-  const supabase = await createClient();
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) return [];
-
-  const { data } = await supabase
-    .from(DB_TABLES.profiles)
-    .select("user_id,name,avatar_url")
-    .ilike("name", `%${q}%`)
-    .limit(8);
-
-  return ((data ?? []) as Array<{ user_id: string; name: string | null; avatar_url: string | null }>).map((p) => ({
-    id: p.user_id,
-    name: p.name?.trim() || "Jugador",
-    avatarUrl: p.avatar_url ?? null,
-  }));
-}
-
-export type ManualReservationState = { ok: boolean; message: string };
-
-export async function createManualReservationAction(
-  _prev: ManualReservationState,
-  formData: FormData
-): Promise<ManualReservationState> {
-  void _prev;
-  const courtId = getField(formData, "court_id");
-  const date = getField(formData, "date");
-  const time = getField(formData, "time");
-  const reference = getField(formData, "reference");
-  const financialStatusRaw = getField(formData, "financial_status");
-  const paymentMethodRaw = getField(formData, "payment_method");
-  const amountRaw = getField(formData, "amount");
-  const playerIds = Array.from(
-    new Set(formData.getAll("player_ids").map((v) => String(v).trim()).filter(Boolean))
-  ).slice(0, 4);
-
-  if (!courtId || !date || !time) return { ok: false, message: "Datos incompletos." };
-  if (date < getTodayYmdInArgentina()) {
-    return { ok: false, message: "No se pueden crear reservas en fechas pasadas." };
-  }
-  if (!reference) return { ok: false, message: "Completá un nombre o referencia." };
-  if (!["unpaid", "partially_paid", "fully_paid"].includes(financialStatusRaw)) {
-    return { ok: false, message: "Elegí el estado de pago." };
-  }
-  const financialStatus = financialStatusRaw as "unpaid" | "partially_paid" | "fully_paid";
-  const paymentMethod = paymentMethodRaw === "transfer" ? "transfer" : "cash";
-  const amount = financialStatus === "unpaid" ? 0 : Number(amountRaw);
-  if (financialStatus !== "unpaid" && (!Number.isFinite(amount) || amount <= 0)) {
-    return { ok: false, message: "Ingresá un monto válido." };
-  }
-
+async function assertCourtOwnership(courtId: string): Promise<CourtOwnershipResult> {
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) return { ok: false, message: "Sesión requerida." };
+  if (!ctx?.userId) return { error: "Sesión requerida." };
   const court = ctx.courts.find((c) => c.id === courtId);
-  if (!court) return { ok: false, message: "Cancha no autorizada." };
+  if (!court) return { error: "Cancha no autorizada." };
+  return { supabase, ctx, court };
+}
 
-  const { data: existingMatch } = await supabase
+export type CrearReservaAdminInput = {
+  courtId: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  reference: string;
+  financialStatus: "unpaid" | "partially_paid" | "fully_paid";
+  paymentMethod?: "cash" | "transfer";
+  amount?: number;
+};
+
+export async function crearReservaDesdeAdmin(input: CrearReservaAdminInput): Promise<AdminActionResult> {
+  const courtId = input.courtId?.trim() ?? "";
+  const scheduledDate = input.scheduledDate?.trim() ?? "";
+  const scheduledTime = input.scheduledTime?.trim() ?? "";
+  const reference = input.reference?.trim() ?? "";
+  const financialStatus = input.financialStatus;
+  const paymentMethod = input.paymentMethod === "transfer" ? "transfer" : "cash";
+  const amount = Number(input.amount ?? 0);
+
+  if (!courtId || !scheduledDate || !scheduledTime) return { ok: false, error: "Datos incompletos." };
+  if (!reference) return { ok: false, error: "Completá un nombre o referencia." };
+  if (!["unpaid", "partially_paid", "fully_paid"].includes(financialStatus)) {
+    return { ok: false, error: "Elegí el estado de pago." };
+  }
+  if (financialStatus !== "unpaid" && (!Number.isFinite(amount) || amount <= 0)) {
+    return { ok: false, error: "Ingresá un monto válido." };
+  }
+
+  const owned = await assertCourtOwnership(courtId);
+  if ("error" in owned) return { ok: false, error: owned.error };
+  const { supabase, ctx, court } = owned;
+
+  const durationMinutes = 90;
+  const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
+
+  const todayAr = getTodayYmdInArgentina();
+  if (scheduledDate < todayAr) return { ok: false, error: "No se pueden crear reservas en fechas pasadas." };
+
+  // Revalidación backend obligatoria: aunque el horario haya aparecido libre
+  // en getAdminClubAvailability al abrir el modal, puede haber cambiado entre
+  // que se abrió y se confirmó (otro admin reservó, se cargó un bloqueo,
+  // etc.) — se vuelve a chequear club cerrado, bloqueo puntual y superposición
+  // real contra la DB, mismo criterio que crearPartidoDesdeAdmin.
+  const { data: closedDayRows } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", court.club_id)
+    .eq("closed_date", scheduledDate)
+    .limit(1);
+  if (closedDayRows?.length) return { ok: false, error: "El club está cerrado ese día." };
+
+  const [{ data: blockRowsModern }, { data: blockRowsLegacy }] = await Promise.all([
+    supabase.from(DB_TABLES.courtBlocks).select("blocked_time").eq("court_id", courtId).eq("blocked_date", scheduledDate),
+    supabase.from(DB_TABLES.courtBlocks).select("start_time").eq("court_id", courtId).eq("date", scheduledDate),
+  ]);
+  const blockedStarts = courtBlockStartsFromRows(
+    blockRowsModern as { blocked_time: string | null }[] | null,
+    blockRowsLegacy as { start_time: string | null }[] | null
+  );
+  if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
+    return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
+  }
+
+  const { data: conflicts, error: conflictsError } = await supabase
     .from(DB_TABLES.matches)
-    .select("id")
+    .select("scheduled_time,duration_minutes")
     .eq("court_id", courtId)
-    .eq("scheduled_date", date)
-    .eq("scheduled_time", time)
-    .neq("match_status", "cancelled")
-    .maybeSingle();
-  if (existingMatch) return { ok: false, message: "Ese horario ya tiene una reserva." };
-
-  const { data: existingBlock } = await supabase
-    .from(DB_TABLES.courtBlocks)
-    .select("id")
-    .eq("court_id", courtId)
-    .eq("blocked_date", date)
-    .eq("blocked_time", time)
-    .maybeSingle();
-  if (existingBlock) return { ok: false, message: "Ese horario está bloqueado." };
+    .eq("scheduled_date", scheduledDate)
+    .neq("match_status", "cancelled");
+  if (conflictsError) return { ok: false, error: "No se pudo validar disponibilidad." };
+  const slotStart = parseClockToMinutes(timeNorm);
+  const slotEnd = slotStart + durationMinutes;
+  for (const row of (conflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]) {
+    const otherStart = parseClockToMinutes(String(row.scheduled_time ?? ""));
+    const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
+    const otherEnd = otherStart + otherDur;
+    if (slotStart < otherEnd && otherStart < slotEnd) {
+      return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
+    }
+  }
 
   // Precio: precio del día específico si está configurado para esa hora, si
   // no el precio legacy (day_of_week IS NULL, previo a precios por día), si
-  // no el precio base de la cancha (mismo criterio que CourtPricesClient).
-  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+  // no el precio base de la cancha (mismo criterio que CourtPricesClient y
+  // crearPartidoDesdeAdmin).
+  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
   const { data: courtRow } = await supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle();
   const { data: priceRows } = await supabase
     .from(DB_TABLES.courtSchedules)
@@ -254,9 +272,9 @@ export async function createManualReservationAction(
     price_override: number | null;
   }>;
   const override =
-    priceRowsTyped.find((r) => r.day_of_week === dayOfWeek && String(r.start_time ?? "").slice(0, 5) === time)
+    priceRowsTyped.find((r) => r.day_of_week === dayOfWeek && String(r.start_time ?? "").slice(0, 5) === timeNorm)
       ?.price_override ??
-    priceRowsTyped.find((r) => r.day_of_week === null && String(r.start_time ?? "").slice(0, 5) === time)
+    priceRowsTyped.find((r) => r.day_of_week === null && String(r.start_time ?? "").slice(0, 5) === timeNorm)
       ?.price_override;
   const basePrice = Number((courtRow as { price: number | null } | null)?.price ?? 0);
   const totalPrice = typeof override === "number" ? override : basePrice;
@@ -271,25 +289,23 @@ export async function createManualReservationAction(
   // y confirmOfflineCobro en /admin/cobros.
   const matchStatus = financialStatus === "unpaid" ? "scheduled" : "reserved";
 
-  // owner_id: el primer jugador asignado si hay (así la reserva le aparece en
-  // "Mis reservas", que filtra por owner_id — no alcanza con estar en
-  // match_participants). Si no hay jugadores, el dueño del club como fallback,
-  // asegurando su profile igual que fixed-slot-generator.ts.
-  let ownerId = playerIds[0] ?? null;
-  if (!ownerId) {
-    ownerId = ctx.userId;
-    const { data: ownerProfile } = await supabase
+  // owner_id: sin jugadores, el dueño del club queda como owner_id solo por
+  // necesidad técnica de la FK (matches.owner_id NOT NULL) — la UI nunca lo
+  // presenta como jugador de la reserva, la referencia visible es
+  // manual_reference. Mismo criterio de asegurar el profile que
+  // fixed-slot-generator.ts.
+  const ownerId = ctx.userId;
+  const { data: ownerProfile } = await supabase
+    .from(DB_TABLES.profiles)
+    .select("user_id")
+    .eq("user_id", ownerId)
+    .maybeSingle();
+  if (!ownerProfile) {
+    const { error: profileErr } = await supabase
       .from(DB_TABLES.profiles)
-      .select("user_id")
-      .eq("user_id", ownerId)
-      .maybeSingle();
-    if (!ownerProfile) {
-      const { error: profileErr } = await supabase
-        .from(DB_TABLES.profiles)
-        .insert({ id: ownerId, user_id: ownerId, name: court.name ?? "Club" });
-      if (profileErr && profileErr.code !== "23505") {
-        return { ok: false, message: "No se pudo asegurar el perfil del club." };
-      }
+      .insert({ id: ownerId, user_id: ownerId, name: court.name ?? "Club" });
+    if (profileErr && profileErr.code !== "23505") {
+      return { ok: false, error: "No se pudo asegurar el perfil del club." };
     }
   }
 
@@ -303,38 +319,30 @@ export async function createManualReservationAction(
       total_price: totalPrice,
       amount_paid: amountPaid,
       amount_pending: amountPending,
-      scheduled_date: date,
-      scheduled_time: time,
-      duration_minutes: 90,
+      scheduled_date: scheduledDate,
+      scheduled_time: timeNorm,
+      duration_minutes: durationMinutes,
       court_id: courtId,
       owner_id: ownerId,
       manual_reference: reference,
       es_turno_fijo: false,
-      date: new Date(`${date}T${time}:00-03:00`).toISOString(),
+      date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
     })
     .select("id")
     .single();
   if (insertErr || !inserted) {
-    return { ok: false, message: insertErr?.message ?? "No se pudo crear la reserva." };
+    // El constraint sin_partidos_superpuestos de la DB queda como última capa
+    // de protección — si el pre-check de arriba no lo agarró (ej. carrera
+    // entre dos admins reservando el mismo horario a la vez), acá se traduce
+    // a un mensaje legible en vez del error crudo de Postgres.
+    const error = isMatchSlotConflictError(insertErr)
+      ? "Ese horario ya no está disponible. Elegí otro."
+      : (insertErr?.message ?? "No se pudo crear la reserva.");
+    return { ok: false, error };
   }
   const matchId = String((inserted as { id: string }).id);
 
-  await cancelConflictingOpenMatches(supabase, courtId, date, time);
-
-  if (playerIds.length > 0) {
-    await supabase
-      .from(DB_TABLES.matchParticipants)
-      .insert(playerIds.map((playerId) => ({ match_id: matchId, player_id: playerId })));
-    for (const playerId of playerIds) {
-      await createNotification(supabase, {
-        user_id: playerId,
-        type: "reservation_confirmed",
-        title: "Te asignaron una reserva",
-        body: `El club te anotó en una reserva el ${date} a las ${time} en ${court.name ?? "la cancha"}.`,
-        match_id: matchId,
-      });
-    }
-  }
+  await cancelConflictingOpenMatches(supabase, courtId, scheduledDate, timeNorm);
 
   if (financialStatus === "unpaid") {
     await supabase.from(DB_TABLES.payments).insert({ match_id: matchId, user_id: ownerId, status: "pending", amount: 0 });
@@ -351,7 +359,7 @@ export async function createManualReservationAction(
 
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/dashboard");
-  return { ok: true, message: "Reserva creada." };
+  return { ok: true, matchId };
 }
 
 // ---------------------------------------------------------------------------
@@ -371,21 +379,6 @@ export type CrearPartidoAdminInput = {
   categoryRange: string[];
   guestPlayers: GuestPlayerInput[];
 };
-
-export type AdminActionResult = { ok: true; matchId?: string } | { ok: false; error: string };
-
-type CourtOwnershipResult =
-  | { error: string }
-  | { supabase: Awaited<ReturnType<typeof createClient>>; ctx: NonNullable<Awaited<ReturnType<typeof getOwnerAdminContext>>>; court: { id: string; name: string | null; club_id: string } };
-
-async function assertCourtOwnership(courtId: string): Promise<CourtOwnershipResult> {
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) return { error: "Sesión requerida." };
-  const court = ctx.courts.find((c) => c.id === courtId);
-  if (!court) return { error: "Cancha no autorizada." };
-  return { supabase, ctx, court };
-}
 
 export async function crearPartidoDesdeAdmin(input: CrearPartidoAdminInput): Promise<AdminActionResult> {
   const courtId = input.courtId?.trim() ?? "";

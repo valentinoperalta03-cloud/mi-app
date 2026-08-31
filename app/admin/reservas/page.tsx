@@ -16,13 +16,11 @@ import { PaymentStatusPill, PlayerAvatar } from "@/components/admin/admin-status
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { minutesToClock, parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 import { cancelReservationAdmin, requestReservationRefundAction } from "./actions";
 import { confirmOfflineCobro } from "../cobros/actions";
 import DateNav from "./date-nav";
-import ReservasGridClient, { type GridCellData } from "./reservas-grid-client";
-import AdminReservasMobileView, { type MobileCourtData, type MobileSlot } from "./reservas-mobile-view";
+import ReservasAgendaList, { type AgendaItem } from "./reservas-agenda-list";
 import ReservasTabs, { type OpenMatchData } from "./reservas-tabs";
 
 function externalLabelFromReason(reason: string | null | undefined): string {
@@ -53,7 +51,9 @@ type MatchRow = {
   match_type: string | null;
   es_turno_fijo: boolean | null;
   manual_reference: string | null;
+  fixed_slot_id: string | null;
   courts: CourtEmbed | null;
+  fixed_slots: { title: string | null } | { title: string | null }[] | null;
 };
 
 type PageProps = {
@@ -69,12 +69,6 @@ function getTimeFromMatch(m: MatchRow): string {
   }
 }
 
-function getSlotBucket(m: MatchRow): string {
-  const time = getTimeFromMatch(m);
-  if (!/^\d{2}:\d{2}$/.test(time)) return "00:00";
-  return time;
-}
-
 function durationMin(m: MatchRow): number {
   return m.duration_minutes && m.duration_minutes > 0 ? m.duration_minutes : 90;
 }
@@ -88,14 +82,6 @@ function reservationMethodLabel(paymentStatus: string | null | undefined) {
   if (s === "refund_requested") return "Reembolso solicitado ⏳";
   if (s === "cancelled" || s === "expired") return "Cancelado";
   return s || "—";
-}
-
-/**
- * ¿Cae `t` (minutos desde medianoche) dentro de alguna franja, con el turno
- * completo (t + 90) sin pasarse del cierre?
- */
-function fitsSomeRange(t: number, ranges: Array<{ startMin: number; endMin: number }>, durationMinutes = 90): boolean {
-  return ranges.some((r) => t >= r.startMin && t + durationMinutes <= r.endMin);
 }
 
 export default async function AdminReservasPage({ searchParams }: PageProps) {
@@ -117,7 +103,8 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const selectedDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today;
   const selectedMatchId = sp.selected?.trim() ?? "";
   const mainClubId = ctx.clubIds[0];
-  const dayOfWeek = new Date(`${selectedDate}T12:00:00`).getDay();
+  const gridCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
+  const courtNameById = new Map(gridCourts.map((c) => [c.id, c.name]));
 
   const { data: closedDayRow } = await supabase
     .from(DB_TABLES.clubClosedDays)
@@ -126,70 +113,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     .eq("closed_date", selectedDate)
     .maybeSingle();
   const closedDay = closedDayRow as { id: string; reason: string | null } | null;
-
-  const [{ data: clubRow }, { data: timeRangesRaw }] = await Promise.all([
-    supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", mainClubId).maybeSingle(),
-    ctx.courtIds.length
-      ? supabase
-          .from(DB_TABLES.courtTimeRanges)
-          .select("court_id,open_time,close_time")
-          .in("court_id", ctx.courtIds)
-          .eq("day_of_week", dayOfWeek)
-      : Promise.resolve({ data: [] }),
-  ]);
-  const clubOpenMin = (clubRow as { open_time?: string | null } | null)?.open_time
-    ? parseClockToMinutes(String((clubRow as { open_time?: string | null }).open_time).slice(0, 5))
-    : null;
-  const clubCloseMin = (clubRow as { close_time?: string | null } | null)?.close_time
-    ? parseCloseTimeToMinutes(String((clubRow as { close_time?: string | null }).close_time).slice(0, 5))
-    : null;
-
-  const timeRangesByCourt = new Map<string, Array<{ startMin: number; endMin: number }>>();
-  for (const r of (timeRangesRaw ?? []) as Array<{ court_id: string; open_time: string; close_time: string }>) {
-    const list = timeRangesByCourt.get(r.court_id) ?? [];
-    list.push({
-      startMin: parseClockToMinutes(String(r.open_time).slice(0, 5)),
-      endMin: parseCloseTimeToMinutes(String(r.close_time).slice(0, 5)),
-    });
-    timeRangesByCourt.set(r.court_id, list);
-  }
-
-  // Franjas por cancha (court_time_ranges) — si la cancha no tiene franjas
-  // propias hoy, cae al horario global del club como fallback.
-  const rangesByCourt: Record<string, Array<{ startMin: number; endMin: number }>> = {};
-  for (const court of ctx.courts) {
-    const custom = timeRangesByCourt.get(court.id);
-    rangesByCourt[court.id] =
-      custom && custom.length > 0
-        ? custom
-        : clubOpenMin != null && clubCloseMin != null && clubCloseMin > clubOpenMin
-          ? [{ startMin: clubOpenMin, endMin: clubCloseMin }]
-          : [{ startMin: 9 * 60, endMin: 22 * 60 + 30 }];
-  }
-
-  // Grilla maestra anclada a la apertura más temprana entre TODAS las
-  // canchas: antes cada cancha generaba su propia secuencia de 90min desde
-  // su propia apertura, y dos canchas con horarios de apertura distintos casi
-  // nunca coincidían en los mismos horarios de reloj (ej. cancha que abre
-  // 08:30 → .../14:30/16:00/17:30..., cancha que cae al fallback 08:00 →
-  // .../14:00/15:30/17:00... — el "16:00" de la primera nunca existía para la
-  // segunda, y se pintaba como no disponible aunque estuviera abierta). Con
-  // una única grilla de referencia, todas las canchas comparten los mismos
-  // horarios de reloj; una celda vacía ahora significa que esa cancha
-  // realmente no tiene franja ahí, no un desalineamiento de cálculo.
-  const allRanges = Object.values(rangesByCourt).flat();
-  const gridStartMin = allRanges.length ? Math.min(...allRanges.map((r) => r.startMin)) : 9 * 60;
-  const masterMinutes: number[] = [];
-  for (let t = gridStartMin; t < 24 * 60; t += 90) masterMinutes.push(t);
-
-  const courtSlotTimes: Record<string, string[]> = {};
-  for (const court of ctx.courts) {
-    const ranges = rangesByCourt[court.id];
-    courtSlotTimes[court.id] = masterMinutes.filter((t) => fitsSomeRange(t, ranges)).map((t) => minutesToClock(t));
-  }
-  const slots = masterMinutes
-    .filter((t) => Object.values(courtSlotTimes).some((times) => times.includes(minutesToClock(t))))
-    .map((t) => minutesToClock(t));
 
   const { data: courtBlocksRaw } = ctx.courtIds.length
     ? await supabase
@@ -203,7 +126,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const { data: matchesRaw, error: matchesError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,manual_reference,courts(id,name)"
+      "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,manual_reference,fixed_slot_id,courts(id,name),fixed_slots(title)"
     )
     .in("court_id", ctx.courtIds)
     .eq("scheduled_date", selectedDate)
@@ -221,28 +144,47 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   );
 
   function labelForMatch(m: MatchRow): string {
+    // El título del turno fijo vive en fixed_slots.title, no se copia al
+    // match generado — se resuelve acá vía el embed de la FK
+    // matches.fixed_slot_id -> fixed_slots.id. Esto funciona también para
+    // matches históricos (generados antes de este fix) porque el título se
+    // lee en el momento, no depende de que se haya guardado en el match.
+    if (m.es_turno_fijo) {
+      const fixedSlot = Array.isArray(m.fixed_slots) ? m.fixed_slots[0] : m.fixed_slots;
+      if (fixedSlot?.title?.trim()) return fixedSlot.title.trim();
+    }
     if (m.manual_reference?.trim()) return m.manual_reference.trim();
     return m.owner_id ? nameByUser.get(m.owner_id) ?? "Jugador" : "Sin asignar";
   }
 
-  const slotMap = new Map<string, MatchRow>();
-  for (const m of matches) {
-    const key = `${m.court_id}__${getSlotBucket(m)}`;
-    if (!slotMap.has(key)) slotMap.set(key, m);
-  }
-
-  // Capas, de menos a más prioridad: bloqueos puntuales por cancha →
-  // reservas/turnos fijos reales (una reserva real siempre gana sobre un
-  // bloqueo, por si llegaran a coincidir en datos inconsistentes).
-  const cells: Record<string, GridCellData> = {};
+  // Agenda cronológica del día: bloqueos puntuales por cancha + reservas y
+  // turnos fijos reales, cada uno como su propia fila (sin la vieja grilla
+  // de horarios que cruzaba todas las canchas contra un eje global — ver
+  // reservas-agenda-list.tsx). Se listan todos los matches no cancelados tal
+  // cual están en la DB, sin deduplicar por horario: no perder información.
+  const agendaItems: AgendaItem[] = [];
   for (const b of courtBlocks) {
     const time = String(b.blocked_time ?? "").slice(0, 5);
     if (!time) continue;
-    cells[`${b.court_id}__${time}`] = { kind: "external", label: externalLabelFromReason(b.reason) };
+    agendaItems.push({
+      key: `block-${b.court_id}-${time}`,
+      time,
+      courtName: courtNameById.get(b.court_id) ?? "Cancha",
+      label: externalLabelFromReason(b.reason),
+      kind: "external",
+    });
   }
-  for (const [key, m] of slotMap) {
-    cells[key] = { matchId: m.id, kind: m.es_turno_fijo ? "fixed" : "reservation", label: labelForMatch(m) };
+  for (const m of matches) {
+    agendaItems.push({
+      key: m.id,
+      time: getTimeFromMatch(m),
+      courtName: m.courts?.name ?? courtNameById.get(m.court_id) ?? "Cancha",
+      label: labelForMatch(m),
+      kind: m.es_turno_fijo ? "fixed" : "reservation",
+      matchId: m.id,
+    });
   }
+  agendaItems.sort((a, b) => a.time.localeCompare(b.time) || a.courtName.localeCompare(b.courtName));
 
   const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
   const selectedMatchParticipantsRaw = selectedMatch
@@ -367,19 +309,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     };
   });
 
-  const gridCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
-
-  const mobileCourts: MobileCourtData[] = gridCourts.map((court) => ({
-    id: court.id,
-    name: court.name,
-    slots: (courtSlotTimes[court.id] ?? []).map((slot): MobileSlot => {
-      const key = `${court.id}__${slot}`;
-      const cell = cells[key];
-      if (!cell) return { time: slot, kind: "available" };
-      return { time: slot, kind: cell.kind, matchId: cell.matchId, label: cell.label };
-    }),
-  }));
-
   const closeHref = `/admin/reservas?date=${selectedDate}`;
 
   return (
@@ -435,7 +364,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
 
         {closedDay ? (
           <div className="rounded-2xl border-l-[3px] border-[var(--admin-alert-warning-border)] bg-[var(--admin-alert-warning-bg)] p-5 text-sm font-semibold text-[var(--admin-alert-warning-text)]">
-            El club está cerrado este día{closedDay.reason ? ` (${closedDay.reason})` : ""}. No se muestra la grilla.
+            El club está cerrado este día{closedDay.reason ? ` (${closedDay.reason})` : ""}. No se muestra la agenda.
           </div>
         ) : matchesError ? (
           <div
@@ -444,19 +373,9 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             Error al cargar reservas: {matchesError.message}.
           </div>
         ) : (
-          <>
-            <section className={`${adminCard} hidden overflow-hidden p-0 md:block`}>
-              <ReservasGridClient
-                courts={gridCourts}
-                slots={slots}
-                courtSlotTimes={courtSlotTimes}
-                cells={cells}
-                selectedDate={selectedDate}
-              />
-            </section>
-
-            <AdminReservasMobileView courts={mobileCourts} selectedDate={selectedDate} />
-          </>
+          <section className={adminCard}>
+            <ReservasAgendaList items={agendaItems} selectedDate={selectedDate} />
+          </section>
         )}
       </ReservasTabs>
 

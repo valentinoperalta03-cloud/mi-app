@@ -42,6 +42,19 @@ export async function getClubAvailability(
 
   const supabase = await createClient();
 
+  // Club cerrado ese día → sin disponibilidad, sea cual sea la franja
+  // configurada. Antes esta función no lo chequeaba: la reserva del jugador,
+  // "Abrir partido" y el turno fijo mostraban horarios "libres" en un día
+  // cerrado, y recién se rechazaba al confirmar (reservarCancha/crearPartido
+  // sí lo validan al insertar, pero el listado de horarios no).
+  const { data: closedDayRows } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", clubId)
+    .eq("closed_date", dateStr)
+    .limit(1);
+  if (closedDayRows?.length) return { slots: [], prices: {} };
+
   const { data: courtRows } = await supabase.from(DB_TABLES.courts).select("id").eq("club_id", clubId);
   const courtIds = ((courtRows ?? []) as { id: string }[]).map((c) => c.id);
   if (courtIds.length === 0) return { slots: [], prices: {} };
