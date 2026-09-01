@@ -1,8 +1,15 @@
-import { addDays, format } from "date-fns";
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
-import { generateMatchForSlotOnDate } from "@/lib/fixed-slot-generator";
+import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
 import { createServiceClient } from "@/utils/supabase/server";
+
+// Reconcilia una ventana de 14 días en lugar de una sola fecha (hoy + 7): si el
+// cron no corre un día (deploy, downtime) la fecha que dependía de esa corrida
+// se perdía para siempre, porque al día siguiente el cron ya apuntaba a otra
+// fecha objetivo. Reconciliar un rango hace que cualquier corrida futura repare
+// los huecos. Es idempotente: generateMatchForSlotOnDate ya chequea excepciones
+// y matches existentes antes de crear.
+const RECONCILE_DAYS_AHEAD = 14;
 
 function getArgentinaNow() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -35,15 +42,12 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const targetDateObj = addDays(getArgentinaNow(), 7);
-  const targetDate = format(targetDateObj, "yyyy-MM-dd");
-  const dayOfWeek = targetDateObj.getDay();
+  const now = getArgentinaNow();
 
   const { data: slotsRaw } = await supabase
     .from(DB_TABLES.fixedSlots)
     .select("id,club_id,court_id,day_of_week,start_time,duration_minutes,is_active")
-    .eq("is_active", true)
-    .eq("day_of_week", dayOfWeek);
+    .eq("is_active", true);
 
   const slots = (slotsRaw ?? []) as Array<{
     id: string;
@@ -56,10 +60,24 @@ export async function GET(req: NextRequest) {
   }>;
 
   let created = 0;
+  let checked = 0;
+  const conflicts: Array<{ fixedSlotId: string; date: string; reason: string }> = [];
+
   for (const slot of slots) {
-    const result = await generateMatchForSlotOnDate(supabase, slot, targetDate);
-    if (result.created) created++;
+    const dates = getUpcomingDatesForDayOfWeek(slot.day_of_week, now, RECONCILE_DAYS_AHEAD);
+    for (const date of dates) {
+      checked++;
+      const result = await generateMatchForSlotOnDate(supabase, slot, date);
+      if (result.created) {
+        created++;
+      } else if (
+        result.reason !== "hay una excepción cargada para esa fecha" &&
+        result.reason !== "ya existe un match de turno fijo para esa fecha/hora"
+      ) {
+        conflicts.push({ fixedSlotId: slot.id, date, reason: result.reason });
+      }
+    }
   }
 
-  return NextResponse.json({ ok: true, targetDate, created });
+  return NextResponse.json({ ok: true, checked, created, conflicts });
 }

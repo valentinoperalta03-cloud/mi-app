@@ -343,7 +343,6 @@ export default async function AdminDashboardPage({
     player_id: string;
     attendance_status: string | null;
   }>;
-  const participantIds = Array.from(new Set(participantsToday.map((p) => p.player_id)));
 
   const ownerNameById = new Map(
     ((nextOwnerProfileRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
@@ -368,19 +367,7 @@ export default async function AdminDashboardPage({
     ? supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", fixedSlotPlayerIds)
     : Promise.resolve({ data: [] as Array<{ user_id: string; name: string | null }> });
 
-  const participantPaymentsPromise =
-    participantIds.length && todayMatchIds.length
-      ? supabase
-          .from(DB_TABLES.payments)
-          .select("match_id,user_id,status")
-          .in("match_id", todayMatchIds)
-          .in("user_id", participantIds)
-      : Promise.resolve({ data: [] as Array<{ match_id: string; user_id: string; status: string | null }> });
-
-  const [{ data: fixedSlotPlayerProfilesRaw }, { data: participantPaymentsRaw }] = await Promise.all([
-    fixedSlotPlayerProfilesPromise,
-    participantPaymentsPromise,
-  ]);
+  const [{ data: fixedSlotPlayerProfilesRaw }] = await Promise.all([fixedSlotPlayerProfilesPromise]);
 
   const fixedSlotPlayerNameById = new Map(
     ((fixedSlotPlayerProfilesRaw ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [
@@ -393,16 +380,6 @@ export default async function AdminDashboardPage({
     const list = fixedSlotPlayersById.get(p.fixed_slot_id) ?? [];
     list.push({ playerId: p.player_id, name: fixedSlotPlayerNameById.get(p.player_id) ?? "Jugador" });
     fixedSlotPlayersById.set(p.fixed_slot_id, list);
-  }
-
-  const participantPayments = (participantPaymentsRaw ?? []) as Array<{
-    match_id: string;
-    user_id: string;
-    status: string | null;
-  }>;
-  const paymentMap = new Map<string, string>();
-  for (const pay of participantPayments) {
-    paymentMap.set(`${pay.match_id}:${pay.user_id}`, String(pay.status ?? "").toLowerCase());
   }
 
   const todayFixedSlotCards: TodayFixedSlotCard[] = fixedSlotsToday.map((slot) => {
@@ -450,8 +427,9 @@ export default async function AdminDashboardPage({
   for (const part of participantsToday) {
     const match = todayMatches.find((m) => m.id === part.match_id);
     if (!match || !match.es_turno_fijo) continue;
-    const status = paymentMap.get(`${part.match_id}:${part.player_id}`) ?? "";
-    if (status === "approved") turnosFijosConfirmados += 1;
+    // Asistencia se decide únicamente por attendance_status — nunca por
+    // payments.status. Un jugador puede confirmar que viene sin haber pagado.
+    if (part.attendance_status === "confirmed") turnosFijosConfirmados += 1;
     else turnosFijosSinConfirmar += 1;
   }
 
