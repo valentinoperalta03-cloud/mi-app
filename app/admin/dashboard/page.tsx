@@ -226,14 +226,23 @@ export default async function AdminDashboardPage({
 
   const todayMatches = (todayMatchesRaw ?? []) as TodayMatchRow[];
   const todayMatchIds = todayMatches.map((m) => m.id);
+  // Fuente única para toda métrica/card de "turnos fijos de hoy activos": un
+  // match cancelado no es un turno fijo vigente hoy, aunque siga siendo
+  // es_turno_fijo=true. No usar fixed_slots.is_active como fallback/piso acá:
+  // un turno recurrente puede seguir activo y aun así tener SU ocurrencia de
+  // hoy cancelada puntualmente (sin desactivar el turno completo), así que
+  // contar por configuración sobrecuenta. La métrica de cancelaciones
+  // ("X cancelaciones registradas hoy") es una query aparte
+  // (cancelledTodayPromise) y no debe derivar de esta colección.
+  const activeTodayFixedMatches = todayMatches.filter(
+    (m) => Boolean(m.es_turno_fijo) && String(m.match_status ?? "").toLowerCase() !== "cancelled"
+  );
+  const activeTodayFixedMatchIds = new Set(activeTodayFixedMatches.map((m) => m.id));
   const matchByFixedSlotId = new Map(
-    todayMatches
-      .filter((m) => m.es_turno_fijo && m.fixed_slot_id && String(m.match_status ?? "").toLowerCase() !== "cancelled")
-      .map((m) => [String(m.fixed_slot_id), m])
+    activeTodayFixedMatches.filter((m) => m.fixed_slot_id).map((m) => [String(m.fixed_slot_id), m])
   );
 
   const fixedSlotsToday = (fixedSlotsTodayRaw ?? []) as FixedSlotRow[];
-  const fixedSlotsTodayCount = fixedSlotsToday.length;
   const fixedSlotIdsToday = fixedSlotsToday.map((s) => s.id);
 
   const refundRequestedCount = (refundRequestedRaw ?? []).length;
@@ -421,12 +430,13 @@ export default async function AdminDashboardPage({
   ).length;
   const reservasPendientes = Math.max(0, reservasHoy - reservasPagadas);
 
-  const turnosFijosHoy = todayMatches.filter((m) => Boolean(m.es_turno_fijo)).length;
+  const turnosFijosHoy = activeTodayFixedMatches.length;
   let turnosFijosConfirmados = 0;
   let turnosFijosSinConfirmar = 0;
   for (const part of participantsToday) {
-    const match = todayMatches.find((m) => m.id === part.match_id);
-    if (!match || !match.es_turno_fijo) continue;
+    // Un match cancelado no cuenta para "turnos fijos hoy": ni sus
+    // participantes deben sumar a confirmados/sin confirmar.
+    if (!activeTodayFixedMatchIds.has(part.match_id)) continue;
     // Asistencia se decide únicamente por attendance_status — nunca por
     // payments.status. Un jugador puede confirmar que viene sin haber pagado.
     if (part.attendance_status === "confirmed") turnosFijosConfirmados += 1;
@@ -549,7 +559,7 @@ export default async function AdminDashboardPage({
             <p className={metricKicker}>Turnos fijos hoy</p>
             <Clock size={20} className="shrink-0 text-[#0085FC]" />
           </div>
-          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">{Math.max(fixedSlotsTodayCount, turnosFijosHoy)}</p>
+          <p className="text-4xl font-bold font-admin-display text-[var(--text-primary)]">{turnosFijosHoy}</p>
           <p className="text-sm text-[var(--text-secondary)]">
             {turnosFijosConfirmados} confirmados · {turnosFijosSinConfirmar} sin confirmar
           </p>
