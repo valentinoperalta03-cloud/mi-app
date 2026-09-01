@@ -178,6 +178,7 @@ export default async function AdminDashboardPage({
         .in("court_id", ctx.courtIds)
         .eq("scheduled_date", today)
         .eq("match_status", "cancelled")
+        .eq("es_turno_fijo", false)
     : Promise.resolve({ data: [] as Array<{ id: string }> });
 
   const paymentsTodayPromise = ctx.courtIds.length
@@ -232,7 +233,7 @@ export default async function AdminDashboardPage({
   // un turno recurrente puede seguir activo y aun así tener SU ocurrencia de
   // hoy cancelada puntualmente (sin desactivar el turno completo), así que
   // contar por configuración sobrecuenta. La métrica de cancelaciones
-  // ("X cancelaciones registradas hoy") es una query aparte
+  // ("X reservas canceladas para hoy") es una query aparte
   // (cancelledTodayPromise) y no debe derivar de esta colección.
   const activeTodayFixedMatches = todayMatches.filter(
     (m) => Boolean(m.es_turno_fijo) && String(m.match_status ?? "").toLowerCase() !== "cancelled"
@@ -482,7 +483,7 @@ export default async function AdminDashboardPage({
     cancelledTodayCount > 0
       ? {
           key: "cancelled_today",
-          text: `${cancelledTodayCount} cancelaciones registradas hoy`,
+          text: `${cancelledTodayCount} reservas canceladas para hoy`,
           href: "/admin/reservas",
         }
       : null,

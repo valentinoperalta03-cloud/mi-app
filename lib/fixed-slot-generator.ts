@@ -139,7 +139,7 @@ export async function generateMatchForSlotOnDate(
       court_id: slot.court_id,
       owner_id: ownerId,
       location_name: clubName,
-      date: new Date(`${targetDate}T${slotTime}:00`).toISOString(),
+      date: `${targetDate}T${slotTime}:00`,
       es_turno_fijo: true,
       fixed_slot_id: slot.id,
     })
