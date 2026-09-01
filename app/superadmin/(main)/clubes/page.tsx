@@ -12,14 +12,14 @@ const filterTabs: { key: Filter; label: string }[] = [
   { key: "all", label: "Todos" },
   { key: "pending", label: "Sin tarjeta" },
   { key: "trial", label: "En trial" },
-  { key: "active", label: "Activos" },
+  { key: "active", label: "Suscripción activa" },
   { key: "problems", label: "Con problemas" },
 ];
 
 export default async function SuperadminClubesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string; deleted?: string; delete_error?: string }>;
+  searchParams: Promise<{ f?: string; deleted?: string; delete_error?: string; active_error?: string }>;
 }) {
   const { svc } = await requireSuperadminAction();
   const sp = await searchParams;
@@ -34,7 +34,12 @@ export default async function SuperadminClubesPage({
   if (filter === "trial") rows = rows.filter((r) => r.subscription_status === "trial");
   if (filter === "active") rows = rows.filter((r) => r.subscription_status === "active");
   if (filter === "problems") {
-    rows = rows.filter((r) => r.subscription_status === "past_due" || r.subscription_status === "paused");
+    rows = rows.filter(
+      (r) =>
+        r.subscription_status === "past_due" ||
+        r.subscription_status === "paused" ||
+        r.subscription_status === "trial_expired"
+    );
   }
 
   const totals = {
@@ -62,6 +67,12 @@ export default async function SuperadminClubesPage({
       {sp.delete_error === "1" ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
           No se pudo eliminar el club.
+        </p>
+      ) : null}
+
+      {sp.active_error === "1" ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          No se pudo cambiar el estado operativo del club. Reintentá o revisá los logs.
         </p>
       ) : null}
 

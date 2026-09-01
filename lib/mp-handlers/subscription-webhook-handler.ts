@@ -52,10 +52,23 @@ async function updateClubSubscription(
 async function findClubByRefs(admin: SupabaseClient, refs: ClubRefs) {
   const query = admin
     .from(DB_TABLES.clubs)
-    .select("id, owner_id, subscription_status, next_billing_date, last_webhook_request_id");
+    .select(
+      "id, owner_id, subscription_status, next_billing_date, last_webhook_request_id, is_active, deactivation_reason"
+    );
   return refs.clubId
     ? await query.eq("id", refs.clubId).maybeSingle()
     : await query.eq("mp_subscription_id", refs.preapprovalId).maybeSingle();
+}
+
+/**
+ * Un club solo se restaura automaticamente (is_active=true) si estaba
+ * inactivo por causa comercial (o nunca estuvo inactivo). Si el superadmin
+ * lo bajo manualmente (deactivation_reason='manual'), un pago de MP NO debe
+ * revertir esa decision operativa.
+ */
+function reactivationPatch(deactivationReason: string | null | undefined): Record<string, unknown> {
+  if (deactivationReason === "manual") return {};
+  return { is_active: true, deactivation_reason: null };
 }
 
 /**
@@ -170,14 +183,21 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
         return NextResponse.json({ ok: true });
       }
       const prePayload = (await preRes.json()) as { external_reference?: string; next_payment_date?: string };
+      const activeRefs: ClubRefs = { clubId: String(prePayload.external_reference ?? "").trim(), preapprovalId };
+
+      const { data: clubForReactivation } = await findClubByRefs(admin, activeRefs);
+      const reactivation = reactivationPatch(
+        (clubForReactivation as { deactivation_reason?: string | null } | null)?.deactivation_reason
+      );
 
       const { data: updated, error } = await updateClubSubscription(
         admin,
-        { clubId: String(prePayload.external_reference ?? "").trim(), preapprovalId },
+        activeRefs,
         {
           subscription_status: "active",
           next_billing_date: prePayload.next_payment_date ?? null,
           mp_subscription_id: preapprovalId,
+          ...reactivation,
           ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
         },
         requestId
@@ -239,6 +259,7 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
       subscription_status: string | null;
       next_billing_date: string | null;
       last_webhook_request_id: string | null;
+      deactivation_reason: string | null;
     };
 
     if (mpRequestId && clubRow.last_webhook_request_id === mpRequestId) {
@@ -278,6 +299,7 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
           subscription_status: "active",
           next_billing_date: preapproval.next_payment_date ?? null,
           mp_subscription_id: preapprovalId,
+          ...reactivationPatch(clubRow.deactivation_reason),
           ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
         };
 

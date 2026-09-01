@@ -11,7 +11,7 @@ const toneClass = {
 export default function ClubHealthBadge({
   row,
 }: {
-  row: Pick<SuperadminClubOverview, "is_active" | "subscription_status">;
+  row: Pick<SuperadminClubOverview, "is_active" | "subscription_status" | "deactivation_reason">;
 }) {
   const { tone, label } = clubHealthLabel(row);
   return (

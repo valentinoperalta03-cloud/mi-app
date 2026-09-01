@@ -23,6 +23,11 @@ const subMessages: Record<string, string> = {
   reset: "Suscripción reseteada a pending.",
 };
 
+const subErrorMessages: Record<string, string> = {
+  dias: "Ingresá una cantidad de días válida para extender el trial.",
+  db: "No se pudo actualizar la suscripción. Reintentá o revisá los logs.",
+};
+
 const deleteErrorMessages: Record<string, string> = {
   "1": "No se pudo eliminar el club. Puede haber datos vinculados que impiden el borrado.",
   reservas: "No se puede eliminar: el club tiene reservas futuras activas. Cancelalas antes de borrar el club.",
@@ -36,6 +41,7 @@ type PageProps = {
     created?: string;
     delete_error?: string;
     active?: string;
+    active_error?: string;
     sub?: string;
     sub_error?: string;
   }>;
@@ -140,15 +146,21 @@ export default async function SuperadminClubDetailPage({ params, searchParams }:
         </p>
       ) : null}
 
+      {sp.active_error === "1" ? (
+        <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
+          No se pudo cambiar el estado operativo del club. Reintentá o revisá los logs.
+        </p>
+      ) : null}
+
       {subOk ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
           {subOk}
         </p>
       ) : null}
 
-      {sp.sub_error === "dias" ? (
+      {sp.sub_error ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-100">
-          Ingresá una cantidad de días válida para extender el trial.
+          {subErrorMessages[sp.sub_error] ?? "No se pudo actualizar la suscripción."}
         </p>
       ) : null}
 

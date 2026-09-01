@@ -34,13 +34,26 @@ export default async function SuperadminDashboardPage() {
   const overview = (overviewRaw ?? []) as SuperadminClubOverview[];
 
   const clubsTotal = overview.length;
-  const enTrial = overview.filter((r) => r.subscription_status === "pending" || r.subscription_status === "trial").length;
+  const sinActivar = overview.filter((r) => r.subscription_status === "pending").length;
+  const enTrial = overview.filter((r) => r.subscription_status === "trial").length;
   const activos = overview.filter((r) => r.subscription_status === "active").length;
-  const conProblemas = overview.filter((r) => r.subscription_status === "past_due" || r.subscription_status === "paused").length;
+  const conProblemas = overview.filter(
+    (r) =>
+      r.subscription_status === "past_due" ||
+      r.subscription_status === "paused" ||
+      r.subscription_status === "trial_expired"
+  ).length;
   const mrr = activos * SUBSCRIPTION_PRICE_ARS;
 
+  const now = Date.now();
   const trialsPorVencer = overview
-    .filter((r) => r.subscription_status === "trial" && r.trial_end_date && new Date(r.trial_end_date) <= in7Days)
+    .filter(
+      (r) =>
+        r.subscription_status === "trial" &&
+        r.trial_end_date &&
+        new Date(r.trial_end_date).getTime() >= now &&
+        new Date(r.trial_end_date).getTime() <= in7Days.getTime()
+    )
     .sort((a, b) => new Date(a.trial_end_date ?? 0).getTime() - new Date(b.trial_end_date ?? 0).getTime());
 
   const pagosFallidos = overview
@@ -101,11 +114,12 @@ export default async function SuperadminDashboardPage() {
         </Link>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { label: "Clubes totales", value: String(clubsTotal), tone: "from-cyan-500/20 to-blue-600/10" },
-          { label: "En trial (sin tarjeta + trial)", value: String(enTrial), tone: "from-sky-500/20 to-blue-600/10" },
-          { label: "Activos (pagando)", value: String(activos), tone: "from-emerald-500/20 to-teal-600/10" },
+          { label: "Sin activar (pending)", value: String(sinActivar), tone: "from-slate-500/20 to-blue-600/10" },
+          { label: "En trial", value: String(enTrial), tone: "from-sky-500/20 to-blue-600/10" },
+          { label: "Suscripción activa", value: String(activos), tone: "from-emerald-500/20 to-teal-600/10" },
           { label: "Con problemas", value: String(conProblemas), tone: "from-rose-500/20 to-red-600/10" },
         ].map((c) => (
           <div

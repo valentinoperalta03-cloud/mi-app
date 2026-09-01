@@ -10,6 +10,7 @@ export type SuperadminClubOverview = {
   owner_id: string | null;
   club_created_at: string;
   is_active: boolean;
+  deactivation_reason: "manual" | "subscription" | null;
   onboarding_completed: boolean;
   mp_access_token: string | null;
   mp_connected: boolean;
@@ -43,11 +44,18 @@ export function moneyArs(n: number) {
 export type BadgeTone = "ok" | "warn" | "danger" | "idle" | "info";
 
 /** Salud general del club: primero si está deshabilitado, después su estado de suscripción. */
-export function clubHealthLabel(row: Pick<SuperadminClubOverview, "is_active" | "subscription_status">): {
+export function clubHealthLabel(
+  row: Pick<SuperadminClubOverview, "is_active" | "subscription_status" | "deactivation_reason">
+): {
   tone: BadgeTone;
   label: string;
 } {
-  if (!row.is_active) return { tone: "danger", label: "Inactivo" };
+  if (!row.is_active) {
+    return {
+      tone: "danger",
+      label: row.deactivation_reason === "manual" ? "Inactivo (baja manual)" : "Inactivo (suscripción)",
+    };
+  }
   switch (row.subscription_status) {
     case "active":
       return { tone: "ok", label: "Al día" };

@@ -9,11 +9,17 @@ export default async function SuperadminFinanzasPage() {
   const overview = (overviewRaw ?? []) as SuperadminClubOverview[];
 
   const activos = overview.filter((r) => r.subscription_status === "active");
-  const enTrial = overview.filter((r) => r.subscription_status === "pending" || r.subscription_status === "trial");
-  const conProblemas = overview.filter((r) => r.subscription_status === "past_due" || r.subscription_status === "paused");
+  const sinActivar = overview.filter((r) => r.subscription_status === "pending");
+  const enTrial = overview.filter((r) => r.subscription_status === "trial");
+  const conProblemas = overview.filter(
+    (r) =>
+      r.subscription_status === "past_due" ||
+      r.subscription_status === "paused" ||
+      r.subscription_status === "trial_expired"
+  );
 
   const mrrActual = activos.length * SUBSCRIPTION_PRICE_ARS;
-  const mrrPotencial = (activos.length + enTrial.length) * SUBSCRIPTION_PRICE_ARS;
+  const mrrPotencial = (activos.length + sinActivar.length + enTrial.length) * SUBSCRIPTION_PRICE_ARS;
 
   const in7Days = new Date(Date.now() + 7 * 24 * 3600 * 1000);
   const proximosCobros = overview
@@ -47,7 +53,8 @@ export default async function SuperadminFinanzasPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300/80">MRR potencial</p>
           <p className="mt-2 text-3xl font-bold text-white">{moneyArs(mrrPotencial)}</p>
           <p className="mt-1 text-sm text-slate-400">
-            ({activos.length} activos + {enTrial.length} en trial) × {moneyArs(SUBSCRIPTION_PRICE_ARS)}
+            ({activos.length} activos + {sinActivar.length} sin activar + {enTrial.length} en trial) ×{" "}
+            {moneyArs(SUBSCRIPTION_PRICE_ARS)}
           </p>
         </div>
       </section>
@@ -56,8 +63,12 @@ export default async function SuperadminFinanzasPage() {
         <h2 className="text-lg font-bold text-white">Por estado</h2>
         <ul className="mt-4 space-y-2">
           <li className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-950/30 px-4 py-3">
-            <span className="text-sm text-emerald-100">Activos: {activos.length} clubes</span>
+            <span className="text-sm text-emerald-100">Suscripción activa: {activos.length} clubes</span>
             <span className="text-sm font-semibold text-white">{moneyArs(activos.length * SUBSCRIPTION_PRICE_ARS)}/mes garantizados</span>
+          </li>
+          <li className="flex items-center justify-between rounded-xl border border-slate-500/20 bg-slate-950/30 px-4 py-3">
+            <span className="text-sm text-slate-200">Sin activar (pending): {sinActivar.length} clubes</span>
+            <span className="text-sm font-semibold text-white">{moneyArs(sinActivar.length * SUBSCRIPTION_PRICE_ARS)} potenciales</span>
           </li>
           <li className="flex items-center justify-between rounded-xl border border-sky-500/20 bg-sky-950/30 px-4 py-3">
             <span className="text-sm text-sky-100">En trial: {enTrial.length} clubes</span>

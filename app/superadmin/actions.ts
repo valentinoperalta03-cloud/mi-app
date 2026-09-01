@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
 import { SUPERADMIN_COOKIE, SUPERADMIN_PIN } from "@/lib/superadmin/constants";
 import { requireSuperadminAction, requireSuperadminUser } from "@/lib/superadmin/guards";
@@ -12,7 +13,7 @@ import { signSuperadminSession } from "@/lib/superadmin/session-cookie";
 export async function unlockSuperadminPinAction(formData: FormData) {
   const pin = String(formData.get("pin") ?? "").trim();
   const user = await requireSuperadminUser();
-  if (pin !== SUPERADMIN_PIN) {
+  if (!SUPERADMIN_PIN || pin !== SUPERADMIN_PIN) {
     redirect("/superadmin/pin?error=1");
   }
   const jar = await cookies();
@@ -37,23 +38,37 @@ export async function toggleClubActiveAction(formData: FormData) {
   if (!clubId) redirect("/superadmin/clubes");
   const active = next === "1";
   const s = await svc();
-  await s.from(DB_TABLES.clubs).update({ is_active: active }).eq("id", clubId);
+  // Baja/alta manual del superadmin: siempre marca deactivation_reason='manual'
+  // para que un pago de MP no la revierta solo (ver subscription-webhook-handler.ts).
+  const { error } = await s
+    .from(DB_TABLES.clubs)
+    .update({ is_active: active, deactivation_reason: active ? null : "manual" })
+    .eq("id", clubId);
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
-  if (returnTo.startsWith("/superadmin/")) {
-    redirect(returnTo);
+  const base = returnTo.startsWith("/superadmin/") ? returnTo : "/superadmin/clubes";
+  if (error) {
+    log.error({ event: "superadmin.toggle_club_active.failed", clubId, err: error });
+    redirect(`${base}${base.includes("?") ? "&" : "?"}active_error=1`);
   }
-  redirect("/superadmin/clubes");
+  redirect(base);
 }
 
 export async function deactivateClubAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
-  await s.from(DB_TABLES.clubs).update({ is_active: false }).eq("id", clubId);
+  const { error } = await s
+    .from(DB_TABLES.clubs)
+    .update({ is_active: false, deactivation_reason: "manual" })
+    .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
+  if (error) {
+    log.error({ event: "superadmin.deactivate_club.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?active_error=1`);
+  }
   redirect(`/superadmin/clubes/${clubId}?active=0`);
 }
 
@@ -61,11 +76,39 @@ export async function reactivateClubAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
-  await s.from(DB_TABLES.clubs).update({ is_active: true }).eq("id", clubId);
+  const { error } = await s
+    .from(DB_TABLES.clubs)
+    .update({ is_active: true, deactivation_reason: null })
+    .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
+  if (error) {
+    log.error({ event: "superadmin.reactivate_club.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?active_error=1`);
+  }
   redirect(`/superadmin/clubes/${clubId}?active=1`);
+}
+
+/**
+ * Acciones de suscripcion disparadas por el superadmin (a diferencia del
+ * cron/webhook) son decisiones humanas explicitas: siempre pueden restaurar
+ * la operacion del club (is_active=true), incluso si estaba inactivo por
+ * causa comercial. Una baja MANUAL previa (deactivation_reason='manual') se
+ * respeta: estas acciones tocan solo el estado comercial, no is_active.
+ */
+async function restoreOperationIfSubscriptionCaused(
+  s: Awaited<ReturnType<typeof svc>>,
+  clubId: string
+): Promise<Record<string, unknown>> {
+  const { data: row } = await s
+    .from(DB_TABLES.clubs)
+    .select("deactivation_reason")
+    .eq("id", clubId)
+    .maybeSingle();
+  const reason = (row as { deactivation_reason?: string | null } | null)?.deactivation_reason;
+  if (reason === "manual") return {};
+  return { is_active: true, deactivation_reason: null };
 }
 
 export async function activateClubSubscriptionAction(formData: FormData) {
@@ -73,14 +116,19 @@ export async function activateClubSubscriptionAction(formData: FormData) {
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
   const nextBilling = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-  await s
+  const restore = await restoreOperationIfSubscriptionCaused(s, clubId);
+  const { error } = await s
     .from(DB_TABLES.clubs)
-    .update({ subscription_status: "active", next_billing_date: nextBilling })
+    .update({ subscription_status: "active", next_billing_date: nextBilling, ...restore })
     .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
+  if (error) {
+    log.error({ event: "superadmin.activate_subscription.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=activated`);
 }
 
@@ -90,14 +138,25 @@ export async function activateClubTrialAction(formData: FormData) {
   const s = await svc();
   const now = new Date();
   const trialEnd = new Date(now.getTime() + 15 * 24 * 3600 * 1000).toISOString();
-  await s
+  const restore = await restoreOperationIfSubscriptionCaused(s, clubId);
+  const { error } = await s
     .from(DB_TABLES.clubs)
-    .update({ subscription_status: "trial", trial_start_date: now.toISOString(), trial_end_date: trialEnd })
+    .update({
+      subscription_status: "trial",
+      trial_start_date: now.toISOString(),
+      trial_end_date: trialEnd,
+      next_billing_date: null,
+      ...restore,
+    })
     .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
+  if (error) {
+    log.error({ event: "superadmin.activate_trial.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=trial_activated`);
 }
 
@@ -109,14 +168,40 @@ export async function extendClubTrialAction(formData: FormData) {
     redirect(`/superadmin/clubes/${clubId}?sub_error=dias`);
   }
   const s = await svc();
-  const { data: row } = await s.from(DB_TABLES.clubs).select("trial_end_date").eq("id", clubId).maybeSingle();
-  const currentEnd = (row as { trial_end_date?: string | null } | null)?.trial_end_date;
-  const base = currentEnd ? new Date(currentEnd) : new Date();
-  const nextEnd = new Date(base.getTime() + days * 24 * 3600 * 1000).toISOString();
-  await s.from(DB_TABLES.clubs).update({ trial_end_date: nextEnd }).eq("id", clubId);
+  const { data: row } = await s
+    .from(DB_TABLES.clubs)
+    .select("trial_end_date, subscription_status, deactivation_reason")
+    .eq("id", clubId)
+    .maybeSingle();
+  const current = row as {
+    trial_end_date?: string | null;
+    subscription_status?: string | null;
+    deactivation_reason?: string | null;
+  } | null;
+  // Extender un trial vencido debe partir de "ahora", no de la fecha vieja
+  // (si no, sumarle dias a un trial vencido hace tiempo puede seguir dando
+  // una fecha en el pasado).
+  const base = Math.max(Date.now(), current?.trial_end_date ? new Date(current.trial_end_date).getTime() : 0);
+  const nextEnd = new Date(base + days * 24 * 3600 * 1000).toISOString();
+  const wasExpired = current?.subscription_status === "trial_expired";
+  const restore = wasExpired && current?.deactivation_reason !== "manual" ? { is_active: true, deactivation_reason: null } : {};
+  const { error } = await s
+    .from(DB_TABLES.clubs)
+    .update({
+      trial_end_date: nextEnd,
+      // Extender un trial vencido lo revive: no puede quedar trial_expired
+      // con una fecha de vencimiento futura (estado imposible).
+      ...(wasExpired ? { subscription_status: "trial" } : {}),
+      ...restore,
+    })
+    .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
+  if (error) {
+    log.error({ event: "superadmin.extend_trial.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=extended`);
 }
 
@@ -124,11 +209,15 @@ export async function markClubPastDueAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
-  await s.from(DB_TABLES.clubs).update({ subscription_status: "past_due" }).eq("id", clubId);
+  const { error } = await s.from(DB_TABLES.clubs).update({ subscription_status: "past_due" }).eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
+  if (error) {
+    log.error({ event: "superadmin.mark_past_due.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=past_due`);
 }
 
@@ -136,11 +225,15 @@ export async function pauseClubSubscriptionAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
-  await s.from(DB_TABLES.clubs).update({ subscription_status: "paused" }).eq("id", clubId);
+  const { error } = await s.from(DB_TABLES.clubs).update({ subscription_status: "paused" }).eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
+  if (error) {
+    log.error({ event: "superadmin.pause_subscription.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=paused`);
 }
 
@@ -148,14 +241,25 @@ export async function resetClubToPendingAction(formData: FormData) {
   const clubId = String(formData.get("club_id") ?? "").trim();
   if (!clubId) redirect("/superadmin/clubes");
   const s = await svc();
-  await s
+  const restore = await restoreOperationIfSubscriptionCaused(s, clubId);
+  const { error } = await s
     .from(DB_TABLES.clubs)
-    .update({ subscription_status: "pending", mp_subscription_id: null, next_billing_date: null })
+    .update({
+      subscription_status: "pending",
+      mp_subscription_id: null,
+      next_billing_date: null,
+      last_webhook_request_id: null,
+      ...restore,
+    })
     .eq("id", clubId);
   revalidatePath("/superadmin");
   revalidatePath("/superadmin/clubes");
   revalidatePath(`/superadmin/clubes/${clubId}`);
   revalidatePath("/superadmin/finanzas");
+  if (error) {
+    log.error({ event: "superadmin.reset_pending.failed", clubId, err: error });
+    redirect(`/superadmin/clubes/${clubId}?sub_error=db`);
+  }
   redirect(`/superadmin/clubes/${clubId}?sub=reset`);
 }
 
