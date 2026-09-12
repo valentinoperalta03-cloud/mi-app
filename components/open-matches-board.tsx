@@ -27,6 +27,7 @@ type MatchFeedRow = {
               location: string | null;
               city?: string | null;
               province?: string | null;
+              logo_url?: string | null;
             }
           | null;
       }
@@ -116,7 +117,8 @@ export default async function OpenMatchesBoard({
           name,
           location,
           city,
-          province
+          province,
+          logo_url
         )
       ),
       match_participants (
@@ -151,17 +153,18 @@ export default async function OpenMatchesBoard({
     const userCanJoinByGender = genderCategory === "mixto" || (currentUserGender != null && currentUserGender === genderCategory);
     const genderLabel = genderCategory === "masculino" ? "Masculino" : genderCategory === "femenino" ? "Femenino" : "Mixto";
     const genderRestrictionMessage = !currentUserJoined && !userCanJoinByGender ? `Este partido es exclusivo para ${genderLabel}.` : null;
+    const club = match.courts?.clubs;
     const participants = (match.match_participants ?? []).map((mp) => {
       const prof = mp.profiles;
       const p = Array.isArray(prof) ? prof[0] : prof;
+      const isGuest = mp.player_id === null;
       return {
         player_id: mp.player_id,
         team: mp.team ?? null,
-        name: mp.guest_name?.trim() || p?.name?.trim() || "Jugador",
-        avatar_url: mp.guest_name ? null : (p?.avatar_url ?? null),
+        name: isGuest ? mp.guest_name?.trim() || "Jugador X" : p?.name?.trim() || "Jugador",
+        avatar_url: isGuest ? (club?.logo_url ?? null) : (p?.avatar_url ?? null),
       };
     });
-    const club = match.courts?.clubs;
     const rawCity = club?.city?.trim() ? club.city : (club?.location ?? "").split(",")[0].trim();
     return {
       id: match.id,

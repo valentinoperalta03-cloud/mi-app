@@ -511,7 +511,7 @@ export async function crearPartidoDesdeAdmin(input: CrearPartidoAdminInput): Pro
         match_id: matchId,
         player_id: null,
         team: g.team,
-        guest_name: g.name?.trim() || `Jugador encontrado por ${clubName}`,
+        guest_name: g.name?.trim() || "Jugador X",
       }))
     );
     if (guestsErr) {
@@ -556,8 +556,7 @@ export async function agregarJugadorDesdeAdmin(input: AgregarJugadorAdminInput):
     return { ok: false, error: "Ese equipo ya está completo." };
   }
 
-  const clubName = ctx.clubs[0]?.name?.trim() || "Club";
-  const guestName = input.guestName?.trim() || `Jugador encontrado por ${clubName}`;
+  const guestName = input.guestName?.trim() || "Jugador X";
 
   const { error } = await supabase
     .from(DB_TABLES.matchParticipants)

@@ -257,7 +257,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     ? await supabase
         .from(DB_TABLES.matches)
         .select(
-          "id,scheduled_date,scheduled_time,match_status,gender_category,category_range,created_by_club,courts(name),match_participants(id,player_id,team,guest_name,profiles(name,avatar_url))"
+          "id,scheduled_date,scheduled_time,match_status,gender_category,category_range,created_by_club,courts(name,clubs(logo_url)),match_participants(id,player_id,team,guest_name,profiles(name,avatar_url))"
         )
         .in("court_id", ctx.courtIds)
         .eq("match_type", "amistoso")
@@ -282,12 +282,17 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     gender_category: "masculino" | "femenino" | "mixto" | null;
     category_range: string[] | null;
     created_by_club: boolean | null;
-    courts: { name: string | null } | { name: string | null }[] | null;
+    courts:
+      | { name: string | null; clubs: { logo_url: string | null } | { logo_url: string | null }[] | null }
+      | { name: string | null; clubs: { logo_url: string | null } | { logo_url: string | null }[] | null }[]
+      | null;
     match_participants: OpenParticipantRaw[] | null;
   };
 
   const openMatches: OpenMatchData[] = ((openMatchesRaw ?? []) as unknown as OpenMatchRaw[]).map((m) => {
     const courtEmbed = Array.isArray(m.courts) ? m.courts[0] ?? null : m.courts;
+    const clubEmbed = Array.isArray(courtEmbed?.clubs) ? courtEmbed.clubs[0] ?? null : courtEmbed?.clubs ?? null;
+    const clubLogoUrl = clubEmbed?.logo_url ?? null;
     return {
       id: m.id,
       scheduledDate: m.scheduled_date ?? "",
@@ -298,12 +303,13 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
       createdByClub: Boolean(m.created_by_club),
       participants: (m.match_participants ?? []).map((p) => {
         const prof = Array.isArray(p.profiles) ? p.profiles[0] ?? null : p.profiles;
+        const isGuest = p.player_id === null;
         return {
           id: p.id ?? "",
           playerId: p.player_id,
           team: (p.team === 1 || p.team === 2 ? p.team : null) as 1 | 2 | null,
-          name: p.guest_name?.trim() || prof?.name?.trim() || "Jugador",
-          avatarUrl: p.guest_name ? null : (prof?.avatar_url ?? null),
+          name: isGuest ? p.guest_name?.trim() || "Jugador X" : prof?.name?.trim() || "Jugador",
+          avatarUrl: isGuest ? clubLogoUrl : (prof?.avatar_url ?? null),
         };
       }),
     };

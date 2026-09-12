@@ -331,8 +331,8 @@ export default function OpenMatchModal({
                   ¿Ya tenés jugadores para este partido?
                 </p>
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  Podés agregar hasta 3 jugadores encontrados por el club. El 4to lugar queda libre para que se
-                  anote alguien desde la app.
+                  Podés agregar hasta 3 jugadores sin cuenta en la app. El 4to lugar queda libre para que se
+                  anote alguien desde la app. Si no escribís un nombre, aparecerá como Jugador X.
                 </p>
               </div>
 
@@ -342,7 +342,7 @@ export default function OpenMatchModal({
                     <input
                       value={g.name}
                       onChange={(e) => updateGuestName(idx, e.target.value)}
-                      placeholder="Nombre (opcional)"
+                      placeholder="Nombre opcional"
                       className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
                     />
                     <div className="flex gap-1">
@@ -375,7 +375,7 @@ export default function OpenMatchModal({
                     onClick={addGuestPlayer}
                     className={`w-full ${adminButtonSecondary}`}
                   >
-                    + Agregar jugador del club
+                    + Agregar Jugador X
                   </button>
                 ) : null}
               </div>

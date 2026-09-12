@@ -99,11 +99,14 @@ export default function ManagePlayersModal({ match, onClose }: { match: OpenMatc
 
           {!isFull ? (
             <div className="space-y-3 border-t border-[var(--border-subtle)] pt-4">
-              <span className="block text-sm font-medium text-[var(--text-secondary)]">Agregar jugador del club</span>
+              <span className="block text-sm font-medium text-[var(--text-secondary)]">Agregar Jugador X</span>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                Es un jugador sin cuenta en la app. Si no escribís un nombre, aparecerá como Jugador X.
+              </p>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nombre del jugador (opcional)"
+                placeholder="Nombre opcional"
                 className={fieldClass}
               />
               <div>

@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { MessageCircle, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import MotionPage from "@/components/motion-page";
+import { MatchesRealtimeRefresh } from "@/components/matches-realtime-refresh";
 import { ConfirmTransferWhatsappButton } from "@/components/confirm-transfer-whatsapp-button";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { formatDateInArgentina } from "@/lib/datetime-ar";
@@ -117,6 +118,7 @@ type MatchDetailRow = {
 };
 
 type ParticipantRow = {
+  id: string;
   player_id: string | null;
   team: number | null;
   name: string | null;
@@ -160,7 +162,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location))"
+      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location,logo_url))"
     )
     .eq("id", id)
     .maybeSingle();
@@ -198,6 +200,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             | {
                 name: string | null;
                 location: string | null;
+                logo_url: string | null;
               }
             | null;
         }
@@ -226,12 +229,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     club_location: match.courts?.clubs?.location ?? null,
   };
 
+  const clubLogoUrl = match.courts?.clubs?.logo_url ?? null;
+
   const { data: participantsRows } = await supabase
     .from(DB_TABLES.matchParticipants)
-    .select("player_id, team, guest_name, profiles(name,avatar_url,category)")
+    .select("id, player_id, team, guest_name, profiles(name,avatar_url,category)")
     .eq("match_id", id);
 
   const participants = ((participantsRows ?? []) as Array<{
+    id: string;
     player_id: string | null;
     team: number | null;
     guest_name: string | null;
@@ -249,12 +255,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
       | null;
   }>).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const isGuest = row.player_id === null;
     return {
+      id: row.id,
       player_id: row.player_id,
       team: row.team ?? null,
-      name: row.guest_name?.trim() || profile?.name || null,
-      avatar_url: row.guest_name ? null : (profile?.avatar_url ?? null),
-      category: profile?.category ?? null,
+      name: isGuest ? row.guest_name?.trim() || "Jugador X" : profile?.name || null,
+      avatar_url: isGuest ? clubLogoUrl : (profile?.avatar_url ?? null),
+      category: isGuest ? null : (profile?.category ?? null),
     } satisfies ParticipantRow;
   });
 
@@ -519,6 +527,11 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+      <MatchesRealtimeRefresh
+        channelName={`match-participants-live:${id}`}
+        table={DB_TABLES.matchParticipants}
+        filter={`match_id=eq.${id}`}
+      />
       <header className="space-y-2">
         <Link href="/buscar-partido" className="inline-block text-sm font-semibold text-[#0085FC] hover:text-[#0461C4]">
           ← Volver
@@ -558,7 +571,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 const level = formatPlayerCategory(participant.category);
                 return (
                   <div
-                    key={participant.player_id ?? `guest-${name}`}
+                    key={participant.id}
                     className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
                   >
                     <ProfileAvatar
@@ -621,7 +634,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 const level = formatPlayerCategory(participant.category);
                 return (
                   <div
-                    key={participant.player_id ?? `guest-${name}`}
+                    key={participant.id}
                     className="flex w-0 min-w-0 max-w-[9rem] flex-1 flex-col items-center gap-1"
                   >
                     <ProfileAvatar

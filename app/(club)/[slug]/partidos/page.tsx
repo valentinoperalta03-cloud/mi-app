@@ -103,12 +103,13 @@ export default async function ClubPartidosPage({ params }: PageProps) {
     const courtEmbed = Array.isArray(row.courts) ? row.courts[0] ?? null : row.courts;
     const participants: OpenMatchParticipant[] = ((row.match_participants ?? []) as RawParticipant[]).map((p) => {
       const prof = Array.isArray(p.profiles) ? p.profiles[0] ?? null : p.profiles;
+      const isGuest = p.player_id === null;
       return {
         player_id: p.player_id,
         team: p.team ?? null,
-        name: p.guest_name?.trim() || prof?.name || null,
-        avatar_url: p.guest_name ? null : (prof?.avatar_url ?? null),
-        category: prof?.category ?? null,
+        name: isGuest ? p.guest_name?.trim() || "Jugador X" : prof?.name || null,
+        avatar_url: isGuest ? (club.logo_url ?? null) : (prof?.avatar_url ?? null),
+        category: isGuest ? null : (prof?.category ?? null),
       };
     });
     return {
