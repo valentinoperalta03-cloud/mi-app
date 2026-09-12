@@ -26,26 +26,33 @@ export async function evaluateClubSubscriptionGate(
 
   let status: string;
   let trialEndDate: string | null;
+  let gracePeriodEnd: string | null;
   let refreshedCookieValue: string | null = null;
 
   if (cached) {
     status = cached.status;
     trialEndDate = cached.trialEndDate;
+    gracePeriodEnd = cached.gracePeriodEnd;
   } else {
     try {
       const service = createServiceClient();
       const { data, error } = await service
         .from(DB_TABLES.clubs)
-        .select("subscription_status, trial_end_date")
+        .select("subscription_status, trial_end_date, grace_period_end")
         .eq("id", clubId)
         .maybeSingle();
       if (error || !data) {
         return { blockReason: null, refreshedCookieValue: null };
       }
-      const row = data as { subscription_status?: string | null; trial_end_date?: string | null };
+      const row = data as {
+        subscription_status?: string | null;
+        trial_end_date?: string | null;
+        grace_period_end?: string | null;
+      };
       status = row.subscription_status ?? "trial";
       trialEndDate = row.trial_end_date ?? null;
-      refreshedCookieValue = signSubscriptionCookie({ clubId, status, trialEndDate });
+      gracePeriodEnd = row.grace_period_end ?? null;
+      refreshedCookieValue = signSubscriptionCookie({ clubId, status, trialEndDate, gracePeriodEnd });
     } catch {
       return { blockReason: null, refreshedCookieValue: null };
     }
@@ -61,7 +68,12 @@ export async function evaluateClubSubscriptionGate(
   } else if (status === "trial_expired") {
     blockReason = "trial_expired";
   } else if (status === "past_due") {
-    blockReason = "past_due";
+    // Grace period propio de PadeLibre (7 dias desde el primer rechazo): el
+    // club sigue con acceso al panel mientras no venza grace_period_end. Sin
+    // esa fecha (caso raro/legacy) se bloquea por seguridad.
+    if (!gracePeriodEnd || Date.now() > new Date(gracePeriodEnd).getTime()) {
+      blockReason = "past_due";
+    }
   } else if (status === "paused") {
     blockReason = "paused";
   }

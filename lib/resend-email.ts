@@ -86,6 +86,95 @@ export async function sendMeetingConfirmationEmail(params: {
   });
 }
 
+function subscriptionEmailShell(bodyHtml: string): string {
+  return `
+<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:0;background-color:#031733;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#031733;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:480px;background-color:#0a2240;border-radius:16px;overflow:hidden;">
+            <tr>
+              <td style="padding:32px 32px 0;text-align:center;">
+                <span style="font-size:40px;">🎾</span>
+                <p style="margin:8px 0 0;color:#ffffff;font-size:18px;font-weight:700;">PadeLibre</p>
+              </td>
+            </tr>
+            ${bodyHtml}
+            <tr>
+              <td style="padding:24px 32px 32px;color:#9fb3c8;font-size:13px;line-height:1.6;">
+                <p style="margin-top:0;color:#6b839c;">soporte@padelibre.online</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim();
+}
+
+/**
+ * Aviso de cobro mensual rechazado. El tono es informativo, no agresivo: el
+ * club sigue activo durante el grace period, esto solo pide que se
+ * regularice el medio de pago.
+ */
+export async function sendSubscriptionPaymentFailedEmail(params: {
+  to: string;
+  clubName: string;
+  amountLabel: string;
+  reasonLabel: string;
+  graceDaysLeft: number;
+}): Promise<void> {
+  const bodyHtml = `
+    <tr>
+      <td style="padding:24px 32px 0;color:#e2ecf5;font-size:15px;line-height:1.6;">
+        <p>No pudimos procesar el pago de tu suscripción de PadeLibre para <strong>${params.clubName}</strong>.</p>
+        <p style="margin:20px 0;padding:16px;background-color:#0d2d52;border-radius:12px;">
+          Mercado Pago rechazó el débito de ${params.amountLabel}.<br />
+          <span style="color:#9fb3c8;">${params.reasonLabel}</span>
+        </p>
+        <p>Tu club continúa activo durante los próximos ${params.graceDaysLeft} día${params.graceDaysLeft === 1 ? "" : "s"}. Revisá tu saldo o medio de pago para evitar interrupciones en el servicio.</p>
+      </td>
+    </tr>`;
+  await getResendClient().emails.send({
+    from: FROM,
+    to: params.to,
+    subject: "No pudimos procesar el pago de tu suscripción",
+    html: subscriptionEmailShell(bodyHtml),
+  });
+}
+
+/**
+ * Aviso de que un cobro que antes habia fallado ahora se aprobo: la deuda
+ * quedo saldada y la suscripcion vuelve a estar al dia.
+ */
+export async function sendSubscriptionPaymentRegularizedEmail(params: {
+  to: string;
+  clubName: string;
+  amountLabel: string;
+  nextBillingLabel: string;
+}): Promise<void> {
+  const bodyHtml = `
+    <tr>
+      <td style="padding:24px 32px 0;color:#e2ecf5;font-size:15px;line-height:1.6;">
+        <p>¡Buenas noticias! El pago de tu suscripción de PadeLibre para <strong>${params.clubName}</strong> se procesó correctamente.</p>
+        <p style="margin:20px 0;padding:16px;background-color:#0d2d52;border-radius:12px;">
+          Se acreditó el débito de ${params.amountLabel}.<br />
+          <span style="color:#9fb3c8;">Próximo cobro: ${params.nextBillingLabel}</span>
+        </p>
+        <p>Tu cuenta quedó al día, no tenés que hacer nada más.</p>
+      </td>
+    </tr>`;
+  await getResendClient().emails.send({
+    from: FROM,
+    to: params.to,
+    subject: "Tu pago se regularizó",
+    html: subscriptionEmailShell(bodyHtml),
+  });
+}
+
 export async function sendMeetingCancellationEmail(params: {
   to: string;
   fullName: string;

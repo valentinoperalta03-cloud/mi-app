@@ -2,11 +2,62 @@ import { NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
 import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
+import { translateMpStatusDetail } from "@/lib/mp-status-detail-labels";
 import { verifyMpWebhookSignature } from "@/lib/mp-webhook-signature";
+import {
+  sendSubscriptionPaymentFailedEmail,
+  sendSubscriptionPaymentRegularizedEmail,
+} from "@/lib/resend-email";
 import { createServiceClient } from "@/utils/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
+const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+const NOTIFY_COOLDOWN_MS = 48 * 60 * 60 * 1000;
+
+function formatArs(amount: number | null | undefined): string {
+  const value = Number(amount ?? 50000);
+  return `$${Math.round(Number.isFinite(value) ? value : 50000).toLocaleString("es-AR")}`;
+}
+
+/**
+ * Consulta primero Mercado Pago producción.
+ * Si el recurso no existe bajo las credenciales productivas, intenta con TEST.
+ * Esto permite probar suscripciones TEST sin reemplazar MP_ACCESS_TOKEN.
+ */
+async function fetchMpSubscriptionResource(path: string): Promise<Response> {
+  const productionToken = String(process.env.MP_ACCESS_TOKEN ?? "").trim();
+  const testToken = String(process.env.MP_TEST_ACCESS_TOKEN ?? "").trim();
+
+  if (!productionToken) {
+    throw new Error("MP_ACCESS_TOKEN no configurado");
+  }
+
+  const url = `https://api.mercadopago.com${path}`;
+
+  const productionResponse = await fetch(url, {
+    headers: { Authorization: `Bearer ${productionToken}` },
+    cache: "no-store",
+  });
+
+  if (productionResponse.ok) {
+    return productionResponse;
+  }
+
+  const canTryTest =
+    Boolean(testToken) &&
+    [401, 403, 404].includes(productionResponse.status);
+
+  if (!canTryTest) {
+    return productionResponse;
+  }
+
+  return fetch(url, {
+    headers: { Authorization: `Bearer ${testToken}` },
+    cache: "no-store",
+  });
+}
+
 
 function extractDataId(url: URL, body: unknown): { id: string | null; topic: string | null } {
   const topic = url.searchParams.get("topic") ?? url.searchParams.get("type");
@@ -40,8 +91,8 @@ async function updateClubSubscription(
 ) {
   const query = admin.from(DB_TABLES.clubs).update(patch);
   const result = refs.clubId
-    ? await query.eq("id", refs.clubId).select("owner_id").maybeSingle()
-    : await query.eq("mp_subscription_id", refs.preapprovalId).select("owner_id").maybeSingle();
+    ? await query.eq("id", refs.clubId).select("owner_id, name").maybeSingle()
+    : await query.eq("mp_subscription_id", refs.preapprovalId).select("owner_id, name").maybeSingle();
 
   if (!result.error) {
     logIfClubNotFound(requestId, refs, result.data);
@@ -53,7 +104,7 @@ async function findClubByRefs(admin: SupabaseClient, refs: ClubRefs) {
   const query = admin
     .from(DB_TABLES.clubs)
     .select(
-      "id, owner_id, subscription_status, next_billing_date, last_webhook_request_id, is_active, deactivation_reason"
+      "id, owner_id, name, subscription_status, next_billing_date, last_webhook_request_id, is_active, deactivation_reason, past_due_since, grace_period_end, last_payment_failure_notified_at"
     );
   return refs.clubId
     ? await query.eq("id", refs.clubId).maybeSingle()
@@ -61,14 +112,218 @@ async function findClubByRefs(admin: SupabaseClient, refs: ClubRefs) {
 }
 
 /**
- * Un club solo se restaura automaticamente (is_active=true) si estaba
- * inactivo por causa comercial (o nunca estuvo inactivo). Si el superadmin
- * lo bajo manualmente (deactivation_reason='manual'), un pago de MP NO debe
- * revertir esa decision operativa.
+ * Un club solo se restaura automaticamente (is_active=true) si la baja fue
+ * por causa comercial nuestra (trial vencido o grace period de past_due
+ * vencido, ambos marcados como deactivation_reason='subscription'). Si el
+ * superadmin lo bajo manualmente (deactivation_reason='manual') o por
+ * cualquier otro motivo, un pago de MP NO debe revertir esa decision
+ * operativa — allow-list explicita, no deny-list del caso manual.
  */
 function reactivationPatch(deactivationReason: string | null | undefined): Record<string, unknown> {
-  if (deactivationReason === "manual") return {};
+  if (deactivationReason !== "subscription") return {};
   return { is_active: true, deactivation_reason: null };
+}
+
+type ClubForPaymentEvent = {
+  id?: string;
+  owner_id?: string | null;
+  name?: string | null;
+  subscription_status?: string | null;
+  deactivation_reason?: string | null;
+  past_due_since?: string | null;
+  grace_period_end?: string | null;
+  last_payment_failure_notified_at?: string | null;
+};
+
+/**
+ * Primer rechazo del ciclo: arranca past_due_since/grace_period_end y avisa
+ * siempre. Rechazo posterior dentro del mismo ciclo: mantiene las mismas
+ * fechas de gracia (no se extienden) y solo reavisa si pasaron >= 48hs desde
+ * el ultimo aviso, para no saturar al dueño con cada reintento de MP.
+ */
+async function handleAuthorizedPaymentRejected(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    apRefs: ClubRefs;
+    club: ClubForPaymentEvent;
+    statusDetail: string | null;
+    retryAttempt: number;
+    amount: number | null;
+    mpRequestId: string | null;
+  }
+): Promise<void> {
+  const { requestId, apRefs, club, statusDetail, retryAttempt, amount, mpRequestId } = params;
+  const now = new Date();
+  const isFirstRejectionOfCycle = club.subscription_status !== "past_due" || !club.past_due_since;
+
+  const graceStart = isFirstRejectionOfCycle ? now : new Date(String(club.past_due_since));
+  const graceEnd = isFirstRejectionOfCycle
+    ? new Date(now.getTime() + GRACE_PERIOD_MS)
+    : new Date(String(club.grace_period_end));
+
+  const shouldNotify =
+    isFirstRejectionOfCycle ||
+    !club.last_payment_failure_notified_at ||
+    now.getTime() - new Date(club.last_payment_failure_notified_at).getTime() >= NOTIFY_COOLDOWN_MS;
+
+  const patch: Record<string, unknown> = {
+    subscription_status: "past_due",
+    past_due_since: graceStart.toISOString(),
+    grace_period_end: graceEnd.toISOString(),
+    retry_attempt: retryAttempt,
+    last_status_detail: statusDetail,
+    last_payment_attempt_at: now.toISOString(),
+    ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
+    ...(shouldNotify ? { last_payment_failure_notified_at: now.toISOString() } : {}),
+  };
+
+  const { data: updated, error } = await updateClubSubscription(admin, apRefs, patch, requestId);
+  if (error) {
+    log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
+    return;
+  }
+
+  log.info({
+    event: "mp.subscription.payment_failed",
+    requestId,
+    preapprovalId: apRefs.preapprovalId,
+    isFirstRejectionOfCycle,
+    graceEnd: graceEnd.toISOString(),
+    notified: shouldNotify,
+  });
+
+  if (!shouldNotify) return;
+
+  const updatedRow = updated as { owner_id?: string | null; name?: string | null } | null;
+  const ownerId = String(updatedRow?.owner_id ?? club.owner_id ?? "").trim();
+  if (!ownerId) return;
+
+  const graceDaysLeft = Math.max(Math.ceil((graceEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)), 0);
+  const reasonLabel = translateMpStatusDetail(statusDetail);
+
+  // Best-effort: la notificacion in-app/push y el email nunca deben tirar
+  // abajo el webhook — el estado financiero ya quedo persistido arriba.
+  try {
+    await createNotification(admin, {
+      user_id: ownerId,
+      type: "payment_rejected",
+      title: "Pago de suscripción rechazado",
+      body: `${reasonLabel} Tu club sigue activo por ${graceDaysLeft} día${graceDaysLeft === 1 ? "" : "s"} más.`,
+    });
+  } catch (err) {
+    log.error({ event: "mp.subscription.webhook.notify_failed", requestId, err });
+  }
+
+  try {
+    const { data: authUser } = await admin.auth.admin.getUserById(ownerId);
+    const email = authUser?.user?.email;
+    if (email) {
+      await sendSubscriptionPaymentFailedEmail({
+        to: email,
+        clubName: String(updatedRow?.name ?? club.name ?? "tu club"),
+        amountLabel: formatArs(amount),
+        reasonLabel,
+        graceDaysLeft,
+      });
+    }
+  } catch (err) {
+    log.error({ event: "mp.subscription.webhook.email_failed", requestId, err });
+  }
+}
+
+/**
+ * Cobro aprobado sobre una factura de suscripcion. Reactiva el club, limpia
+ * todo rastro de deuda y solo manda el aviso especial de "regularizacion"
+ * (email incluido) si el club realmente venia de past_due — un cobro
+ * mensual normal no debe generar ese email todos los meses.
+ */
+async function handleAuthorizedPaymentApproved(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    preapprovalId: string;
+    club: ClubForPaymentEvent;
+    amount: number | null;
+    mpRequestId: string | null;
+  }
+): Promise<void> {
+  const { requestId, preapprovalId, club, amount, mpRequestId } = params;
+
+  const preRes = await fetchMpSubscriptionResource(`/preapproval/${preapprovalId}`);
+  if (!preRes.ok) {
+    log.error({ event: "mp.subscription.webhook.preapproval_fetch_failed", requestId, status: preRes.status });
+    return;
+  }
+  const prePayload = (await preRes.json()) as { next_payment_date?: string };
+
+  const wasInDebt = club.subscription_status === "past_due" || Boolean(club.past_due_since);
+  const reactivation = reactivationPatch(club.deactivation_reason);
+
+  const patch: Record<string, unknown> = {
+    subscription_status: "active",
+    next_billing_date: prePayload.next_payment_date ?? null,
+    mp_subscription_id: preapprovalId,
+    past_due_since: null,
+    grace_period_end: null,
+    last_status_detail: null,
+    retry_attempt: 0,
+    last_payment_failure_notified_at: null,
+    last_payment_attempt_at: new Date().toISOString(),
+    ...reactivation,
+    ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
+  };
+
+  const refs: ClubRefs = { clubId: String(club.id ?? ""), preapprovalId };
+  const { data: updated, error } = await updateClubSubscription(admin, refs, patch, requestId);
+  if (error) {
+    log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
+    return;
+  }
+
+  log.info({ event: "mp.subscription.payment_approved", requestId, preapprovalId, wasInDebt });
+
+  const updatedRow = updated as { owner_id?: string | null; name?: string | null } | null;
+  const ownerId = String(updatedRow?.owner_id ?? club.owner_id ?? "").trim();
+  if (!ownerId) return;
+
+  try {
+    await createNotification(admin, {
+      user_id: ownerId,
+      type: "payment_approved",
+      title: wasInDebt ? "Pago regularizado" : "Pago aprobado",
+      body: wasInDebt
+        ? "Tu pago de PadeLibre se procesó correctamente. Tu cuenta quedó al día."
+        : "Tu pago mensual de PadeLibre fue procesado correctamente.",
+    });
+  } catch (err) {
+    log.error({ event: "mp.subscription.webhook.notify_failed", requestId, err });
+  }
+
+  // El email de "regularizacion" solo aplica si hubo una transicion real
+  // desde deuda — evita mandar un email cada mes por el cobro normal.
+  if (!wasInDebt) return;
+
+  try {
+    const { data: authUser } = await admin.auth.admin.getUserById(ownerId);
+    const email = authUser?.user?.email;
+    if (email) {
+      await sendSubscriptionPaymentRegularizedEmail({
+        to: email,
+        clubName: String(updatedRow?.name ?? club.name ?? "tu club"),
+        amountLabel: formatArs(amount),
+        nextBillingLabel: prePayload.next_payment_date
+          ? new Date(prePayload.next_payment_date).toLocaleDateString("es-AR", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })
+          : "según tu ciclo de facturación",
+      });
+    }
+  } catch (err) {
+    log.error({ event: "mp.subscription.webhook.email_failed", requestId, err });
+  }
 }
 
 /**
@@ -123,9 +378,9 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
   const normalizedTopic = String(topic ?? "").toLowerCase();
 
   if (normalizedTopic.includes("authorized_payment")) {
-    const res = await fetch(`https://api.mercadopago.com/authorized_payments/${dataId}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetchMpSubscriptionResource(
+      `/authorized_payments/${dataId}`
+    );
     if (!res.ok) {
       log.error({
         event: "mp.subscription.webhook.authorized_payment_fetch_failed",
@@ -134,10 +389,43 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
       });
       return NextResponse.json({ ok: true });
     }
-    const payment = (await res.json()) as { status?: string; preapproval_id?: string };
-    const preapprovalId = String(payment.preapproval_id ?? "").trim();
-    const paymentStatus = String(payment.status ?? "").toLowerCase();
+    const invoice = (await res.json()) as {
+      id?: string | number;
+      status?: string;
+      summarized?: string;
+      preapproval_id?: string;
+      retry_attempt?: number;
+      last_modified?: string;
+      debit_date?: string;
+      transaction_amount?: number;
+      currency_id?: string;
+      payment?: {
+        id?: number | string;
+        status?: string;
+        status_detail?: string;
+      };
+    };
+    const preapprovalId = String(invoice.preapproval_id ?? "").trim();
     if (!preapprovalId) return NextResponse.json({ ok: true });
+
+    const authorizedPaymentId = String(invoice.id ?? dataId).trim();
+    // El estado EFECTIVO es el de payment.status si existe: un
+    // authorized_payment puede reportar status="scheduled" a nivel de
+    // invoice mientras payment.status ya dice "rejected" (caso real
+    // confirmado en produccion — La Catedral del Padel, authorized_payment
+    // 7031606874). NUNCA usar invoice.status como fuente si payment.status
+    // esta presente.
+    const effectiveStatus = String(
+      invoice.payment?.status ?? invoice.summarized ?? invoice.status ?? ""
+    ).toLowerCase();
+    const statusDetail = invoice.payment?.status_detail ?? null;
+    const retryAttempt = Number.isFinite(invoice.retry_attempt) ? Number(invoice.retry_attempt) : 0;
+    // Fuente de verdad para el orden de eventos: SIEMPRE el last_modified del
+    // recurso recien consultado a MP, nunca el payload crudo del webhook ni
+    // retry_attempt (que es local a esta factura puntual y no sirve para
+    // comparar entre webhooks).
+    const mpLastModified = invoice.last_modified ? String(invoice.last_modified) : null;
+    const amount = Number.isFinite(invoice.transaction_amount) ? Number(invoice.transaction_amount) : null;
 
     const apRefs: ClubRefs = { clubId: "", preapprovalId };
     if (await isDuplicateWebhookDelivery(admin, apRefs, mpRequestId)) {
@@ -145,84 +433,113 @@ export async function handleSubscriptionWebhook(req: Request): Promise<NextRespo
       return NextResponse.json({ received: true, skipped: "duplicate" });
     }
 
-    if (paymentStatus === "rejected") {
-      const { data: updated, error } = await updateClubSubscription(
-        admin,
-        apRefs,
-        { subscription_status: "past_due", ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}) },
-        requestId
-      );
-      if (error) {
-        log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
-        return NextResponse.json({ ok: false }, { status: 500 });
-      }
-      const ownerId = String((updated as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-      if (ownerId) {
-        await createNotification(admin, {
-          user_id: ownerId,
-          type: "payment_rejected",
-          title: "Pago de suscripción rechazado",
-          body: "No pudimos cobrar tu suscripción mensual de PadeLibre. Actualizá tu medio de pago para evitar la suspensión.",
-        });
-      }
-      log.info({ event: "mp.subscription.payment_failed", requestId, preapprovalId });
-    } else if (paymentStatus === "approved") {
-      // Cobro (inicial post-trial o recurrente mensual) aprobado: reactiva un
-      // club que hubiera quedado en past_due y refresca next_billing_date.
-      // Antes de este fix no se manejaba este status y el club quedaba
-      // en past_due indefinidamente pese a que MP siguiera cobrando bien.
-      const preRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+    if (!mpLastModified) {
+      // No inventamos now(): sin last_modified no podemos garantizar el
+      // orden de eventos para este authorized_payment. Se loguea para
+      // investigar por que MP no lo devolvio, pero el estado de clubs se
+      // sigue procesando abajo (el GET fresco sigue siendo confiable como
+      // snapshot puntual, solo no podemos usarlo para descartar duplicados
+      // fuera de orden ni para el historial de subscription_payment_attempts).
+      log.warn({
+        event: "mp.subscription.webhook.authorized_payment_missing_last_modified",
+        requestId,
+        authorizedPaymentId,
+        preapprovalId,
       });
-      if (!preRes.ok) {
-        log.error({
-          event: "mp.subscription.webhook.preapproval_fetch_failed",
+    } else {
+      const { data: lastKnown } = await admin
+        .from(DB_TABLES.subscriptionPaymentAttempts)
+        .select("mp_last_modified")
+        .eq("mp_authorized_payment_id", authorizedPaymentId)
+        .order("mp_last_modified", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const lastKnownModified = (lastKnown as { mp_last_modified?: string } | null)?.mp_last_modified ?? null;
+      if (lastKnownModified && new Date(mpLastModified).getTime() <= new Date(lastKnownModified).getTime()) {
+        log.info({
+          event: "mp.subscription.webhook.stale_authorized_payment",
           requestId,
-          status: preRes.status,
+          authorizedPaymentId,
+          mpLastModified,
+          lastKnownModified,
         });
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ received: true, skipped: "stale" });
       }
-      const prePayload = (await preRes.json()) as { external_reference?: string; next_payment_date?: string };
-      const activeRefs: ClubRefs = { clubId: String(prePayload.external_reference ?? "").trim(), preapprovalId };
+    }
 
-      const { data: clubForReactivation } = await findClubByRefs(admin, activeRefs);
-      const reactivation = reactivationPatch(
-        (clubForReactivation as { deactivation_reason?: string | null } | null)?.deactivation_reason
-      );
+    const { data: clubRow } = await findClubByRefs(admin, apRefs);
+    const club = clubRow as ClubForPaymentEvent | null;
+    if (!club?.id) {
+      logIfClubNotFound(requestId, apRefs, club);
+      return NextResponse.json({ ok: true });
+    }
 
-      const { data: updated, error } = await updateClubSubscription(
-        admin,
-        activeRefs,
-        {
-          subscription_status: "active",
-          next_billing_date: prePayload.next_payment_date ?? null,
-          mp_subscription_id: preapprovalId,
-          ...reactivation,
-          ...(mpRequestId ? { last_webhook_request_id: mpRequestId } : {}),
-        },
-        requestId
-      );
-      if (error) {
-        log.error({ event: "mp.subscription.webhook.update_failed", requestId, err: error });
-        return NextResponse.json({ ok: false }, { status: 500 });
-      }
-      const ownerId = String((updated as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
-      if (ownerId) {
-        await createNotification(admin, {
-          user_id: ownerId,
-          type: "payment_approved",
-          title: "Pago aprobado",
-          body: "Tu pago mensual de PadeLibre fue procesado correctamente.",
+    // Auditoria best-effort: si falla el insert del historial, se loguea
+    // pero NO debe impedir que se actualice el estado financiero del club
+    // (un approved tiene que poder reactivar la suscripcion igual).
+    if (mpLastModified) {
+      const hasPaymentAttempt = Boolean(invoice.payment?.status);
+      const attemptedAtIso = hasPaymentAttempt ? mpLastModified : null;
+      const { error: insertError } = await admin.from(DB_TABLES.subscriptionPaymentAttempts).insert({
+        club_id: club.id,
+        mp_preapproval_id: preapprovalId,
+        mp_authorized_payment_id: authorizedPaymentId,
+        mp_payment_id: invoice.payment?.id != null ? String(invoice.payment.id) : null,
+        status: effectiveStatus,
+        status_detail: statusDetail,
+        retry_attempt: retryAttempt,
+        amount,
+        currency: invoice.currency_id ?? "ARS",
+        debit_date: invoice.debit_date ?? null,
+        mp_last_modified: mpLastModified,
+        first_attempted_at: attemptedAtIso,
+        last_attempted_at: attemptedAtIso,
+        resolved_at: effectiveStatus === "approved" ? mpLastModified : null,
+      });
+      if (insertError) {
+        log.error({
+          event: "mp.subscription.webhook.attempt_insert_failed",
+          requestId,
+          authorizedPaymentId,
+          err: insertError,
         });
       }
-      log.info({ event: "mp.subscription.payment_approved", requestId, preapprovalId });
+    }
+
+    if (effectiveStatus === "rejected") {
+      await handleAuthorizedPaymentRejected(admin, {
+        requestId,
+        apRefs,
+        club,
+        statusDetail,
+        retryAttempt,
+        amount,
+        mpRequestId,
+      });
+    } else if (effectiveStatus === "approved") {
+      await handleAuthorizedPaymentApproved(admin, {
+        requestId,
+        preapprovalId,
+        club,
+        amount,
+        mpRequestId,
+      });
+    } else {
+      log.info({
+        event: "mp.subscription.payment_pending_or_unknown",
+        requestId,
+        preapprovalId,
+        effectiveStatus,
+        invoiceStatus: invoice.status ?? null,
+        summarized: invoice.summarized ?? null,
+      });
     }
     return NextResponse.json({ ok: true });
   }
 
-  const res = await fetch(`https://api.mercadopago.com/preapproval/${dataId}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const res = await fetchMpSubscriptionResource(
+    `/preapproval/${dataId}`
+  );
   if (!res.ok) {
     log.error({ event: "mp.subscription.webhook.preapproval_fetch_failed", requestId, status: res.status });
     return NextResponse.json({ ok: true });

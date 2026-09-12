@@ -63,4 +63,5 @@ export const DB_TABLES = {
   practiceRegistrations: "practice_registrations",
   meetingAvailability: "meeting_availability",
   meetings: "meetings",
+  subscriptionPaymentAttempts: "subscription_payment_attempts",
 } as const;

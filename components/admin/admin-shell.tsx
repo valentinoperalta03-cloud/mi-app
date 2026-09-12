@@ -2,12 +2,21 @@ import type { ReactNode } from "react";
 import AdminRouteTransition from "./admin-route-transition";
 import AdminShellBody from "./admin-shell-body";
 import AdminSidebarWrapper from "./admin-sidebar-wrapper";
+import PastDueBanner from "./past-due-banner";
 import TrialBanner from "./trial-banner";
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="admin-shell-bg min-h-dvh" style={{ borderTop: "2px solid var(--admin-accent-lima)" }}>
-      <AdminShellBody chrome={<AdminSidebarWrapper />} trialBanner={<TrialBanner />}>
+      <AdminShellBody
+        chrome={<AdminSidebarWrapper />}
+        trialBanner={
+          <>
+            <TrialBanner />
+            <PastDueBanner />
+          </>
+        }
+      >
         <AdminRouteTransition>{children}</AdminRouteTransition>
       </AdminShellBody>
     </div>

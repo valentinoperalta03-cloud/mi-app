@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
+import { translateMpStatusDetail } from "@/lib/mp-status-detail-labels";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 import ActivateSubscriptionButton from "@/app/admin/facturacion/activate-subscription-button";
 
@@ -46,7 +47,9 @@ export default async function AdminConfigSuscripcionPage() {
   const service = createServiceClient();
   const { data: clubRow } = await service
     .from(DB_TABLES.clubs)
-    .select("subscription_status, trial_end_date, next_billing_date, mp_subscription_id")
+    .select(
+      "subscription_status, trial_end_date, next_billing_date, mp_subscription_id, grace_period_end, last_status_detail, retry_attempt"
+    )
     .eq("id", clubId)
     .maybeSingle();
   const row = clubRow as {
@@ -54,6 +57,9 @@ export default async function AdminConfigSuscripcionPage() {
     trial_end_date?: string | null;
     next_billing_date?: string | null;
     mp_subscription_id?: string | null;
+    grace_period_end?: string | null;
+    last_status_detail?: string | null;
+    retry_attempt?: number | null;
   } | null;
 
   const status = row?.subscription_status ?? "trial";
@@ -62,6 +68,11 @@ export default async function AdminConfigSuscripcionPage() {
   const daysLeft = row?.trial_end_date
     ? Math.max(Math.ceil((new Date(row.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)), 0)
     : null;
+
+  const graceDaysLeft = row?.grace_period_end
+    ? Math.max(Math.ceil((new Date(row.grace_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)), 0)
+    : null;
+  const rejectionReasonLabel = status === "past_due" ? translateMpStatusDetail(row?.last_status_detail) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -115,7 +126,10 @@ export default async function AdminConfigSuscripcionPage() {
             <span className={adminBadgeError}>Atención</span>
           </div>
           <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">
-            Tu pago mensual no pudo procesarse. Actualizá tu método de pago para seguir usando PadeLibre.
+            {rejectionReasonLabel}{" "}
+            {graceDaysLeft != null
+              ? `Tu club sigue activo por ${graceDaysLeft} día${graceDaysLeft === 1 ? "" : "s"} más mientras regularizás el pago.`
+              : "Actualizá tu método de pago para seguir usando PadeLibre."}
           </p>
           <ActivateSubscriptionButton clubId={clubId} label="Reintentar pago" variant="danger" />
         </section>

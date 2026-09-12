@@ -15,6 +15,7 @@ export type CachedClubSubscription = {
   clubId: string;
   status: string;
   trialEndDate: string | null;
+  gracePeriodEnd: string | null;
 };
 
 function encodeField(v: string | null): string {
@@ -25,10 +26,10 @@ function decodeField(v: string): string | null {
   return v === "-" ? null : decodeURIComponent(v);
 }
 
-/** Token: `${exp}.${clubId}.${status}.${trialEndDate}.${sig}`, TTL fijo de 30s. */
+/** Token: `${exp}.${clubId}.${status}.${trialEndDate}.${gracePeriodEnd}.${sig}`, TTL fijo de 30s. */
 export function signSubscriptionCookie(data: CachedClubSubscription): string {
   const exp = Math.floor(Date.now() / 1000) + SUBSCRIPTION_COOKIE_MAX_AGE_SECONDS;
-  const payload = `${exp}.${encodeField(data.clubId)}.${encodeField(data.status)}.${encodeField(data.trialEndDate)}`;
+  const payload = `${exp}.${encodeField(data.clubId)}.${encodeField(data.status)}.${encodeField(data.trialEndDate)}.${encodeField(data.gracePeriodEnd)}`;
   const sig = createHmac("sha256", hmacSecret()).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
@@ -39,13 +40,13 @@ export function verifySubscriptionCookie(
 ): CachedClubSubscription | null {
   if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 5) return null;
-  const [expRaw, clubIdRaw, statusRaw, trialRaw, sig] = parts;
+  if (parts.length !== 6) return null;
+  const [expRaw, clubIdRaw, statusRaw, trialRaw, graceRaw, sig] = parts;
 
   const exp = Number.parseInt(expRaw ?? "", 10);
   if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return null;
 
-  const payload = `${expRaw}.${clubIdRaw}.${statusRaw}.${trialRaw}`;
+  const payload = `${expRaw}.${clubIdRaw}.${statusRaw}.${trialRaw}.${graceRaw}`;
   const expected = createHmac("sha256", hmacSecret()).update(payload).digest("hex");
   try {
     if (!timingSafeEqual(Buffer.from(sig, "utf8"), Buffer.from(expected, "utf8"))) return null;
@@ -60,5 +61,6 @@ export function verifySubscriptionCookie(
     clubId,
     status: decodeField(statusRaw ?? "-") ?? "trial",
     trialEndDate: decodeField(trialRaw ?? "-"),
+    gracePeriodEnd: decodeField(graceRaw ?? "-"),
   };
 }
