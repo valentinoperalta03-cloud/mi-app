@@ -8,6 +8,7 @@ export const TOURNAMENT_TYPE_OPTIONS: { value: TournamentTypeKey; label: string;
 
 export const TOURNAMENT_STATUS_LABELS: Record<string, string> = {
   open: "Inscripción abierta",
+  registration_closed: "Inscripciones cerradas",
   in_progress: "En curso",
   finished: "Finalizado",
   cancelled: "Cancelado",

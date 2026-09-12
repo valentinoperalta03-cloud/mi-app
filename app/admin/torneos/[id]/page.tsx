@@ -33,7 +33,9 @@ import {
 import {
   cancelRegistrationAction,
   cancelTournamentFormAction,
+  closeTournamentRegistrationsFormAction,
   finishTournamentFormAction,
+  reopenTournamentRegistrationsFormAction,
   saveTournamentMatchFormAction,
   startTournamentFormAction,
   updatePenaMatchPairsAction,
@@ -608,6 +610,22 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
 
       <section className="flex flex-wrap gap-2">
         {tour.status === "open" ? (
+          <form action={closeTournamentRegistrationsFormAction}>
+            <input type="hidden" name="tournament_id" value={id} />
+            <button type="submit" className={adminCTAPrimary}>
+              Cerrar inscripciones
+            </button>
+          </form>
+        ) : null}
+        {tour.status === "registration_closed" ? (
+          <form action={reopenTournamentRegistrationsFormAction}>
+            <input type="hidden" name="tournament_id" value={id} />
+            <button type="submit" className={adminCTAPrimary}>
+              Reabrir inscripciones
+            </button>
+          </form>
+        ) : null}
+        {tour.status === "open" || tour.status === "registration_closed" ? (
           <form action={startTournamentFormAction}>
             <input type="hidden" name="tournament_id" value={id} />
             <button type="submit" className={adminCTAPrimary}>

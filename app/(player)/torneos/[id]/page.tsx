@@ -172,6 +172,8 @@ export default async function TorneoDetallePage({ params }: PageProps) {
       : null,
   };
 
+  if (tour.status === "cancelled") redirect("/torneos");
+
   const { data: me } = await supabase
     .from(DB_TABLES.profiles)
     .select("category")
@@ -490,7 +492,11 @@ export default async function TorneoDetallePage({ params }: PageProps) {
         <p className="mt-6 rounded-2xl bg-emerald-500/10 px-4 py-3 text-center text-sm font-medium text-emerald-800 dark:text-emerald-200">
           Ya estás inscripto en este torneo.
         </p>
-      ) : (
+      ) : tour.status === "registration_closed" ? (
+        <p className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-center text-sm font-medium text-[var(--text-secondary)]">
+          Inscripciones cerradas
+        </p>
+      ) : tour.status === "open" ? (
         <div className="mt-6">
           {!levelOk ? (
             <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
@@ -508,7 +514,7 @@ export default async function TorneoDetallePage({ params }: PageProps) {
             />
           )}
         </div>
-      )}
+      ) : null}
 
       <section className="mt-8">
         <h2 className="text-base font-semibold text-[var(--text-primary)]">

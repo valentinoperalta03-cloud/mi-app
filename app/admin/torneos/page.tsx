@@ -20,6 +20,7 @@ export default async function AdminTorneosPage() {
         "id, name, tournament_type, start_date, end_date, status, max_pairs, club_id",
       )
       .in("club_id", ctx.clubIds)
+      .neq("status", "cancelled")
       .order("start_date", { ascending: false }),
     supabase
       .from(DB_TABLES.courts)

@@ -70,8 +70,15 @@ export async function startTournamentAction(
   const gate = await assertTournamentOwner(supabase, tournamentId);
   if (!gate.ok) return gate;
 
-  if ((gate.row as { status?: string }).status !== "open") {
-    return { ok: false, message: "El torneo ya fue iniciado." };
+  const currentStatus = (gate.row as { status?: string }).status;
+  if (currentStatus !== "open" && currentStatus !== "registration_closed") {
+    const message =
+      currentStatus === "cancelled"
+        ? "El torneo está cancelado."
+        : currentStatus === "finished"
+          ? "El torneo ya finalizó."
+          : "El torneo ya fue iniciado.";
+    return { ok: false, message };
   }
 
   const service = createServiceClient();
@@ -209,6 +216,7 @@ export async function startTournamentAction(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath("/admin/torneos");
   revalidatePath("/torneos");
+  revalidatePath(`/torneos/${tournamentId}`);
   return { ok: true, message: "Torneo iniciado y fixture generado." };
 }
 
@@ -270,7 +278,9 @@ export async function finishTournamentAction(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath("/admin/torneos");
   revalidatePath("/torneos");
+  revalidatePath(`/torneos/${tournamentId}`);
   return { ok: true, message: "Torneo finalizado." };
 }
 
@@ -326,7 +336,76 @@ export async function cancelTournamentAction(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath("/admin/torneos");
   revalidatePath("/torneos");
+  revalidatePath(`/torneos/${tournamentId}`);
   return { ok: true, message: "Torneo cancelado." };
+}
+
+/** Cierra la inscripción manualmente sin iniciar el torneo todavía. */
+export async function closeTournamentRegistrationsAction(
+  tournamentId: string,
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+
+  if ((gate.row as { status?: string }).status !== "open") {
+    return { ok: false, message: "Solo se puede cerrar la inscripción mientras está abierta." };
+  }
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from(DB_TABLES.tournaments)
+    .update({ status: "registration_closed" })
+    .eq("id", tournamentId);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath("/admin/torneos");
+  revalidatePath("/torneos");
+  revalidatePath(`/torneos/${tournamentId}`);
+  return { ok: true, message: "Inscripciones cerradas." };
+}
+
+export async function closeTournamentRegistrationsFormAction(
+  formData: FormData,
+): Promise<void> {
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
+  if (!tournamentId) return;
+  await closeTournamentRegistrationsAction(tournamentId);
+}
+
+/** Reabre la inscripción de un torneo que estaba con registration_closed. */
+export async function reopenTournamentRegistrationsAction(
+  tournamentId: string,
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+
+  if ((gate.row as { status?: string }).status !== "registration_closed") {
+    return { ok: false, message: "Solo se puede reabrir mientras la inscripción está cerrada." };
+  }
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from(DB_TABLES.tournaments)
+    .update({ status: "open" })
+    .eq("id", tournamentId);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath("/admin/torneos");
+  revalidatePath("/torneos");
+  revalidatePath(`/torneos/${tournamentId}`);
+  return { ok: true, message: "Inscripciones reabiertas." };
+}
+
+export async function reopenTournamentRegistrationsFormAction(
+  formData: FormData,
+): Promise<void> {
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
+  if (!tournamentId) return;
+  await reopenTournamentRegistrationsAction(tournamentId);
 }
 
 /** Baja una pareja/jugador inscripto — solo mientras la inscripción está abierta. Notifica a los afectados. */

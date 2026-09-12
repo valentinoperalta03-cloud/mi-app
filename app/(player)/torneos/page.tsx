@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import MotionPage from "@/components/motion-page";
 import { PlayerStackHeader } from "@/components/player-back-button";
+import { TournamentListRealtimeRefresh } from "@/components/tournament-list-realtime-refresh";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
   TOURNAMENT_STATUS_LABELS,
@@ -98,6 +99,7 @@ export default async function TorneosPage({
 
   return (
     <MotionPage className="mx-auto min-h-screen w-full min-w-0 max-w-md overflow-x-hidden bg-[var(--bg-app)] px-4 pb-28 pt-6">
+      <TournamentListRealtimeRefresh />
       <PlayerStackHeader
         backHref="/home"
         backLabel="Volver al inicio"
