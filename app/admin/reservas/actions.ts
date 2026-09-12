@@ -15,7 +15,7 @@ import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { refundReservationPayment } from "@/lib/payment-refund";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { getClubAvailability, type ClubAvailabilityResult } from "../../(club)/[slug]/actions";
 
 function getField(formData: FormData, key: string) {
@@ -506,7 +506,13 @@ export async function crearPartidoDesdeAdmin(input: CrearPartidoAdminInput): Pro
   const matchId = String((inserted as { id: string }).id);
 
   if (guestPlayers.length > 0) {
-    const { error: guestsErr } = await supabase.from(DB_TABLES.matchParticipants).insert(
+    // RLS de match_participants exige auth.uid() = player_id tanto en INSERT
+    // como en DELETE — un Jugador X tiene player_id NULL, así que el cliente
+    // autenticado normal no puede insertarlo. El ownership de la cancha ya
+    // se validó arriba vía assertCourtOwnership, así que acá se usa
+    // service role solo para este insert puntual (no reemplaza validaciones).
+    const service = createServiceClient();
+    const { error: guestsErr } = await service.from(DB_TABLES.matchParticipants).insert(
       guestPlayers.map((g) => ({
         match_id: matchId,
         player_id: null,
@@ -515,7 +521,7 @@ export async function crearPartidoDesdeAdmin(input: CrearPartidoAdminInput): Pro
       }))
     );
     if (guestsErr) {
-      await supabase.from(DB_TABLES.matches).delete().eq("id", matchId);
+      await service.from(DB_TABLES.matches).delete().eq("id", matchId);
       return { ok: false, error: "No se pudieron agregar los jugadores." };
     }
   }
@@ -558,7 +564,12 @@ export async function agregarJugadorDesdeAdmin(input: AgregarJugadorAdminInput):
 
   const guestName = input.guestName?.trim() || "Jugador X";
 
-  const { error } = await supabase
+  // Ownership del partido ya validado arriba con el cliente autenticado
+  // (courtIds del admin + match_type amistoso + no cancelado). Recién acá
+  // se usa service role, solo porque RLS de match_participants exige
+  // auth.uid() = player_id y un Jugador X tiene player_id NULL.
+  const service = createServiceClient();
+  const { error } = await service
     .from(DB_TABLES.matchParticipants)
     .insert({ match_id: matchId, player_id: null, team, guest_name: guestName });
   if (error) return { ok: false, error: "No se pudo agregar el jugador." };
@@ -588,7 +599,14 @@ export async function quitarJugadorDesdeAdmin(input: QuitarJugadorAdminInput): P
     return { ok: false, error: "Partido no autorizado." };
   }
 
-  const { error } = await supabase
+  // Ownership del partido ya validado arriba (matchId pertenece a una cancha
+  // de ctx.courtIds). Recién acá se usa service role, porque RLS de
+  // match_participants exige auth.uid() = player_id y un Jugador X tiene
+  // player_id NULL — el cliente autenticado no puede borrarlo. El delete
+  // sigue acotado por id + match_id, nunca un participantId arbitrario de
+  // otro club.
+  const service = createServiceClient();
+  const { error } = await service
     .from(DB_TABLES.matchParticipants)
     .delete()
     .eq("id", participantId)
