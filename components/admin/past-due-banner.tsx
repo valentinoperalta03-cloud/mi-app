@@ -1,11 +1,9 @@
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getPastDueBannerInfo } from "@/lib/admin/subscription-past-due-banner";
-import { createClient } from "@/utils/supabase/server";
 import PastDueBannerClient from "./past-due-banner-client";
 
 export default async function PastDueBanner() {
-  const supabase = await createClient();
-  const ctx = await getOwnerAdminContext(supabase);
+  const ctx = await getOwnerAdminContext();
   const clubId = ctx?.clubIds[0];
   if (!clubId) return null;
 

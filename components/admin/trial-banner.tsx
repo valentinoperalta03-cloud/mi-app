@@ -1,11 +1,9 @@
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTrialBannerInfo } from "@/lib/admin/trial-banner";
-import { createClient } from "@/utils/supabase/server";
 import TrialBannerClient from "./trial-banner-client";
 
 export default async function TrialBanner() {
-  const supabase = await createClient();
-  const ctx = await getOwnerAdminContext(supabase);
+  const ctx = await getOwnerAdminContext();
   const clubId = ctx?.clubIds[0];
   if (!clubId) return null;
 

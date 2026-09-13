@@ -1,20 +1,13 @@
-import { DB_TABLES } from "@/lib/db-tables";
-import { createServiceClient } from "@/utils/supabase/server";
+import { getClubSubscriptionSnapshot } from "@/lib/admin/club-subscription-snapshot";
 
 export type TrialBannerInfo = { variant: "warning" | "critical"; daysLeft: number } | null;
 
 /**
- * subscription_status/trial_end_date estan revocadas para authenticated,
- * por eso esta consulta usa el service client.
+ * subscription_status/trial_end_date estan revocadas para authenticated: se leen
+ * del snapshot compartido (service client) para no repetir la query con PastDueBanner.
  */
 export async function getTrialBannerInfo(clubId: string): Promise<TrialBannerInfo> {
-  const service = createServiceClient();
-  const { data } = await service
-    .from(DB_TABLES.clubs)
-    .select("subscription_status, trial_end_date")
-    .eq("id", clubId)
-    .maybeSingle();
-  const row = data as { subscription_status?: string | null; trial_end_date?: string | null } | null;
+  const row = await getClubSubscriptionSnapshot(clubId);
 
   if (!row || row.subscription_status !== "trial" || !row.trial_end_date) return null;
 
