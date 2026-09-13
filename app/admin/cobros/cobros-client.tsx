@@ -267,6 +267,8 @@ function RegistrarPagoModal({ item, onClose }: { item: PendingMatchItem; onClose
   const methodBtnActive = `${methodBtn} border-[#0085FC] bg-[#0085FC]/10 text-[#0085FC]`;
   const methodBtnInactive = `${methodBtn} border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]`;
 
+  if (typeof document === "undefined") return null;
+
   return createPortal(
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[3px]"
