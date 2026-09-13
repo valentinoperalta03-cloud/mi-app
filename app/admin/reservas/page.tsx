@@ -106,39 +106,82 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const gridCourts = ctx.courts.map((c) => ({ id: c.id, name: c.name ?? "Cancha" }));
   const courtNameById = new Map(gridCourts.map((c) => [c.id, c.name]));
 
-  const { data: closedDayRow } = await supabase
-    .from(DB_TABLES.clubClosedDays)
-    .select("id,reason")
-    .eq("club_id", mainClubId)
-    .eq("closed_date", selectedDate)
-    .maybeSingle();
+  const [
+    { data: closedDayRow },
+    { data: courtBlocksRaw },
+    { data: matchesRaw, error: matchesError },
+    { data: openMatchesRaw },
+  ] = await Promise.all([
+    supabase
+      .from(DB_TABLES.clubClosedDays)
+      .select("id,reason")
+      .eq("club_id", mainClubId)
+      .eq("closed_date", selectedDate)
+      .maybeSingle(),
+    ctx.courtIds.length
+      ? supabase
+          .from(DB_TABLES.courtBlocks)
+          .select("court_id,blocked_time,reason")
+          .in("court_id", ctx.courtIds)
+          .eq("blocked_date", selectedDate)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from(DB_TABLES.matches)
+      .select(
+        "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,manual_reference,fixed_slot_id,courts(id,name),fixed_slots(title)"
+      )
+      .in("court_id", ctx.courtIds)
+      .eq("scheduled_date", selectedDate)
+      .neq("match_status", "cancelled")
+      .order("scheduled_time", { ascending: true }),
+    ctx.courtIds.length
+      ? supabase
+          .from(DB_TABLES.matches)
+          .select(
+            "id,scheduled_date,scheduled_time,match_status,gender_category,category_range,created_by_club,courts(name,clubs(logo_url)),match_participants(id,player_id,team,guest_name,profiles(name,avatar_url))"
+          )
+          .in("court_id", ctx.courtIds)
+          .eq("match_type", "amistoso")
+          .neq("match_status", "cancelled")
+          .gte("scheduled_date", today)
+          .order("scheduled_date", { ascending: true })
+          .order("scheduled_time", { ascending: true })
+      : Promise.resolve({ data: [] }),
+  ]);
+
   const closedDay = closedDayRow as { id: string; reason: string | null } | null;
-
-  const { data: courtBlocksRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.courtBlocks)
-        .select("court_id,blocked_time,reason")
-        .in("court_id", ctx.courtIds)
-        .eq("blocked_date", selectedDate)
-    : { data: [] };
   const courtBlocks = (courtBlocksRaw ?? []) as Array<{ court_id: string; blocked_time: string | null; reason: string | null }>;
-
-  const { data: matchesRaw, error: matchesError } = await supabase
-    .from(DB_TABLES.matches)
-    .select(
-      "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,manual_reference,fixed_slot_id,courts(id,name),fixed_slots(title)"
-    )
-    .in("court_id", ctx.courtIds)
-    .eq("scheduled_date", selectedDate)
-    .neq("match_status", "cancelled")
-    .order("scheduled_time", { ascending: true });
-
   const matches = (matchesRaw ?? []) as unknown as MatchRow[];
 
   const creatorIds = Array.from(new Set(matches.map((m) => m.owner_id).filter(Boolean))) as string[];
-  const { data: profilesData } = creatorIds.length
-    ? await supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
-    : { data: [] };
+  const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
+
+  const [{ data: profilesData }, selectedMatchParticipantsRaw, selectedPaymentsRaw, { data: ownerProfileRow }] =
+    await Promise.all([
+      creatorIds.length
+        ? supabase.from(DB_TABLES.profiles).select("user_id,name").in("user_id", creatorIds)
+        : Promise.resolve({ data: [] }),
+      selectedMatch
+        ? supabase
+            .from(DB_TABLES.matchParticipants)
+            .select("player_id,profiles(name,avatar_url)")
+            .eq("match_id", selectedMatch.id)
+        : Promise.resolve({ data: [] }),
+      selectedMatch
+        ? supabase
+            .from(DB_TABLES.payments)
+            .select("user_id,status,payment_method,amount")
+            .eq("match_id", selectedMatch.id)
+        : Promise.resolve({ data: [] }),
+      selectedMatch?.owner_id
+        ? supabase
+            .from(DB_TABLES.profiles)
+            .select("name,avatar_url")
+            .eq("user_id", selectedMatch.owner_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
   const nameByUser = new Map(
     (profilesData ?? []).map((p: { user_id: string; name: string | null }) => [p.user_id, p.name ?? "Jugador"])
   );
@@ -186,13 +229,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   }
   agendaItems.sort((a, b) => a.time.localeCompare(b.time) || a.courtName.localeCompare(b.courtName));
 
-  const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
-  const selectedMatchParticipantsRaw = selectedMatch
-    ? await supabase
-        .from(DB_TABLES.matchParticipants)
-        .select("player_id,profiles(name,avatar_url)")
-        .eq("match_id", selectedMatch.id)
-    : { data: [] };
   const selectedMatchParticipants = ((selectedMatchParticipantsRaw.data ?? []) as Array<{
     player_id: string;
     profiles:
@@ -208,12 +244,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     };
   });
 
-  const selectedPaymentsRaw = selectedMatch
-    ? await supabase
-        .from(DB_TABLES.payments)
-        .select("user_id,status,payment_method,amount")
-        .eq("match_id", selectedMatch.id)
-    : { data: [] };
   const selectedPayments = (selectedPaymentsRaw.data ?? []) as Array<{
     user_id: string;
     status: string | null;
@@ -222,14 +252,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   }>;
   const selectedPaymentsByUser = new Map(selectedPayments.map((p) => [p.user_id, p]));
 
-  const { data: ownerProfileRow } =
-    selectedMatch?.owner_id
-      ? await supabase
-          .from(DB_TABLES.profiles)
-          .select("name,avatar_url")
-          .eq("user_id", selectedMatch.owner_id)
-          .maybeSingle()
-      : { data: null };
   const ownerProfile = ownerProfileRow as { name: string | null; avatar_url: string | null } | null;
   const ownerDisplayName = selectedMatch ? labelForMatch(selectedMatch) : "Jugador";
 
@@ -252,20 +274,6 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   ).length;
 
   const refundErr = sp.refund_error ? decodeURIComponent(sp.refund_error.replace(/\+/g, " ")) : "";
-
-  const { data: openMatchesRaw } = ctx.courtIds.length
-    ? await supabase
-        .from(DB_TABLES.matches)
-        .select(
-          "id,scheduled_date,scheduled_time,match_status,gender_category,category_range,created_by_club,courts(name,clubs(logo_url)),match_participants(id,player_id,team,guest_name,profiles(name,avatar_url))"
-        )
-        .in("court_id", ctx.courtIds)
-        .eq("match_type", "amistoso")
-        .neq("match_status", "cancelled")
-        .gte("scheduled_date", today)
-        .order("scheduled_date", { ascending: true })
-        .order("scheduled_time", { ascending: true })
-    : { data: [] };
 
   type OpenParticipantRaw = {
     id: string | null;
