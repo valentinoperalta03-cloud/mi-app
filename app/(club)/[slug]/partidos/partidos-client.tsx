@@ -140,7 +140,7 @@ function Header({ club }: { club: PartidosClub }) {
     .join(", ");
 
   return (
-    <>
+    <div style={{ paddingTop: "var(--cap-safe-top, env(safe-area-inset-top, 0px))" }}>
       <div className="h-0.5 w-full" style={{ backgroundColor: "#CCFF00" }} />
       <div className="mx-auto flex w-full max-w-[480px] items-center gap-3 px-4 py-4">
         <Link
@@ -161,7 +161,7 @@ function Header({ club }: { club: PartidosClub }) {
           {cityProvince ? <p className="text-[11px] text-white/60">{cityProvince}</p> : null}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
