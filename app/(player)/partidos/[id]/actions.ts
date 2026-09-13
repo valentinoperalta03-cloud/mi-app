@@ -714,7 +714,8 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
   const cancellationGuard = await checkCancellationLimit(supabase, user.id);
   if (!cancellationGuard.allowed) {
-    redirect(`/partidos/${matchId}?cancel_error=rate_limit`);
+    const errorKey = cancellationGuard.reason === "rate_limit" ? "rate_limit" : "rpc";
+    redirect(`/partidos/${matchId}?cancel_error=${errorKey}`);
   }
 
   const { data: matchRow, error: mErr } = await supabase
