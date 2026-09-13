@@ -17,7 +17,6 @@ import { isLevelCompatible } from "@/lib/match-level";
 import { formatPlayerCategory } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
-import JoinWithTeamForm from "./join-with-team-form";
 import KickPlayerButton from "./kick-player-button";
 import { MatchFeedbackSection } from "./match-feedback-section";
 import PartidoEditSection from "./partido-edit-section";
@@ -484,7 +483,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const heroMonthShort = format(matchDateForHero, "MMM", { locale: es }).replace(/\.$/, "");
   const heroMonthCap = heroMonthShort.charAt(0).toUpperCase() + heroMonthShort.slice(1);
   const heroDateHeadline = `${heroWeekdayCap} ${heroDayNum} ${heroMonthCap}`;
-  const heroMatchTitleLine = `${detail.club_name ?? "Club"} · ${heroDateHeadline} · ${hourAr}`;
+  const heroLocationSegment = detail.club_location?.trim() ? ` · ${detail.club_location.trim()}` : "";
+  const heroMatchTitleLine = `${detail.club_name ?? "Club"}${heroLocationSegment} · ${heroDateHeadline} · ${hourAr}`;
   const clubWhenDurationLine = `${heroDateHeadline} · ${hourAr} · ${roundedDuration} min`;
   const partyUrl = buildMatchShareUrl(id, match.visibility);
   const sharePath = partyUrl;
@@ -581,7 +581,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                       ringClassName="ring-2 ring-white/20"
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
-                    <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    {participant.player_id ? (
+                      <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    ) : null}
                     {isOwner && participant.player_id && participant.player_id !== match.owner_id ? (
                       <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
                     ) : null}
@@ -644,7 +646,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                       ringClassName="ring-2 ring-white/20"
                     />
                     <p className="w-full truncate text-center text-sm font-semibold text-white">{name}</p>
-                    <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    {participant.player_id ? (
+                      <p className="w-full truncate text-center text-xs text-white/70">{level}</p>
+                    ) : null}
                     {isOwner && participant.player_id && participant.player_id !== match.owner_id ? (
                       <KickPlayerButton matchId={id} playerId={participant.player_id} playerName={name} />
                     ) : null}
@@ -1075,30 +1079,6 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
             </Link>
           ) : null}
         </section>
-      ) : null}
-
-      {canJoinAsNewPlayer && !isPrivate && !match.level_restricted ? (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/40">
-          <h2 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white">Sumate al partido</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Confirmás tu lugar con el pago del turno.</p>
-          <div className="mt-4">
-            <JoinWithTeamForm
-              matchId={id}
-              team1Count={team1Count}
-              team2Count={team2Count}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      {canJoinAsNewPlayer && match.level_restricted && !isOwner ? (
-        <div className="space-y-2">
-          <JoinWithTeamForm
-            matchId={id}
-            team1Count={team1Count}
-            team2Count={team2Count}
-          />
-        </div>
       ) : null}
 
       <Link
