@@ -4,7 +4,6 @@ import Link from "next/link";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { nativeOpenUrl } from "@/lib/native-open";
 import { PLAYER_PRIMARY_BUTTON } from "@/lib/player-ui";
 import { requestToJoin } from "./actions";
 
@@ -72,7 +71,7 @@ export default function RequestJoinButton({
 }: {
   matchId: string;
   levelOverride?: boolean;
-  /** Texto del botón (p. ej. "Pagar y unirme" en partidos públicos). */
+  /** Texto del botón (p. ej. "Unirme al partido"). */
   submitLabel?: string;
   /** Equipo al unirse (obligatorio en el flujo desde el detalle con selector). */
   team?: 1 | 2;
@@ -93,12 +92,8 @@ export default function RequestJoinButton({
         fd.set("level_override", levelOverride ? "true" : "false");
         if (team != null) fd.set("team", String(team));
 
-        const result = await requestToJoin(fd);
-
-        if (result && "needsPayment" in result && result.mpUrl) {
-          await nativeOpenUrl(result.mpUrl);
-        }
-        // Si no devuelve nada → la action hizo redirect() internamente
+        // La action siempre termina con redirect(): no hay checkout para partidos abiertos.
+        await requestToJoin(fd);
       } catch (err) {
         if (isRedirectError(err)) throw err;
         console.error("[RequestJoinButton]", err);

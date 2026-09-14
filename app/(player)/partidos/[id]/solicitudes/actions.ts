@@ -6,6 +6,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
 import { pickTeamForMatch } from "@/lib/match-teams";
 import { createNotification } from "@/lib/notifications";
+import { notifyOpenMatchConfirmed } from "@/lib/open-match-confirmed";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 async function addPlayerToMatchGroup(matchId: string, playerId: string) {
@@ -139,6 +140,9 @@ export async function voteOnRequest(formData: FormData): Promise<void> {
       const joinResult = await joinMatchAtomic(createServiceClient(), matchId, requesterId, pickedTeam);
       if (joinResult.ok) {
         await addPlayerToMatchGroup(matchId, requesterId);
+      }
+      if (joinResult.ok && joinResult.reason === "inserted" && joinResult.participantCount >= 4) {
+        await notifyOpenMatchConfirmed(supabase, matchId);
       }
       await createNotification(supabase, {
         user_id: requesterId,

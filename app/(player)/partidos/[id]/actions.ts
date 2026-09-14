@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
-import { formatDateInArgentina } from "@/lib/datetime-ar";
+import { formatDateInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { isLevelCompatible } from "@/lib/match-level";
 import { isMatchPrivate, normalizeMatchVisibility } from "@/lib/match-visibility";
@@ -14,8 +13,9 @@ import { pickTeamForMatch } from "@/lib/match-teams";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { generateInviteToken } from "@/lib/invite-token";
 import { joinMatchAtomic } from "@/lib/join-match-atomic";
-import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
+import { createMPPreference } from "@/lib/mp-preference";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { notifyOpenMatchConfirmed } from "@/lib/open-match-confirmed";
 import { refundApprovedPayment } from "@/lib/payment-refund";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -197,9 +197,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
   redirect(`/partidos/${matchId}`);
 }
 
-export async function requestToJoin(
-  formData: FormData
-): Promise<void | { needsPayment: true; mpUrl: string }> {
+export async function requestToJoin(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
   const levelOverride = getField(formData, "level_override") === "true";
   const requestedTeamRaw = getField(formData, "team");
@@ -230,7 +228,9 @@ export async function requestToJoin(
 
   const { data: matchRow, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,visibility,match_status,level_restricted,gender_category,category_range")
+    .select(
+      "id,owner_id,visibility,match_status,match_type,scheduled_date,scheduled_time,level_restricted,gender_category,category_range"
+    )
     .eq("id", matchId)
     .maybeSingle();
 
@@ -242,6 +242,9 @@ export async function requestToJoin(
     owner_id: string | null;
     visibility: string | null;
     match_status: string | null;
+    match_type: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
     level_restricted: boolean | null;
     gender_category: string | null;
     category_range: string[] | null;
@@ -254,6 +257,13 @@ export async function requestToJoin(
     matchStatusCheck === "full" ||
     matchStatusCheck === "finished"
   ) {
+    redirect(`/partidos/${matchId}?join_error=no_disponible`);
+  }
+  if (String(m.match_type ?? "").toLowerCase() !== "amistoso") {
+    redirect(`/partidos/${matchId}?join_error=no_disponible`);
+  }
+  const startMs = utcMsForArgentinaWallClock(String(m.scheduled_date ?? ""), String(m.scheduled_time ?? ""));
+  if (!Number.isFinite(startMs) || startMs <= Date.now()) {
     redirect(`/partidos/${matchId}?join_error=no_disponible`);
   }
   const isPrivate = isMatchPrivate(m.visibility);
@@ -375,14 +385,20 @@ export async function requestToJoin(
     redirect(`/partidos/${matchId}?invite=${inviteToken}&join_sent=1`);
   }
 
-  const joinResult = await joinMatchAtomic(supabase, matchId, user.id, requestedTeam);
+  // Sin equipo elegido (p. ej. "Unirme al partido" desde una invitación) se asigna
+  // uno libre: la RPC rechaza p_team null.
+  const team = requestedTeam ?? (await pickTeamForMatch(supabase, matchId));
+  if (team == null) {
+    redirect(`/partidos/${matchId}?join_error=cupos`);
+  }
+
+  // Partido abierto: los jugadores no pagan por la app. La RPC es la única fuente
+  // de verdad del cupo y deja match_status='full' al entrar el 4to (= confirmado).
+  const joinResult = await joinMatchAtomic(supabase, matchId, user.id, team);
   if (!joinResult.ok) {
     revalidatePath(`/partidos/${matchId}`);
     revalidatePath("/home");
     revalidatePath("/buscar-partido");
-    if (joinResult.reason === "already_in") {
-      redirect(`/partidos/${matchId}?invite=${inviteToken}`);
-    }
     if (joinResult.reason === "team_full" || joinResult.reason === "match_full") {
       redirect(`/partidos/${matchId}?join_error=cupos`);
     }
@@ -391,123 +407,16 @@ export async function requestToJoin(
     }
     redirect(`/partidos/${matchId}?join_error=db`);
   }
-
-  // Contar participantes después de unirse
-  const { count: participantCount } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id", { count: "exact", head: true })
-    .eq("match_id", matchId);
-
-  // Si llegamos a 4 → el 4to paga la seña
-  if ((participantCount ?? 0) >= 4) {
-    const { data: matchForPayment } = await supabase
-      .from(DB_TABLES.matches)
-      .select("total_price, scheduled_date, court_id, courts(name, club_id, clubs(name, deposit_type, deposit_value))")
-      .eq("id", matchId)
-      .maybeSingle();
-
-    const matchPay = matchForPayment as {
-      total_price: number | null;
-      scheduled_date: string | null;
-      court_id: string | null;
-      courts:
-        | {
-            name: string | null;
-            club_id: string | null;
-            clubs: { name: string | null; deposit_type: string | null; deposit_value: number | null } | null;
-          }
-        | null;
-    } | null;
-
-    const courtRel = matchPay?.courts;
-    const clubRel = Array.isArray(courtRel?.clubs) ? courtRel?.clubs[0] : courtRel?.clubs;
-    const clubId = String(courtRel?.club_id ?? "").trim();
-    const totalPrice = Number(matchPay?.total_price ?? 0);
-    const depositType = (clubRel?.deposit_type ?? null) as "percentage" | "fixed" | null;
-    const depositValue = Number(clubRel?.deposit_value ?? 0);
-    const depositAmount = resolveDepositCharge(totalPrice, depositType, depositValue);
-
-    if (depositAmount > 0 && clubId) {
-      // Obtener mp_access_token del club con service client
-      const { data: clubMpRow } = await createServiceClient()
-        .from(DB_TABLES.clubs)
-        .select("mp_access_token")
-        .eq("id", clubId)
-        .maybeSingle();
-      const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
-
-      if (clubAccessToken) {
-        const { data: payerProfile } = await supabase
-          .from(DB_TABLES.profiles)
-          .select("name")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
-        const nameParts = payerName.split(" ");
-
-        const mp = await createMPPreference({
-          matchId,
-          amount: depositAmount,
-          clubName: String(clubRel?.name ?? "Club"),
-          courtName: String(courtRel?.name ?? "Cancha"),
-          date: String(matchPay?.scheduled_date ?? ""),
-          userId: user.id,
-          externalReference: `${matchId}__${user.id}`,
-          payerEmail: user.email ?? "",
-          payerFirstName: nameParts[0] ?? "",
-          payerLastName: nameParts.slice(1).join(" ") ?? "",
-          clubAccessToken,
-          backUrls: {
-            success: `${getPublicBaseUrl()}/reservas/confirmacion`,
-            failure: `${getPublicBaseUrl()}/reservas/confirmacion`,
-            pending: `${getPublicBaseUrl()}/reservas/confirmacion`,
-          },
-        });
-
-        if (!("error" in mp)) {
-          // Registrar el pago pendiente
-          await supabase.from(DB_TABLES.payments).insert({
-            match_id: matchId,
-            user_id: user.id,
-            mp_preference_id: mp.prefId,
-            status: "pending",
-            amount: mp.total,
-            payment_method: "mercadopago",
-          });
-
-          // Notificar a los otros 3 jugadores que el partido está completo
-          const { data: otherParticipants } = await supabase
-            .from(DB_TABLES.matchParticipants)
-            .select("player_id")
-            .eq("match_id", matchId)
-            .neq("player_id", user.id);
-
-          for (const p of (otherParticipants ?? []) as Array<{ player_id: string }>) {
-            await createNotification(supabase, {
-              user_id: p.player_id,
-              type: "player_joined",
-              title: "🎾 ¡Partido completo!",
-              body: `Se completaron los 4 jugadores. ${joinerName} está pagando la seña para confirmar la cancha.`,
-              match_id: matchId,
-            });
-          }
-
-          revalidatePath(`/partidos/${matchId}`);
-          revalidatePath("/buscar-partido");
-          revalidatePath("/home");
-
-          // En vez de redirect(), devolver la URL de MP al cliente — un
-          // redirect() del server action no navega a mercadopago.com dentro
-          // del WebView de Capacitor (no está en allowNavigation).
-          return { needsPayment: true, mpUrl: mp.initPoint };
-        }
-      }
-    }
+  // join_match_atomic devuelve ok=true con reason='already_in' si ya estaba anotado.
+  if (joinResult.reason === "already_in") {
+    redirect(`/partidos/${matchId}?invite=${inviteToken}`);
   }
 
   await addPlayerToMatchGroup(supabase, matchId, user.id);
 
-  if (m.owner_id && m.owner_id !== user.id) {
+  if (joinResult.participantCount >= 4) {
+    await notifyOpenMatchConfirmed(supabase, matchId);
+  } else if (m.owner_id && m.owner_id !== user.id) {
     const tpl = NOTIFICATION_TEMPLATES.player_joined(joinerName, "tu partido");
     await createNotification(supabase, {
       user_id: m.owner_id,
@@ -562,15 +471,6 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
 
   const playerId = String((reqRow as { player_id: string }).player_id);
 
-  const { count, error: cErr } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id", { count: "exact", head: true })
-    .eq("match_id", matchId);
-
-  if (cErr || (count ?? 0) >= 4) {
-    redirect(`/partidos/${matchId}?join_error=cupos`);
-  }
-
   // El organizador resuelve directo: cierra la votación en curso (solicitudes/actions.ts)
   // para que un voto que llegue después no vuelva a resolver la misma solicitud.
   const { error: uErr } = await supabase
@@ -584,43 +484,26 @@ export async function acceptJoinRequest(formData: FormData): Promise<void> {
     redirect(`/partidos/${matchId}?join_error=db`);
   }
 
+  // Misma RPC atómica que el join directo: valida cupo total/por equipo y marca
+  // 'full' en la misma transacción (autoriza al dueño del partido).
   const pickedTeam = await pickTeamForMatch(supabase, matchId);
-  if (pickedTeam == null) {
-    await supabase
-      .from(DB_TABLES.matchJoinRequests)
-      .update({ status: "pending", voting_closed: false })
-      .eq("id", requestId)
-      .eq("match_id", matchId);
-    redirect(`/partidos/${matchId}?join_error=cupos`);
-  }
-
-  const { error: partErr } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: matchId,
-    player_id: playerId,
-    team: pickedTeam,
-  });
-  if (partErr) {
+  const joinResult = pickedTeam == null ? null : await joinMatchAtomic(supabase, matchId, playerId, pickedTeam);
+  if (!joinResult?.ok) {
     await supabase
       .from(DB_TABLES.matchJoinRequests)
       .update({ status: "pending", voting_closed: false })
       .eq("id", requestId)
       .eq("match_id", matchId);
     revalidatePath(`/partidos/${matchId}`);
-    redirect(`/partidos/${matchId}?join_error=db`);
+    const isFull =
+      joinResult == null || joinResult.reason === "team_full" || joinResult.reason === "match_full";
+    redirect(`/partidos/${matchId}?join_error=${isFull ? "cupos" : "db"}`);
   }
 
   await addPlayerToMatchGroup(supabase, matchId, playerId);
 
-  const { count: participantsAfter } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("player_id", { count: "exact", head: true })
-    .eq("match_id", matchId);
-  if ((participantsAfter ?? 0) >= 4) {
-    await supabase
-      .from(DB_TABLES.matches)
-      .update({ match_status: "full" })
-      .eq("id", matchId)
-      .neq("match_status", "cancelled");
+  if (joinResult.reason === "inserted" && joinResult.participantCount >= 4) {
+    await notifyOpenMatchConfirmed(supabase, matchId);
   }
 
   await createNotification(supabase, {
@@ -827,15 +710,22 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
   if (remaining === 0) {
     const totalPrice = m.total_price != null ? Number(m.total_price) : null;
+    // Partido abierto: el cobro presencial que haya registrado el club no se borra
+    // al vaciarse el partido (cancelar != devolver). Misma regla que leave_match_atomic.
+    const isOpenMatchEmptied = String(m.match_type ?? "").toLowerCase() === "amistoso";
     await supabase
       .from(DB_TABLES.matches)
-      .update({
-        match_status: "cancelled",
-        payment_status: "cancelled",
-        financial_status: "unpaid",
-        amount_paid: 0,
-        amount_pending: totalPrice ?? 0,
-      })
+      .update(
+        isOpenMatchEmptied
+          ? { match_status: "cancelled" }
+          : {
+              match_status: "cancelled",
+              payment_status: "cancelled",
+              financial_status: "unpaid",
+              amount_paid: 0,
+              amount_pending: totalPrice ?? 0,
+            }
+      )
       .eq("id", matchId);
     matchCancelled = true;
     await insertFixedSlotExceptionIfNeeded(matchId);
@@ -853,13 +743,16 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     }
   } else if (remaining < 4 && !matchCancelled) {
     const isReservationType = String(m.match_type ?? "").toLowerCase() === "reservation";
+    // En un partido abierto el organizador no pagó nada por la app: su salida no
+    // toca el estado de cobro del club.
+    const isOpenMatch = String(m.match_type ?? "").toLowerCase() === "amistoso";
     const downgradedStatus = isReservationType ? "reserved" : "scheduled";
     const updatePayload: Record<string, unknown> = { match_status: downgradedStatus };
 
     // El organizador que se va puede haberse llevado (o recibido reembolso de)
     // el pago que hizo al crear el partido: el nuevo organizador no puede
     // heredar un estado "pagado" que ya no corresponde a plata real en el club.
-    if (isOwnerLeaving) {
+    if (isOwnerLeaving && !isOpenMatch) {
       const totalPrice = m.total_price != null ? Number(m.total_price) : 0;
       updatePayload.payment_status = "pending";
       updatePayload.financial_status = "unpaid";
@@ -869,7 +762,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
 
     await supabase.from(DB_TABLES.matches).update(updatePayload).eq("id", matchId);
 
-    if (isOwnerLeaving) {
+    if (isOwnerLeaving && !isOpenMatch) {
       const clubId = await getClubIdForCourt(supabase, String(m.court_id ?? "").trim());
       if (clubId) {
         const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";

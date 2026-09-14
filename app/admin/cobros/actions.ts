@@ -99,6 +99,52 @@ async function finalizeFullMatchPayment(
   return { ok: true };
 }
 
+/**
+ * Cobro presencial de un partido abierto (amistoso): una sola unidad financiera a
+ * nivel partido, registrada solo en matches. No inserta en payments (user_id es
+ * obligatorio y este cobro no es de ningún jugador), no toca match_status y no
+ * notifica pagos. El update condicional sobre un payment_status pendiente hace que
+ * un doble click no duplique amount_paid: el segundo request no encuentra filas.
+ */
+async function confirmOpenMatchCobro(
+  svc: SupabaseClient,
+  match: { id: string; match_status: string | null; total_price: number | null }
+): Promise<{ ok: boolean; error?: string }> {
+  if (String(match.match_status ?? "").toLowerCase() !== "full") {
+    return { ok: false, error: "El partido todavía no tiene los 4 jugadores." };
+  }
+  const totalPrice = Number(match.total_price ?? 0);
+  if (!(totalPrice > 0)) {
+    return { ok: false, error: "El partido no tiene un precio cargado." };
+  }
+  const { amountPaid, amountPending, financialStatus } = resolveOfflinePaymentConfirmation(totalPrice);
+
+  const { data: updated, error } = await svc
+    .from(DB_TABLES.matches)
+    .update({
+      payment_status: "paid",
+      amount_paid: amountPaid,
+      amount_pending: amountPending,
+      financial_status: financialStatus,
+    })
+    .eq("id", match.id)
+    .eq("match_type", "amistoso")
+    .eq("match_status", "full")
+    .in("payment_status", ["pending", "cash_pending", "transfer_pending"])
+    .select("id");
+  if (error) return { ok: false, error: "No se pudo confirmar el cobro." };
+  if (!updated?.length) {
+    const { data: current } = await svc
+      .from(DB_TABLES.matches)
+      .select("payment_status")
+      .eq("id", match.id)
+      .maybeSingle();
+    const alreadyPaid = String((current as { payment_status?: string | null } | null)?.payment_status ?? "") === "paid";
+    return alreadyPaid ? { ok: true } : { ok: false, error: "Este cobro ya no está pendiente." };
+  }
+  return { ok: true };
+}
+
 export async function confirmOfflineCobro(formData: FormData) {
   const matchId = getMatchId(formData);
   const supabase = await createClient({ allowCookieWrites: true });
@@ -122,6 +168,24 @@ export async function confirmOfflineCobro(formData: FormData) {
     redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
   }
 
+  const svc = createServiceClient();
+
+  // Va antes del chequeo de payment_status: confirmOpenMatchCobro ya resuelve el
+  // "ya cobrado" (doble click) como éxito sin volver a escribir.
+  if (String((match as { match_type: string | null }).match_type ?? "").toLowerCase() === "amistoso") {
+    const openResult = await confirmOpenMatchCobro(
+      svc,
+      match as { id: string; match_status: string | null; total_price: number | null }
+    );
+    if (!openResult.ok) {
+      redirect("/admin/cobros?error=" + encodeURIComponent(openResult.error ?? "No se pudo confirmar el cobro."));
+    }
+    revalidatePath("/admin/cobros");
+    revalidatePath("/admin/reservas");
+    revalidatePath("/admin/finanzas");
+    redirect("/admin/cobros?ok=1");
+  }
+
   const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
   // "pending" se agrega porque el jugador puede haber elegido Mercado Pago y no
   // haber terminado el pago online: el club igual puede cobrarle en persona.
@@ -129,7 +193,6 @@ export async function confirmOfflineCobro(formData: FormData) {
     redirect("/admin/cobros?error=" + encodeURIComponent("Este cobro ya no está pendiente."));
   }
 
-  const svc = createServiceClient();
   const result = await finalizeFullMatchPayment(
     svc,
     match as { id: string; owner_id: string; match_status: string | null; payment_status: string | null; total_price: number | null },
@@ -163,7 +226,7 @@ export async function registrarPagoParcial(input: {
 
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, payment_status, match_status, total_price, amount_paid")
+    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price, amount_paid")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr || !match) return { ok: false, error: "No se encontró el turno." };
@@ -174,11 +237,17 @@ export async function registrarPagoParcial(input: {
     court_id: string;
     payment_status: string | null;
     match_status: string | null;
+    match_type: string | null;
     total_price: number | null;
     amount_paid: number | null;
   };
 
   if (!ctx.courtIds.includes(row.court_id)) return { ok: false, error: "No autorizado." };
+  // Partido abierto = un único cobro por el total (confirmOfflineCobro); los abonos
+  // parciales insertan payments a nombre del organizador.
+  if (String(row.match_type ?? "").toLowerCase() === "amistoso") {
+    return { ok: false, error: "Los partidos abiertos se registran como cobro total." };
+  }
 
   const pay = String(row.payment_status ?? "").toLowerCase();
   if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending") {
@@ -238,7 +307,7 @@ export async function markOfflineNoShow(formData: FormData) {
 
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, payment_status, match_status")
+    .select("id, owner_id, court_id, payment_status, match_status, match_type")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -249,6 +318,11 @@ export async function markOfflineNoShow(formData: FormData) {
   const courtId = String((match as { court_id: string }).court_id);
   if (!ctx.courtIds.includes(courtId)) {
     redirect("/admin/cobros?error=" + encodeURIComponent("No autorizado."));
+  }
+
+  // El estado de cobro de un partido abierto no cancela el partido.
+  if (String((match as { match_type: string | null }).match_type ?? "").toLowerCase() === "amistoso") {
+    redirect("/admin/cobros?error=" + encodeURIComponent("Un partido abierto no se cancela desde Cobros."));
   }
 
   const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();

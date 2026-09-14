@@ -453,11 +453,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         ? "Femenino"
         : "Mixto";
 
+  // Partido abierto: los jugadores no pagan por la app, el club cobra en persona.
+  // payment_status acá es solo el estado de cobro del club, nunca del jugador.
+  const isOpenMatch = String(match.match_type ?? "").toLowerCase() === "amistoso";
   const payStatus = String(match.payment_status ?? "").toLowerCase();
   const matchFullyPaid = payStatus === "paid";
   const canEdit = !(payStatus === "paid" && participants.length > 1);
-  const blockedEditMessage =
-    "No podés editar un partido con jugadores que ya pagaron.";
+  const blockedEditMessage = isOpenMatch
+    ? "No podés editar un partido que el club ya cobró."
+    : "No podés editar un partido con jugadores que ya pagaron.";
 
   const scheduledDateStr =
     match.scheduled_date && String(match.scheduled_date).trim().length >= 10
@@ -717,7 +721,14 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
               ${Math.round(detail.total_price ?? 0).toLocaleString("es-AR")}
             </p>
           </div>
-          {isParticipant ? (
+          {isParticipant && isOpenMatch ? (
+            <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
+              <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu lugar</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Te anotaste al partido. El pago se hace en el club.
+              </p>
+            </div>
+          ) : isParticipant ? (
             <div className="mt-2 rounded-xl bg-[var(--bg-subtle)] px-3 py-2.5">
               <p className="text-xs font-medium text-[var(--text-tertiary)]">Tu pago</p>
               <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -812,7 +823,24 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isParticipant ? (
+      {isParticipant && isOpenMatch ? (
+        participants.length >= 4 ? (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-[var(--shadow-card)] dark:border-emerald-800 dark:bg-emerald-950/30">
+            <div className="flex items-center gap-2">
+              <span className="text-lg text-emerald-700 dark:text-emerald-400">✓</span>
+              <p className="font-semibold text-emerald-800 dark:text-emerald-300">Partido confirmado</p>
+            </div>
+            <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">Ya están los 4 jugadores.</p>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/5 p-4 shadow-[var(--shadow-card)] dark:border-[#0085FC]/30 dark:bg-[#0085FC]/10">
+            <p className="font-semibold text-[#0461C4] dark:text-sky-300">Te anotaste al partido</p>
+            <p className="mt-1 text-sm text-[#0461C4]/80 dark:text-sky-300/80">
+              {`Falta${freeSlots === 1 ? "" : "n"} ${freeSlots} jugador${freeSlots === 1 ? "" : "es"} para confirmarlo.`}
+            </p>
+          </section>
+        )
+      ) : isParticipant ? (
         <MatchStatusBanner
           matchFullyPaid={matchFullyPaid}
           myPaymentNorm={myPaymentBanner}
@@ -820,7 +848,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         />
       ) : null}
 
-      {isParticipant && myPaymentBanner === "pending" ? (
+      {isParticipant && !isOpenMatch && myPaymentBanner === "pending" ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-[var(--shadow-card)] dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-center gap-2">
             <span className="text-lg">⚠️</span>
@@ -841,7 +869,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           ) : null}
         </section>
       ) : null}
-      {isParticipant && myPaymentBanner === "approved" ? (
+      {isParticipant && !isOpenMatch && myPaymentBanner === "approved" ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-[var(--shadow-card)] dark:border-emerald-800 dark:bg-emerald-950/30">
           <div className="flex items-center gap-2">
             <span className="text-lg text-emerald-700 dark:text-emerald-400">✓</span>
@@ -850,7 +878,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
         </section>
       ) : null}
 
-      {isParticipant && myPaymentStatus === "invited" && myPaymentMethod === "transfer" && clubWhatsapp ? (
+      {isParticipant && !isOpenMatch && myPaymentStatus === "invited" && myPaymentMethod === "transfer" && clubWhatsapp ? (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
           <p className="font-semibold text-emerald-800 dark:text-emerald-300">¿Ya transferiste?</p>
           <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
@@ -883,7 +911,9 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {cancelOk ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-          Cancelaste tu lugar. Si ya habías pagado, quedó registrada la solicitud de reembolso.
+          {isOpenMatch
+            ? "Cancelaste tu lugar."
+            : "Cancelaste tu lugar. Si ya habías pagado, quedó registrada la solicitud de reembolso."}
         </p>
       ) : null}
 
@@ -895,13 +925,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
 
       {joinAccepted && isOwner ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-          El jugador será redirigido al pago para confirmar su lugar (recibirá un aviso con el link).
+          {isOpenMatch
+            ? "Aceptaste la solicitud. El jugador ya está anotado en el partido."
+            : "El jugador será redirigido al pago para confirmar su lugar (recibirá un aviso con el link)."}
         </p>
       ) : null}
 
       {joinAccepted && justJoined ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-          ¡Te uniste al partido!
+          {isOpenMatch ? "Te anotaste al partido." : "¡Te uniste al partido!"}
         </p>
       ) : null}
 

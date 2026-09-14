@@ -17,7 +17,7 @@ import {
 import { adminAccentBar, adminCard, adminKicker } from "@/components/admin/admin-premium";
 import { SkeletonBlock } from "@/components/admin/ui-skeleton";
 
-const CACHE_PREFIX = "admin_finance_matches_v1:";
+const CACHE_PREFIX = "admin_finance_matches_v2:";
 const CACHE_TTL_MS = 90_000;
 
 type Court = { id: string; name: string | null };
@@ -68,7 +68,9 @@ async function fetchPaidMatchesDeduped(courtIds: string[]): Promise<{
       .from(DB_TABLES.matches)
       .select("id,date,court_id,total_price,amount_paid,payment_status,owner_id,scheduled_date")
       .in("court_id", courtIds)
-      .eq("match_type", "reservation")
+      // Partido abierto: suma recién cuando el club registra el cobro presencial
+      // (payment_status='paid' en el propio match, un solo registro por partido).
+      .in("match_type", ["reservation", "amistoso"])
       .order("date", { ascending: false });
     if (error) {
       return { rows: [], error: error.message };
@@ -265,7 +267,7 @@ export default function FinanceModule({ courtIds, courts }: { courtIds: string[]
             <div className={adminCard}>
               <p className={adminKicker}>Ticket promedio</p>
               <p className="mt-2 text-xl font-bold text-[var(--text-primary)]">${avgTicket.toFixed(2)}</p>
-              <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">Por reserva pagada</p>
+              <p className="mt-1 text-xs font-medium text-[var(--text-tertiary)]">Por turno o partido cobrado</p>
             </div>
             <div className={adminCard}>
               <p className={adminKicker}>Cancha más rentable (mes)</p>

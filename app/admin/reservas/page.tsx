@@ -7,6 +7,8 @@ import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
   adminAccentBar,
   adminBadgeDanger,
+  adminBadgeNeutral,
+  adminBadgeSuccess,
   adminBadgeWarning,
   adminButtonSecondary,
   adminCard,
@@ -260,6 +262,12 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     ? String(selectedMatch.match_type ?? "").toLowerCase() === "reservation"
     : false;
   const selectedIsFixed = Boolean(selectedMatch?.es_turno_fijo);
+  // Partido abierto: estado deportivo (full = confirmado) y estado de cobro del
+  // club se muestran por separado; no hay pagos individuales de jugadores.
+  const selectedIsOpenMatch =
+    !selectedIsFixed && String(selectedMatch?.match_type ?? "").toLowerCase() === "amistoso";
+  const selectedOpenMatchFull = String(selectedMatch?.match_status ?? "").toLowerCase() === "full";
+  const selectedOpenMatchCobrado = selectedPaySt === "paid";
 
   const reservationMatches = matches.filter((m) => String(m.match_type ?? "").toLowerCase() === "reservation");
   const totalReservas = reservationMatches.length;
@@ -418,11 +426,26 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     <PlayerAvatar name={ownerDisplayName} />
                   )}
                   <div>
-                    <p className={adminKicker}>{selectedIsFixed ? "Turno fijo" : "Detalle de reserva"}</p>
+                    <p className={adminKicker}>
+                      {selectedIsFixed ? "Turno fijo" : selectedIsOpenMatch ? "Partido abierto" : "Detalle de reserva"}
+                    </p>
                     <h2 className="text-lg font-semibold text-[var(--text-primary)]">{ownerDisplayName}</h2>
                   </div>
                 </div>
-                {!selectedIsFixed ? <PaymentStatusPill status={String(selectedMatch.payment_status ?? "—")} /> : null}
+                {selectedIsOpenMatch ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={selectedOpenMatchFull ? adminBadgeSuccess : adminBadgeNeutral}>
+                      {selectedOpenMatchFull ? "Partido confirmado" : "Esperando jugadores"}
+                    </span>
+                    {selectedOpenMatchFull || selectedOpenMatchCobrado ? (
+                      <span className={selectedOpenMatchCobrado ? adminBadgeSuccess : adminBadgeWarning}>
+                        {selectedOpenMatchCobrado ? "Cobrado en el club" : "Cobro presencial pendiente"}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : !selectedIsFixed ? (
+                  <PaymentStatusPill status={String(selectedMatch.payment_status ?? "—")} />
+                ) : null}
               </div>
 
               <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
@@ -471,7 +494,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
               </dl>
 
               <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/50 p-3">
-                <p className={adminKicker}>Jugadores{!selectedIsFixed ? " y pagos" : ""}</p>
+                <p className={adminKicker}>Jugadores{!selectedIsFixed && !selectedIsOpenMatch ? " y pagos" : ""}</p>
                 {selectedMatchParticipants.length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--text-tertiary)]">Sin jugadores asignados aún.</p>
                 ) : (
@@ -489,7 +512,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                             )}
                             <span className="text-sm font-medium text-[var(--text-secondary)]">{player.name}</span>
                           </div>
-                          {!selectedIsFixed ? (
+                          {!selectedIsFixed && !selectedIsOpenMatch ? (
                             <span className="text-right text-xs text-[var(--text-tertiary)]">
                               {payment
                                 ? `${payment.payment_method ?? "—"} · ${String(payment.status ?? "")} · $${Number(payment.amount ?? 0).toFixed(2)}`

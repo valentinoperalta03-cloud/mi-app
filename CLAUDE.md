@@ -20,8 +20,7 @@ Stack: Next.js 16 (App Router) · TypeScript · Tailwind CSS · Supabase · Merc
 
 ## 4. Flujo de pagos
 - Reserva de cancha: jugador paga seña online via MP → cancha confirmada → saldo restante se paga en el club.
-- Partido abierto (jugadores): el 4to jugador paga la seña completa → cancha confirmada para todos.
-- Partido abierto (club): sin pago de seña, los jugadores se anotan gratis.
+- Partido abierto (amistoso): nadie paga por la app. Al entrar el 4to jugador → match_status 'full' = confirmado. El club cobra el total en persona y lo registra en /admin/cobros (se guarda en matches.payment_status/amount_paid, sin filas en payments) → suma en /admin/finanzas.
 - Webhook MP en /api/mp/webhook-unified maneja todos los pagos.
 
 ## 5. Rutas principales

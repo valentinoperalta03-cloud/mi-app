@@ -463,8 +463,8 @@ type AbrirPartidoResult = { error: string } | { success: true; matchId: string }
 
 /**
  * Abre un partido abierto desde la página pública del club: match_type
- * 'amistoso', sin cobro al crear. El 4to jugador en unirse paga la seña
- * — ver requestToJoin en app/(player)/partidos/[id]/actions.ts.
+ * 'amistoso', sin cobro por la app. Al entrar el 4to jugador el partido queda
+ * 'full' (confirmado) y el club cobra el total en persona desde /admin/cobros.
  */
 export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirPartidoResult> {
   const supabase = await createClient({ allowCookieWrites: true });

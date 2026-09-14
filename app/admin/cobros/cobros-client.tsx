@@ -25,6 +25,8 @@ import {
 export type PendingMatchItem = {
   kind: "match";
   id: string;
+  /** Partido abierto completo: se cobra como un único total, sin abonos parciales ni "No se presentó". */
+  isOpenMatch: boolean;
   badge: "Reserva" | "Partido abierto" | "Turno fijo";
   courtLabel: string;
   time: string;
@@ -131,32 +133,46 @@ function PendingCard({ item, onRegistrarPago }: { item: PendingItem; onRegistrar
           <p className="mt-1.5 text-base font-bold text-[var(--text-primary)]">
             {item.courtLabel} · {item.time}hs
           </p>
-          <p className="text-sm text-[var(--text-tertiary)]">Jugador: {item.playerName}</p>
+          <p className="text-sm text-[var(--text-tertiary)]">
+            {item.isOpenMatch ? "Partido completo · 4 jugadores" : `Jugador: ${item.playerName}`}
+          </p>
         </div>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Total: <span className="font-semibold text-[var(--text-primary)]">${fmt(item.totalPrice)}</span>
-          {" · "}
-          Abonado: <span className="font-semibold text-[var(--text-primary)]">${fmt(item.amountPaid)}</span>
-          {" · "}
-          Restante:{" "}
-          <span className="font-semibold text-amber-700 dark:text-amber-300">${fmt(item.amountPending)}</span>
-        </p>
+        {item.isOpenMatch ? (
+          <p className="text-sm text-[var(--text-secondary)]">
+            Total del partido: <span className="font-semibold text-[var(--text-primary)]">${fmt(item.totalPrice)}</span>
+            {" · "}
+            <span className="font-semibold text-amber-700 dark:text-amber-300">Pendiente de cobro</span>
+          </p>
+        ) : (
+          <p className="text-sm text-[var(--text-secondary)]">
+            Total: <span className="font-semibold text-[var(--text-primary)]">${fmt(item.totalPrice)}</span>
+            {" · "}
+            Abonado: <span className="font-semibold text-[var(--text-primary)]">${fmt(item.amountPaid)}</span>
+            {" · "}
+            Restante:{" "}
+            <span className="font-semibold text-amber-700 dark:text-amber-300">${fmt(item.amountPending)}</span>
+          </p>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row">
-          <button type="button" onClick={onRegistrarPago} className={`flex-1 ${adminCTAPrimary}`}>
-            $ Registrar pago
-          </button>
+          {!item.isOpenMatch ? (
+            <button type="button" onClick={onRegistrarPago} className={`flex-1 ${adminCTAPrimary}`}>
+              $ Registrar pago
+            </button>
+          ) : null}
           <form action={confirmOfflineCobro} className="flex-1">
             <input type="hidden" name="match_id" value={item.id} />
             <button type="submit" className={btnSuccess}>
               Pagaron todo ✓
             </button>
           </form>
-          <form action={markOfflineNoShow} className="flex-1">
-            <input type="hidden" name="match_id" value={item.id} />
-            <button type="submit" className={btnNeutral}>
-              No se presentó
-            </button>
-          </form>
+          {!item.isOpenMatch ? (
+            <form action={markOfflineNoShow} className="flex-1">
+              <input type="hidden" name="match_id" value={item.id} />
+              <button type="submit" className={btnNeutral}>
+                No se presentó
+              </button>
+            </form>
+          ) : null}
         </div>
       </li>
     );

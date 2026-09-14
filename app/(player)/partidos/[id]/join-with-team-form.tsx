@@ -2,7 +2,6 @@
 
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useTransition } from "react";
-import { nativeOpenUrl } from "@/lib/native-open";
 import { requestToJoin } from "./actions";
 
 type Props = {
@@ -88,12 +87,8 @@ function TeamJoinButton({
         fd.set("level_override", levelOverride ? "true" : "false");
         fd.set("team", String(team));
 
-        const result = await requestToJoin(fd);
-
-        if (result && "needsPayment" in result && result.mpUrl) {
-          await nativeOpenUrl(result.mpUrl);
-        }
-        // Si no devuelve nada → la action hizo redirect() internamente
+        // La action siempre termina con redirect(): no hay checkout para partidos abiertos.
+        await requestToJoin(fd);
       } catch (err) {
         if (isRedirectError(err)) throw err;
         console.error("[JoinWithTeamForm]", err);

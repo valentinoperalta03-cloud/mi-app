@@ -9,6 +9,7 @@ type MatchRow = {
   scheduled_date: string | null;
   scheduled_time: string | null;
   owner_id: string | null;
+  match_type: string | null;
   financial_status: string | null;
   incomplete_reminder_sent: boolean | null;
   courts: { name: string | null } | { name: string | null }[] | null;
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, scheduled_date, scheduled_time, owner_id, financial_status, incomplete_reminder_sent, courts(name)")
+    .select("id, scheduled_date, scheduled_time, owner_id, match_type, financial_status, incomplete_reminder_sent, courts(name)")
     .in("match_status", ["scheduled", "full"])
     .lte("scheduled_date", nowDate)
     .neq("match_status", "cancelled")
@@ -67,10 +68,12 @@ export async function GET(req: Request) {
     if ((count ?? 0) >= 4) continue;
 
     const financialStatus = String(match.financial_status ?? "unpaid");
+    const isOpenMatch = String(match.match_type ?? "").toLowerCase() === "amistoso";
 
     // El club ya cobro la sena (o el total): el turno queda confirmado, la
     // decision de jugar con menos gente es del organizador. No se cancela.
-    if (financialStatus === "partially_paid" || financialStatus === "fully_paid") {
+    // No aplica a partidos abiertos: el cobro no decide si el partido sigue.
+    if (!isOpenMatch && (financialStatus === "partially_paid" || financialStatus === "fully_paid")) {
       if (!match.incomplete_reminder_sent && match.owner_id) {
         const missing = Math.max(0, 4 - (count ?? 0));
         await supabase
@@ -99,7 +102,10 @@ export async function GET(req: Request) {
         user_id: row.player_id,
         type: "reservation_cancelled",
         title: "Partido cancelado",
-        body: "El partido se canceló porque no se completó el pago de la seña a tiempo.",
+        body:
+          String(match.match_type ?? "").toLowerCase() === "amistoso"
+            ? "El partido se canceló porque no se completaron los 4 jugadores."
+            : "El partido se canceló porque no se completó el pago de la seña a tiempo.",
         match_id: match.id,
       });
     }

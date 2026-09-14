@@ -59,6 +59,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     { data: tournamentPendingRows, error: tournamentPendErr },
     { data: payRows },
     { data: practiceApprovedRows },
+    { data: openMatchPaidRows },
   ] = await Promise.all([
     supabase
       .from(DB_TABLES.matches)
@@ -107,6 +108,19 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       .eq("practice_sessions.session_date", todayAr)
       .in("practice_sessions.practices.club_id", ctx.clubIds)
       .order("confirmed_at", { ascending: false }),
+    // Partidos abiertos ya cobrados: el cobro vive en matches (un registro por
+    // partido), no en payments.
+    supabase
+      .from(DB_TABLES.matches)
+      .select("id, court_id, scheduled_time, amount_paid")
+      .in("court_id", ctx.courtIds)
+      .eq("scheduled_date", todayAr)
+      .eq("match_type", "amistoso")
+      .eq("payment_status", "paid")
+      .eq("financial_status", "fully_paid")
+      // Sin filtrar cancelados: un cobro registrado sigue siendo ingreso aunque
+      // el partido se haya cancelado despues (cancelar != devolver).
+      .order("scheduled_time", { ascending: true }),
   ]);
 
   type MatchPendingRow = {
@@ -124,10 +138,10 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
   };
   const pendingMatchesRaw = (pendingMatchRows ?? []) as MatchPendingRow[];
   // Un partido abierto (amistoso) solo se muestra como "pendiente de cobro"
-  // cuando ya esta confirmado (reserved) — antes de eso no tiene sentido
-  // pedirle plata a nadie, todavia puede no completarse.
+  // cuando ya esta confirmado (full = 4 jugadores): antes de eso todavia puede
+  // no completarse. Se cobra como un unico total del partido.
   const pendingMatches = pendingMatchesRaw.filter(
-    (m) => String(m.match_type ?? "").toLowerCase() !== "amistoso" || String(m.match_status ?? "") === "reserved"
+    (m) => String(m.match_type ?? "").toLowerCase() !== "amistoso" || String(m.match_status ?? "") === "full"
   );
 
   type PracticePendingRow = {
@@ -239,6 +253,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       return {
         kind: "match",
         id: m.id,
+        isOpenMatch: String(m.match_type ?? "").toLowerCase() === "amistoso" && !m.es_turno_fijo,
         badge: matchBadge(m.match_type, m.es_turno_fijo),
         courtLabel: courtName.get(m.court_id) ?? "Cancha",
         time: String(m.scheduled_time ?? "").slice(0, 5),
@@ -269,7 +284,30 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     }),
   ];
 
+  // Un partido abierto cobrado con el flujo previo (payment a nombre del
+  // organizador) ya aparece por paymentsToday: no se lista dos veces.
+  const matchIdsWithPaymentToday = new Set(paymentsToday.map((p) => p.match_id));
+  const openMatchesPaidToday = (
+    (openMatchPaidRows ?? []) as Array<{
+      id: string;
+      court_id: string;
+      scheduled_time: string | null;
+      amount_paid: number | null;
+    }>
+  ).filter((m) => !matchIdsWithPaymentToday.has(m.id));
+
   const confirmedItems: ConfirmedItem[] = [
+    ...openMatchesPaidToday.map(
+      (m): ConfirmedItem => ({
+        kind: "match",
+        id: m.id,
+        label: courtName.get(m.court_id) ?? "Cancha",
+        time: String(m.scheduled_time ?? "").slice(0, 5),
+        playerName: "Partido abierto",
+        amount: Number(m.amount_paid ?? 0),
+        method: null,
+      })
+    ),
     ...paymentsToday.map((p): ConfirmedItem => {
       const rel = p.matches;
       const match = Array.isArray(rel) ? rel[0] ?? null : rel;

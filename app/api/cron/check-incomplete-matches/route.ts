@@ -132,8 +132,9 @@ export async function GET(req: Request) {
 
     const financialStatus = String(m.financial_status ?? "unpaid");
     // El club ya cobro la sena (o el total): el turno queda confirmado, no
-    // se cancela ni se reembolsa aunque falten jugadores.
-    if (financialStatus === "partially_paid" || financialStatus === "fully_paid") continue;
+    // se cancela ni se reembolsa aunque falten jugadores. No aplica a partidos
+    // abiertos: ahi la cancelacion por incompleto depende solo de los jugadores.
+    if (mt !== "amistoso" && (financialStatus === "partially_paid" || financialStatus === "fully_paid")) continue;
 
     if (diffMin <= 30 && diffMin >= -10) {
       const { data: fresh } = await supabase
@@ -155,14 +156,18 @@ export async function GET(req: Request) {
           user_id: uid,
           type: "match_cancelled",
           title: "Partido cancelado",
-          body: "Partido cancelado por falta de jugadores y no se completó el pago de la seña a tiempo.",
+          body:
+            mt === "amistoso"
+              ? "Partido cancelado porque no se completaron los 4 jugadores."
+              : "Partido cancelado por falta de jugadores y no se completó el pago de la seña a tiempo.",
           match_id: m.id,
         });
       }
 
       const { data: upData, error: cancelErr } = await supabase
         .from(DB_TABLES.matches)
-        .update({ match_status: "cancelled", payment_status: "expired" })
+        // Partido abierto: solo cambia el estado deportivo; el cobro del club queda como esta.
+        .update(mt === "amistoso" ? { match_status: "cancelled" } : { match_status: "cancelled", payment_status: "expired" })
         .eq("id", m.id)
         .in("match_status", ["scheduled", "full", "reserved", "pending"])
         .select("id");

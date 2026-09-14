@@ -41,14 +41,15 @@ export async function GET(req: Request) {
 
   // Solo senas/pagos de organizador todavia sin acreditar. Pagos en efectivo/
   // transferencia (cash_pending/transfer_pending) se cobran en el club, no
-  // via MP, asi que no expiran por este cron.
+  // via MP, asi que no expiran por este cron. Los partidos abiertos (amistoso)
+  // tampoco: los jugadores no pagan por la app, el club cobra en persona.
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id,owner_id,created_at,deposit_reminder_sent,courts(name)")
     .eq("financial_status", "unpaid")
     .eq("payment_status", "pending")
     .in("match_status", ["pending", "scheduled", "reserved"])
-    .in("match_type", ["reservation", "amistoso", "competitivo"])
+    .in("match_type", ["reservation", "competitivo"])
     .or("es_turno_fijo.is.null,es_turno_fijo.eq.false")
     .lt("created_at", warningThresholdIso);
 
