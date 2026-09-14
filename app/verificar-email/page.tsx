@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 import { resendEmailOtp, verifyEmailOtp } from "./actions";
 
@@ -121,7 +122,8 @@ export default function VerificarEmailPage() {
           onClick={() => {
             setSignOutPending(true);
             const supabase = createClient();
-            void supabase.auth.signOut().finally(() => {
+            void supabase.auth.signOut().finally(async () => {
+              await logoutOneSignal();
               router.replace("/login");
             });
           }}

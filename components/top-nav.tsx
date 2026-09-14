@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { DB_TABLES } from "@/lib/db-tables";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
 type DrawerItem = {
@@ -286,7 +287,11 @@ export default function TopNav() {
     setBusy(true);
     try {
       const supabase = createClient();
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        await logoutOneSignal();
+      }
       closeDrawer();
       router.replace("/login");
       router.refresh();

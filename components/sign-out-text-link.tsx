@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
 export function SignOutTextLink() {
@@ -11,7 +12,11 @@ export function SignOutTextLink() {
   async function handleSignOut() {
     setBusy(true);
     const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      await logoutOneSignal();
+    }
     router.push("/login");
     router.refresh();
   }

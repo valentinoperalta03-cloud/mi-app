@@ -51,6 +51,26 @@ async function waitForPushToken(
   return null;
 }
 
+/**
+ * Desasocia el dispositivo del external_id actual. Nunca lanza y no espera más de 3s,
+ * para no bloquear el cierre de sesión. Llamar después de supabase.auth.signOut():
+ * el listener de pushSubscription vuelve a registrar al usuario si la sesión sigue activa.
+ */
+export async function logoutOneSignal(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await Promise.race([
+      (async () => {
+        const OneSignal = await ensureOneSignalInitialized();
+        if (OneSignal) await OneSignal.logout();
+      })(),
+      sleep(3000),
+    ]);
+  } catch (err) {
+    console.error("[OneSignal] logout:", err);
+  }
+}
+
 /** Registra external_id y guarda el token en profiles. Devuelve false si falló. */
 export async function registerOneSignalUser(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;

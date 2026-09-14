@@ -9,6 +9,7 @@ import {
   deleteMyAccount,
   updateMyProfile,
 } from "@/app/(player)/perfil/edit/actions";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
 const initial: EditProfileState = { ok: false, message: "" };
@@ -103,7 +104,11 @@ export function EditProfileForm({
         return;
       }
       const supabase = createClient();
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        await logoutOneSignal();
+      }
       router.replace("/login");
       router.refresh();
     });

@@ -3,6 +3,7 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
 export function AdminSignOutLink() {
@@ -12,7 +13,11 @@ export function AdminSignOutLink() {
   async function handleSignOut() {
     setBusy(true);
     const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      await logoutOneSignal();
+    }
     router.push("/login");
     router.refresh();
   }

@@ -18,6 +18,7 @@ import { Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
+import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], weight: ["500", "700"] });
@@ -290,7 +291,11 @@ function ClubPageDrawer({
     setSignOutBusy(true);
     try {
       const supabase = createClient();
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        await logoutOneSignal();
+      }
     } catch (err) {
       console.error("[ClubPageDrawer] sign out failed", err);
     } finally {
