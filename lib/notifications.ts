@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendPushNotification } from "@/lib/onesignal-server";
 
 type NotificationType =
   | "join_request"
@@ -37,9 +38,15 @@ export async function createNotification(
     actor_id?: string;
   }
 ) {
+  // El id se genera acá (y no con .select("id")) porque la policy SELECT de
+  // notifications solo deja leer filas propias: la mayoría de los callers
+  // notifica a otro usuario con el cliente de sesión y el RETURNING fallaría.
+  const notificationId = crypto.randomUUID();
+
   // 1. Guardar en base de datos (in-app)
   try {
     const { error } = await supabase.from("notifications").insert({
+      id: notificationId,
       user_id: params.user_id,
       type: params.type,
       title: params.title,
@@ -47,27 +54,23 @@ export async function createNotification(
       match_id: params.match_id ?? null,
       actor_id: params.actor_id ?? null,
     });
-    if (error) console.error("[createNotification] insert failed:", error);
+    if (error) {
+      console.error("[createNotification] insert failed:", error);
+      return;
+    }
   } catch (err) {
     console.error("[createNotification] unexpected error:", err);
+    return;
   }
 
-  // 2. Disparar push externo (OneSignal) — se intenta igual aunque el insert falle
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.padelibre.online";
-    await fetch(`${baseUrl}/api/push`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: params.user_id,
-        title: params.title,
-        body: params.body,
-        match_id: params.match_id,
-      }),
-    });
-  } catch (err) {
-    console.error("Push notification error:", err);
-  }
+  // 2. Push (OneSignal) solo si la notificación quedó guardada
+  await sendPushNotification({
+    userId: params.user_id,
+    title: params.title,
+    body: params.body,
+    matchId: params.match_id,
+    idempotencyKey: notificationId,
+  });
 }
 
 export const NOTIFICATION_TEMPLATES = {
