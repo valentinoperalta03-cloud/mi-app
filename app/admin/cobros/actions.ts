@@ -40,6 +40,7 @@ async function finalizeFullMatchPayment(
     match_status: string | null;
     payment_status: string | null;
     total_price: number | null;
+    confirmed_at?: string | null;
   },
   method: OfflineMethod
 ): Promise<{ ok: boolean; error?: string }> {
@@ -69,6 +70,8 @@ async function finalizeFullMatchPayment(
       amount_paid: amountPaid,
       amount_pending: amountPending,
       financial_status: financialStatus,
+      // Mismo evento que la seña aprobada por MP: acá la reserva queda confirmada.
+      confirmed_at: match.confirmed_at ?? new Date().toISOString(),
     })
     .eq("id", match.id);
   if (upMatchErr) return { ok: false, error: "No se pudo confirmar el cobro." };
@@ -155,7 +158,7 @@ export async function confirmOfflineCobro(formData: FormData) {
 
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price")
+    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price, confirmed_at")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -195,7 +198,14 @@ export async function confirmOfflineCobro(formData: FormData) {
 
   const result = await finalizeFullMatchPayment(
     svc,
-    match as { id: string; owner_id: string; match_status: string | null; payment_status: string | null; total_price: number | null },
+    match as {
+      id: string;
+      owner_id: string;
+      match_status: string | null;
+      payment_status: string | null;
+      total_price: number | null;
+      confirmed_at?: string | null;
+    },
     inferOfflineMethod(pay)
   );
   if (!result.ok) {
@@ -226,7 +236,7 @@ export async function registrarPagoParcial(input: {
 
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price, amount_paid")
+    .select("id, owner_id, court_id, payment_status, match_status, match_type, total_price, amount_paid, confirmed_at")
     .eq("id", matchId)
     .maybeSingle();
   if (mErr || !match) return { ok: false, error: "No se encontró el turno." };
@@ -240,6 +250,7 @@ export async function registrarPagoParcial(input: {
     match_type: string | null;
     total_price: number | null;
     amount_paid: number | null;
+    confirmed_at?: string | null;
   };
 
   if (!ctx.courtIds.includes(row.court_id)) return { ok: false, error: "No autorizado." };
@@ -572,7 +583,7 @@ export async function confirmRemainingBalanceAction(formData: FormData) {
 
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, court_id, total_price, financial_status, amount_pending")
+    .select("id, court_id, total_price, financial_status, amount_pending, match_status, late_cancellation_at")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -587,7 +598,18 @@ export async function confirmRemainingBalanceAction(formData: FormData) {
 
   const financialStatus = String((match as { financial_status: string | null }).financial_status ?? "");
   const amountPending = Number((match as { amount_pending: number | null }).amount_pending ?? 0);
-  if (financialStatus !== "partially_paid" || amountPending <= 0) {
+  const matchStatus = String((match as { match_status: string | null }).match_status ?? "").toLowerCase();
+  const lateCancellationAt = (match as { late_cancellation_at: string | null }).late_cancellation_at;
+  // Dos orígenes de saldo, una sola action: un turno vivo con abono parcial
+  // (partially_paid) y una cancelación fuera de término marcada con
+  // late_cancellation_at. Un turno cancelado SOLO tiene saldo si lleva la marca:
+  // amount_pending no alcanza (un partido abierto nace con pending = total y lo
+  // conserva), y partially_paid tampoco (una reserva con seña en efectivo que
+  // cancela el club queda partially_paid sin deber nada).
+  const hasCollectableBalance =
+    amountPending > 0 &&
+    (matchStatus === "cancelled" ? Boolean(lateCancellationAt) : financialStatus === "partially_paid");
+  if (!hasCollectableBalance) {
     redirect("/admin/cobros?error=" + encodeURIComponent("Este turno no tiene saldo pendiente."));
   }
 
@@ -600,6 +622,10 @@ export async function confirmRemainingBalanceAction(formData: FormData) {
       amount_paid: totalPrice,
       amount_pending: 0,
       financial_status: "fully_paid",
+      // Finanzas suma amount_paid solo de los matches con payment_status 'paid'.
+      // Un partido abierto llega acá en 'pending' (nadie paga por la app), así que
+      // sin esto el cobro presencial del saldo no entraría como ingreso.
+      payment_status: "paid",
     })
     .eq("id", matchId);
   if (upErr) {

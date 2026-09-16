@@ -8,7 +8,11 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { AR_TIME_ZONE, formatDateInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
-import CobrosClient, { type ConfirmedItem, type PendingItem } from "./cobros-client";
+import CobrosClient, {
+  type ConfirmedItem,
+  type LateCancellationItem,
+  type PendingItem,
+} from "./cobros-client";
 
 function isYmdInArgentina(iso: string, ymd: string): boolean {
   return (
@@ -27,7 +31,7 @@ function matchBadge(matchType: string | null, esTurnoFijo: boolean | null): "Res
 }
 
 type PageProps = {
-  searchParams?: Promise<{ error?: string; ok?: string }>;
+  searchParams?: Promise<{ error?: string; ok?: string; saldo?: string }>;
 };
 
 export default async function AdminCobrosPage({ searchParams }: PageProps) {
@@ -122,6 +126,59 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       // el partido se haya cancelado despues (cancelar != devolver).
       .order("scheduled_time", { ascending: true }),
   ]);
+
+  // Cancelaciones tardías: el jugador canceló fuera de la ventana del club, la
+  // seña no se reintegró y el total de la cancha quedó a cobrar. El saldo ya
+  // vive en matches (amount_pending / financial_status), no se crea un registro
+  // aparte. No se filtra por fecha: la deuda sigue abierta hasta que se cobre.
+  const LATE_CANCEL_COLUMNS =
+    "id, owner_id, court_id, match_type, scheduled_date, scheduled_time, total_price, amount_paid, amount_pending";
+
+  const [{ data: lateReservationRows }, { data: lateOpenMatchRows }] = await Promise.all([
+    // Reserva cancelada tarde: la seña quedó abonada y falta el resto. Hace falta
+    // late_cancellation_at: una reserva con seña en efectivo/transferencia que
+    // cancela el club queda también cancelled + paid + partially_paid + pending > 0
+    // (refundReservationPayment no tiene MP que devolver y no toca el saldo), y
+    // sin la marca aparecería como deuda del jugador.
+    supabase
+      .from(DB_TABLES.matches)
+      .select(LATE_CANCEL_COLUMNS)
+      .in("court_id", ctx.courtIds)
+      .eq("match_type", "reservation")
+      .eq("match_status", "cancelled")
+      .eq("payment_status", "paid")
+      .eq("financial_status", "partially_paid")
+      .not("late_cancellation_at", "is", null)
+      .gt("amount_pending", 0)
+      .order("scheduled_date", { ascending: false })
+      .limit(50),
+    // Partido abierto cancelado tarde: se filtra por late_cancellation_at. Ni el
+    // estado financiero ni confirmed_at alcanzan: un amistoso nace con
+    // amount_pending = total_price y lo conserva si lo cancela el club o se vacía,
+    // cancelaciones que no generan deuda.
+    supabase
+      .from(DB_TABLES.matches)
+      .select(LATE_CANCEL_COLUMNS)
+      .in("court_id", ctx.courtIds)
+      .eq("match_type", "amistoso")
+      .eq("match_status", "cancelled")
+      .not("late_cancellation_at", "is", null)
+      .gt("amount_pending", 0)
+      .order("scheduled_date", { ascending: false })
+      .limit(50),
+  ]);
+
+  const lateCancels = [...(lateReservationRows ?? []), ...(lateOpenMatchRows ?? [])] as Array<{
+    id: string;
+    owner_id: string;
+    court_id: string;
+    match_type: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    total_price: number | null;
+    amount_paid: number | null;
+    amount_pending: number | null;
+  }>;
 
   type MatchPendingRow = {
     id: string;
@@ -229,6 +286,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
     ...new Set(
       [
         ...pendingMatches.map((p) => p.owner_id),
+        ...lateCancels.map((m) => m.owner_id),
         ...practicePending.map((p) => p.player_id),
         ...practiceApprovedToday.map((p) => p.player_id),
         ...paymentsToday.map((p) => p.user_id),
@@ -245,6 +303,18 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       p.name?.trim() || "Jugador",
     ])
   );
+
+  const lateCancellationItems: LateCancellationItem[] = lateCancels.map((m) => ({
+    id: m.id,
+    isOpenMatch: String(m.match_type ?? "").toLowerCase() === "amistoso",
+    courtLabel: courtName.get(m.court_id) ?? "Cancha",
+    playerName: playerName.get(m.owner_id) ?? "Jugador",
+    originalDate: String(m.scheduled_date ?? ""),
+    time: String(m.scheduled_time ?? "").slice(0, 5),
+    totalPrice: Number(m.total_price ?? 0),
+    amountPaid: Number(m.amount_paid ?? 0),
+    amountPending: Number(m.amount_pending ?? 0),
+  }));
 
   const pendingItems: PendingItem[] = [
     ...pendingMatches.map((m): PendingItem => {
@@ -338,6 +408,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
 
   const err = sp.error ? decodeURIComponent(sp.error) : "";
   const ok = sp.ok === "1";
+  const saldoOk = sp.saldo === "1";
 
   return (
     <div className="flex flex-col gap-5">
@@ -349,6 +420,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       />
 
       {ok ? <AdminFlashMessage type="success" message="Actualizado correctamente." /> : null}
+      {saldoOk ? <AdminFlashMessage type="success" message="Saldo registrado. El turno queda saldado." /> : null}
       {err ? <AdminFlashMessage type="error" message={err} /> : null}
       {pendErr ? <AdminFlashMessage type="error" message={`No se pudieron cargar los pendientes: ${pendErr.message}`} /> : null}
       {practicePendErr ? (
@@ -373,6 +445,14 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
             Con <strong>$ Registrar pago</strong> podés cargar el monto exacto que te entregó el jugador. Si todavía
             queda saldo, el turno sigue apareciendo en pendientes con el restante actualizado. Si el monto cubre el
             total, el cobro se cierra solo.
+          </p>
+        </div>
+        <div>
+          <p className="font-bold text-[var(--text-primary)]">Cancelaciones tardías</p>
+          <p className="mt-1 leading-relaxed text-[var(--text-secondary)]">
+            Si un jugador cancela con menos anticipación que la política del club, la seña no se le devuelve y el
+            valor total de la cancha queda a cobrar. Aparece arriba con el saldo ya descontado de lo que abonó;
+            cuando te pague, tocá <strong>Cobró el saldo ✓</strong>.
           </p>
         </div>
         <div className={adminTip}>
@@ -408,7 +488,12 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <CobrosClient pendingItems={pendingItems} confirmedItems={confirmedItems} todayLabel={todayAr} />
+      <CobrosClient
+        pendingItems={pendingItems}
+        confirmedItems={confirmedItems}
+        lateCancellationItems={lateCancellationItems}
+        todayLabel={todayAr}
+      />
     </div>
   );
 }

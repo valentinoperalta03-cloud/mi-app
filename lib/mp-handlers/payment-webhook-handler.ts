@@ -442,12 +442,13 @@ async function processPaymentId(
     const { data: matchBefore } = await admin
       .from(DB_TABLES.matches)
       .select(
-        "owner_id,match_status,payment_status,total_price,amount_paid,scheduled_date,court_id,courts(name,club_id),match_type,gender_category,visibility,location_name,invited_friend_ids"
+        "owner_id,match_status,payment_status,total_price,amount_paid,scheduled_date,court_id,courts(name,club_id),match_type,gender_category,visibility,location_name,invited_friend_ids,confirmed_at"
       )
       .eq("id", matchId)
       .maybeSingle();
     const mb = matchBefore as {
       owner_id?: string | null;
+      confirmed_at?: string | null;
       match_status?: string | null;
       payment_status?: string | null;
       total_price?: number | null;
@@ -508,6 +509,9 @@ async function processPaymentId(
         amount_paid: amountPaid,
         amount_pending: amountPending,
         financial_status: financialStatus,
+        // La seña aprobada es el evento que confirma la reserva: desde acá corre
+        // la política de cancelación del club. No se pisa si ya estaba seteado.
+        confirmed_at: mb?.confirmed_at ?? now,
       })
       .eq("id", matchId);
 

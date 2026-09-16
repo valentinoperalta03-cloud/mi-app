@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { CANCELLATION_POLICY_PRESETS } from "@/lib/admin/cancellation-policy-presets";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -135,14 +136,21 @@ export async function saveCancellationPolicy(formData: FormData) {
 
   const clubId = ctx.clubIds[0];
   const policy = getField(formData, "cancellation_policy");
+  // El campo vacío no puede colapsar a 0: 0 es un preset válido ("Sin reembolso"),
+  // la política más restrictiva, y guardarla por un submit incompleto sería peor
+  // que dejar el club sin configurar.
+  const rawHoursField = getField(formData, "cancellation_hours");
+  const rawHours = rawHoursField === "" ? Number.NaN : Number(rawHoursField);
+  const hours = CANCELLATION_POLICY_PRESETS.some((p) => p.hours === rawHours) ? rawHours : null;
 
-  const payload: { cancellation_policy: string | null } = {
+  // cancellation_hours es la fuente de verdad numérica (la usa el backend al
+  // cancelar y el aviso público); cancellation_policy es el texto que la
+  // describe. Se guardan juntos para que no puedan divergir.
+  const payload: { cancellation_policy: string | null; cancellation_hours: number | null } = {
     cancellation_policy: policy || null,
+    cancellation_hours: hours,
   };
 
-  // clubs no tiene columna cancellation_hours (ver CLUB_ADMIN_COLUMNS_FALLBACK
-  // en app/admin/club/club-form.tsx) — el UPDATE la incluía y fallaba entero
-  // por columna inexistente, sin guardar ni cancellation_policy.
   const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
     .update(payload)

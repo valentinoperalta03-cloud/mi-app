@@ -3,14 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { createNotification } from "@/lib/notifications";
+import { lateCancellationFinancials } from "@/lib/cancellation-policy";
+import { isOpenMatchCancellationLate } from "@/lib/club-cancellation-window";
 
 type MatchRow = {
   id: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
   owner_id: string | null;
+  court_id: string | null;
   match_type: string | null;
+  match_status: string | null;
   financial_status: string | null;
+  confirmed_at: string | null;
+  total_price: number | null;
+  amount_paid: number | null;
   incomplete_reminder_sent: boolean | null;
   courts: { name: string | null } | { name: string | null }[] | null;
 };
@@ -42,7 +49,9 @@ export async function GET(req: Request) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, scheduled_date, scheduled_time, owner_id, match_type, financial_status, incomplete_reminder_sent, courts(name)")
+    .select(
+      "id, scheduled_date, scheduled_time, owner_id, court_id, match_type, match_status, financial_status, confirmed_at, total_price, amount_paid, incomplete_reminder_sent, courts(name)"
+    )
     .in("match_status", ["scheduled", "full"])
     .lte("scheduled_date", nowDate)
     .neq("match_status", "cancelled")
@@ -110,9 +119,28 @@ export async function GET(req: Request) {
       });
     }
 
+    // Un partido abierto que alguna vez llego a 4 comprometio la cancha: si llega
+    // la hora incompleto, el total queda a cobrar (una sola cuenta del match, sin
+    // deuda por jugador). Si nunca se confirmo, se cancela sin cargo.
+    const lateOpenMatch =
+      isOpenMatch &&
+      (await isOpenMatchCancellationLate(supabase, {
+        courtId: String(match.court_id ?? ""),
+        scheduledDate,
+        scheduledTime,
+        confirmedAt: match.confirmed_at,
+        matchStatus: match.match_status,
+      }));
+    const financials = lateOpenMatch
+      ? lateCancellationFinancials(Number(match.total_price ?? 0), Number(match.amount_paid ?? 0))
+      : null;
+
     await supabase
       .from(DB_TABLES.matches)
-      .update({ match_status: "cancelled" })
+      .update({
+        match_status: "cancelled",
+        ...(financials ? { ...financials, late_cancellation_at: new Date().toISOString() } : {}),
+      })
       .eq("id", match.id)
       .in("match_status", ["scheduled", "full"]);
 

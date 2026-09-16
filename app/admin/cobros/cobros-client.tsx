@@ -1,5 +1,7 @@
 "use client";
 
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
@@ -16,6 +18,7 @@ import {
 import {
   confirmOfflineCobro,
   confirmPracticeOfflineCobro,
+  confirmRemainingBalanceAction,
   confirmTournamentOfflineCobro,
   markOfflineNoShow,
   markPracticeOfflineNoShow,
@@ -55,6 +58,20 @@ export type PendingTournamentItem = {
 
 export type PendingItem = PendingMatchItem | PendingPracticeItem | PendingTournamentItem;
 
+/** Reserva cancelada fuera de la ventana del club: la seña no se devolvió y falta el resto del total. */
+export type LateCancellationItem = {
+  id: string;
+  /** Partido abierto confirmado: el saldo es del partido, el organizador es solo el contacto. */
+  isOpenMatch: boolean;
+  courtLabel: string;
+  playerName: string;
+  originalDate: string;
+  time: string;
+  totalPrice: number;
+  amountPaid: number;
+  amountPending: number;
+};
+
 export type ConfirmedItem = {
   kind: "match" | "practice";
   id: string;
@@ -80,15 +97,30 @@ function fmt(n: number) {
 export default function CobrosClient({
   pendingItems,
   confirmedItems,
+  lateCancellationItems,
 }: {
   pendingItems: PendingItem[];
   confirmedItems: ConfirmedItem[];
+  lateCancellationItems: LateCancellationItem[];
   todayLabel: string;
 }) {
   const [modalItem, setModalItem] = useState<PendingMatchItem | null>(null);
 
   return (
     <>
+      {lateCancellationItems.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">
+            Cancelaciones tardías · saldo a cobrar
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {lateCancellationItems.map((item) => (
+              <LateCancellationCard key={item.id} item={item} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="font-admin-display text-sm font-bold text-[var(--text-primary)]">Pendientes hoy</h2>
         {pendingItems.length === 0 ? (
@@ -121,6 +153,50 @@ export default function CobrosClient({
 
       {modalItem ? <RegistrarPagoModal item={modalItem} onClose={() => setModalItem(null)} /> : null}
     </>
+  );
+}
+
+function LateCancellationCard({ item }: { item: LateCancellationItem }) {
+  const fecha = item.originalDate
+    ? format(parseISO(`${item.originalDate}T12:00:00`), "EEE d MMM", { locale: es })
+    : "—";
+  return (
+    <li className={`${adminCard} flex flex-col gap-3 border-rose-200/70 dark:border-rose-900/40`}>
+      <div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={adminBadgePending}>Cancelación tardía</span>
+          <span className={item.isOpenMatch ? adminBadgeNeutral : adminBadgeBrand}>
+            {item.isOpenMatch ? "Partido abierto" : "Reserva"}
+          </span>
+        </div>
+        <p className="mt-1.5 text-base font-bold text-[var(--text-primary)]">
+          {item.courtLabel} · {fecha} {item.time}hs
+        </p>
+        <p className="text-sm text-[var(--text-tertiary)]">
+          {item.isOpenMatch ? "Organizador" : "Jugador"}: {item.playerName}
+        </p>
+      </div>
+      <dl className="flex flex-col gap-1 text-sm">
+        <div className="flex justify-between">
+          <dt className="text-[var(--text-secondary)]">Total cancha</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">${fmt(item.totalPrice)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-[var(--text-secondary)]">Abonado</dt>
+          <dd className="font-semibold text-[var(--text-primary)]">${fmt(item.amountPaid)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-[var(--text-secondary)]">Saldo pendiente</dt>
+          <dd className="font-bold text-rose-700 dark:text-rose-300">${fmt(item.amountPending)}</dd>
+        </div>
+      </dl>
+      <form action={confirmRemainingBalanceAction}>
+        <input type="hidden" name="match_id" value={item.id} />
+        <button type="submit" className={btnSuccess}>
+          Cobró el saldo ✓
+        </button>
+      </form>
+    </li>
   );
 }
 

@@ -18,6 +18,12 @@ import { Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
+import {
+  CANCELLATION_NOTICE_TITLE,
+  cancellationNoticeText,
+  CONFIRMATION_EXPLAINER,
+  resolveCancellationHours,
+} from "@/lib/cancellation-policy";
 import { logoutOneSignal } from "@/lib/onesignal-native";
 import { createClient } from "@/utils/supabase/client";
 
@@ -39,6 +45,7 @@ export type PublicClub = {
   whatsapp: string | null;
   facebook: string | null;
   tiktok: string | null;
+  cancellation_hours: number | null;
 };
 
 export type PublicCourt = {
@@ -413,6 +420,7 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName, p
     .join(" · ");
 
   const services = (club.services ?? []).filter(Boolean);
+  const cancellationHours = resolveCancellationHours(club.cancellation_hours);
   const socialLinks = [
     { key: "instagram", href: instagramHref(club.instagram), Icon: InstagramIcon, label: "Instagram" },
     { key: "whatsapp", href: whatsappHref(club.whatsapp), Icon: WhatsappIcon, label: "WhatsApp" },
@@ -557,6 +565,21 @@ export default function ClubPublicPage({ club, courts, isLoggedIn, playerName, p
         </div>
 
         <div className="px-4">
+          <section
+            role="note"
+            aria-label={CANCELLATION_NOTICE_TITLE}
+            className="mt-5 rounded-2xl border border-red-500/40 bg-red-500/[0.10] p-4"
+          >
+            <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.15em] text-red-300">
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              {CANCELLATION_NOTICE_TITLE}
+            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-red-50/90">
+              {cancellationNoticeText(cancellationHours)}
+            </p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-red-100/60">{CONFIRMATION_EXPLAINER}</p>
+          </section>
+
           {!isLoggedIn ? (
             <section className="mt-6 border-t border-[#1A3050] pt-6">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-white/35">Cómo funciona</p>

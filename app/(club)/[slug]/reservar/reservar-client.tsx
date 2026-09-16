@@ -8,6 +8,11 @@ import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import {
+  CANCELLATION_NOTICE_TITLE,
+  depositNoticeText,
+  resolveCancellationHours,
+} from "@/lib/cancellation-policy";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { nativeOpenUrl } from "@/lib/native-open";
 import { getClubAvailability, reservarCancha, type AvailabilitySlot } from "../actions";
@@ -28,6 +33,7 @@ export type ReservarClub = {
   close_time: string | null;
   contact_phone: string | null;
   whatsapp: string | null;
+  cancellation_hours: number | null;
 };
 
 export type ReservarCourt = {
@@ -534,6 +540,19 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
                   <span className="text-[10px] text-white/35">(lo pagás en el club el día del turno)</span>
                 </div>
               ) : null}
+            </div>
+
+            <div
+              role="note"
+              aria-label={CANCELLATION_NOTICE_TITLE}
+              className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/[0.10] p-3.5"
+            >
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-red-300">
+                {CANCELLATION_NOTICE_TITLE}
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-red-50/90">
+                {depositNoticeText(resolveCancellationHours(club.cancellation_hours))}
+              </p>
             </div>
 
             {bookingError ? <p className="mt-3 text-sm text-red-400">{bookingError}</p> : null}

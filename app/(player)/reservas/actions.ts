@@ -5,6 +5,13 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
+import {
+  isLateCancellation,
+  lateCancellationFinancials,
+  onTimeCancellationFinancials,
+} from "@/lib/cancellation-policy";
+import { resolveClubCancellationHours } from "@/lib/club-cancellation-window";
+import { utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
@@ -14,8 +21,10 @@ import { getClubAccessTokenForMatch } from "@/lib/payment-refund";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function matchStartMs(scheduledDate: string, scheduledTime: string): number {
-  const t = scheduledTime.trim().slice(0, 5);
-  return new Date(`${scheduledDate}T${t}:00`).getTime();
+  // scheduled_date/scheduled_time son hora de pared argentina. Interpretarlas en
+  // la TZ del servidor (UTC en prod) corría el turno 3 horas: con una ventana de
+  // cancelación de 24hs ese desfase decide mal si el jugador está dentro o fuera.
+  return utcMsForArgentinaWallClock(scheduledDate, scheduledTime);
 }
 
 async function isLocalDevHost(): Promise<boolean> {
@@ -259,7 +268,7 @@ export async function cancelReservation(formData: FormData) {
 
   const { data: match, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, owner_id, court_id, scheduled_date, scheduled_time, payment_status, total_price")
+    .select("id, owner_id, court_id, scheduled_date, scheduled_time, payment_status, total_price, amount_paid")
     .eq("id", id)
     .maybeSingle();
 
@@ -299,10 +308,21 @@ export async function cancelReservation(formData: FormData) {
     if (mpId) {
       const start = matchStartMs(scheduledDate, scheduledTime);
       const minutesUntil = (start - Date.now()) / 60_000;
-      if (minutesUntil < 60) {
+      const cancellationHours = await resolveClubCancellationHours(supabase, courtId);
+      if (isLateCancellation(minutesUntil, cancellationHours)) {
+        // Cancelación tardía: no se devuelve la seña y el total de la cancha queda
+        // a cobrar. El estado financiero no se toca más allá de reafirmar el saldo
+        // (total - lo ya abonado): cancelar el partido no borra lo que ingresó ni
+        // lo que falta. Con seña = total, amount_pending queda en 0 y no se crea
+        // una deuda inexistente.
+        const currentPaid = Number((match as { amount_paid: number | null }).amount_paid ?? 0);
+        const lateFinancials = lateCancellationFinancials(totalPrice, currentPaid);
+        const financialUpdate = lateFinancials
+          ? { ...lateFinancials, late_cancellation_at: new Date().toISOString() }
+          : {};
         const { error: cancelNoRefundErr } = await supabase
           .from(DB_TABLES.matches)
-          .update({ match_status: "cancelled" })
+          .update({ match_status: "cancelled", ...financialUpdate })
           .eq("id", id);
         if (cancelNoRefundErr) {
           console.error("[cancelReservation]", cancelNoRefundErr);
@@ -323,7 +343,7 @@ export async function cancelReservation(formData: FormData) {
           await notifyClubReservationReleased(supabase, courtId, scheduledDate, scheduledTime);
         }
         revalidatePath("/reservas");
-        redirect("/reservas?info=sin_reembolso");
+        redirect(`/reservas?info=sin_reembolso&h=${cancellationHours}`);
       }
       const clubAccessToken = await getClubAccessTokenForMatch(createServiceClient(), id);
       if (!clubAccessToken) {
@@ -343,9 +363,10 @@ export async function cancelReservation(formData: FormData) {
         .update({
           match_status: "cancelled",
           payment_status: "refunded",
-          financial_status: "unpaid",
-          amount_paid: 0,
-          amount_pending: totalPrice,
+          // Reembolso total: no queda nada abonado ni nada por abonar. amount_pending
+          // en 0 (antes quedaba en totalPrice) es lo que distingue una cancelación a
+          // tiempo de una tardía en /admin/cobros.
+          ...onTimeCancellationFinancials(totalPrice, 0),
         })
         .eq("id", id);
       if (cancelRefundErr) {

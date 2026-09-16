@@ -552,29 +552,37 @@ export async function agregarJugadorDesdeAdmin(input: AgregarJugadorAdminInput):
   }
   if (match.match_status === "cancelled") return { ok: false, error: "Ese partido ya está cancelado." };
 
-  const { data: participantsRaw } = await supabase
-    .from(DB_TABLES.matchParticipants)
-    .select("team")
-    .eq("match_id", matchId);
-  const participants = (participantsRaw ?? []) as Array<{ team: number | null }>;
-  if (participants.length >= 4) return { ok: false, error: "El partido ya está completo." };
-  if (participants.filter((p) => p.team === team).length >= 2) {
-    return { ok: false, error: "Ese equipo ya está completo." };
-  }
-
   const guestName = input.guestName?.trim() || "Jugador X";
 
-  // Ownership del partido ya validado arriba con el cliente autenticado
-  // (courtIds del admin + match_type amistoso + no cancelado). Recién acá
-  // se usa service role, solo porque RLS de match_participants exige
-  // auth.uid() = player_id y un Jugador X tiene player_id NULL.
+  // El cupo y la transición scheduled -> full (+ confirmed_at, que activa la
+  // política de cancelación) las resuelve el RPC en un solo bloque con FOR
+  // UPDATE: el count + insert que había acá dejaba pasar dos altas simultáneas
+  // y, sobre todo, completaba el partido sin marcarlo confirmado.
+  //
+  // Se llama con service role porque RLS de match_participants exige
+  // auth.uid() = player_id y un Jugador X tiene player_id NULL; el RPC revalida
+  // la pertenencia del partido igual que la action.
   const service = createServiceClient();
-  const { error } = await service
-    .from(DB_TABLES.matchParticipants)
-    .insert({ match_id: matchId, player_id: null, team, guest_name: guestName });
+  const { data: rpcRows, error } = await service.rpc("add_guest_to_match_atomic", {
+    p_match_id: matchId,
+    p_team: team,
+    p_guest_name: guestName,
+  });
   if (error) return { ok: false, error: "No se pudo agregar el jugador." };
 
+  const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok?: boolean; reason?: string | null }
+    | null;
+  if (!result?.ok) {
+    const reason = String(result?.reason ?? "");
+    if (reason === "match_full") return { ok: false, error: "El partido ya está completo." };
+    if (reason === "team_full") return { ok: false, error: "Ese equipo ya está completo." };
+    if (reason === "match_closed") return { ok: false, error: "Ese partido ya está cerrado." };
+    return { ok: false, error: "No se pudo agregar el jugador." };
+  }
+
   revalidatePath("/admin/reservas");
+  revalidatePath("/admin/cobros");
   return { ok: true };
 }
 
@@ -612,6 +620,22 @@ export async function quitarJugadorDesdeAdmin(input: QuitarJugadorAdminInput): P
     .eq("id", participantId)
     .eq("match_id", matchId);
   if (error) return { ok: false, error: "No se pudo quitar el jugador." };
+
+  // Misma regla que leave_match_atomic: con menos de 4 el partido vuelve a
+  // buscar jugadores y confirmed_at se conserva. Sin carrera con un alta: mientras
+  // el partido sigue en 'full', join_match_atomic y add_guest_to_match_atomic
+  // rechazan la entrada, así que nadie puede sumarse entre el delete y este update.
+  const { count: remaining } = await service
+    .from(DB_TABLES.matchParticipants)
+    .select("id", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  if ((remaining ?? 0) < 4) {
+    await service
+      .from(DB_TABLES.matches)
+      .update({ match_status: "scheduled" })
+      .eq("id", matchId)
+      .eq("match_status", "full");
+  }
 
   revalidatePath("/admin/reservas");
   return { ok: true };

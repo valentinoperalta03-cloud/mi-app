@@ -17,6 +17,7 @@ import { isLevelCompatible } from "@/lib/match-level";
 import { formatPlayerCategory } from "@/lib/profile-display";
 import { PLAYER_CARD_INTERACTIVE } from "@/lib/player-ui";
 import { createClient, getAdminClient } from "@/utils/supabase/server";
+import CancelOpenMatchButton from "./cancel-open-match-button";
 import KickPlayerButton from "./kick-player-button";
 import { MatchFeedbackSection } from "./match-feedback-section";
 import PartidoEditSection from "./partido-edit-section";
@@ -27,6 +28,12 @@ import { MatchStatusBanner } from "@/components/match-status-banner";
 import { JoinMatchPaymentModal } from "../../../../components/join-match-payment-modal";
 import { MercadoPagoPayButton } from "@/components/mercadopago-pay-button";
 import { Button } from "@/components/ui/button";
+import {
+  CANCELLATION_NOTICE_TITLE,
+  openMatchNoticeText,
+  resolveCancellationHours,
+} from "@/lib/cancellation-policy";
+import { isOpenMatchCancellationLate } from "@/lib/club-cancellation-window";
 import { CANCEL_ERROR_MESSAGES, EDIT_ERROR_MESSAGES, JOIN_FLASH_MESSAGES } from "@/lib/messages";
 import { PAYMENT_COPY } from "@/lib/payment-copy";
 import {
@@ -161,7 +168,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   const { data: matchRow, error: matchError } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,es_turno_fijo,courts(name,clubs(name,location,logo_url))"
+      "id,date,owner_id,scheduled_date,scheduled_time,payment_status,match_status,court_id,match_type,visibility,gender_category,level_restricted,duration_minutes,total_price,financial_status,amount_pending,amount_paid,confirmed_at,es_turno_fijo,courts(name,clubs(name,location,logo_url,cancellation_hours))"
     )
     .eq("id", id)
     .maybeSingle();
@@ -191,6 +198,8 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
     total_price: number | null;
     financial_status: string | null;
     amount_pending: number | null;
+    amount_paid: number | null;
+    confirmed_at: string | null;
     es_turno_fijo: boolean | null;
     courts:
       | {
@@ -200,6 +209,7 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 name: string | null;
                 location: string | null;
                 logo_url: string | null;
+                cancellation_hours: number | null;
               }
             | null;
         }
@@ -456,6 +466,22 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
   // Partido abierto: los jugadores no pagan por la app, el club cobra en persona.
   // payment_status acá es solo el estado de cobro del club, nunca del jugador.
   const isOpenMatch = String(match.match_type ?? "").toLowerCase() === "amistoso";
+  // El 4to jugador es el que confirma la cancha: quien todavía no está adentro
+  // tiene que saberlo antes de sumarse.
+  const showOpenMatchPolicyNotice =
+    isOpenMatch && !isParticipant && !isOwner && !matchAlreadyPlayed && matchStatusNorm !== "cancelled";
+  const clubCancellationHours = resolveCancellationHours(match.courts?.clubs?.cancellation_hours);
+  // Cancelar el partido entero es del organizador; un participante solo puede salirse.
+  const canCancelOpenMatch = isOpenMatch && isOwner && !matchAlreadyPlayed && matchStatusNorm !== "cancelled";
+  const openMatchCancellationIsLate = canCancelOpenMatch
+    ? await isOpenMatchCancellationLate(supabase, {
+        courtId: String(match.court_id ?? ""),
+        scheduledDate: String(match.scheduled_date ?? ""),
+        scheduledTime: String(match.scheduled_time ?? ""),
+        confirmedAt: match.confirmed_at,
+        matchStatus: match.match_status,
+      })
+    : false;
   const payStatus = String(match.payment_status ?? "").toLowerCase();
   const matchFullyPaid = payStatus === "paid";
   const canEdit = !(payStatus === "paid" && participants.length > 1);
@@ -790,6 +816,15 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
                 Ver solicitudes ({pendingRequestsCount})
               </Link>
             ) : null}
+            {canCancelOpenMatch ? (
+              <CancelOpenMatchButton
+                matchId={id}
+                isLate={openMatchCancellationIsLate}
+                cancellationHours={clubCancellationHours}
+                totalPrice={Number(match.total_price ?? 0)}
+                amountPaid={Number(match.amount_paid ?? 0)}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -922,6 +957,21 @@ export default async function PartidoDetailPage({ params, searchParams }: PagePr
           {cancelErrorMessage}
         </p>
        ) : null}
+
+      {showOpenMatchPolicyNotice ? (
+        <section
+          role="note"
+          aria-label={CANCELLATION_NOTICE_TITLE}
+          className="rounded-2xl border border-rose-300/70 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/25"
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-rose-700 dark:text-rose-300">
+            {CANCELLATION_NOTICE_TITLE}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-rose-900/90 dark:text-rose-100/80">
+            {openMatchNoticeText(clubCancellationHours)}
+          </p>
+        </section>
+      ) : null}
 
       {joinAccepted && isOwner ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">

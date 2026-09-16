@@ -21,7 +21,7 @@ export default async function ReservarPage({ params }: PageProps) {
   const { data: clubRow } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "id,name,slug,logo_url,city,province,business_hours,deposit_type,deposit_value,open_time,close_time,contact_phone,whatsapp,is_active"
+      "id,name,slug,logo_url,city,province,business_hours,deposit_type,deposit_value,open_time,close_time,contact_phone,whatsapp,cancellation_hours,is_active"
     )
     .eq("slug", slug)
     .eq("is_active", true)

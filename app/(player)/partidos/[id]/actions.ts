@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
+import { lateCancellationFinancials, onTimeCancellationFinancials } from "@/lib/cancellation-policy";
+import { isOpenMatchCancellationLate } from "@/lib/club-cancellation-window";
 import { formatDateInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
@@ -1356,3 +1358,132 @@ export async function kickPlayerFromMatch(
   return { ok: true };
 }
 
+
+/**
+ * Cancela un partido abierto completo. Solo el organizador.
+ *
+ * Bajarse != cancelar: `cancelParticipation` saca a un jugador y el partido sigue
+ * vivo buscando reemplazo. Esta acción cancela el booking, y por eso es la única
+ * del lado del jugador que puede disparar la política de cancelación del club.
+ *
+ * La obligación es del match completo (una cuenta en `matches`), nunca de un
+ * jugador: no se insertan filas en `payments` ni se reparte por participante.
+ */
+export async function cancelOpenMatch(formData: FormData): Promise<void> {
+  const matchId = getField(formData, "match_id");
+  if (!matchId) redirect("/home");
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: matchRow } = await supabase
+    .from(DB_TABLES.matches)
+    .select(
+      "id, owner_id, court_id, match_type, match_status, scheduled_date, scheduled_time, total_price, amount_paid, confirmed_at"
+    )
+    .eq("id", matchId)
+    .maybeSingle();
+
+  const m = matchRow as {
+    id: string;
+    owner_id: string | null;
+    court_id: string | null;
+    match_type: string | null;
+    match_status: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+    total_price: number | null;
+    amount_paid: number | null;
+    confirmed_at: string | null;
+  } | null;
+
+  if (!m) redirect("/home");
+  if (String(m.match_type ?? "").toLowerCase() !== "amistoso") {
+    redirect(`/partidos/${matchId}?cancel_error=tipo`);
+  }
+  // Un participante cualquiera no puede cancelar el partido de todos.
+  if (!m.owner_id || m.owner_id !== user.id) {
+    redirect(`/partidos/${matchId}?cancel_error=solo_organizador`);
+  }
+  if (String(m.match_status ?? "").toLowerCase() === "cancelled") {
+    redirect(`/partidos/${matchId}`);
+  }
+
+  const courtId = String(m.court_id ?? "").trim();
+  const totalPrice = Number(m.total_price ?? 0);
+  const amountPaid = Number(m.amount_paid ?? 0);
+  const scheduledDate = String(m.scheduled_date ?? "");
+  const scheduledTime = String(m.scheduled_time ?? "");
+
+  const late = await isOpenMatchCancellationLate(supabase, {
+    courtId,
+    scheduledDate,
+    scheduledTime,
+    confirmedAt: m.confirmed_at,
+    matchStatus: m.match_status,
+  });
+
+  // Amistoso: payment_status es el estado de cobro del club, no del jugador, y
+  // cancelar nunca lo pisa (cancelar != devolver lo ya cobrado).
+  const financials = late
+    ? lateCancellationFinancials(totalPrice, amountPaid)
+    : onTimeCancellationFinancials(totalPrice, amountPaid);
+
+  // Condicional a que siga vivo: con doble click o un cron cancelando en paralelo,
+  // solo una corrida cancela; las demás no pisan late_cancellation_at ni vuelven
+  // a notificar a los jugadores y al club.
+  const { data: cancelledRows, error: cancelErr } = await supabase
+    .from(DB_TABLES.matches)
+    .update({
+      match_status: "cancelled",
+      ...(financials ?? {}),
+      ...(late && financials ? { late_cancellation_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", matchId)
+    .neq("match_status", "cancelled")
+    .select("id");
+  if (cancelErr) {
+    log.error({ event: "cancelOpenMatch.failed", matchId, err: cancelErr });
+    redirect(`/partidos/${matchId}?cancel_error=db`);
+  }
+  if (!cancelledRows?.length) {
+    redirect(`/partidos/${matchId}`);
+  }
+
+  await insertFixedSlotExceptionIfNeeded(matchId);
+
+  const { data: participantRows } = await supabase
+    .from(DB_TABLES.matchParticipants)
+    .select("player_id")
+    .eq("match_id", matchId);
+  for (const row of (participantRows ?? []) as Array<{ player_id: string }>) {
+    await createNotification(supabase, {
+      user_id: row.player_id,
+      type: "match_cancelled",
+      title: "Partido cancelado",
+      body: "El organizador canceló el partido.",
+      match_id: matchId,
+    });
+  }
+
+  const clubId = await getClubIdForCourt(supabase, courtId);
+  if (clubId) {
+    const timeLabel = scheduledTime.trim().slice(0, 5) || "—";
+    await notifyClubOwner(createServiceClient(), clubId, {
+      title: "Partido cancelado",
+      body: late
+        ? `El partido de las ${timeLabel} se canceló fuera de término. Quedó saldo a cobrar en Cobros.`
+        : `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
+      match_id: matchId,
+    });
+  }
+
+  revalidatePath(`/partidos/${matchId}`);
+  revalidatePath("/home");
+  revalidatePath("/buscar-partido");
+  revalidatePath("/reservas");
+  redirect(`/partidos/${matchId}?cancel_ok=1`);
+}

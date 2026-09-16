@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { utcMsForArgentinaWallClock, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { lateCancellationFinancials } from "@/lib/cancellation-policy";
+import { isOpenMatchCancellationLate } from "@/lib/club-cancellation-window";
 import { DB_TABLES } from "@/lib/db-tables";
 import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
 import { log } from "@/lib/logger";
@@ -18,6 +20,9 @@ type MatchRow = {
   es_turno_fijo: boolean | null;
   incomplete_reminder_sent: boolean | null;
   financial_status: string | null;
+  confirmed_at: string | null;
+  total_price: number | null;
+  amount_paid: number | null;
 };
 
 function addDaysYmd(ymd: string, days: number): string {
@@ -48,7 +53,7 @@ export async function GET(req: Request) {
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,es_turno_fijo,incomplete_reminder_sent,financial_status"
+      "id,owner_id,court_id,scheduled_date,scheduled_time,match_type,match_status,es_turno_fijo,incomplete_reminder_sent,financial_status,confirmed_at,total_price,amount_paid"
     )
     .gte("scheduled_date", today)
     .lte("scheduled_date", until)
@@ -164,10 +169,35 @@ export async function GET(req: Request) {
         });
       }
 
+      // Partido abierto que alguna vez llego a 4: comprometio la cancha, asi que
+      // al cancelarse por incompleto el total queda a cobrar (menos lo ya abonado).
+      // Si nunca se confirmo, se cancela sin cargo. Las reservas no se tocan.
+      const lateOpenMatch =
+        mt === "amistoso" &&
+        (await isOpenMatchCancellationLate(supabase, {
+          courtId: String(m.court_id ?? ""),
+          scheduledDate: String(m.scheduled_date ?? ""),
+          scheduledTime: String(m.scheduled_time ?? ""),
+          confirmedAt: m.confirmed_at,
+          matchStatus: m.match_status,
+        }));
+      const openMatchFinancials = lateOpenMatch
+        ? lateCancellationFinancials(Number(m.total_price ?? 0), Number(m.amount_paid ?? 0))
+        : null;
+
       const { data: upData, error: cancelErr } = await supabase
         .from(DB_TABLES.matches)
         // Partido abierto: solo cambia el estado deportivo; el cobro del club queda como esta.
-        .update(mt === "amistoso" ? { match_status: "cancelled" } : { match_status: "cancelled", payment_status: "expired" })
+        .update(
+          mt === "amistoso"
+            ? {
+                match_status: "cancelled",
+                ...(openMatchFinancials
+                  ? { ...openMatchFinancials, late_cancellation_at: new Date().toISOString() }
+                  : {}),
+              }
+            : { match_status: "cancelled", payment_status: "expired" }
+        )
         .eq("id", m.id)
         .in("match_status", ["scheduled", "full", "reserved", "pending"])
         .select("id");

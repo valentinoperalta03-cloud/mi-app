@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MatchesRealtimeRefresh } from "@/components/matches-realtime-refresh";
 import MotionPage from "@/components/motion-page";
+import { resolveCancellationHours } from "@/lib/cancellation-policy";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
@@ -22,21 +23,25 @@ const ERROR_MESSAGES: Record<string, string> = {
     "No pudimos procesar el reembolso con Mercado Pago. Contactá soporte o intentá más tarde.",
 };
 
-const INFO_MESSAGES: Record<string, string> = {
-  sin_reembolso:
-    "Reserva cancelada. No aplica reembolso automático porque falta menos de una hora para el horario.",
-};
+function lateCancellationMessage(rawHours: string | undefined): string {
+  const hours = resolveCancellationHours(Number(rawHours));
+  const ventana =
+    hours <= 0
+      ? "El club no reintegra señas por cancelaciones."
+      : `Cancelaste con menos de ${hours} ${hours === 1 ? "hora" : "horas"} de anticipación.`;
+  return `Reserva cancelada. ${ventana} La seña no se reintegra y el valor total de la cancha queda a abonar en el club (se descuenta lo que ya pagaste).`;
+}
 
 export default async function ReservasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; info?: string; tab?: string }>;
+  searchParams: Promise<{ error?: string; info?: string; tab?: string; h?: string }>;
 }) {
   const sp = await searchParams;
   const urlError = sp.error?.trim();
   const urlInfo = sp.info?.trim();
   const urlErrorMessage = urlError ? ERROR_MESSAGES[urlError] ?? null : null;
-  const urlInfoMessage = urlInfo ? INFO_MESSAGES[urlInfo] ?? null : null;
+  const urlInfoMessage = urlInfo === "sin_reembolso" ? lateCancellationMessage(sp.h) : null;
   const defaultTab = sp.tab?.trim() === "partidos" ? "partidos" : "canchas";
 
   const supabase = await createClient();
