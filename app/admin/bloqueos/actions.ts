@@ -16,7 +16,9 @@ import {
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import {
   buildSlotsForDay,
+  minutesToClock,
   normalizeSlotTime,
+  parseClockToMinutes,
   type ClubHoursBounds,
   type CourtTimeRangeInput,
 } from "@/lib/court-slots";
@@ -309,135 +311,260 @@ export async function removeClosedDayAction(formData: FormData): Promise<CloseDa
 // Bloqueo puntual de un horario
 // ---------------------------------------------------------------------------
 
-export type SlotOption = { time: string; occupied: boolean; detail: string };
-export type SlotOptionsResult =
-  | { ok: true; slots: SlotOption[]; dayClosed: boolean }
-  | { ok: false; error: string };
+const BLOCK_SLOT_MINUTES = 90;
+const MAX_BLOCKS_PER_BATCH = 200;
 
-async function loadCourtSlots(
+/** Turnos reales por cancha ese día (buildSlotsForDay), con una sola lectura de franjas y horario del club. */
+async function loadSlotsByCourt(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  courtId: string,
+  courtIds: string[],
   clubId: string,
   date: string
-): Promise<string[]> {
+): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  if (!courtIds.length) return result;
   const [{ data: rangeRows }, { data: clubRow }] = await Promise.all([
     supabase
       .from(DB_TABLES.courtTimeRanges)
       .select("court_id,day_of_week,open_time,close_time")
-      .eq("court_id", courtId),
+      .in("court_id", courtIds),
     supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle(),
   ]);
   const timeRanges = (rangeRows ?? []) as CourtTimeRangeInput[];
   const clubBounds = (clubRow ?? null) as ClubHoursBounds | null;
-  return buildSlotsForDay([courtId], new Date(`${date}T12:00:00`), timeRanges, clubBounds).map((s) => s.time);
+  const dayDate = new Date(`${date}T12:00:00`);
+  for (const courtId of courtIds) {
+    result.set(
+      courtId,
+      buildSlotsForDay([courtId], dayDate, timeRanges, clubBounds, BLOCK_SLOT_MINUTES).map((s) => s.time)
+    );
+  }
+  return result;
 }
 
+export type BlockGridSlot = { time: string; endTime: string; occupied: boolean; detail: string };
+export type BlockGridCourt = { id: string; name: string; slots: BlockGridSlot[] };
+export type BlockGridResult =
+  | { ok: true; date: string; dayClosed: boolean; courts: BlockGridCourt[] }
+  | { ok: false; error: string };
+
 /**
- * Turnos reales de esa cancha ese día, con qué los ocupa. El formulario de
- * bloqueo elige de acá — nunca hay input de hora libre, así que no se puede
- * cargar un bloqueo en un horario en el que la cancha ni siquiera abre.
+ * Grilla cancha × horario de una fecha para el bloqueo en lote. Solo informa:
+ * lo que se muestra libre acá NO autoriza a insertar — createManualBlocksAction
+ * vuelve a validar cada combinación contra la DB.
  */
-export async function getSlotOptionsAction(courtId: string, date: string): Promise<SlotOptionsResult> {
-  const court = String(courtId ?? "").trim();
+export async function getBlockGridAction(date: string): Promise<BlockGridResult> {
   const day = String(date ?? "").trim();
-  if (!court || !DATE_RE.test(day)) return { ok: false, error: "Datos incompletos." };
+  if (!DATE_RE.test(day)) return { ok: false, error: "Fecha inválida." };
 
   const supabase = await createClient();
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) return { ok: false, error: "Sesión requerida." };
-  const courtRef = ctx.courts.find((c) => c.id === court && c.club_id === ctx.clubIds[0]);
-  if (!courtRef) return { ok: false, error: "Cancha no autorizada." };
+  if (!ctx.clubIds.length) return { ok: false, error: "No tenés un club asignado." };
 
-  const [slots, activity] = await Promise.all([
-    loadCourtSlots(supabase, court, courtRef.club_id, day),
-    getDayActivity(supabase, {
-      clubId: courtRef.club_id,
-      courts: ctx.courts.filter((c) => c.club_id === courtRef.club_id),
-      date: day,
-    }),
+  const clubId = ctx.clubIds[0];
+  const courts = ctx.courts.filter((c) => c.club_id === clubId);
+  const [slotsByCourt, activity] = await Promise.all([
+    loadSlotsByCourt(
+      supabase,
+      courts.map((c) => c.id),
+      clubId,
+      day
+    ),
+    getDayActivity(supabase, { clubId, courts, date: day }),
   ]);
 
   return {
     ok: true,
+    date: day,
     dayClosed: activity.alreadyClosed,
-    slots: slots.map((time) => {
-      const occ = findSlotOccupancy(activity, court, time);
-      return {
-        time,
-        occupied: occ.occupied,
-        detail: occ.occupied ? occ.detail : "",
-      };
-    }),
+    courts: courts.map((c) => ({
+      id: c.id,
+      name: c.name?.trim() || "Cancha",
+      slots: (slotsByCourt.get(c.id) ?? []).map((time) => {
+        const occ = findSlotOccupancy(activity, c.id, time, BLOCK_SLOT_MINUTES);
+        return {
+          time,
+          endTime: minutesToClock(parseClockToMinutes(time) + BLOCK_SLOT_MINUTES),
+          occupied: occ.occupied,
+          detail: occ.occupied ? occ.detail : "",
+        };
+      }),
+    })),
   };
 }
 
 export type BlockResult = { ok: true; message: string } | { ok: false; error: string };
 
-/**
- * Bloquea un turno puntual de una cancha. Si el turno ya tiene cualquier
- * ocupación (reserva, turno fijo, entrenamiento, torneo, clase u otro bloqueo)
- * se rechaza y se dice qué lo ocupa: esta pantalla no cancela nada, para eso
- * está la sección de cada entidad.
- */
-export async function createManualBlockAction(formData: FormData): Promise<BlockResult> {
-  const courtId = getField(formData, "court_id");
-  const date = getField(formData, "blocked_date");
-  const time = normalizeSlotTime(getField(formData, "blocked_time"));
-  const note = getField(formData, "note").slice(0, 120);
+export type BlockSlotInput = { courtId: string; startTime: string; endTime?: string };
+export type BlockConflict = { courtId: string; courtName: string; time: string; detail: string };
+export type BulkBlockResult =
+  | { ok: true; message: string; created: number }
+  | { ok: false; error: string; conflicts: BlockConflict[] };
 
-  if (!courtId) return { ok: false, error: "Elegí una cancha." };
-  if (!DATE_RE.test(date)) return { ok: false, error: "Fecha inválida." };
-  if (!TIME_RE.test(time)) return { ok: false, error: "Elegí un horario." };
-  if (date < getTodayYmdInArgentina()) {
-    return { ok: false, error: "No podés bloquear un horario que ya pasó." };
+/**
+ * Bloquea en una sola operación un conjunto EXPLÍCITO de combinaciones
+ * cancha + horario de una fecha (nunca el producto cartesiano).
+ *
+ * Todo o nada:
+ * 1. Valida cada combinación contra la DB (cancha del club, turno real de
+ *    buildSlotsForDay, ocupación por solapamiento de rango). Si alguna falla no
+ *    se escribe nada y se devuelven las que hay que revisar.
+ * 2. Inserta todas las filas en UN solo INSERT: Postgres lo aplica completo o
+ *    no aplica ninguna.
+ * 3. Vuelve a leer la ocupación: si entre la validación y el insert se coló una
+ *    reserva / partido / turno fijo, borra las filas recién creadas y rechaza el
+ *    lote. Desde el insert en adelante, reservarCancha y abrirPartido ya ven el
+ *    bloqueo y rechazan ese turno.
+ *
+ * Un día cerrado no rechaza el lote (mismo criterio que el bloqueo puntual de
+ * antes): el bloqueo sigue valiendo si después se reabre la fecha.
+ */
+export async function createManualBlocksAction(input: {
+  date: string;
+  note?: string;
+  slots: BlockSlotInput[];
+}): Promise<BulkBlockResult> {
+  const fail = (error: string, conflicts: BlockConflict[] = []): BulkBlockResult => ({ ok: false, error, conflicts });
+  const date = String(input?.date ?? "").trim();
+  const note = String(input?.note ?? "").trim().slice(0, 120);
+  const rawSlots = Array.isArray(input?.slots) ? input.slots : [];
+
+  if (!DATE_RE.test(date)) return fail("Fecha inválida.");
+  if (date < getTodayYmdInArgentina()) return fail("No podés bloquear horarios de una fecha que ya pasó.");
+  if (rawSlots.length === 0) return fail("Elegí al menos un horario.");
+  if (rawSlots.length > MAX_BLOCKS_PER_BATCH) {
+    return fail(`Podés bloquear hasta ${MAX_BLOCKS_PER_BATCH} horarios por vez.`);
   }
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
-  const courtRef = ctx.courts.find((c) => c.id === courtId && c.club_id === ctx.clubIds[0]);
-  if (!courtRef) return { ok: false, error: "Cancha no autorizada." };
+  if (!ctx.clubIds.length) return fail("No tenés un club asignado.");
 
-  const validSlots = await loadCourtSlots(supabase, courtId, courtRef.club_id, date);
-  if (!validSlots.includes(time)) {
-    return { ok: false, error: `${courtRef.name ?? "La cancha"} no tiene un turno que arranque a las ${time} ese día.` };
+  const clubId = ctx.clubIds[0];
+  const clubCourts = ctx.courts.filter((c) => c.club_id === clubId);
+  const courtNameById = new Map(clubCourts.map((c) => [c.id, c.name?.trim() || "Cancha"]));
+
+  // Normalización + deduplicación. Un item con forma inválida rechaza el lote entero.
+  const seen = new Set<string>();
+  const slots: Array<{ courtId: string; time: string }> = [];
+  for (const raw of rawSlots) {
+    const courtId = String(raw?.courtId ?? "").trim();
+    const time = normalizeSlotTime(String(raw?.startTime ?? ""));
+    if (!courtId || !TIME_RE.test(time)) return fail("Hay horarios con datos inválidos.");
+    if (!courtNameById.has(courtId)) return fail("Hay canchas que no pertenecen a tu club.");
+    const expectedEnd = minutesToClock(parseClockToMinutes(time) + BLOCK_SLOT_MINUTES);
+    if (raw?.endTime !== undefined && normalizeSlotTime(String(raw.endTime)) !== expectedEnd) {
+      return fail("Hay horarios con un fin que no corresponde al turno.");
+    }
+    const key = `${courtId}__${time}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    slots.push({ courtId, time });
   }
 
-  const activity = await getDayActivity(supabase, {
-    clubId: courtRef.club_id,
-    courts: ctx.courts.filter((c) => c.club_id === courtRef.club_id),
-    date,
+  const conflictOf = (courtId: string, time: string, detail: string): BlockConflict => ({
+    courtId,
+    courtName: courtNameById.get(courtId) ?? "Cancha",
+    time,
+    detail,
   });
-  const occupancy = findSlotOccupancy(activity, courtId, time);
-  if (occupancy.occupied) {
-    return {
-      ok: false,
-      error: `No podés bloquear ${courtRef.name ?? "esa cancha"} · ${time}. Hay ${occupancy.detail.toLowerCase()} en ese horario. Resolvelo primero.`,
-    };
+
+  const [slotsByCourt, activity] = await Promise.all([
+    loadSlotsByCourt(
+      supabase,
+      Array.from(new Set(slots.map((s) => s.courtId))),
+      clubId,
+      date
+    ),
+    getDayActivity(supabase, { clubId, courts: clubCourts, date }),
+  ]);
+
+  const conflicts: BlockConflict[] = [];
+  for (const s of slots) {
+    if (!(slotsByCourt.get(s.courtId) ?? []).includes(s.time)) {
+      conflicts.push(conflictOf(s.courtId, s.time, "La cancha no tiene ese turno ese día"));
+      continue;
+    }
+    const occ = findSlotOccupancy(activity, s.courtId, s.time, BLOCK_SLOT_MINUTES);
+    if (occ.occupied) {
+      conflicts.push(conflictOf(s.courtId, s.time, occ.detail));
+      continue;
+    }
+    // Dos turnos del mismo lote no pueden pisarse (franjas superpuestas de una cancha).
+    const start = parseClockToMinutes(s.time);
+    const clash = slots.find(
+      (o) =>
+        o !== s &&
+        o.courtId === s.courtId &&
+        parseClockToMinutes(o.time) < start + BLOCK_SLOT_MINUTES &&
+        parseClockToMinutes(o.time) + BLOCK_SLOT_MINUTES > start
+    );
+    if (clash) conflicts.push(conflictOf(s.courtId, s.time, `Se superpone con ${clash.time} del mismo lote`));
+  }
+  if (conflicts.length) {
+    return fail(
+      "No pudimos bloquear los horarios porque algunos no están disponibles. No se bloqueó ninguno: revisá los marcados y volvé a intentar.",
+      conflicts
+    );
   }
 
-  // `date` y `start_time` son NOT NULL en el schema actual aunque el código de
-  // lectura use `blocked_date` / `blocked_time`: hay que escribir las cuatro.
-  //
-  // `reason` es el discriminador del tipo de bloqueo (entrenamiento_externo,
-  // torneo, bloqueo_manual) y todas las queries filtran por igualdad exacta: el
-  // motivo libre que escribe el dueño va en `note` (20260915200000).
-  const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
-    court_id: courtId,
-    date,
-    start_time: time,
-    blocked_date: date,
-    blocked_time: time,
-    reason: REASON_BLOQUEO_MANUAL,
-    note: note || null,
-    created_by: ctx.userId,
-  });
-  if (error) return { ok: false, error: error.message };
+  // `date` y `start_time` son NOT NULL en el schema actual: se escriben las cuatro columnas.
+  const { data: inserted, error: insertErr } = await supabase
+    .from(DB_TABLES.courtBlocks)
+    .insert(
+      slots.map((s) => ({
+        court_id: s.courtId,
+        date,
+        start_time: s.time,
+        blocked_date: date,
+        blocked_time: s.time,
+        reason: REASON_BLOQUEO_MANUAL,
+        note: note || null,
+        created_by: ctx.userId,
+      }))
+    )
+    .select("id");
+  if (insertErr) return fail(`No se bloqueó ningún horario: ${insertErr.message}`);
+  const insertedIds = ((inserted ?? []) as Array<{ id: string }>).map((r) => r.id);
+
+  // Re-chequeo post-insert contra lo que se haya agendado en paralelo. Se ignoran
+  // los bloqueos manuales: incluyen las filas que acabamos de crear.
+  const after = await getDayActivity(supabase, { clubId, courts: clubCourts, date });
+  const others = { ...after, items: after.items.filter((i) => i.kind !== "manual_block") };
+  const lateConflicts = slots
+    .map((s) => ({ s, occ: findSlotOccupancy(others, s.courtId, s.time, BLOCK_SLOT_MINUTES) }))
+    .filter((x) => x.occ.occupied)
+    .map((x) => conflictOf(x.s.courtId, x.s.time, x.occ.detail));
+  if (lateConflicts.length) {
+    const { error: rollbackErr } = await supabase
+      .from(DB_TABLES.courtBlocks)
+      .delete()
+      .in("id", insertedIds)
+      .eq("reason", REASON_BLOQUEO_MANUAL);
+    revalidatePath("/admin/bloqueos");
+    if (rollbackErr) {
+      return fail(
+        `Algunos horarios se ocuparon mientras bloqueabas y no pudimos deshacer el lote (${rollbackErr.message}). Revisá la lista de horarios bloqueados.`,
+        lateConflicts
+      );
+    }
+    return fail(
+      "No pudimos bloquear los horarios porque algunos acaban de dejar de estar disponibles. No se bloqueó ninguno.",
+      lateConflicts
+    );
+  }
 
   revalidatePath("/admin/bloqueos");
   revalidatePath("/admin/reservas");
   revalidatePath("/admin/dashboard");
-  return { ok: true, message: `Horario bloqueado: ${courtRef.name ?? "cancha"} · ${time}.` };
+  const n = insertedIds.length;
+  return {
+    ok: true,
+    created: n,
+    message: `${n === 1 ? "Se bloqueó 1 horario" : `Se bloquearon ${n} horarios`} el ${longDate(date)}.`,
+  };
 }
 
 /**

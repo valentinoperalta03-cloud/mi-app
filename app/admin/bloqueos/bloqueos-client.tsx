@@ -3,7 +3,7 @@
 import { useCallback, useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertTriangle, Ban, CalendarOff, CheckCircle2, Info } from "lucide-react";
+import { AlertTriangle, Ban, CalendarOff, CheckCircle2, Info, Lock } from "lucide-react";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import AdminFlashMessage from "@/components/admin/admin-flash-message";
 import {
@@ -18,14 +18,15 @@ import {
 } from "@/components/admin/admin-premium";
 import {
   closeDayAction,
-  createManualBlockAction,
-  getSlotOptionsAction,
+  createManualBlocksAction,
+  getBlockGridAction,
   previewDayAction,
   removeClosedDayAction,
   removeManualBlockAction,
   type ActivityGroup,
+  type BlockConflict,
+  type BlockGridCourt,
   type DayPreview,
-  type SlotOption,
 } from "./actions";
 
 export type CourtOption = { id: string; name: string };
@@ -255,6 +256,8 @@ function CloseDayPanel({ todayYmd, onDone }: { todayYmd: string; onDone: (f: Fla
   );
 }
 
+const slotKey = (courtId: string, time: string) => `${courtId}|${time}`;
+
 function BlockSlotPanel({
   courts,
   todayYmd,
@@ -264,167 +267,412 @@ function BlockSlotPanel({
   todayYmd: string;
   onDone: (f: Flash) => void;
 }) {
-  const [courtId, setCourtId] = useState(courts[0]?.id ?? "");
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [note, setNote] = useState("");
-  const [slots, setSlots] = useState<SlotOption[] | null>(null);
-  const [slotError, setSlotError] = useState("");
+  const [courtIds, setCourtIds] = useState<Set<string>>(() => new Set(courts.map((c) => c.id)));
+  const [grid, setGrid] = useState<BlockGridCourt[] | null>(null);
   const [dayClosed, setDayClosed] = useState(false);
+  const [gridError, setGridError] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [conflicts, setConflicts] = useState<BlockConflict[]>([]);
+  const [note, setNote] = useState("");
   const [loading, startLoading] = useTransition();
   const [saving, startSaving] = useTransition();
 
-  const loadSlots = useCallback((nextCourtId: string, nextDate: string) => {
-    setTime("");
-    if (!nextCourtId || !nextDate) {
-      setSlots(null);
-      setSlotError("");
+  const loadGrid = useCallback((nextDate: string, keepSelection?: Set<string>) => {
+    if (!nextDate) {
+      setGrid(null);
+      setGridError("");
       setDayClosed(false);
+      setSelected(new Set());
       return;
     }
     startLoading(async () => {
-      const result = await getSlotOptionsAction(nextCourtId, nextDate);
-      if (result.ok) {
-        setSlots(result.slots);
-        setDayClosed(result.dayClosed);
-        setSlotError("");
-      } else {
-        setSlots(null);
+      const result = await getBlockGridAction(nextDate);
+      if (!result.ok) {
+        setGrid(null);
         setDayClosed(false);
-        setSlotError(result.error);
+        setGridError(result.error);
+        setSelected(new Set());
+        return;
       }
+      setGrid(result.courts);
+      setDayClosed(result.dayClosed);
+      setGridError("");
+      // Tras un rechazo se conserva lo elegido que sigue libre; al cambiar de fecha se limpia.
+      const free = new Set(
+        result.courts.flatMap((c) => c.slots.filter((s) => !s.occupied).map((s) => slotKey(c.id, s.time)))
+      );
+      setSelected(new Set([...(keepSelection ?? [])].filter((k) => free.has(k))));
     });
   }, []);
 
-  function submit() {
-    const formData = new FormData();
-    formData.set("court_id", courtId);
-    formData.set("blocked_date", date);
-    formData.set("blocked_time", time);
-    formData.set("note", note);
-    startSaving(async () => {
-      const result = await createManualBlockAction(formData);
-      if (result.ok) {
-        setTime("");
-        setNote("");
-        setSlots(null);
-        setDate("");
-        onDone({ type: "success", message: result.message });
-      } else {
-        onDone({ type: "error", message: result.error });
-      }
+  const visibleCourts = (grid ?? []).filter((c) => courtIds.has(c.id));
+  const times = Array.from(new Set(visibleCourts.flatMap((c) => c.slots.map((s) => s.time)))).sort();
+  const endByTime = new Map(visibleCourts.flatMap((c) => c.slots.map((s) => [s.time, s.endTime] as const)));
+  const slotAt = (court: BlockGridCourt, time: string) => court.slots.find((s) => s.time === time) ?? null;
+  const freeKeysOf = (list: BlockGridCourt[], time?: string) =>
+    list.flatMap((c) =>
+      c.slots.filter((s) => !s.occupied && (time === undefined || s.time === time)).map((s) => slotKey(c.id, s.time))
+    );
+  const conflictKeys = new Set(conflicts.map((c) => slotKey(c.courtId, c.time)));
+  const selectedVisible = [...selected].filter((k) => courtIds.has(k.split("|")[0]!));
+  const count = selectedVisible.length;
+
+  function toggleKey(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
   }
 
-  const freeSlots = slots?.filter((s) => !s.occupied) ?? [];
-  const busySlots = slots?.filter((s) => s.occupied) ?? [];
+  /** Si ya están todas elegidas las quita; si no, agrega las que falten. */
+  function toggleGroup(keys: string[]) {
+    if (!keys.length) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allOn = keys.every((k) => next.has(k));
+      for (const k of keys) {
+        if (allOn) next.delete(k);
+        else next.add(k);
+      }
+      return next;
+    });
+  }
+
+  function toggleCourt(id: string) {
+    setCourtIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        setSelected((sel) => new Set([...sel].filter((k) => !k.startsWith(`${id}|`))));
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function submit() {
+    if (!date || count === 0) return;
+    const slots = selectedVisible.map((k) => {
+      const [courtId, time] = k.split("|") as [string, string];
+      return { courtId, startTime: time, endTime: endByTime.get(time) };
+    });
+    startSaving(async () => {
+      const result = await createManualBlocksAction({ date, note, slots });
+      if (result.ok) {
+        setConflicts([]);
+        setSelected(new Set());
+        setNote("");
+        setGrid(null);
+        setDate("");
+        onDone({ type: "success", message: result.message });
+        return;
+      }
+      setConflicts(result.conflicts);
+      onDone({ type: "error", message: result.error });
+      loadGrid(date, new Set(selected));
+    });
+  }
+
+  const allCourtsOn = courts.length > 0 && courts.every((c) => courtIds.has(c.id));
 
   return (
     <div className={adminCard}>
-      <p className={adminKicker}>Bloquear horario</p>
-      <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Sacá un turno puntual de circulación</p>
+      <p className={adminKicker}>Bloquear horarios</p>
+      <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Sacá turnos de circulación</p>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        Solo se pueden bloquear turnos libres. Si el horario ya tiene algo agendado, resolvelo en su sección primero.
+        Elegí una fecha, las canchas y los turnos exactos. Solo se pueden bloquear turnos libres; si alguno se ocupa
+        antes de confirmar, no se bloquea ninguno.
       </p>
 
       {courts.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--text-tertiary)]">Todavía no tenés canchas cargadas.</p>
       ) : (
         <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-xs font-semibold text-[var(--text-secondary)]">Cancha</span>
-              <select
-                value={courtId}
-                onChange={(e) => {
-                  setCourtId(e.target.value);
-                  loadSlots(e.target.value, date);
-                }}
-                className={`mt-1 ${inputClass}`}
-              >
-                {courts.map((c) => (
-                  <option key={c.id} value={c.id}>
+          <label className="mt-4 block sm:max-w-xs">
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">1. Fecha</span>
+            <input
+              type="date"
+              value={date}
+              min={todayYmd}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setConflicts([]);
+                loadGrid(e.target.value);
+              }}
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">2. Canchas</span>
+              {courts.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (allCourtsOn) {
+                      setCourtIds(new Set());
+                      setSelected(new Set());
+                    } else {
+                      setCourtIds(new Set(courts.map((c) => c.id)));
+                    }
+                  }}
+                  className="text-xs font-semibold text-[#0085FC]"
+                >
+                  {allCourtsOn ? "Quitar todas" : "Seleccionar todas"}
+                </button>
+              ) : null}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {courts.map((c) => {
+                const on = courtIds.has(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+                      on
+                        ? "border-[#0085FC]/40 bg-[#0085FC]/10 text-[#0085FC]"
+                        : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggleCourt(c.id)}
+                      className="h-4 w-4 accent-[#0085FC]"
+                    />
                     {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-[var(--text-secondary)]">Fecha</span>
-              <input
-                type="date"
-                value={date}
-                min={todayYmd}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  loadSlots(courtId, e.target.value);
-                }}
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
-          {slotError ? <p className="mt-3 text-sm text-rose-600">{slotError}</p> : null}
-          {loading ? <p className="mt-3 text-sm text-[var(--text-tertiary)]">Buscando los turnos de esa cancha...</p> : null}
+          {gridError ? <p className="mt-3 text-sm text-rose-600">{gridError}</p> : null}
+          {loading ? <p className="mt-3 text-sm text-[var(--text-tertiary)]">Buscando los turnos de ese día...</p> : null}
 
           {!loading && dayClosed ? (
             <p className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-              Ese día el club ya está cerrado. El bloqueo se guarda igual y sigue valiendo si después reabrís la fecha.
+              Ese día el club ya está cerrado. Los bloqueos se guardan igual y siguen valiendo si después reabrís la fecha.
             </p>
           ) : null}
 
-          {!loading && slots ? (
-            slots.length === 0 ? (
-              <p className="mt-3 text-sm text-[var(--text-tertiary)]">
-                Esa cancha no tiene turnos configurados para ese día.
+          {conflicts.length > 0 ? (
+            <div className="mt-3 rounded-xl border border-[var(--admin-alert-error-border)] bg-[var(--admin-alert-error-bg)] px-3 py-2">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300">
+                <AlertTriangle size={15} className="shrink-0" />
+                Revisá estos horarios
+              </p>
+              <ul className="mt-1 flex flex-col gap-0.5">
+                {conflicts.map((c) => (
+                  <li key={slotKey(c.courtId, c.time)} className="text-xs text-[var(--text-secondary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {c.courtName} · {c.time}
+                    </span>{" "}
+                    · {c.detail}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {!loading && grid && date ? (
+            visibleCourts.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--text-tertiary)]">Elegí al menos una cancha.</p>
+            ) : times.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--text-tertiary)]">
+                Esas canchas no tienen turnos configurados para ese día.
               </p>
             ) : (
               <div className="mt-4">
-                <p className={adminSectionLabel}>Turnos libres</p>
-                {freeSlots.length === 0 ? (
-                  <p className="mt-2 text-sm text-[var(--text-tertiary)]">
-                    No queda ningún turno libre en esa cancha ese día.
-                  </p>
-                ) : (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {freeSlots.map((s) => (
-                      <button
-                        key={s.time}
-                        type="button"
-                        onClick={() => setTime(s.time)}
-                        className={`rounded-xl border px-3 py-1.5 text-sm font-semibold transition ${
-                          time === s.time
-                            ? "border-[#0085FC]/30 bg-[#0085FC]/10 text-[#0085FC]"
-                            : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
-                        }`}
-                      >
-                        {s.time}
-                      </button>
-                    ))}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">3. Horarios</span>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(new Set(freeKeysOf(visibleCourts)))}
+                      className="text-xs font-semibold text-[#0085FC]"
+                    >
+                      Seleccionar todos los disponibles
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(new Set())}
+                      disabled={count === 0}
+                      className="text-xs font-semibold text-[var(--text-secondary)] disabled:opacity-40"
+                    >
+                      Limpiar selección
+                    </button>
                   </div>
-                )}
+                </div>
 
-                {busySlots.length > 0 ? (
-                  <details className="mt-3 rounded-xl border border-[var(--border-subtle)] px-3 py-2">
-                    <summary className="cursor-pointer text-xs font-semibold text-[var(--text-secondary)]">
-                      Turnos ocupados ({busySlots.length})
-                    </summary>
-                    <ul className="mt-2 flex flex-col gap-1">
-                      {busySlots.map((s) => (
-                        <li key={s.time} className="text-xs text-[var(--text-secondary)]">
-                          <span className="font-semibold text-[var(--text-primary)]">{s.time}</span>
-                          <span className="text-[var(--text-tertiary)]"> · {s.detail}</span>
-                        </li>
+                {/* Desktop: matriz cancha × horario. Cada celda es exactamente cancha + turno. */}
+                <div className="mt-2 hidden overflow-x-auto rounded-xl border border-[var(--border-subtle)] sm:block">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)]">
+                        <th className="sticky left-0 z-10 bg-[var(--bg-subtle)] px-3 py-2 text-left text-xs font-semibold text-[var(--text-secondary)]">
+                          Cancha
+                        </th>
+                        {times.map((t) => (
+                          <th key={t} className="px-1 py-1.5 text-center">
+                            <button
+                              type="button"
+                              title={`Seleccionar ${t} en todas las canchas`}
+                              onClick={() => toggleGroup(freeKeysOf(visibleCourts, t))}
+                              className="rounded-lg px-2 py-1 text-xs font-bold text-[var(--text-primary)] hover:bg-[#0085FC]/10 hover:text-[#0085FC]"
+                            >
+                              {t}
+                              <span className="block text-[10px] font-normal text-[var(--text-tertiary)]">
+                                a {endByTime.get(t)}
+                              </span>
+                            </button>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleCourts.map((court) => (
+                        <tr key={court.id} className="border-t border-[var(--border-subtle)]">
+                          <th className="sticky left-0 z-10 bg-[var(--bg-card)] px-3 py-2 text-left">
+                            <span className="block whitespace-nowrap text-sm font-semibold text-[var(--text-primary)]">
+                              {court.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(freeKeysOf([court]))}
+                              className="whitespace-nowrap text-[11px] font-semibold text-[#0085FC]"
+                            >
+                              Toda la cancha
+                            </button>
+                          </th>
+                          {times.map((t) => {
+                            const slot = slotAt(court, t);
+                            const key = slotKey(court.id, t);
+                            if (!slot) {
+                              return (
+                                <td key={t} className="px-1 py-1.5 text-center text-xs text-[var(--text-tertiary)]">
+                                  <span title="La cancha no tiene este turno ese día">—</span>
+                                </td>
+                              );
+                            }
+                            if (slot.occupied) {
+                              return (
+                                <td key={t} className="px-1 py-1.5 text-center">
+                                  <span
+                                    title={slot.detail}
+                                    className={`mx-auto flex max-w-[92px] items-center justify-center gap-1 rounded-lg px-1.5 py-1 text-[10px] font-semibold ${
+                                      conflictKeys.has(key)
+                                        ? "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                                        : "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
+                                    }`}
+                                  >
+                                    <Lock size={10} className="shrink-0" />
+                                    <span className="truncate">{slot.detail}</span>
+                                  </span>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td key={t} className="px-1 py-1.5 text-center">
+                                <label className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg hover:bg-[#0085FC]/10">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected.has(key)}
+                                    onChange={() => toggleKey(key)}
+                                    aria-label={`${court.name} ${t}`}
+                                    className="h-4 w-4 accent-[#0085FC]"
+                                  />
+                                </label>
+                              </td>
+                            );
+                          })}
+                        </tr>
                       ))}
-                    </ul>
-                  </details>
-                ) : null}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile: una tarjeta por cancha con sus turnos. */}
+                <div className="mt-2 flex flex-col gap-3 sm:hidden">
+                  {visibleCourts.map((court) => (
+                    <div key={court.id} className="rounded-xl border border-[var(--border-subtle)] p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-[var(--text-primary)]">{court.name}</p>
+                        {court.slots.some((s) => !s.occupied) ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(freeKeysOf([court]))}
+                            className="min-h-[44px] text-xs font-semibold text-[#0085FC]"
+                          >
+                            Toda la cancha
+                          </button>
+                        ) : null}
+                      </div>
+                      {court.slots.length === 0 ? (
+                        <p className="mt-1 text-xs text-[var(--text-tertiary)]">Sin turnos ese día.</p>
+                      ) : (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {court.slots.map((s) => {
+                            const key = slotKey(court.id, s.time);
+                            if (s.occupied) {
+                              return (
+                                <div
+                                  key={s.time}
+                                  className={`flex min-h-[44px] flex-col justify-center rounded-xl border px-3 py-1.5 ${
+                                    conflictKeys.has(key)
+                                      ? "border-rose-400/60 bg-rose-500/10"
+                                      : "border-[var(--border-subtle)] bg-[var(--bg-subtle)]"
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-1 text-sm font-semibold text-[var(--text-tertiary)]">
+                                    <Lock size={12} className="shrink-0" />
+                                    {s.time}
+                                  </span>
+                                  <span className="truncate text-[11px] text-[var(--text-tertiary)]">{s.detail}</span>
+                                </div>
+                              );
+                            }
+                            const on = selected.has(key);
+                            return (
+                              <label
+                                key={s.time}
+                                className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+                                  on
+                                    ? "border-[#0085FC]/40 bg-[#0085FC]/10 text-[#0085FC]"
+                                    : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  onChange={() => toggleKey(key)}
+                                  className="h-4 w-4 accent-[#0085FC]"
+                                />
+                                <span>
+                                  {s.time}
+                                  <span className="block text-[10px] font-normal text-[var(--text-tertiary)]">
+                                    a {s.endTime}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           ) : null}
 
           <label className="mt-4 block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">Motivo (opcional)</span>
+            <span className="text-xs font-semibold text-[var(--text-secondary)]">4. Motivo (opcional, para todo el lote)</span>
             <input
               type="text"
               value={note}
@@ -438,10 +686,14 @@ function BlockSlotPanel({
           <button
             type="button"
             onClick={submit}
-            disabled={!courtId || !date || !time || saving}
+            disabled={!date || count === 0 || saving || loading}
             className={`mt-5 ${adminCTAPrimary} disabled:cursor-not-allowed disabled:opacity-40`}
           >
-            {saving ? "Bloqueando..." : "Bloquear horario"}
+            {saving
+              ? "Bloqueando..."
+              : count === 0
+                ? "Elegí horarios para bloquear"
+                : `Bloquear ${count} ${count === 1 ? "horario" : "horarios"}`}
           </button>
         </>
       )}
@@ -532,13 +784,13 @@ export default function BloqueosClient({
             <Ban size={24} className="text-[#0085FC]" />
           </div>
           <div>
-            <p className="font-bold text-[var(--text-primary)]">Bloquear horario</p>
+            <p className="font-bold text-[var(--text-primary)]">Bloquear horarios</p>
             <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Sacar un turno puntual de una cancha sin cerrar el día entero.
+              Sacar uno o varios turnos de tus canchas sin cerrar el día entero.
             </p>
           </div>
           <p className="mt-auto text-sm font-semibold text-[#0085FC]">
-            {panel === "slot" ? "Cerrar panel" : "Elegir horario →"}
+            {panel === "slot" ? "Cerrar panel" : "Elegir horarios →"}
           </p>
         </button>
       </div>
@@ -590,33 +842,42 @@ export default function BloqueosClient({
         {blocks.length === 0 ? (
           <div className={`mt-4 ${adminEmptyState}`}>No hay horarios bloqueados próximos.</div>
         ) : (
-          <div className="mt-4 flex flex-col gap-2">
-            {blocks.map((b) => (
-              <div
-                key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">
-                    {b.courtName} · {b.blocked_time} hs
-                  </span>
-                  <span className="ml-2 text-xs capitalize text-[var(--text-tertiary)]">
-                    {formatShortDay(b.blocked_date)}
-                  </span>
-                  {b.note ? (
-                    <span className="ml-2 text-xs text-[var(--text-tertiary)]">· {b.note}</span>
-                  ) : null}
+          <div className="mt-4 flex flex-col gap-4">
+            {Array.from(new Set(blocks.map((b) => b.blocked_date))).map((day) => {
+              const dayBlocks = blocks.filter((b) => b.blocked_date === day);
+              return (
+                <div key={day}>
+                  <p className="text-xs font-bold capitalize text-[var(--text-secondary)]">
+                    {formatShortDay(day)} · {dayBlocks.length} {dayBlocks.length === 1 ? "bloqueo" : "bloqueos"}
+                  </p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {dayBlocks.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-sm font-semibold text-[var(--text-primary)]">
+                            {b.courtName} · {b.blocked_time} hs
+                          </span>
+                          {b.note ? (
+                            <span className="ml-2 text-xs text-[var(--text-tertiary)]">· {b.note}</span>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => removeBlock(b.id)}
+                          className={`${adminCTADangerCompact} disabled:opacity-40`}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => removeBlock(b.id)}
-                  className={`${adminCTADangerCompact} disabled:opacity-40`}
-                >
-                  Eliminar
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
