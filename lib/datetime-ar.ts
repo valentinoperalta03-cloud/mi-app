@@ -83,3 +83,35 @@ export function utcMsForArgentinaWallClock(dateYmd: string, hhmm: string): numbe
 }
 
 export { AR_TIME_ZONE };
+
+/**
+ * `true` si fecha + hora de reloj argentino todavía no empezó respecto de
+ * `todayYmd` + `nowClock` (ambos en Argentina). El minuto exacto de inicio ya
+ * no es futuro.
+ */
+export function isArgentinaWallClockFuture(
+  dateYmd: string,
+  hhmm: string,
+  todayYmd: string = getTodayYmdInArgentina(),
+  nowClock: string = getCurrentClockInArgentina()
+): boolean {
+  return `${dateYmd} ${hhmm.trim().slice(0, 5)}` > `${todayYmd} ${nowClock.slice(0, 5)}`;
+}
+
+/**
+ * Próxima ocurrencia FUTURA (YYYY-MM-DD) de un turno semanal: hoy si es ese día
+ * y la hora todavía no llegó, si no la semana siguiente.
+ */
+export function nextWeeklyOccurrenceYmd(
+  dayOfWeek: number,
+  startTime: string,
+  todayYmd: string = getTodayYmdInArgentina(),
+  nowClock: string = getCurrentClockInArgentina()
+): string {
+  const [y, m, d] = todayYmd.split("-").map(Number);
+  const base = new Date(Date.UTC(y, m - 1, d));
+  let delta = (dayOfWeek - base.getUTCDay() + 7) % 7;
+  if (delta === 0 && !isArgentinaWallClockFuture(todayYmd, startTime, todayYmd, nowClock)) delta = 7;
+  base.setUTCDate(base.getUTCDate() + delta);
+  return base.toISOString().slice(0, 10);
+}

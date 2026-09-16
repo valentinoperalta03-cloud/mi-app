@@ -40,10 +40,12 @@ export async function GET(req: NextRequest) {
 
   const { data: matches } = await supabase
     .from(DB_TABLES.matches)
-    .select("id, scheduled_time, court_id")
+    .select("id, scheduled_time, court_id, fixed_slots!inner(is_active)")
     .eq("es_turno_fijo", true)
     .eq("scheduled_date", tomorrow)
-    .neq("match_status", "cancelled");
+    .neq("match_status", "cancelled")
+    // Una ocurrencia de un turno dado de baja no debería existir: no recordarla.
+    .eq("fixed_slots.is_active", true);
 
   if (!matches?.length) return NextResponse.json({ ok: true, sent: 0 });
 

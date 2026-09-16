@@ -263,9 +263,11 @@ function EditModal({ ctx, onClose }: { ctx: EditContext; onClose: () => void }) 
     const fd = new FormData();
     fd.set("fixed_slot_id", cell.fixedSlotId);
     fd.set("exception_date", cell.nextDateYmd);
-    await addExceptionToFixedSlot(fd);
+    setError(null);
+    const res = await addExceptionToFixedSlot(fd);
     setActionPending(false);
-    onClose();
+    if (res?.error) setError(res.error);
+    else onClose();
   }
 
   async function handleDelete() {
@@ -273,9 +275,11 @@ function EditModal({ ctx, onClose }: { ctx: EditContext; onClose: () => void }) 
     setActionPending(true);
     const fd = new FormData();
     fd.set("fixed_slot_id", cell.fixedSlotId);
-    await deleteFixedSlot(fd);
+    setError(null);
+    const res = await deleteFixedSlot(fd);
     setActionPending(false);
-    onClose();
+    if (res?.error) setError(res.error);
+    else onClose();
   }
 
   return (

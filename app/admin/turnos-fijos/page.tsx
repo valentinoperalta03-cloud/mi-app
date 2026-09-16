@@ -1,11 +1,11 @@
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { redirect } from "next/navigation";
 import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminGuideBox from "@/components/admin/admin-guide-box";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import { adminCard } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
-import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { getCurrentClockInArgentina, getTodayYmdInArgentina, nextWeeklyOccurrenceYmd } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { buildSlotsForDay, type CourtTimeRangeInput } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
@@ -16,13 +16,6 @@ const FIXED_SLOT_DURATION_MINUTES = 90;
 /** 2023-01-01 fue domingo — ancla para pedirle a buildSlotsForDay el día de semana que necesitamos. */
 function referenceDateForDow(dayOfWeek: number): Date {
   return new Date(2023, 0, 1 + dayOfWeek);
-}
-
-/** Próxima fecha (yyyy-MM-dd) en la que cae ese día de semana, a partir de hoy. */
-function nextDateForDay(dayOfWeek: number, todayYmd: string): string {
-  const base = new Date(`${todayYmd}T12:00:00`);
-  const delta = (dayOfWeek - base.getDay() + 7) % 7;
-  return format(addDays(base, delta), "yyyy-MM-dd");
 }
 
 export default async function AdminTurnosFijosPage() {
@@ -117,9 +110,11 @@ export default async function AdminTurnosFijosPage() {
     playersBySlot.set(p.fixed_slot_id, list);
   }
 
+  // Próxima ocurrencia FUTURA: si hoy es el día y la hora ya pasó, la semana siguiente.
+  const nowClock = getCurrentClockInArgentina();
   const nextDateBySlot = new Map<string, string>();
   for (const slot of slots) {
-    nextDateBySlot.set(slot.id, nextDateForDay(slot.day_of_week, todayYmd));
+    nextDateBySlot.set(slot.id, nextWeeklyOccurrenceYmd(slot.day_of_week, slot.start_time, todayYmd, nowClock));
   }
   const nextDates = Array.from(new Set(nextDateBySlot.values()));
 

@@ -1,14 +1,19 @@
 /**
  * Repara turnos fijos activos que tienen ocurrencias futuras faltantes en
  * `matches`. Reutiliza generateMatchForSlotOnDate (misma lógica que el cron y
- * createFixedSlot), así que respeta excepciones, matches ya existentes y
- * conflictos de horario. Es idempotente: correrlo varias veces no duplica nada.
+ * createFixedSlot), así que respeta turno activo, excepciones, días cerrados,
+ * matches ya existentes, ocupación de la cancha y bloqueos. Es idempotente:
+ * correrlo varias veces no duplica nada.
  *
  * Uso: node --env-file=.env.local -r tsx/cjs scripts/reconcile-fixed-slots.ts [--days=14] [--dry-run]
  *   (o: npx tsx scripts/reconcile-fixed-slots.ts, con las env vars ya exportadas en el shell)
  */
 import { createServiceRoleClient } from "../lib/supabase-service";
-import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "../lib/fixed-slot-generator";
+import {
+  BENIGN_SKIP_REASONS,
+  generateMatchForSlotOnDate,
+  getUpcomingDatesForDayOfWeek,
+} from "../lib/fixed-slot-generator";
 import { DB_TABLES } from "../lib/db-tables";
 
 function getArgentinaNow(): Date {
@@ -68,51 +73,17 @@ async function main() {
     for (const date of dates) {
       checked++;
 
-      if (dryRun) {
-        // En dry-run solo detectamos el hueco sin crear nada: replicamos los
-        // chequeos de guarda de generateMatchForSlotOnDate (excepción, día
-        // cerrado y match existente) para reportar qué se repararía.
-        const { data: exception } = await supabase
-          .from(DB_TABLES.fixedSlotExceptions)
-          .select("id")
-          .eq("fixed_slot_id", slot.id)
-          .eq("exception_date", date)
-          .maybeSingle();
-        if (exception) continue;
-
-        const { data: closedDay } = await supabase
-          .from(DB_TABLES.clubClosedDays)
-          .select("id")
-          .eq("club_id", slot.club_id)
-          .eq("closed_date", date)
-          .maybeSingle();
-        if (closedDay) continue;
-
-        const slotTime = String(slot.start_time).slice(0, 5);
-        const { data: existing } = await supabase
-          .from(DB_TABLES.matches)
-          .select("id")
-          .eq("court_id", slot.court_id)
-          .eq("scheduled_date", date)
-          .eq("scheduled_time", slotTime)
-          .eq("es_turno_fijo", true)
-          .neq("match_status", "cancelled")
-          .maybeSingle();
-        if (existing) continue;
-
-        console.log(`[dry-run] faltaría crear: slot=${slot.id} (${slot.title ?? ""}) fecha=${date}`);
-        continue;
-      }
-
-      const result = await generateMatchForSlotOnDate(supabase, slot, date);
+      // Misma función central que el cron, también en dry-run: la RPC corre
+      // todos los chequeos (activo, excepción, día cerrado, ocupación, dedupe)
+      // y en dry-run no escribe nada.
+      const result = await generateMatchForSlotOnDate(supabase, slot, date, { dryRun });
       if (result.created) {
         created++;
         createdRows.push({ slotId: slot.id, title: slot.title, date, matchId: result.matchId });
         console.log(`[reparado] slot=${slot.id} (${slot.title ?? ""}) fecha=${date} -> match=${result.matchId}`);
-      } else if (
-        result.reason !== "hay una excepción cargada para esa fecha" &&
-        result.reason !== "ya existe un match de turno fijo para esa fecha/hora"
-      ) {
+      } else if (result.wouldCreate) {
+        console.log(`[dry-run] faltaría crear: slot=${slot.id} (${slot.title ?? ""}) fecha=${date}`);
+      } else if (!BENIGN_SKIP_REASONS.has(result.reason)) {
         skippedConflicts.push({ slotId: slot.id, title: slot.title, date, reason: result.reason });
         console.warn(`[conflicto] slot=${slot.id} (${slot.title ?? ""}) fecha=${date}: ${result.reason}`);
       }

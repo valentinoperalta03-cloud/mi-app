@@ -15,82 +15,124 @@ export type SlotInput = {
 
 export type GenerateMatchResult =
   | { created: true; matchId: string }
-  | { created: false; reason: string };
+  | { created: false; reason: string; wouldCreate?: boolean };
 
 /** Motivo de omisión cuando el club marcó esa fecha como cerrada. */
 export const CLOSED_DAY_SKIP_REASON = "el club está cerrado esa fecha";
+export const EXCEPTION_SKIP_REASON = "hay una excepción cargada para esa fecha";
+export const EXISTING_SKIP_REASON = "ya existe un match de turno fijo para esa fecha/hora";
+export const INACTIVE_SKIP_REASON = "el turno fijo está dado de baja";
+export const PAST_SKIP_REASON = "el horario de esa fecha ya pasó";
 
 /**
- * Intenta crear el partido de un turno fijo para una fecha concreta.
- * No hace nada si ya existe, hay excepción, el club está cerrado ese día o
- * no hay owner_id disponible. Retorna el resultado con el motivo cuando no
- * crea nada, para poder diagnosticar por qué una cancha no quedó bloqueada.
+ * Omisiones esperables que no son conflictos a reportar. Cualquier otro motivo
+ * (cancha ocupada, bloqueo, error de DB) sí lo es.
+ */
+export const BENIGN_SKIP_REASONS = new Set([
+  CLOSED_DAY_SKIP_REASON,
+  EXCEPTION_SKIP_REASON,
+  EXISTING_SKIP_REASON,
+  INACTIVE_SKIP_REASON,
+  PAST_SKIP_REASON,
+]);
+
+const REASON_BY_RPC_STATUS: Record<string, string> = {
+  not_found: "el turno fijo no existe",
+  inactive: INACTIVE_SKIP_REASON,
+  wrong_day: "la fecha no corresponde al día del turno fijo",
+  past: PAST_SKIP_REASON,
+  exception: EXCEPTION_SKIP_REASON,
+  closed_day: CLOSED_DAY_SKIP_REASON,
+  exists: EXISTING_SKIP_REASON,
+  occupied: "la cancha ya está ocupada por otra reserva o partido en ese rango",
+  blocked: "la cancha tiene un bloqueo en ese rango",
+  no_owner: "no hay owner_id disponible",
+};
+
+type RpcOutcome = { status: string; matchId: string | null } | { error: string };
+
+/**
+ * Única decisión de "¿se puede crear esta ocurrencia?": la RPC
+ * generate_fixed_slot_occurrence revisa activo, día, futuro, excepción, día
+ * cerrado, dedupe por recurrencia, ocupación por rango y bloqueos bajo lock, y
+ * recién ahí inserta. Un error de DB nunca se interpreta como "libre".
+ */
+async function runGenerateRpc(
+  supabase: SupabaseClient,
+  params: {
+    fixedSlotId: string;
+    date: string;
+    ownerId: string | null;
+    locationName: string | null;
+    totalPrice: number;
+    dryRun: boolean;
+  }
+): Promise<RpcOutcome> {
+  const { data, error } = await supabase.rpc("generate_fixed_slot_occurrence", {
+    p_fixed_slot_id: params.fixedSlotId,
+    p_date: params.date,
+    p_owner_id: params.ownerId,
+    p_location_name: params.locationName,
+    p_total_price: params.totalPrice,
+    p_dry_run: params.dryRun,
+  });
+  if (error) return { error: error.message };
+  const row = data as { status?: string; match_id?: string | null } | null;
+  if (!row?.status) return { error: "respuesta vacía de generate_fixed_slot_occurrence" };
+  return { status: row.status, matchId: row.match_id ?? null };
+}
+
+/**
+ * Intenta crear el partido de un turno fijo para una fecha concreta. Retorna el
+ * motivo cuando no crea nada, para poder diagnosticar por qué una cancha no
+ * quedó bloqueada. Con `dryRun` corre exactamente los mismos chequeos sin
+ * escribir nada.
  */
 export async function generateMatchForSlotOnDate(
   supabase: SupabaseClient,
   slot: SlotInput,
-  targetDate: string
+  targetDate: string,
+  options: { dryRun?: boolean } = {}
 ): Promise<GenerateMatchResult> {
   const logPrefix = `[fixed-slot-generator] slot=${slot.id} fecha=${targetDate}`;
-
-  const { data: exception } = await supabase
-    .from(DB_TABLES.fixedSlotExceptions)
-    .select("id")
-    .eq("fixed_slot_id", slot.id)
-    .eq("exception_date", targetDate)
-    .maybeSingle();
-  if (exception) {
-    const reason = "hay una excepción cargada para esa fecha";
+  const failClosed = (reason: string): GenerateMatchResult => {
+    console.error(`${logPrefix}: NO se creó el match (fail closed) — ${reason}`);
+    return { created: false, reason };
+  };
+  const skip = (status: string): GenerateMatchResult => {
+    const reason = REASON_BY_RPC_STATUS[status] ?? `estado desconocido: ${status}`;
     console.log(`${logPrefix}: omitido — ${reason}`);
     return { created: false, reason };
-  }
+  };
 
-  // Día cerrado del club: no se genera la ocurrencia. Sin este chequeo el cron
-  // recreaba todas las noches el match de un día cerrado (y le mandaba push
-  // "Turno fijo agendado" a los jugadores), porque club_closed_days solo
-  // frenaba las reservas hechas por personas, no al generador.
-  // Va acá y no en el cron para que valga también para el reconciliador manual
-  // y para removeException, que llaman a esta misma función.
-  const { data: closedDay } = await supabase
-    .from(DB_TABLES.clubClosedDays)
-    .select("id")
-    .eq("club_id", slot.club_id)
-    .eq("closed_date", targetDate)
-    .maybeSingle();
-  if (closedDay) {
-    console.log(`${logPrefix}: omitido — ${CLOSED_DAY_SKIP_REASON}`);
-    return { created: false, reason: CLOSED_DAY_SKIP_REASON };
-  }
+  // Chequeo previo barato: la mayoría de las corridas del cron terminan acá
+  // (ya existe, excepción, etc.) sin leer jugadores ni precio.
+  const pre = await runGenerateRpc(supabase, {
+    fixedSlotId: slot.id,
+    date: targetDate,
+    ownerId: null,
+    locationName: null,
+    totalPrice: 0,
+    dryRun: true,
+  });
+  if ("error" in pre) return failClosed(`error verificando la ocurrencia: ${pre.error}`);
+  if (pre.status !== "would_create") return skip(pre.status);
+  if (options.dryRun) return { created: false, reason: "dry-run: se crearía", wouldCreate: true };
 
-  const slotTime = String(slot.start_time).slice(0, 5);
-
-  const { data: existing } = await supabase
-    .from(DB_TABLES.matches)
-    .select("id")
-    .eq("court_id", slot.court_id)
-    .eq("scheduled_date", targetDate)
-    .eq("scheduled_time", slotTime)
-    .eq("es_turno_fijo", true)
-    .neq("match_status", "cancelled")
-    .maybeSingle();
-  if (existing) {
-    const reason = "ya existe un match de turno fijo para esa fecha/hora";
-    console.log(`${logPrefix}: omitido — ${reason}`);
-    return { created: false, reason };
-  }
-
-  const { data: playersRaw } = await supabase
+  const { data: playersRaw, error: playersErr } = await supabase
     .from(DB_TABLES.fixedSlotPlayers)
     .select("player_id,created_at")
     .eq("fixed_slot_id", slot.id)
     .order("created_at", { ascending: true });
+  if (playersErr) return failClosed(`error leyendo jugadores: ${playersErr.message}`);
   const players = (playersRaw ?? []) as Array<{ player_id: string; created_at: string }>;
 
-  const { data: clubRow } = await supabase
+  const { data: clubRow, error: clubErr } = await supabase
     .from(DB_TABLES.clubs)
     .select("name,owner_id")
     .eq("id", slot.club_id)
     .maybeSingle();
+  if (clubErr) return failClosed(`error leyendo el club: ${clubErr.message}`);
   const club = clubRow as { name?: string | null; owner_id?: string | null } | null;
   const clubName = String(club?.name ?? "Club");
 
@@ -99,29 +141,22 @@ export async function generateMatchForSlotOnDate(
   // del club — no hay ningún jugador real al que asignarle el owner_id.
   const ownerId = players[0]?.player_id ?? club?.owner_id ?? null;
   if (!ownerId) {
-    const reason = "no hay owner_id disponible (sin jugadores asignados y sin owner_id en el club)";
-    console.error(`${logPrefix}: NO se creó el match — ${reason}`);
-    return { created: false, reason };
+    return failClosed("no hay owner_id disponible (sin jugadores asignados y sin owner_id en el club)");
   }
 
   // matches.owner_id tiene FK a profiles. Los jugadores siempre tienen fila en
   // profiles (se buscan desde esa misma tabla), pero el dueño del club
   // (fallback cuando el turno no tiene jugadores todavía) puede no tenerla —
   // los admins no pasan necesariamente por el flujo que crea el profile de
-  // jugador. Sin esto, el insert de abajo fallaba en silencio y la cancha
-  // nunca quedaba bloqueada.
+  // jugador. Sin esto, el insert fallaba en silencio y la cancha nunca quedaba
+  // bloqueada.
   if (!players[0]) {
-    if (!club?.owner_id) {
-      const reason = "owner_id es null";
-      console.error(`${logPrefix}: NO se creó el match — ${reason} (el club ${slot.club_id} no tiene owner_id)`);
-      return { created: false, reason };
-    }
-
-    const { data: ownerProfile } = await supabase
+    const { data: ownerProfile, error: profileReadErr } = await supabase
       .from(DB_TABLES.profiles)
       .select("user_id")
       .eq("user_id", ownerId)
       .maybeSingle();
+    if (profileReadErr) return failClosed(`error leyendo el profile del dueño: ${profileReadErr.message}`);
     if (!ownerProfile) {
       // profiles.id es NOT NULL y no tiene default en la DB — hay que setearlo
       // explícito. Sigue la convención estándar de Supabase: id = auth.users.id,
@@ -131,15 +166,14 @@ export async function generateMatchForSlotOnDate(
         .from(DB_TABLES.profiles)
         .insert({ id: ownerId, user_id: ownerId, name: clubName });
       if (profileErr && profileErr.code !== "23505") {
-        const reason = `no se pudo asegurar el profile del dueño del club: ${profileErr.message}`;
-        console.error(`${logPrefix}: NO se creó el match — ${reason}`);
-        return { created: false, reason };
+        return failClosed(`no se pudo asegurar el profile del dueño del club: ${profileErr.message}`);
       }
     }
   }
 
   // Precio efectivo de ESTA ocurrencia (día + horario), no el precio base de la
   // cancha: un turno fijo del lunes 19:30 se cobra lo que vale el lunes 19:30.
+  const slotTime = String(slot.start_time).slice(0, 5);
   const totalPrice = await resolveCourtSlotPrice({
     supabase,
     courtId: slot.court_id,
@@ -147,34 +181,18 @@ export async function generateMatchForSlotOnDate(
     startTime: slotTime,
   });
 
-  const { data: matchInserted, error: matchErr } = await supabase
-    .from(DB_TABLES.matches)
-    .insert({
-      match_type: "reservation",
-      match_status: "scheduled",
-      payment_status: "pending",
-      financial_status: "unpaid",
-      total_price: totalPrice,
-      amount_pending: totalPrice,
-      scheduled_date: targetDate,
-      scheduled_time: slotTime,
-      duration_minutes: slot.duration_minutes || 90,
-      court_id: slot.court_id,
-      owner_id: ownerId,
-      location_name: clubName,
-      date: `${targetDate}T${slotTime}:00`,
-      es_turno_fijo: true,
-      fixed_slot_id: slot.id,
-    })
-    .select("id")
-    .single();
-  if (matchErr || !matchInserted) {
-    const reason = matchErr?.message ?? "insert sin error pero sin id devuelto";
-    console.error(`${logPrefix}: NO se creó el match — error de insert: ${reason}`);
-    return { created: false, reason };
-  }
+  const result = await runGenerateRpc(supabase, {
+    fixedSlotId: slot.id,
+    date: targetDate,
+    ownerId,
+    locationName: clubName,
+    totalPrice,
+    dryRun: false,
+  });
+  if ("error" in result) return failClosed(`error creando la ocurrencia: ${result.error}`);
+  if (result.status !== "created" || !result.matchId) return skip(result.status);
 
-  const matchId = String((matchInserted as { id: string }).id);
+  const matchId = result.matchId;
   console.log(`${logPrefix}: match creado OK (matchId=${matchId})`);
 
   if (players.length > 0) {

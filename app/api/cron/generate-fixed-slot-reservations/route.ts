@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
-  CLOSED_DAY_SKIP_REASON,
+  BENIGN_SKIP_REASONS,
   generateMatchForSlotOnDate,
   getUpcomingDatesForDayOfWeek,
 } from "@/lib/fixed-slot-generator";
@@ -74,11 +74,7 @@ export async function GET(req: NextRequest) {
       const result = await generateMatchForSlotOnDate(supabase, slot, date);
       if (result.created) {
         created++;
-      } else if (
-        result.reason !== "hay una excepción cargada para esa fecha" &&
-        result.reason !== "ya existe un match de turno fijo para esa fecha/hora" &&
-        result.reason !== CLOSED_DAY_SKIP_REASON
-      ) {
+      } else if (!BENIGN_SKIP_REASONS.has(result.reason)) {
         conflicts.push({ fixedSlotId: slot.id, date, reason: result.reason });
       }
     }

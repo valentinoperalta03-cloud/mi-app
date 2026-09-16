@@ -50,7 +50,10 @@ export default function FixedSlotTodayCard({ card }: { card: TodayFixedSlotCard 
               </button>
             </form>
             <form
-              action={addExceptionToFixedSlot}
+              action={async (fd) => {
+                const res = await addExceptionToFixedSlot(fd);
+                if (res?.error) alert(res.error);
+              }}
               onSubmit={(e) => {
                 if (!confirm("¿No vienen hoy? Se libera la cancha por hoy.")) e.preventDefault();
               }}
@@ -62,7 +65,10 @@ export default function FixedSlotTodayCard({ card }: { card: TodayFixedSlotCard 
               </button>
             </form>
             <form
-              action={deleteFixedSlot}
+              action={async (fd) => {
+                const res = await deleteFixedSlot(fd);
+                if (res?.error) alert(res.error);
+              }}
               onSubmit={(e) => {
                 if (!confirm("¿Dar de baja este turno fijo? Se cancelan todos los partidos futuros.")) e.preventDefault();
               }}

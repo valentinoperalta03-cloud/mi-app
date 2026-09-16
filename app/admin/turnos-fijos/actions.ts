@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { dayOfWeekForDate } from "@/lib/court-pricing";
+import { getCurrentClockInArgentina, getTodayYmdInArgentina, isArgentinaWallClockFuture } from "@/lib/datetime-ar";
 import { applyFixedSlotExceptionForDate } from "@/lib/fixed-slot-exceptions";
 import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -77,6 +78,9 @@ export async function createFixedSlot(formData: FormData) {
     .select("id")
     .single();
 
+  if (slotErr?.code === "23505") {
+    return { error: "Ya hay un turno fijo activo en esa cancha, día y horario." };
+  }
   if (slotErr || !inserted) {
     return { error: "No se pudo crear el turno fijo." };
   }
@@ -252,43 +256,67 @@ export async function updateFixedSlot(formData: FormData): Promise<{ error?: str
   return { ok: true };
 }
 
-export async function deleteFixedSlot(formData: FormData) {
+const FINANCIAL_STATUS_LABELS: Record<string, string> = {
+  partially_paid: "seña registrada",
+  fully_paid: "pagado",
+};
+
+function ddmm(ymd: string): string {
+  const [, m, d] = ymd.split("-");
+  return `${d}/${m}`;
+}
+
+export async function deleteFixedSlot(formData: FormData): Promise<{ error?: string; ok?: boolean }> {
   const fixedSlotId = getField(formData, "fixed_slot_id");
-  if (!fixedSlotId) return;
+  if (!fixedSlotId) return { error: "Turno inválido." };
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: slot } = await supabase
+  const { data: slot, error: slotErr } = await supabase
     .from(DB_TABLES.fixedSlots)
     .select("id,court_id")
     .eq("id", fixedSlotId)
     .maybeSingle();
+  if (slotErr) return { error: "No se pudo verificar el turno fijo." };
   const courtId = String((slot as { court_id?: string } | null)?.court_id ?? "");
-  if (!courtId || !ctx.courtIds.includes(courtId)) return;
+  if (!courtId || !ctx.courtIds.includes(courtId)) return { error: "El turno no pertenece a tu club." };
 
-  await supabase.from(DB_TABLES.fixedSlots).update({ is_active: false }).eq("id", fixedSlotId);
-
-  // Cancelar partidos futuros — usar serviceClient para bypasear RLS,
-  // ya que el owner_id de los matches es un jugador, no el admin.
+  // Todo o nada en una transacción (service role: la ownership ya se validó
+  // arriba): si alguna ocurrencia futura (fecha + hora AR) tiene dinero
+  // registrado no escribe nada; si no, desactiva la regla y cancela solo esas
+  // ocurrencias. Pasadas y de hoy ya empezadas quedan intactas.
   const serviceSupabase = createServiceClient();
-  const today = getArgentinaNow().toISOString().slice(0, 10);
-  const { data: futureMatches } = await serviceSupabase
-    .from(DB_TABLES.matches)
-    .select("id")
-    .eq("fixed_slot_id", fixedSlotId)
-    .eq("es_turno_fijo", true)
-    .neq("match_status", "cancelled")
-    .gte("scheduled_date", today);
+  const { data: rpcData, error: rpcErr } = await serviceSupabase.rpc("deactivate_fixed_slot_atomic", {
+    p_fixed_slot_id: fixedSlotId,
+  });
+  if (rpcErr) {
+    console.error("[deleteFixedSlot] deactivate_fixed_slot_atomic falló", fixedSlotId, rpcErr);
+    return { error: "No se pudo dar de baja el turno fijo. No se canceló ningún partido." };
+  }
+  const outcome = rpcData as {
+    status?: string;
+    cancelled_match_ids?: string[];
+    blocked?: Array<{ scheduled_date: string; scheduled_time: string; financial_status: string | null; payment_status: string | null }>;
+  } | null;
+  if (outcome?.status === "has_money") {
+    const detail = (outcome.blocked ?? [])
+      .map((b) => {
+        const label = FINANCIAL_STATUS_LABELS[b.financial_status ?? ""] ?? "pago registrado";
+        return `${ddmm(b.scheduled_date)} ${b.scheduled_time} (${label})`;
+      })
+      .join(", ");
+    return {
+      error: `Hay turnos futuros con pagos registrados: ${detail}. Resolvé esos cobros antes de dar de baja el turno fijo.`,
+    };
+  }
+  if (outcome?.status !== "ok") {
+    return { error: "No se encontró el turno fijo." };
+  }
 
-  const matchIds = ((futureMatches ?? []) as Array<{ id: string }>).map((m) => m.id);
+  const matchIds = outcome.cancelled_match_ids ?? [];
   if (matchIds.length > 0) {
-    await serviceSupabase
-      .from(DB_TABLES.matches)
-      .update({ match_status: "cancelled" })
-      .in("id", matchIds);
-
     // Notificar a los participantes de cada partido cancelado
     const { data: participants } = await serviceSupabase
       .from(DB_TABLES.matchParticipants)
@@ -308,41 +336,102 @@ export async function deleteFixedSlot(formData: FormData) {
 
   revalidatePath("/admin/turnos-fijos");
   revalidatePath("/admin/dashboard");
+  return { ok: true };
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 // Usada tanto desde la grilla de turnos fijos ("No viene esta semana", con la
-// próxima fecha del día) como desde el dashboard ("No vienen hoy", con la fecha
-// de hoy) — es la misma acción, solo cambia qué exception_date le pasa el caller.
-export async function addExceptionToFixedSlot(formData: FormData): Promise<void> {
+// próxima ocurrencia futura) como desde el dashboard ("No vienen hoy", con la
+// fecha de hoy) — es la misma acción, solo cambia qué exception_date le pasa el
+// caller. La fecha del cliente no se confía: se valida acá.
+export async function addExceptionToFixedSlot(formData: FormData): Promise<{ error?: string; ok?: boolean }> {
   const fixedSlotId = getField(formData, "fixed_slot_id");
   const exceptionDate = getField(formData, "exception_date");
   const reason = getField(formData, "reason");
-  if (!fixedSlotId || !exceptionDate) return;
+  if (!fixedSlotId || !DATE_RE.test(exceptionDate)) return { error: "Datos inválidos." };
 
   const supabase = await createClient({ allowCookieWrites: true });
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: slot } = await supabase
+  const { data: slot, error: slotErr } = await supabase
     .from(DB_TABLES.fixedSlots)
-    .select("id,court_id,start_time")
+    .select("id,court_id,start_time,day_of_week,is_active")
     .eq("id", fixedSlotId)
     .maybeSingle();
-  const typedSlot = slot as { id: string; court_id: string; start_time: string } | null;
-  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
+  if (slotErr) return { error: "No se pudo verificar el turno fijo." };
+  const typedSlot = slot as {
+    id: string;
+    court_id: string;
+    start_time: string;
+    day_of_week: number;
+    is_active: boolean;
+  } | null;
+  if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return { error: "El turno no pertenece a tu club." };
+  if (!typedSlot.is_active) return { error: "Este turno fijo ya está dado de baja." };
+
+  const slotTime = String(typedSlot.start_time).slice(0, 5);
+  if (dayOfWeekForDate(exceptionDate) !== typedSlot.day_of_week) {
+    return { error: "La fecha no corresponde al día de este turno fijo." };
+  }
+  if (!isArgentinaWallClockFuture(exceptionDate, slotTime)) {
+    return { error: "Ese turno ya empezó o ya pasó. Solo se pueden liberar turnos futuros." };
+  }
+
+  // Ocurrencia ya generada con dinero registrado: no se libera desde acá.
+  // Service role para que RLS no oculte payments ajenos al admin (ownership
+  // ya validada arriba).
+  const serviceSupabase = createServiceClient();
+  const { data: liveMatch, error: matchErr } = await serviceSupabase
+    .from(DB_TABLES.matches)
+    .select("id,amount_paid,payment_status,financial_status")
+    .eq("fixed_slot_id", fixedSlotId)
+    .eq("scheduled_date", exceptionDate)
+    .eq("es_turno_fijo", true)
+    .neq("match_status", "cancelled")
+    .maybeSingle();
+  if (matchErr) return { error: "No se pudo verificar la ocurrencia de ese día." };
+  const typedMatch = liveMatch as {
+    id: string;
+    amount_paid: number | string | null;
+    payment_status: string | null;
+    financial_status: string | null;
+  } | null;
+  if (typedMatch) {
+    const { count: approvedCount, error: payErr } = await serviceSupabase
+      .from(DB_TABLES.payments)
+      .select("id", { count: "exact", head: true })
+      .eq("match_id", typedMatch.id)
+      .eq("status", "approved");
+    if (payErr) return { error: "No se pudo verificar los pagos de ese turno." };
+    const hasMoney =
+      Number(typedMatch.amount_paid ?? 0) > 0 ||
+      typedMatch.payment_status === "paid" ||
+      typedMatch.financial_status === "partially_paid" ||
+      typedMatch.financial_status === "fully_paid" ||
+      (approvedCount ?? 0) > 0;
+    if (hasMoney) {
+      return {
+        error: `El turno del ${ddmm(exceptionDate)} tiene pagos registrados. Resolvé ese cobro antes de liberarlo.`,
+      };
+    }
+  }
 
   // Misma primitiva que usa el cierre de un día completo en /admin/bloqueos:
   // excepción de esa fecha + cancelación de la ocurrencia generada + aviso.
-  await applyFixedSlotExceptionForDate(supabase, {
+  const result = await applyFixedSlotExceptionForDate(supabase, {
     fixedSlotId,
     exceptionDate,
-    slotTime: String(typedSlot.start_time).slice(0, 5),
+    slotTime,
     reason: reason || null,
     cancelledBy: ctx.userId,
   });
+  if (!result.ok) return { error: "No se pudo liberar el turno. Probá de nuevo." };
 
   revalidatePath("/admin/turnos-fijos");
   revalidatePath("/admin/dashboard");
+  return { ok: true };
 }
 
 export async function removeException(formData: FormData): Promise<void> {
@@ -363,7 +452,7 @@ export async function removeException(formData: FormData): Promise<void> {
 
   const { data: slot } = await supabase
     .from(DB_TABLES.fixedSlots)
-    .select("id,court_id,club_id,start_time,duration_minutes")
+    .select("id,court_id,club_id,start_time,duration_minutes,day_of_week,is_active")
     .eq("id", exception.fixed_slot_id)
     .maybeSingle();
   const typedSlot = slot as {
@@ -372,8 +461,19 @@ export async function removeException(formData: FormData): Promise<void> {
     club_id: string;
     start_time: string;
     duration_minutes: number;
+    day_of_week: number;
+    is_active: boolean;
   } | null;
   if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
+  // Sin consumidor en la UI hoy. Hardening mínimo: no reabrir ocurrencias de
+  // turnos dados de baja, de otro día de semana o que ya empezaron.
+  if (
+    !typedSlot.is_active ||
+    dayOfWeekForDate(exception.exception_date) !== typedSlot.day_of_week ||
+    !isArgentinaWallClockFuture(exception.exception_date, String(typedSlot.start_time).slice(0, 5))
+  ) {
+    return;
+  }
 
   await supabase.from(DB_TABLES.fixedSlotExceptions).delete().eq("id", exceptionId);
 
