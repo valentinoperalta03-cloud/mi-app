@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizeSlotTime, parseClockToMinutes } from "@/lib/court-slots";
+import { normalizeSlotTime, parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { DB_TABLES } from "@/lib/db-tables";
 
 /** `court_blocks.reason` de los bloqueos puntuales cargados a mano desde /admin/bloqueos. */
@@ -144,7 +144,7 @@ function toItem(
 ): ActivityItem {
   const time = normalizeSlotTime(rawTime);
   const startMinutes = time ? parseClockToMinutes(time) : -1;
-  const explicitEnd = extra?.endClock ? parseClockToMinutes(normalizeSlotTime(extra.endClock)) : null;
+  const explicitEnd = extra?.endClock ? parseCloseTimeToMinutes(normalizeSlotTime(extra.endClock)) : null;
   const endMinutes =
     startMinutes < 0
       ? -1

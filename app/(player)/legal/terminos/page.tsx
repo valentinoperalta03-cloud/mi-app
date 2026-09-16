@@ -86,7 +86,10 @@ export default function TerminosPage() {
         <section className="space-y-3">
           <h2 className="text-base font-bold text-slate-900">5. Política de Cancelaciones y Reembolsos</h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
-            <li>Las cancelaciones deben realizarse con una antelación mínima de 60 minutos antes del inicio del turno.</li>
+            <li>
+              El plazo de cancelación y las condiciones de reembolso dependen de la política configurada por cada club,
+              que se informa en la página del club antes de reservar.
+            </li>
             <li>
               Si la cancelación se realiza dentro del plazo permitido, el reembolso se procesará automáticamente al
               medio de pago original dentro de los plazos establecidos por Mercado Pago.

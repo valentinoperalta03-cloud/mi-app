@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { CANCELLATION_POLICY_PRESETS } from "@/lib/admin/cancellation-policy-presets";
+import { resolveCancellationHours } from "@/lib/cancellation-policy";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
@@ -137,16 +137,14 @@ export async function saveCancellationPolicy(formData: FormData) {
   const clubId = ctx.clubIds[0];
   const policy = getField(formData, "cancellation_policy");
   // El campo vacío no puede colapsar a 0: 0 es un preset válido ("Sin reembolso"),
-  // la política más restrictiva, y guardarla por un submit incompleto sería peor
-  // que dejar el club sin configurar.
-  const rawHoursField = getField(formData, "cancellation_hours");
-  const rawHours = rawHoursField === "" ? Number.NaN : Number(rawHoursField);
-  const hours = CANCELLATION_POLICY_PRESETS.some((p) => p.hours === rawHours) ? rawHours : null;
+  // la política más restrictiva. Un valor inválido guarda la ventana efectiva que
+  // aplicaría el backend (default 24), nunca NULL.
+  const hours = resolveCancellationHours(getField(formData, "cancellation_hours"));
 
   // cancellation_hours es la fuente de verdad numérica (la usa el backend al
   // cancelar y el aviso público); cancellation_policy es el texto que la
   // describe. Se guardan juntos para que no puedan divergir.
-  const payload: { cancellation_policy: string | null; cancellation_hours: number | null } = {
+  const payload: { cancellation_policy: string | null; cancellation_hours: number } = {
     cancellation_policy: policy || null,
     cancellation_hours: hours,
   };

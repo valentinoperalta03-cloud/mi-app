@@ -737,9 +737,16 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     const timeLabel = String(m.scheduled_time ?? "").trim().slice(0, 5) || "—";
     if (clubId) {
       const service = createServiceClient();
+      // leave_match_atomic ya aplicó la política del club al cancelar el amistoso.
+      const { data: cancelledRow } = isOpenMatchEmptied
+        ? await service.from(DB_TABLES.matches).select("late_cancellation_at").eq("id", matchId).maybeSingle()
+        : { data: null };
+      const lateCancelled = Boolean((cancelledRow as { late_cancellation_at?: string | null } | null)?.late_cancellation_at);
       await notifyClubOwner(service, clubId, {
         title: "Partido cancelado",
-        body: `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
+        body: lateCancelled
+          ? `El partido de las ${timeLabel} se canceló fuera de término. Quedó saldo a cobrar en Cobros.`
+          : `El partido de las ${timeLabel} fue cancelado. La cancha quedó libre.`,
         match_id: matchId,
       });
     }

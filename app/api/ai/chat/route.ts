@@ -30,7 +30,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "como_devolucion",
     category: "Devoluciones",
     label: "¿Cómo pido una devolución?",
-    answer: `Para solicitar una devolución:\n\n1. Andá a **Mis Reservas**\n2. Tocá la reserva que querés cancelar\n3. Presioná **Cancelar reserva**\n4. Si cancelas con más de 60 minutos de anticipación → reembolso automático\n\nEl dinero vuelve al medio de pago original dentro de los plazos de Mercado Pago (1-10 días hábiles).`,
+    answer: `Para solicitar una devolución:\n\n1. Andá a **Mis Reservas**\n2. Tocá la reserva que querés cancelar\n3. Presioná **Cancelar reserva**\n4. Si cancelás dentro del plazo que fija la política de cancelación del club → reembolso automático de la seña\n\nEl plazo y las condiciones de reembolso dependen de la política configurada por cada club: la ves en la página del club antes de reservar.\n\nEl dinero vuelve al medio de pago original dentro de los plazos de Mercado Pago (1-10 días hábiles).`,
   },
   {
     id: "tiempo_devolucion",
@@ -42,7 +42,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "no_devolucion",
     category: "Devoluciones",
     label: "¿Cuándo NO hay devolución?",
-    answer: `No hay devolución cuando:\n\n❌ Cancelás con **menos de 60 minutos** de anticipación al turno\n❌ No te presentás al turno sin cancelar previamente\n❌ El partido fue completado normalmente\n\n💡 Siempre cancelá con tiempo para asegurarte el reembolso.`,
+    answer: `No hay devolución cuando:\n\n❌ Cancelás un turno confirmado fuera del plazo que fija la política del club (cada club configura el suyo)\n❌ No te presentás al turno sin cancelar previamente\n❌ El partido fue completado normalmente\n\n💡 Siempre cancelá con tiempo para asegurarte el reembolso.`,
   },
   // PARTIDOS
   {
@@ -67,7 +67,7 @@ export const QUESTIONS: { id: string; label: string; answer: string; category: s
     id: "cancelar_partido",
     category: "Partidos",
     label: "¿Qué pasa si cancelo un partido?",
-    answer: `Si sos el **organizador** y cancelás el partido o la reserva:\n\n✅ Con más de 60 min de anticipación → reembolso automático de la seña (si pagaste una)\n❌ Con menos de 60 min → sin reembolso\n\nEl turno queda liberado en la cancha apenas se cancela.\n\nSi solo salís del partido sin ser el organizador, no hay ningún pago que reembolsar — no pagaste nada al unirte.`,
+    answer: `Si sos el **organizador** y cancelás el partido o la reserva:\n\n✅ Dentro del plazo de la política del club → reembolso automático de la seña (si pagaste una)\n❌ Fuera de ese plazo → sin reembolso\n\nEl plazo depende de la política configurada por cada club.\n\nEl turno queda liberado en la cancha apenas se cancela.\n\nSi solo salís del partido sin ser el organizador, no hay ningún pago que reembolsar — no pagaste nada al unirte.`,
   },
   // INCONVENIENTES
   {

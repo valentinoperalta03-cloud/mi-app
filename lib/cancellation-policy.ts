@@ -12,8 +12,14 @@ export const DEFAULT_CANCELLATION_HOURS = 24;
 
 const VALID_HOURS = new Set(CANCELLATION_POLICY_PRESETS.map((p) => p.hours));
 
-/** Normaliza el valor guardado del club a una de las ventanas de preset. Nunca viene del cliente. */
-export function resolveCancellationHours(raw: number | null | undefined): number {
+/**
+ * Normaliza el valor guardado del club a una de las ventanas de preset. Nunca viene del cliente.
+ * NULL / vacío / no numérico caen al default: `Number(null)` y `Number("")` valen 0, que es
+ * un preset válido ("Sin reembolso"), así que hay que descartarlos antes de convertir.
+ */
+export function resolveCancellationHours(raw: number | string | null | undefined): number {
+  if (raw === null || raw === undefined) return DEFAULT_CANCELLATION_HOURS;
+  if (typeof raw === "string" && raw.trim() === "") return DEFAULT_CANCELLATION_HOURS;
   const n = Number(raw);
   if (Number.isFinite(n) && VALID_HOURS.has(n)) return n;
   return DEFAULT_CANCELLATION_HOURS;

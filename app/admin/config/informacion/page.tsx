@@ -2,6 +2,7 @@ import AdminBackLink from "@/components/admin/admin-back-link";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import { adminCard } from "@/components/admin/admin-premium";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { resolveCancellationHours } from "@/lib/cancellation-policy";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
@@ -126,10 +127,8 @@ export default async function AdminConfigInformacionPage({ searchParams }: PageP
 
   const decode = (key?: string) => (key ? decodeURIComponent(key) : "");
 
-  const cancellationHours =
-    typeof club.cancellation_hours === "number" && Number.isFinite(club.cancellation_hours)
-      ? club.cancellation_hours
-      : null;
+  // Mismo valor efectivo que aplica el backend: NULL legacy se muestra como 24.
+  const cancellationHours = resolveCancellationHours(club.cancellation_hours);
 
   return (
     <InformacionHubClient
