@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { resolveCourtSlotPrice } from "@/lib/court-pricing";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import {
   courtBlockStartsFromRows,
@@ -255,29 +256,8 @@ export async function crearReservaDesdeAdmin(input: CrearReservaAdminInput): Pro
     }
   }
 
-  // Precio: precio del día específico si está configurado para esa hora, si
-  // no el precio legacy (day_of_week IS NULL, previo a precios por día), si
-  // no el precio base de la cancha (mismo criterio que CourtPricesClient y
-  // crearPartidoDesdeAdmin).
-  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
-  const { data: courtRow } = await supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle();
-  const { data: priceRows } = await supabase
-    .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,start_time,price_override")
-    .eq("court_id", courtId)
-    .not("start_time", "is", null);
-  const priceRowsTyped = (priceRows ?? []) as Array<{
-    day_of_week: number | null;
-    start_time: string | null;
-    price_override: number | null;
-  }>;
-  const override =
-    priceRowsTyped.find((r) => r.day_of_week === dayOfWeek && String(r.start_time ?? "").slice(0, 5) === timeNorm)
-      ?.price_override ??
-    priceRowsTyped.find((r) => r.day_of_week === null && String(r.start_time ?? "").slice(0, 5) === timeNorm)
-      ?.price_override;
-  const basePrice = Number((courtRow as { price: number | null } | null)?.price ?? 0);
-  const totalPrice = typeof override === "number" ? override : basePrice;
+  // Precio server-side desde la fuente única (lib/court-pricing.ts).
+  const totalPrice = await resolveCourtSlotPrice({ supabase, courtId, date: scheduledDate, startTime: timeNorm });
 
   const amountPaid = financialStatus === "unpaid" ? 0 : amount;
   const amountPending = Math.max(totalPrice - amountPaid, 0);
@@ -449,25 +429,7 @@ export async function crearPartidoDesdeAdmin(input: CrearPartidoAdminInput): Pro
     }
   }
 
-  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
-  const { data: courtRow } = await supabase.from(DB_TABLES.courts).select("price").eq("id", courtId).maybeSingle();
-  const { data: priceRows } = await supabase
-    .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,start_time,price_override")
-    .eq("court_id", courtId)
-    .not("start_time", "is", null);
-  const priceRowsTyped = (priceRows ?? []) as Array<{
-    day_of_week: number | null;
-    start_time: string | null;
-    price_override: number | null;
-  }>;
-  const override =
-    priceRowsTyped.find((r) => r.day_of_week === dayOfWeek && String(r.start_time ?? "").slice(0, 5) === timeNorm)
-      ?.price_override ??
-    priceRowsTyped.find((r) => r.day_of_week === null && String(r.start_time ?? "").slice(0, 5) === timeNorm)
-      ?.price_override;
-  const basePrice = Number((courtRow as { price: number | null } | null)?.price ?? 0);
-  const totalPrice = typeof override === "number" ? override : basePrice;
+  const totalPrice = await resolveCourtSlotPrice({ supabase, courtId, date: scheduledDate, startTime: timeNorm });
 
   const clubName = ctx.clubs.find((c) => c.id === court.club_id)?.name?.trim() || "Club";
 

@@ -76,7 +76,8 @@ export type CourtRow = {
   image_url?: string | null;
 };
 
-export type CourtSlotPrice = { time: string; price: number };
+/** Resumen de precios de la cancha: rango real (reglas por horario + precio base). */
+export type CourtPriceSummary = { label: string; variable: boolean };
 
 type View = "hub" | "canchas" | "horarios" | "precios";
 
@@ -88,7 +89,7 @@ export type CanchasHubClientProps = {
   clubDepositType: "percentage" | "fixed" | null;
   clubDepositValue: number;
   blockedCourtIds: string[];
-  slotPricesByCourt: Array<[string, CourtSlotPrice[]]>;
+  priceSummaryByCourt: Array<[string, CourtPriceSummary]>;
   clubOpenTime: string;
   clubCloseTime: string;
   timeRangesByCourt: Array<[string, CourtTimeRange[]]>;
@@ -192,10 +193,10 @@ function CanchasView({
   clubs,
   userId,
   blockedCourtIds,
-  slotPricesByCourt,
+  priceSummaryByCourt,
   onBack,
 }: CanchasHubClientProps & { onBack: () => void }) {
-  const priceMap = new Map(slotPricesByCourt);
+  const priceMap = new Map(priceSummaryByCourt);
 
   return (
     <div className="flex flex-col gap-6">
@@ -219,7 +220,7 @@ function CanchasView({
               key={court.id}
               court={court}
               isBlockedToday={blockedCourtIds.includes(court.id)}
-              slots={priceMap.get(court.id) ?? []}
+              priceSummary={priceMap.get(court.id) ?? null}
             />
           ))}
         </div>
@@ -231,11 +232,11 @@ function CanchasView({
 function CourtCard({
   court,
   isBlockedToday,
-  slots,
+  priceSummary,
 }: {
   court: CourtRow;
   isBlockedToday: boolean;
-  slots: CourtSlotPrice[];
+  priceSummary: CourtPriceSummary | null;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -258,7 +259,7 @@ function CourtCard({
           <div>
             <p className="font-bold text-[var(--text-primary)]">{court.name ?? "Cancha"}</p>
             <p className="text-sm text-[var(--text-secondary)]">
-              ${Number(court.price ?? 0).toLocaleString("es-AR")}/turno
+              {priceSummary?.label ?? `$${Number(court.price ?? 0).toLocaleString("es-AR")}`}/turno
             </p>
             <div className="mt-1 flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${isBlockedToday ? "bg-rose-500" : "bg-emerald-500"}`} />
@@ -277,23 +278,9 @@ function CourtCard({
         </button>
       </div>
 
-      {slots.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {slots.slice(0, 3).map((s) => (
-            <span
-              key={s.time}
-              className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[11px] text-[var(--text-tertiary)]"
-            >
-              {s.time}: ${s.price.toLocaleString("es-AR")}
-            </span>
-          ))}
-          {slots.length > 3 ? (
-            <span className="text-[11px] text-[var(--text-tertiary)]">+{slots.length - 3} más</span>
-          ) : null}
-        </div>
-      ) : (
-        <p className="mt-2 text-xs text-[var(--text-tertiary)]">Sin precios por horario</p>
-      )}
+      <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+        {priceSummary?.variable ? "Precios variables según día y horario" : "Mismo precio en todos los horarios"}
+      </p>
 
       <div className="mt-2 flex gap-2 text-xs text-[var(--text-tertiary)]">
         {court.surface ? <span>{court.surface}</span> : <span>Superficie no definida</span>}

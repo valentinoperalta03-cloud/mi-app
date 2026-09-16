@@ -1,11 +1,12 @@
 ﻿import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
+import { courtPriceRange, formatCourtPriceRange, loadCourtPricing } from "@/lib/court-pricing";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import CanchasHubClient, {
   type CourtPriceRow,
+  type CourtPriceSummary,
   type CourtRow,
-  type CourtSlotPrice,
   type CourtTimeRange,
 } from "./canchas-hub-client";
 
@@ -50,25 +51,15 @@ export default async function AdminCanchasPage({
     : { data: [] };
   const blockedCourtIds = new Set((blocksRaw ?? []).map((b: { court_id: string }) => b.court_id));
 
-  // Solo rama precios (day_of_week IS NULL) — los horarios ahora están en court_time_ranges.
-  const { data: schedulesRaw } = courtIds.length
-    ? await supabase
-        .from(DB_TABLES.courtSchedules)
-        .select("court_id,start_time,price_override")
-        .in("court_id", courtIds)
-        .is("day_of_week", null)
-        .not("start_time", "is", null)
-        .not("price_override", "is", null)
-        .order("start_time", { ascending: true })
-    : { data: [] };
-  const schedules = (schedulesRaw ?? []) as Array<{ court_id: string; start_time: string | null; price_override: number | null }>;
-  const slotPricesByCourt = new Map<string, CourtSlotPrice[]>();
-  for (const row of schedules) {
-    const time = String(row.start_time ?? "").slice(0, 5);
-    if (!time || typeof row.price_override !== "number") continue;
-    const list = slotPricesByCourt.get(row.court_id) ?? [];
-    list.push({ time, price: row.price_override });
-    slotPricesByCourt.set(row.court_id, list);
+  // Rango real de precios de cada cancha (reglas por día/horario + precio base),
+  // desde la misma fuente que usan las reservas: no mostrar un único precio
+  // como universal cuando hay precios variables.
+  const pricing = await loadCourtPricing(supabase, courtIds);
+  const priceSummaryByCourt = new Map<string, CourtPriceSummary>();
+  for (const id of courtIds) {
+    const range = courtPriceRange(pricing, id);
+    const label = formatCourtPriceRange(range);
+    if (range && label) priceSummaryByCourt.set(id, { label, variable: range.min !== range.max });
   }
 
   const { data: clubHoursRow } = mainClubId
@@ -127,7 +118,7 @@ export default async function AdminCanchasPage({
       clubDepositType={clubDepositType}
       clubDepositValue={clubDepositValue}
       blockedCourtIds={Array.from(blockedCourtIds)}
-      slotPricesByCourt={Array.from(slotPricesByCourt.entries())}
+      priceSummaryByCourt={Array.from(priceSummaryByCourt.entries())}
       clubOpenTime={clubOpenTime}
       clubCloseTime={clubCloseTime}
       timeRangesByCourt={Array.from(timeRangesByCourt.entries())}

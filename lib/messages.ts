@@ -15,6 +15,8 @@ export const EDIT_ERROR_MESSAGES: Record<string, string> = {
   reserva: "Las reservas de cancha no se pueden editar desde acá.",
   fecha: "No se encontró la fecha del partido.",
   ocupado: "Ese horario ya está ocupado. Elegí otro.",
+  precio_con_pago:
+    "Este partido ya tiene un pago registrado y el nuevo horario tiene un precio diferente. Resolvelo desde administración.",
   db: "No se pudieron guardar los cambios. Intentá de nuevo.",
 };
 

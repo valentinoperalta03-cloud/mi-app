@@ -10,11 +10,11 @@ export const matchListSelect = `
   is_competitive,
   match_type,
   gender_category,
+  total_price,
   courts (
     id,
     name,
     club_id,
-    price,
     clubs (
       id,
       name,
@@ -81,10 +81,16 @@ export function matchCourtName(m: UpcomingMatchRow): string {
   return typeof n === "string" && n ? n : "Cancha";
 }
 
+/**
+ * Precio de ESTE partido: el snapshot guardado en matches.total_price al crearlo.
+ * No usa courts.price (el base no vale para todos los horarios) ni recalcula
+ * contra las reglas actuales.
+ */
 export function matchCourtPrice(m: UpcomingMatchRow): number | null {
-  const court = firstCourtEmbed(m);
-  const p = court?.price;
-  return typeof p === "number" ? p : null;
+  const p = (m as { total_price?: number | string | null }).total_price;
+  if (p == null) return null;
+  const n = Number(p);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** Próximo partido futuro donde el usuario creó el match o está anotado en match_participants. */

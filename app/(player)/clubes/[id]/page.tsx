@@ -4,6 +4,7 @@ import { ArrowLeft, AtSign, Clock, MapPin, MessageCircle, Phone, Shield } from "
 import ClubGalleryLightbox from "@/components/club-gallery-lightbox";
 import EmptyStateCard from "@/components/empty-state-card";
 import MotionPage from "@/components/motion-page";
+import { courtPriceRange, formatCourtPriceRange, loadCourtPricing } from "@/lib/court-pricing";
 import { DB_TABLES } from "@/lib/db-tables";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import type { ClubRow, CourtRow } from "@/lib/database.types";
@@ -74,6 +75,9 @@ export default async function ClubDetailPage({ params }: PageProps) {
     .order("name");
 
   const courts = (courtsData ?? []) as CourtRow[];
+  // Referencia de precio: rango real por cancha (reglas por día/horario + base),
+  // así no se muestra el precio base como si valiera para todos los horarios.
+  const pricing = await loadCourtPricing(supabase, courts.map((c) => c.id));
   const clubName = club.name ?? "Club";
   const location = club.location ?? "";
   const heroSrc = club.cover_image_url?.trim() || club.logo_url?.trim() || null;
@@ -237,8 +241,8 @@ export default async function ClubDetailPage({ params }: PageProps) {
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Canchas</h2>
               <ul className="space-y-3">
                 {courts.map((court) => {
-                  const price = court.price ?? 0;
-                  const displayPrice = price;
+                  const priceLabel =
+                    formatCourtPriceRange(courtPriceRange(pricing, court.id)) ?? "$0";
                   const courtName = court.name ?? "Cancha";
                   const indoorLabel = court.indoor ? "Techada" : "Descubierta";
                   const surfaceLabel = formatSurface(court.surface ?? null);
@@ -248,7 +252,7 @@ export default async function ClubDetailPage({ params }: PageProps) {
                       <article className={`${PLAYER_CARD_INTERACTIVE} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
                         <div className="min-w-0">
                           <h3 className="text-base font-bold text-slate-950 dark:text-slate-100">{courtName}</h3>
-                          <p className="text-sm font-semibold text-[#0461C4]">${new Intl.NumberFormat("es-AR").format(displayPrice)} / turno (90 min)</p>
+                          <p className="text-sm font-semibold text-[#0461C4]">{priceLabel} / turno (90 min)</p>
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             {surfaceLabel} · {indoorLabel}
                           </p>

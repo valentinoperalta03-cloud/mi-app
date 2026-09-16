@@ -1,6 +1,7 @@
 "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveCourtSlotPrice } from "@/lib/court-pricing";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createNotification } from "@/lib/notifications";
 
@@ -137,12 +138,14 @@ export async function generateMatchForSlotOnDate(
     }
   }
 
-  const { data: court } = await supabase
-    .from(DB_TABLES.courts)
-    .select("price")
-    .eq("id", slot.court_id)
-    .maybeSingle();
-  const totalPrice = Number((court as { price?: number } | null)?.price ?? 0);
+  // Precio efectivo de ESTA ocurrencia (día + horario), no el precio base de la
+  // cancha: un turno fijo del lunes 19:30 se cobra lo que vale el lunes 19:30.
+  const totalPrice = await resolveCourtSlotPrice({
+    supabase,
+    courtId: slot.court_id,
+    date: targetDate,
+    startTime: slotTime,
+  });
 
   const { data: matchInserted, error: matchErr } = await supabase
     .from(DB_TABLES.matches)

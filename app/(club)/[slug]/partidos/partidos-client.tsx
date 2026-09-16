@@ -306,11 +306,10 @@ export default function PartidosClient({
     setSelectedDate(ymd);
   }
 
+  // Precio efectivo resuelto server-side (lib/court-pricing.ts) en
+  // getClubAvailability: el mismo que guarda abrirPartido.
   function priceForCourt(courtId: string, time: string): number | null {
-    const override = availability.prices[`${courtId}__${time}`];
-    if (override != null) return override;
-    const court = courtsById.get(courtId);
-    return typeof court?.price === "number" ? court.price : null;
+    return availability.prices[`${courtId}__${time}`] ?? null;
   }
 
   const selectedDayChip = dayChips.find((d) => d.ymd === selectedDate) ?? dayChips[0];

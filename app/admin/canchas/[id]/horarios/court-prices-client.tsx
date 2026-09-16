@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Copy } from "lucide-react";
 import { adminButtonSecondary, adminCTAPrimary, adminCard } from "@/components/admin/admin-premium";
+import { resolvePriceForDayOfWeek, type CourtPricing } from "@/lib/court-pricing";
 import { minutesToClock, parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { applyCourtPricesToAllDays, saveCourtHourlyPrices } from "../precios/actions";
 import type { CourtTimeRange } from "./court-time-ranges-client";
@@ -92,15 +93,14 @@ export default function CourtPricesClient({
 
   const turns = buildTurnsForDay(timeRanges, activeDay, clubOpen, clubClose);
 
-  // Precio específico del día si existe; si no, el legacy day_of_week IS NULL
-  // (fallback para días que nunca se guardaron explícitamente); si no, el
-  // precio base de la cancha.
+  // Misma resolución que reservas y turnos fijos (lib/court-pricing.ts):
+  // día específico → legacy day_of_week IS NULL → precio base de la cancha.
+  const pricing: CourtPricing = {
+    basePriceByCourt: new Map([[courtId, basePrice]]),
+    rules: priceRows.map((r) => ({ courtId, dayOfWeek: r.dayOfWeek, startTime: r.startTime, price: r.price })),
+  };
   function priceForStart(start: string): number {
-    const specific = priceRows.find((r) => r.dayOfWeek === activeDay && r.startTime === start);
-    if (specific) return specific.price;
-    const fallback = priceRows.find((r) => r.dayOfWeek === null && r.startTime === start);
-    if (fallback) return fallback.price;
-    return basePrice;
+    return resolvePriceForDayOfWeek(pricing, courtId, activeDay, start) ?? basePrice;
   }
 
   const hasSavedPricesForDay = priceRows.some((r) => r.dayOfWeek === activeDay);

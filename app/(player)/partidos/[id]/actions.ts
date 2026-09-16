@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkCancellationLimit } from "@/lib/cancellation-guard";
 import { lateCancellationFinancials, onTimeCancellationFinancials } from "@/lib/cancellation-policy";
 import { isOpenMatchCancellationLate } from "@/lib/club-cancellation-window";
+import { resolveCourtSlotPrice } from "@/lib/court-pricing";
 import { formatDateInArgentina, utcMsForArgentinaWallClock } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { insertFixedSlotExceptionIfNeeded } from "@/lib/fixed-slot-exceptions";
@@ -105,7 +106,7 @@ export async function updateMatch(formData: FormData): Promise<void> {
   const { data: matchRow, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id,owner_id,court_id,scheduled_date,scheduled_time,payment_status,duration_minutes,match_type"
+      "id,owner_id,court_id,scheduled_date,scheduled_time,payment_status,duration_minutes,match_type,total_price,amount_paid,financial_status"
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -122,6 +123,9 @@ export async function updateMatch(formData: FormData): Promise<void> {
     payment_status: string | null;
     duration_minutes: number | null;
     match_type: string | null;
+    total_price: number | null;
+    amount_paid: number | null;
+    financial_status: string | null;
   };
 
   if (m.owner_id !== user.id) {
@@ -176,9 +180,46 @@ export async function updateMatch(formData: FormData): Promise<void> {
 
   const dateIso = new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString();
 
+  // updateMatch solo mueve el horario (cancha y fecha no se editan acá). Si el
+  // horario cambia, el precio se resuelve server-side para el turno nuevo:
+  //   A. sin dinero registrado → se actualiza total/pending al precio nuevo;
+  //   B. con dinero y mismo precio → se mueve sin tocar lo financiero;
+  //   C. con dinero y precio distinto → se rechaza: no se recalcula deuda, no se
+  //      cobra diferencia ni se devuelve nada. Se resuelve desde administración.
+  const timeChanged = String(m.scheduled_time ?? "").trim().slice(0, 5) !== timeNorm;
+  let priceUpdate: { total_price: number; amount_pending: number; financial_status: "unpaid" } | null = null;
+  if (timeChanged) {
+    const financialNorm = String(m.financial_status ?? "").toLowerCase();
+    // Service client: RLS de payments podría ocultarle al organizador pagos de
+    // otros jugadores y hacer pasar un partido cobrado por "sin dinero".
+    const { count: approvedPayments } = await createServiceClient()
+      .from(DB_TABLES.payments)
+      .select("id", { count: "exact", head: true })
+      .eq("match_id", matchId)
+      .eq("status", "approved");
+    const hasMoneyRegistered =
+      Number(m.amount_paid ?? 0) > 0 ||
+      (approvedPayments ?? 0) > 0 ||
+      pay === "paid" ||
+      financialNorm === "partially_paid" ||
+      financialNorm === "fully_paid";
+    const newPrice = await resolveCourtSlotPrice({
+      supabase,
+      courtId: m.court_id,
+      date: scheduledDate,
+      startTime: timeNorm,
+    });
+    if (!hasMoneyRegistered) {
+      priceUpdate = { total_price: newPrice, amount_pending: newPrice, financial_status: "unpaid" };
+    } else if (newPrice !== Number(m.total_price ?? 0)) {
+      redirect(`/partidos/${matchId}?edit_error=precio_con_pago`);
+    }
+  }
+
   const { error: updErr } = await supabase
     .from(DB_TABLES.matches)
     .update({
+      ...(priceUpdate ?? {}),
       scheduled_time: timeNorm,
       date: dateIso,
       match_type: matchType,

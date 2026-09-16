@@ -9,6 +9,7 @@ import {
   type ClubHoursBounds,
   type CourtTimeRangeInput,
 } from "@/lib/court-slots";
+import { loadCourtPricing, resolveCourtSlotPrice, resolvePriceFromPricing } from "@/lib/court-pricing";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { createGroupChat } from "@/lib/group-chats";
@@ -87,7 +88,7 @@ export async function getClubAvailability(
     new Set(Array.from(perCourtSlots.values()).flatMap((s) => Array.from(s)))
   ).sort((a, b) => clockToMinutes(a) - clockToMinutes(b));
 
-  const [{ data: matchRows }, { data: blockRowsModern }, { data: blockRowsLegacy }, { data: schedRows }] =
+  const [{ data: matchRows }, { data: blockRowsModern }, { data: blockRowsLegacy }, pricing] =
     await Promise.all([
       supabase
         .from(DB_TABLES.matches)
@@ -105,13 +106,7 @@ export async function getClubAvailability(
         .select("court_id,start_time")
         .in("court_id", courtIds)
         .eq("date", dateStr),
-      supabase
-        .from(DB_TABLES.courtSchedules)
-        .select("court_id,start_time,price_override")
-        .in("court_id", courtIds)
-        .is("day_of_week", null)
-        .not("start_time", "is", null)
-        .not("price_override", "is", null),
+      loadCourtPricing(supabase, courtIds),
     ]);
 
   const occupied = new Set<string>();
@@ -125,17 +120,6 @@ export async function getClubAvailability(
     if (b.court_id) occupied.add(`${b.court_id}__${normalizeSlotTime(b.start_time)}`);
   }
 
-  const prices: Record<string, number> = {};
-  for (const r of (schedRows ?? []) as {
-    court_id: string | null;
-    start_time: string | null;
-    price_override: number | null;
-  }[]) {
-    if (r.court_id && r.price_override != null) {
-      prices[`${r.court_id}__${normalizeSlotTime(r.start_time)}`] = Number(r.price_override);
-    }
-  }
-
   const todayAr = getTodayYmdInArgentina();
   const nowMinutes = dateStr === todayAr ? clockToMinutes(getCurrentClockInArgentina()) : -1;
 
@@ -146,6 +130,16 @@ export async function getClubAvailability(
       (cid) => perCourtSlots.get(cid)!.has(time) && !occupied.has(`${cid}__${time}`)
     );
     if (freeCourtIds.length > 0) slots.push({ time, courtIds: freeCourtIds });
+  }
+
+  // Precio efectivo de cada turno libre, con la misma resolución que usan las
+  // acciones al crear el booking: lo que ve el jugador es lo que se guarda.
+  const prices: Record<string, number> = {};
+  for (const slot of slots) {
+    for (const cid of slot.courtIds) {
+      const price = resolvePriceFromPricing(pricing, cid, dateStr, slot.time);
+      if (price != null) prices[`${cid}__${slot.time}`] = price;
+    }
   }
 
   return { slots, prices };
@@ -239,24 +233,7 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
 
   const timeNorm = scheduledTime.length >= 5 ? scheduledTime.slice(0, 5) : scheduledTime;
   const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
-  const { data: slotPriceRows } = await supabase
-    .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,start_time,price_override")
-    .eq("court_id", courtId)
-    .not("start_time", "is", null)
-    .not("price_override", "is", null);
-  const slotPriceRowsTyped = (slotPriceRows ?? []) as Array<{
-    day_of_week: number | null;
-    start_time: string | null;
-    price_override: number | null;
-  }>;
-  const specificPrice = slotPriceRowsTyped.find(
-    (row) => row.day_of_week === dayOfWeek && String(row.start_time ?? "").slice(0, 5) === timeNorm
-  )?.price_override;
-  const legacyPrice = slotPriceRowsTyped.find(
-    (row) => row.day_of_week === null && String(row.start_time ?? "").slice(0, 5) === timeNorm
-  )?.price_override;
-  const totalPrice = Number(specificPrice ?? legacyPrice ?? (courtData as { price: number | null }).price ?? 0);
+  const totalPrice = await resolveCourtSlotPrice({ supabase, courtId, date: scheduledDate, startTime: timeNorm });
   const clubDepositType =
     (courtData as { clubs?: { deposit_type?: "percentage" | "fixed" | null } | null }).clubs?.deposit_type ?? null;
   const clubDepositValue = Number(
@@ -629,25 +606,7 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
   const clubName = String((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club");
   const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
 
-  const dayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
-  const { data: slotPriceRows } = await supabase
-    .from(DB_TABLES.courtSchedules)
-    .select("day_of_week,start_time,price_override")
-    .eq("court_id", courtId)
-    .not("start_time", "is", null)
-    .not("price_override", "is", null);
-  const slotPriceRowsTyped = (slotPriceRows ?? []) as Array<{
-    day_of_week: number | null;
-    start_time: string | null;
-    price_override: number | null;
-  }>;
-  const specificPrice = slotPriceRowsTyped.find(
-    (row) => row.day_of_week === dayOfWeek && String(row.start_time ?? "").slice(0, 5) === timeNorm
-  )?.price_override;
-  const legacyPrice = slotPriceRowsTyped.find(
-    (row) => row.day_of_week === null && String(row.start_time ?? "").slice(0, 5) === timeNorm
-  )?.price_override;
-  const totalPrice = Number(specificPrice ?? legacyPrice ?? (courtData as { price: number | null }).price ?? 0);
+  const totalPrice = await resolveCourtSlotPrice({ supabase, courtId, date: scheduledDate, startTime: timeNorm });
 
   const { data: payerProfile } = await supabase
     .from(DB_TABLES.profiles)
