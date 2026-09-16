@@ -236,7 +236,9 @@ export async function buildDashboardTimelineData(
     const startMin = timeToMinutes(b.blocked_time);
     if (startMin < 0) continue;
     const meta = trainingMetaByKey.get(`${b.court_id}__${String(b.blocked_time).slice(0, 5)}`);
-    const durationMin = meta ? Math.max(30, timeToMinutes(meta.endTime) - startMin) : 90;
+    // parseCloseTimeToMinutes: una clase que termina "00:00" cierra a medianoche
+    // (1440), no en el minuto 0 — si no, el bloque se dibujaba de 30 min.
+    const durationMin = meta ? Math.max(30, parseCloseTimeToMinutes(meta.endTime) - startMin) : 90;
     events.push({
       id: `training-${b.id}`,
       courtId: b.court_id,

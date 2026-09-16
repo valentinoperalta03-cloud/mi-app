@@ -4,8 +4,8 @@ import { DB_TABLES } from "@/lib/db-tables";
 import {
   buildSlotsForDay,
   courtBlockStartsFromRows,
+  isSlotWithinCourtHours,
   normalizeSlotTime,
-  parseCloseTimeToMinutes,
   type ClubHoursBounds,
   type CourtTimeRangeInput,
 } from "@/lib/court-slots";
@@ -205,7 +205,7 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   const { data: courtData, error: courtError } = await supabase
     .from(DB_TABLES.courts)
     .select(
-      "club_id, price, name, clubs!inner(name, deposit_type, deposit_value, close_time)"
+      "club_id, price, name, clubs!inner(name, deposit_type, deposit_value, open_time, close_time)"
     )
     .eq("id", courtId)
     .maybeSingle();
@@ -270,14 +270,33 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   }
 
   const slotStart = clockToMinutes(timeNorm);
-  const clubCloseTime = String(
-    (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? ""
-  ).trim();
-  if (clubCloseTime) {
-    const closeMinutes = parseCloseTimeToMinutes(clubCloseTime);
-    if (slotStart + durationMinutes > closeMinutes) {
-      return { error: "El club cierra antes de que termine ese turno." };
-    }
+  // Mismo criterio que la grilla que el jugador acaba de ver
+  // (getClubAvailability → buildSlotsForDay): manda la franja propia de ESA
+  // cancha para ESE día de semana, y el horario del club es solo fallback
+  // cuando la cancha no tiene franjas cargadas. Antes esto validaba siempre
+  // contra clubs.close_time, así que un club con canchas abiertas más tarde
+  // que su horario general mostraba el turno y lo rechazaba al confirmar.
+  const { data: courtRangeRows } = await supabase
+    .from(DB_TABLES.courtTimeRanges)
+    .select("court_id,day_of_week,open_time,close_time")
+    .eq("court_id", courtId)
+    .eq("day_of_week", dayOfWeek);
+  const clubHours: ClubHoursBounds = {
+    open_time:
+      (courtData as { clubs?: { open_time?: string | null } | null }).clubs?.open_time ?? null,
+    close_time:
+      (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? null,
+  };
+  const withinHours = isSlotWithinCourtHours(
+    courtId,
+    dayOfWeek,
+    slotStart,
+    durationMinutes,
+    (courtRangeRows ?? []) as CourtTimeRangeInput[],
+    clubHours
+  );
+  if (!withinHours) {
+    return { error: "Ese turno queda fuera del horario de la cancha." };
   }
 
   const todayAr = getTodayYmdInArgentina();
@@ -540,6 +559,30 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
   );
   if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
     return { error: "Esa cancha está bloqueada en ese horario." };
+  }
+
+  // Mismo criterio de horario que reservarCancha: la franja propia de la
+  // cancha manda, el horario del club es fallback. Abrir partido salía de la
+  // misma grilla pero no validaba horario en absoluto.
+  const partidoDayOfWeek = new Date(`${scheduledDate}T12:00:00`).getDay();
+  const [{ data: partidoRangeRows }, { data: partidoClubHoursRow }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.courtTimeRanges)
+      .select("court_id,day_of_week,open_time,close_time")
+      .eq("court_id", courtId)
+      .eq("day_of_week", partidoDayOfWeek),
+    supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", clubId).maybeSingle(),
+  ]);
+  const partidoWithinHours = isSlotWithinCourtHours(
+    courtId,
+    partidoDayOfWeek,
+    slotStart,
+    durationMinutes,
+    (partidoRangeRows ?? []) as CourtTimeRangeInput[],
+    (partidoClubHoursRow ?? null) as ClubHoursBounds | null
+  );
+  if (!partidoWithinHours) {
+    return { error: "Ese turno queda fuera del horario de la cancha." };
   }
 
   const { data: conflicts, error: conflictsError } = await supabase

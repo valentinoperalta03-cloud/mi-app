@@ -539,6 +539,7 @@ function PreciosView({
   clubDepositType,
   clubDepositValue,
   clubOpenTime,
+  clubCloseTime,
   timeRangesByCourt,
   priceSchedulesByCourt,
   onBack,
@@ -760,6 +761,7 @@ function PreciosView({
                     <CourtPricesClient
                       courtId={court.id}
                       clubOpen={clubOpenTime}
+                      clubClose={clubCloseTime}
                       basePrice={Number(court.price ?? 0)}
                       timeRanges={rangesMap.get(court.id) ?? []}
                       priceRows={pricesMap.get(court.id) ?? []}

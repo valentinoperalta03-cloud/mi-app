@@ -102,7 +102,8 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
 
       {clubOpen && clubClose ? (
         <div className="rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
-          <span className="font-semibold">Horario del club:</span> abre {clubOpen} hs · último turno 22:30 → 00:00 · turnos de 90 min.{" "}
+          <span className="font-semibold">Horario del club:</span> {clubOpen} a {clubClose} hs · turnos de 90 min · un
+          turno solo existe si termina antes del cierre (00:00 y 23:59 significan medianoche).{" "}
           <a href="/admin/config" className="underline underline-offset-2 opacity-70 hover:opacity-100">
             Cambiar en Configuración
           </a>
@@ -145,6 +146,7 @@ export default async function AdminCanchaHorariosPage({ params, searchParams }: 
         <CourtPricesClient
           courtId={courtId}
           clubOpen={clubOpen}
+          clubClose={clubClose}
           basePrice={basePrice}
           timeRanges={timeRanges}
           priceRows={priceRows}

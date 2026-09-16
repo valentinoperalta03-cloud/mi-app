@@ -3,7 +3,13 @@
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { AR_TIME_ZONE, getTodayYmdInArgentina } from "@/lib/datetime-ar";
-import { courtBlockStartsFromRows, normalizeSlotTime, parseCloseTimeToMinutes } from "@/lib/court-slots";
+import {
+  courtBlockStartsFromRows,
+  isSlotWithinCourtHours,
+  normalizeSlotTime,
+  type ClubHoursBounds,
+  type CourtTimeRangeInput,
+} from "@/lib/court-slots";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
@@ -147,7 +153,7 @@ export async function crearPartido(
     const { data: courtData, error: courtError } = await supabase
       .from(DB_TABLES.courts)
       .select(
-        "club_id, price, name, clubs!inner(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value, close_time)"
+        "club_id, price, name, clubs!inner(name, accepts_cash, accepts_transfer, bank_alias, bank_cbu, deposit_type, deposit_value, open_time, close_time)"
       )
       .eq("id", courtId)
       .maybeSingle();
@@ -253,14 +259,30 @@ export async function crearPartido(
     }
 
     const slotStart = clockToMinutes(scheduledTime);
-    const clubCloseTime = String(
-      (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? ""
-    ).trim();
-    if (clubCloseTime) {
-      const closeMinutes = parseCloseTimeToMinutes(clubCloseTime);
-      if (slotStart + durationMinutes > closeMinutes) {
-        return { error: "El club cierra antes de que termine ese turno." };
-      }
+    // Misma regla que reservarCancha en app/(club)/[slug]/actions.ts: manda la
+    // franja propia de ESA cancha para ESE día de semana, y clubs.open_time /
+    // clubs.close_time son solo fallback si la cancha no tiene franjas.
+    const { data: courtRangeRows } = await supabase
+      .from(DB_TABLES.courtTimeRanges)
+      .select("court_id,day_of_week,open_time,close_time")
+      .eq("court_id", courtId)
+      .eq("day_of_week", dayOfWeek);
+    const clubHours: ClubHoursBounds = {
+      open_time:
+        (courtData as { clubs?: { open_time?: string | null } | null }).clubs?.open_time ?? null,
+      close_time:
+        (courtData as { clubs?: { close_time?: string | null } | null }).clubs?.close_time ?? null,
+    };
+    const withinHours = isSlotWithinCourtHours(
+      courtId,
+      dayOfWeek,
+      slotStart,
+      durationMinutes,
+      (courtRangeRows ?? []) as CourtTimeRangeInput[],
+      clubHours
+    );
+    if (!withinHours) {
+      return { error: "Ese turno queda fuera del horario de la cancha." };
     }
 
     const todayAr = getTodayYmdInArgentina();

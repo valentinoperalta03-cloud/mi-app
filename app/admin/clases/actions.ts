@@ -8,7 +8,7 @@ import {
   getCurrentClockInArgentina,
   getTodayYmdInArgentina,
 } from "@/lib/datetime-ar";
-import { parseClockToMinutes } from "@/lib/court-slots";
+import { parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
 import type {
   PracticeModalityKey,
@@ -196,7 +196,9 @@ export async function createTrainingBlockAction(
   if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
     return { ok: false, message: "Completá horario de inicio y fin." };
   }
-  if (parseClockToMinutes(endTime) <= parseClockToMinutes(startTime)) {
+  // El fin se lee con parseCloseTimeToMinutes: "00:00" es medianoche (1440),
+  // no el minuto 0. Sin esto una clase de 22:30 → 00:00 se rechazaba.
+  if (parseCloseTimeToMinutes(endTime) <= parseClockToMinutes(startTime)) {
     return {
       ok: false,
       message: "El horario de fin debe ser mayor al de inicio.",

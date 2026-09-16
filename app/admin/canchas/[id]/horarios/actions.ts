@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
-import { parseClockToMinutes } from "@/lib/court-slots";
+import { parseClockToMinutes, parseCloseTimeToMinutes } from "@/lib/court-slots";
 import { createClient } from "@/utils/supabase/server";
 
 export type CourtTimeRangeState = { ok: boolean; message?: string };
@@ -20,7 +20,9 @@ export async function addCourtTimeRange(
   const open = openTime.slice(0, 5);
   const close = closeTime.slice(0, 5);
   const openMin = parseClockToMinutes(open);
-  const closeMin = parseClockToMinutes(close);
+  // "00:00" y "23:59" son medianoche (1440). Antes "00:00" valía 0 y el cierre
+  // a medianoche se rechazaba, así que 23:59 quedó como el único valor posible.
+  const closeMin = parseCloseTimeToMinutes(close);
   if (closeMin <= openMin) {
     return { ok: false, message: "El horario de cierre debe ser mayor al de apertura." };
   }
@@ -42,7 +44,7 @@ export async function addCourtTimeRange(
   if (existing.length >= 4) return { ok: false, message: "Máximo 4 franjas por día." };
   const overlaps = existing.some((r) => {
     const rOpen = parseClockToMinutes(String(r.open_time).slice(0, 5));
-    const rClose = parseClockToMinutes(String(r.close_time).slice(0, 5));
+    const rClose = parseCloseTimeToMinutes(String(r.close_time).slice(0, 5));
     return openMin < rClose && closeMin > rOpen;
   });
   if (overlaps) return { ok: false, message: "La franja se superpone con otra ya cargada." };

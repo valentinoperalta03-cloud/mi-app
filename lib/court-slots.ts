@@ -74,6 +74,13 @@ export function minutesToClock(total: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+/**
+ * Último recurso cuando la cancha no tiene franjas propias y el club tampoco
+ * configuró horario. Generación y validación comparten estos números: si acá
+ * divergieran, la grilla ofrecería turnos que después se rechazan.
+ */
+const FALLBACK_BOUNDS = { lo: 9 * 60, hi: 22 * 60 + 30 } as const;
+
 function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: number; hi: number } | null {
   if (!bounds) return null;
   const o = String(bounds.open_time ?? "").trim();
@@ -85,6 +92,53 @@ function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: nu
   return { lo, hi };
 }
 
+/** Horario a usar cuando la cancha no tiene franjas propias ese día. */
+function fallbackBounds(bounds: ClubHoursBounds | null | undefined): { lo: number; hi: number } {
+  return clubBoundsMinutes(bounds) ?? FALLBACK_BOUNDS;
+}
+
+function rangesForCourtDay(
+  courtId: string,
+  dayOfWeek: number,
+  timeRanges: CourtTimeRangeInput[]
+): { open: number; close: number }[] {
+  return timeRanges
+    .filter((r) => String(r.court_id) === String(courtId) && Number(r.day_of_week) === dayOfWeek)
+    .map((r) => ({
+      open: parseClockToMinutes(String(r.open_time)),
+      close: parseCloseTimeToMinutes(String(r.close_time)),
+    }))
+    .filter((r) => r.close > r.open);
+}
+
+/**
+ * ¿El turno [start, start + duration) entra en el horario de esa cancha ese día?
+ *
+ * Misma semántica que buildSlotsForDay — es la validación al confirmar de la
+ * grilla que el jugador vio: la franja propia de la cancha manda, `clubBounds`
+ * (clubs.open_time/close_time) es el fallback cuando la cancha no tiene ninguna
+ * franja cargada para ese día, y FALLBACK_BOUNDS el último recurso si el club
+ * tampoco configuró horario. Todo slot que buildSlotsForDay genere pasa acá, y
+ * ningún otro.
+ */
+export function isSlotWithinCourtHours(
+  courtId: string,
+  dayOfWeek: number,
+  startMinutes: number,
+  durationMinutes: number,
+  timeRanges: CourtTimeRangeInput[],
+  clubBounds?: ClubHoursBounds | null
+): boolean {
+  const endMinutes = startMinutes + durationMinutes;
+  const dayRanges = rangesForCourtDay(courtId, dayOfWeek, timeRanges);
+  if (dayRanges.length > 0) {
+    return dayRanges.some((r) => startMinutes >= r.open && endMinutes <= r.close);
+  }
+
+  const cb = fallbackBounds(clubBounds);
+  return startMinutes >= cb.lo && endMinutes <= cb.hi;
+}
+
 /**
  * Genera los slots disponibles para el día a partir de las franjas propias de
  * cada cancha (`court_time_ranges`). Una cancha puede tener varias franjas no
@@ -93,7 +147,8 @@ function clubBoundsMinutes(bounds: ClubHoursBounds | null | undefined): { lo: nu
  *
  * Si la cancha no tiene ninguna franja propia para ese día de semana, cae al
  * horario del club (`clubBounds`) como una única franja. Si tampoco hay
- * horario de club configurado, fallback hardcodeado 09:00–22:30.
+ * horario de club configurado, cae a FALLBACK_BOUNDS — el mismo que usa
+ * isSlotWithinCourtHours para validar.
  */
 export function buildSlotsForDay(
   courtIds: string[],
@@ -103,25 +158,13 @@ export function buildSlotsForDay(
   slotDurationMinutes = 90
 ): GeneratedSlot[] {
   const dow = getDay(dayDate);
-  const cb = clubBoundsMinutes(clubBounds ?? null);
-  const fallbackOpen = cb?.lo ?? 9 * 60;
-  const fallbackClose = cb?.hi ?? 22 * 60 + 30;
+  const cb = fallbackBounds(clubBounds);
 
   const times = new Set<string>();
 
   for (const cid of courtIds) {
-    const dayRanges = timeRanges.filter(
-      (r) => String(r.court_id) === String(cid) && Number(r.day_of_week) === dow
-    );
-
-    const ranges = dayRanges
-      .map((r) => ({
-        open: parseClockToMinutes(String(r.open_time)),
-        close: parseCloseTimeToMinutes(String(r.close_time)),
-      }))
-      .filter((r) => r.close > r.open);
-
-    const effectiveRanges = ranges.length ? ranges : [{ open: fallbackOpen, close: fallbackClose }];
+    const ranges = rangesForCourtDay(cid, dow, timeRanges);
+    const effectiveRanges = ranges.length ? ranges : [{ open: cb.lo, close: cb.hi }];
 
     for (const r of effectiveRanges) {
       for (let t = r.open; t + slotDurationMinutes <= r.close; t += slotDurationMinutes) {

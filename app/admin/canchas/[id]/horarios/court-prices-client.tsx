@@ -35,15 +35,20 @@ export type CourtPriceRow = { dayOfWeek: number | null; startTime: string; price
 function buildTurnsForDay(
   timeRanges: CourtTimeRange[],
   dayOfWeek: number,
-  clubOpen: string
+  clubOpen: string,
+  clubClose: string
 ): { start: string; end: string }[] {
   const dayRanges = timeRanges.filter((r) => r.day_of_week === dayOfWeek);
 
   if (dayRanges.length === 0) {
-    if (!clubOpen) return [];
+    if (!clubOpen || !clubClose) return [];
+    // El turno tiene que terminar dentro del horario del club: la condición
+    // anterior (t < 24hs, sin mirar el fin) generaba turnos tipo 23:30 → 01:00
+    // que la disponibilidad real nunca ofrece.
     const rawOpen = parseClockToMinutes(clubOpen);
+    const rawClose = parseCloseTimeToMinutes(clubClose);
     const turns: { start: string; end: string }[] = [];
-    for (let t = rawOpen; t < 24 * 60; t += SLOT_DURATION) {
+    for (let t = rawOpen; t + SLOT_DURATION <= rawClose; t += SLOT_DURATION) {
       turns.push({ start: minutesToClock(t), end: minutesToClock(t + SLOT_DURATION) });
     }
     return turns;
@@ -67,12 +72,14 @@ function buildTurnsForDay(
 export default function CourtPricesClient({
   courtId,
   clubOpen,
+  clubClose,
   basePrice,
   timeRanges,
   priceRows,
 }: {
   courtId: string;
   clubOpen: string;
+  clubClose: string;
   basePrice: number;
   timeRanges: CourtTimeRange[];
   priceRows: CourtPriceRow[];
@@ -83,7 +90,7 @@ export default function CourtPricesClient({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const turns = buildTurnsForDay(timeRanges, activeDay, clubOpen);
+  const turns = buildTurnsForDay(timeRanges, activeDay, clubOpen, clubClose);
 
   // Precio específico del día si existe; si no, el legacy day_of_week IS NULL
   // (fallback para días que nunca se guardaron explícitamente); si no, el
