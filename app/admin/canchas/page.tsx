@@ -1,10 +1,8 @@
 ﻿import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
-import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import CanchasHubClient, {
-  type ClosedDayRow,
   type CourtPriceRow,
   type CourtRow,
   type CourtSlotPrice,
@@ -73,16 +71,6 @@ export default async function AdminCanchasPage({
     slotPricesByCourt.set(row.court_id, list);
   }
 
-  const { data: closedDaysRaw } = mainClubId
-    ? await supabase
-        .from(DB_TABLES.clubClosedDays)
-        .select("id,closed_date,reason")
-        .eq("club_id", mainClubId)
-        .gte("closed_date", getTodayYmdInArgentina())
-        .order("closed_date", { ascending: true })
-    : { data: [] };
-  const closedDays = (closedDaysRaw ?? []) as ClosedDayRow[];
-
   const { data: clubHoursRow } = mainClubId
     ? await supabase.from(DB_TABLES.clubs).select("open_time,close_time").eq("id", mainClubId).maybeSingle()
     : { data: null };
@@ -139,7 +127,6 @@ export default async function AdminCanchasPage({
       clubDepositType={clubDepositType}
       clubDepositValue={clubDepositValue}
       blockedCourtIds={Array.from(blockedCourtIds)}
-      closedDays={closedDays}
       slotPricesByCourt={Array.from(slotPricesByCourt.entries())}
       clubOpenTime={clubOpenTime}
       clubCloseTime={clubCloseTime}

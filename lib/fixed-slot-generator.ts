@@ -16,11 +16,14 @@ export type GenerateMatchResult =
   | { created: true; matchId: string }
   | { created: false; reason: string };
 
+/** Motivo de omisión cuando el club marcó esa fecha como cerrada. */
+export const CLOSED_DAY_SKIP_REASON = "el club está cerrado esa fecha";
+
 /**
  * Intenta crear el partido de un turno fijo para una fecha concreta.
- * No hace nada si ya existe, hay excepción o no hay owner_id disponible.
- * Retorna el resultado con el motivo cuando no crea nada, para poder
- * diagnosticar por qué una cancha no quedó bloqueada.
+ * No hace nada si ya existe, hay excepción, el club está cerrado ese día o
+ * no hay owner_id disponible. Retorna el resultado con el motivo cuando no
+ * crea nada, para poder diagnosticar por qué una cancha no quedó bloqueada.
  */
 export async function generateMatchForSlotOnDate(
   supabase: SupabaseClient,
@@ -39,6 +42,23 @@ export async function generateMatchForSlotOnDate(
     const reason = "hay una excepción cargada para esa fecha";
     console.log(`${logPrefix}: omitido — ${reason}`);
     return { created: false, reason };
+  }
+
+  // Día cerrado del club: no se genera la ocurrencia. Sin este chequeo el cron
+  // recreaba todas las noches el match de un día cerrado (y le mandaba push
+  // "Turno fijo agendado" a los jugadores), porque club_closed_days solo
+  // frenaba las reservas hechas por personas, no al generador.
+  // Va acá y no en el cron para que valga también para el reconciliador manual
+  // y para removeException, que llaman a esta misma función.
+  const { data: closedDay } = await supabase
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", slot.club_id)
+    .eq("closed_date", targetDate)
+    .maybeSingle();
+  if (closedDay) {
+    console.log(`${logPrefix}: omitido — ${CLOSED_DAY_SKIP_REASON}`);
+    return { created: false, reason: CLOSED_DAY_SKIP_REASON };
   }
 
   const slotTime = String(slot.start_time).slice(0, 5);

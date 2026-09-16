@@ -70,8 +70,8 @@ async function main() {
 
       if (dryRun) {
         // En dry-run solo detectamos el hueco sin crear nada: replicamos los
-        // dos chequeos de guarda de generateMatchForSlotOnDate (excepción y
-        // match existente) para reportar qué se repararía.
+        // chequeos de guarda de generateMatchForSlotOnDate (excepción, día
+        // cerrado y match existente) para reportar qué se repararía.
         const { data: exception } = await supabase
           .from(DB_TABLES.fixedSlotExceptions)
           .select("id")
@@ -79,6 +79,14 @@ async function main() {
           .eq("exception_date", date)
           .maybeSingle();
         if (exception) continue;
+
+        const { data: closedDay } = await supabase
+          .from(DB_TABLES.clubClosedDays)
+          .select("id")
+          .eq("club_id", slot.club_id)
+          .eq("closed_date", date)
+          .maybeSingle();
+        if (closedDay) continue;
 
         const slotTime = String(slot.start_time).slice(0, 5);
         const { data: existing } = await supabase

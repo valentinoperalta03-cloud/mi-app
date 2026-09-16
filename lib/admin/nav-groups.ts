@@ -1,5 +1,6 @@
 import {
   Activity,
+  Ban,
   Banknote,
   Building2,
   CircleDollarSign,
@@ -43,6 +44,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin/turnos-fijos", label: "Turnos fijos", icon: Clock3 },
       { href: "/admin/torneos", label: "Torneos", icon: Trophy },
       { href: "/admin/clases", label: "Clases", icon: GraduationCap },
+      { href: "/admin/bloqueos", label: "Bloqueos temporales", icon: Ban },
     ],
   },
   {

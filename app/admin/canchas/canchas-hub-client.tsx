@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import AdminPageHeader from "@/components/admin/admin-page-header";
 import {
@@ -22,7 +21,7 @@ import NewCourtForm from "./new-court-form";
 import CourtTimeRangesClient, { type CourtTimeRange } from "./[id]/horarios/court-time-ranges-client";
 import CourtPricesClient, { type CourtPriceRow } from "./[id]/horarios/court-prices-client";
 import { applyBulkPricesAction } from "./[id]/precios/actions";
-import { addClubClosedDayAction, deleteCourt, removeClubClosedDayAction, updateClubDeposit, updateCourt } from "./actions";
+import { deleteCourt, updateClubDeposit, updateCourt } from "./actions";
 
 // Slots de 90 en 90 desde el open_time del club hasta 22:30 como máximo.
 function generateSlots(openTime: string): string[] {
@@ -77,8 +76,6 @@ export type CourtRow = {
   image_url?: string | null;
 };
 
-export type ClosedDayRow = { id: string; closed_date: string; reason: string | null };
-
 export type CourtSlotPrice = { time: string; price: number };
 
 type View = "hub" | "canchas" | "horarios" | "precios";
@@ -91,7 +88,6 @@ export type CanchasHubClientProps = {
   clubDepositType: "percentage" | "fixed" | null;
   clubDepositValue: number;
   blockedCourtIds: string[];
-  closedDays: ClosedDayRow[];
   slotPricesByCourt: Array<[string, CourtSlotPrice[]]>;
   clubOpenTime: string;
   clubCloseTime: string;
@@ -112,7 +108,7 @@ const HUB_CARDS: Array<{ view: Exclude<View, "hub">; icon: string; title: string
     view: "horarios",
     icon: "🕐",
     title: "Horarios",
-    description: "Horario de apertura del club, días cerrados y franjas por cancha",
+    description: "Horario semanal de apertura del club y franjas por cancha",
     cta: "Configurar →",
   },
   {
@@ -139,7 +135,7 @@ export default function CanchasHubClient(props: CanchasHubClientProps) {
           <p className="text-sm font-semibold text-[var(--text-primary)]">📋 ¿Por dónde empezar?</p>
           <ol className="mt-2 space-y-1 text-sm text-[var(--text-secondary)]">
             <li>1️⃣ <strong>Mis canchas</strong> — Creá y configurá cada cancha del club</li>
-            <li>2️⃣ <strong>Horarios</strong> — Definí cuándo está abierto el club y cada cancha</li>
+            <li>2️⃣ <strong>Horarios</strong> — Definí el horario semanal del club y de cada cancha</li>
             <li>3️⃣ <strong>Precios y seña</strong> — Configurá los precios por horario y la seña</li>
           </ol>
         </div>
@@ -385,7 +381,6 @@ function CourtEditForm({ court }: { court: CourtRow }) {
 function HorariosView({
   courts,
   mainClubId,
-  closedDays,
   clubOpenTime,
   clubCloseTime,
   timeRangesByCourt,
@@ -393,7 +388,6 @@ function HorariosView({
 }: CanchasHubClientProps & { onBack: () => void }) {
   const [expandedCourt, setExpandedCourt] = useState<string | null>(null);
   const rangesMap = new Map(timeRangesByCourt);
-  const todayYmd = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-col gap-6">
@@ -401,7 +395,7 @@ function HorariosView({
       <AdminPageHeader
         kicker="Canchas"
         title="Horarios"
-        subtitle="Configurá cuándo está abierto el club y cada cancha"
+        subtitle="Horario semanal regular del club y de cada cancha"
       />
 
       <div className={adminCard}>
@@ -438,56 +432,18 @@ function HorariosView({
         </form>
       </div>
 
-      <div className={adminCard}>
-        <p className={adminKicker}>Días cerrados</p>
-        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Días cerrados del club</p>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">El club no ofrecerá turnos en esas fechas.</p>
-
-        <form action={addClubClosedDayAction} className="mt-4 flex flex-wrap gap-2">
-          <input type="hidden" name="club_id" value={mainClubId} />
-          <input
-            type="date"
-            name="closed_date"
-            required
-            min={todayYmd}
-            className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-          />
-          <input
-            type="text"
-            name="reason"
-            placeholder="Motivo (opcional)"
-            className="flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-          />
-          <button type="submit" className={adminCTAPrimary}>
-            Marcar como cerrado
-          </button>
-        </form>
-
-        {closedDays.length === 0 ? (
-          <p className="mt-4 text-sm text-[var(--text-tertiary)]">No hay días cerrados futuros cargados.</p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-2">
-            {closedDays.map((day) => (
-              <div
-                key={day.id}
-                className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] px-3 py-2"
-              >
-                <div>
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">
-                    {format(parseISO(`${day.closed_date}T12:00:00`), "d 'de' MMMM yyyy", { locale: es })}
-                  </span>
-                  {day.reason ? <span className="ml-2 text-xs text-[var(--text-tertiary)]">· {day.reason}</span> : null}
-                </div>
-                <form action={removeClubClosedDayAction}>
-                  <input type="hidden" name="closed_day_id" value={day.id} />
-                  <button type="submit" className="text-xs font-semibold text-rose-500 hover:text-rose-700">
-                    Eliminar
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Los cierres excepcionales (días cerrados y bloqueos puntuales) viven en
+          /admin/bloqueos. Acá quedan solo los horarios regulares del club. */}
+      <div className={`${adminCard} flex flex-wrap items-center justify-between gap-3`}>
+        <div>
+          <p className="text-sm font-bold text-[var(--text-primary)]">¿Un día puntual no abrís?</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Los feriados, cierres por lluvia y bloqueos de un horario suelto se cargan en Bloqueos temporales.
+          </p>
+        </div>
+        <Link href="/admin/bloqueos" className={adminButtonSecondary}>
+          Ir a Bloqueos temporales
+        </Link>
       </div>
 
       <div className={adminCard}>

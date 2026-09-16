@@ -46,6 +46,19 @@ export async function getCourtAvailabilityForDate(
   }
 
   const service = createServiceClient();
+
+  // Club cerrado ese día: sin disponibilidad, igual que getClubAvailability.
+  // Sin esto el wizard de torneos y el scheduler ofrecían horarios "libres" en
+  // una fecha que el club ya había cerrado desde /admin/bloqueos, y el torneo
+  // terminaba ocupando canchas de un día sin actividad.
+  const { data: closedDayRows } = await service
+    .from(DB_TABLES.clubClosedDays)
+    .select("id")
+    .eq("club_id", clubId)
+    .eq("closed_date", dateStr)
+    .limit(1);
+  if (closedDayRows?.length) return { slots: [], occupiedByCourtAndSlot: {} };
+
   const dayDate = new Date(`${dateStr}T12:00:00`);
   const dayOfWeek = dayDate.getDay();
 

@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DB_TABLES } from "@/lib/db-tables";
-import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
+import {
+  CLOSED_DAY_SKIP_REASON,
+  generateMatchForSlotOnDate,
+  getUpcomingDatesForDayOfWeek,
+} from "@/lib/fixed-slot-generator";
 import { createServiceClient } from "@/utils/supabase/server";
 
 // Reconcilia una ventana de 14 días en lugar de una sola fecha (hoy + 7): si el
@@ -72,7 +76,8 @@ export async function GET(req: NextRequest) {
         created++;
       } else if (
         result.reason !== "hay una excepción cargada para esa fecha" &&
-        result.reason !== "ya existe un match de turno fijo para esa fecha/hora"
+        result.reason !== "ya existe un match de turno fijo para esa fecha/hora" &&
+        result.reason !== CLOSED_DAY_SKIP_REASON
       ) {
         conflicts.push({ fixedSlotId: slot.id, date, reason: result.reason });
       }

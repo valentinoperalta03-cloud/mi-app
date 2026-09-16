@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/notifications";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
+import { applyFixedSlotExceptionForDate } from "@/lib/fixed-slot-exceptions";
 import { generateMatchForSlotOnDate, getUpcomingDatesForDayOfWeek } from "@/lib/fixed-slot-generator";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -330,62 +331,15 @@ export async function addExceptionToFixedSlot(formData: FormData): Promise<void>
   const typedSlot = slot as { id: string; court_id: string; start_time: string } | null;
   if (!typedSlot || !ctx.courtIds.includes(typedSlot.court_id)) return;
 
-  const { error } = await supabase.from(DB_TABLES.fixedSlotExceptions).insert({
-    fixed_slot_id: fixedSlotId,
-    exception_date: exceptionDate,
+  // Misma primitiva que usa el cierre de un día completo en /admin/bloqueos:
+  // excepción de esa fecha + cancelación de la ocurrencia generada + aviso.
+  await applyFixedSlotExceptionForDate(supabase, {
+    fixedSlotId,
+    exceptionDate,
+    slotTime: String(typedSlot.start_time).slice(0, 5),
     reason: reason || null,
-    cancelled_by: ctx.userId,
+    cancelledBy: ctx.userId,
   });
-  if (error) return;
-
-  const slotTime = String(typedSlot.start_time).slice(0, 5);
-
-  // Cancelar el partido ya generado para esa fecha y liberar el horario
-  const { data: existingMatch } = await supabase
-    .from(DB_TABLES.matches)
-    .select("id")
-    .eq("fixed_slot_id", fixedSlotId)
-    .eq("scheduled_date", exceptionDate)
-    .eq("es_turno_fijo", true)
-    .neq("match_status", "cancelled")
-    .maybeSingle();
-
-  if (existingMatch) {
-    const matchId = String((existingMatch as { id: string }).id);
-    await supabase
-      .from(DB_TABLES.matches)
-      .update({ match_status: "cancelled" })
-      .eq("id", matchId);
-
-    const { data: matchParticipants } = await supabase
-      .from(DB_TABLES.matchParticipants)
-      .select("player_id")
-      .eq("match_id", matchId);
-
-    for (const p of (matchParticipants ?? []) as Array<{ player_id: string }>) {
-      await createNotification(supabase, {
-        user_id: p.player_id,
-        type: "reservation_cancelled",
-        title: "Turno fijo cancelado",
-        body: `El club canceló el turno del ${exceptionDate} a las ${slotTime}. El horario quedó libre.`,
-        match_id: matchId,
-      });
-    }
-  } else {
-    // Si no había partido generado, igual notificamos por las dudas
-    const { data: players } = await supabase
-      .from(DB_TABLES.fixedSlotPlayers)
-      .select("player_id")
-      .eq("fixed_slot_id", fixedSlotId);
-    for (const p of (players ?? []) as Array<{ player_id: string }>) {
-      await createNotification(supabase, {
-        user_id: p.player_id,
-        type: "reservation_cancelled",
-        title: "Turno fijo cancelado",
-        body: `El club canceló el turno del ${exceptionDate} a las ${slotTime}.`,
-      });
-    }
-  }
 
   revalidatePath("/admin/turnos-fijos");
   revalidatePath("/admin/dashboard");
