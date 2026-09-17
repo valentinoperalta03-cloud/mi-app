@@ -50,6 +50,13 @@ export async function getClubAvailability(
   if (!clubId || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return { slots: [], prices: {} };
 
   const supabase = await createClient();
+  // reservation_holds tiene RLS: un usuario autenticado solo puede ver sus
+  // propios holds (o ninguno, si es anon). Sin service role acá, la
+  // disponibilidad no vería los holds pendientes de OTROS jugadores y
+  // mostraría una cancha como libre mientras alguien más la está pagando.
+  // Se usa solo para esa lectura puntual — la función sigue devolviendo
+  // únicamente slots disponibles, nunca datos del hold en sí.
+  const serviceClientForHolds = createServiceClient();
 
   // Club cerrado ese día → sin disponibilidad, sea cual sea la franja
   // configurada. Antes esta función no lo chequeaba: la reserva del jugador,
@@ -106,7 +113,7 @@ export async function getClubAvailability(
         .neq("match_status", "cancelled"),
       // Holds de pago (checkout de MP en curso, todavía sin match real — ver
       // lib/reservation-hold.ts) también ocupan la cancha mientras no venzan.
-      supabase
+      serviceClientForHolds
         .from(DB_TABLES.reservationHolds)
         .select("court_id,scheduled_time,expires_at")
         .in("court_id", courtIds)
@@ -381,7 +388,7 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
       .eq("court_id", courtId)
       .eq("scheduled_date", scheduledDate)
       .neq("match_status", "cancelled"),
-    supabase
+    serviceClient
       .from(DB_TABLES.reservationHolds)
       .select("scheduled_time,duration_minutes")
       .eq("court_id", courtId)
@@ -427,7 +434,9 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   // confiable — por eso ends_at es una columna normal que la aplicación
   // completa al insertar.
   const holdStartsAt = new Date(`${scheduledDate}T${timeNorm}:00-03:00`);
-  const { data: hold, error: holdErr } = await supabase
+  // reservation_holds tiene RLS: authenticated solo puede SELECT su propio
+  // hold, no INSERT/UPDATE/DELETE — todas las escrituras van por service role.
+  const { data: hold, error: holdErr } = await serviceClient
     .from(DB_TABLES.reservationHolds)
     .insert({
       owner_id: user.id,
@@ -448,6 +457,9 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     .single();
 
   if (holdErr || !hold) {
+    // TEMPORAL: log crudo para que errores reales de INSERT aparezcan en los
+    // logs de Vercel en vez de perderse detrás del mensaje genérico de abajo.
+    console.error("[reservarCancha] holdErr", holdErr);
     // Red de seguridad para la carrera doble-click / dos tabs / requests
     // concurrentes: si dos INSERT del mismo usuario, o de dos usuarios
     // distintos para el mismo horario, pasan la validación de arriba casi al
@@ -485,11 +497,11 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   if ("error" in mp) {
     // Cancelar inmediatamente el hold: no dejar basura ocupando la cancha
     // por algo que ni siquiera llegó a generar una preferencia de pago.
-    await supabase.from(DB_TABLES.reservationHolds).delete().eq("id", holdId);
+    await serviceClient.from(DB_TABLES.reservationHolds).delete().eq("id", holdId);
     return { error: mp.error };
   }
 
-  await supabase
+  await serviceClient
     .from(DB_TABLES.reservationHolds)
     .update({ mp_preference_id: mp.prefId, external_reference: `${holdId}__${user.id}` })
     .eq("id", holdId);
