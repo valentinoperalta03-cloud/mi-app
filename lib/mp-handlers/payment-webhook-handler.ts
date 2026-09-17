@@ -9,6 +9,7 @@ import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "
 import { assertMatchTransition, canTransitionMatch } from "@/lib/state-machines/match-states";
 import { createGroupChat } from "@/lib/group-chats";
 import { buildMatchShareUrl } from "@/lib/invite-token";
+import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
 import { createNotification } from "@/lib/notifications";
 import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
@@ -381,6 +382,247 @@ async function handlePracticePaymentIfPresent(
 }
 
 /**
+ * Notifica al jugador y al club, y desaloja partidos abiertos en conflicto,
+ * recién cuando una reserva de cancha REALMENTE se confirma (hold convertido
+ * a match). Antes esto corría en reservarCancha() al crear el hold — bajo la
+ * regla de producto vigente eso pasó a ser prematuro: en ese momento todavía
+ * no hay ninguna reserva real.
+ */
+async function notifyReservationConfirmed(admin: SupabaseClient, matchId: string, requestId: string): Promise<void> {
+  const { data: matchRow } = await admin
+    .from(DB_TABLES.matches)
+    .select(
+      "owner_id,total_price,amount_paid,amount_pending,financial_status,scheduled_date,scheduled_time,court_id,courts(name,club_id)"
+    )
+    .eq("id", matchId)
+    .maybeSingle();
+  const m = matchRow as {
+    owner_id?: string | null;
+    total_price?: number | null;
+    amount_paid?: number | null;
+    amount_pending?: number | null;
+    financial_status?: string | null;
+    scheduled_date?: string | null;
+    scheduled_time?: string | null;
+    court_id?: string | null;
+    courts?: { name?: string | null; club_id?: string | null } | null;
+  } | null;
+  if (!m) {
+    log.error({ event: "mp.webhook.hold.notify_missing_match", requestId, matchId });
+    return;
+  }
+
+  const amountPaid = Number(m.amount_paid ?? 0);
+  const amountPending = Number(m.amount_pending ?? 0);
+
+  if (m.owner_id) {
+    const body =
+      m.financial_status === "fully_paid"
+        ? `Tu reserva fue confirmada por $${Math.round(amountPaid)}.`
+        : `Tu seña de $${Math.round(amountPaid)} fue confirmada. Tu turno quedó reservado. Resta $${Math.round(amountPending)}.`;
+    await createNotification(admin, {
+      user_id: m.owner_id,
+      type: "payment_approved",
+      title: "¡Pago confirmado!",
+      body,
+      match_id: matchId,
+    });
+  }
+
+  const clubId = String(m.courts?.club_id ?? "").trim();
+  if (clubId) {
+    const { data: clubRow } = await admin.from(DB_TABLES.clubs).select("owner_id").eq("id", clubId).maybeSingle();
+    const clubOwnerId = String((clubRow as { owner_id?: string | null } | null)?.owner_id ?? "").trim();
+    if (clubOwnerId) {
+      const courtNameLbl = String(m.courts?.name ?? "Cancha");
+      const dateLbl = String(m.scheduled_date ?? "");
+      const body =
+        m.financial_status === "fully_paid"
+          ? `Reserva pagada por $${amountPaid.toFixed(2)}. Cancha ${courtNameLbl} el ${dateLbl}.`
+          : `Reserva confirmada con seña de $${amountPaid.toFixed(2)} (resta $${amountPending.toFixed(2)}). Cancha ${courtNameLbl} el ${dateLbl}.`;
+      await createNotification(admin, {
+        user_id: clubOwnerId,
+        type: "payment_approved",
+        title: "Nueva reserva confirmada",
+        body,
+        match_id: matchId,
+      });
+    }
+  }
+
+  if (m.court_id && m.scheduled_date && m.scheduled_time) {
+    await cancelConflictingOpenMatches(admin, m.court_id, m.scheduled_date, String(m.scheduled_time).slice(0, 5));
+  }
+}
+
+/**
+ * Si `extRef` apunta a un `reservation_holds.id` (flujo vigente: una reserva
+ * de cancha solo existe en `matches` una vez pagada), maneja el pago acá y
+ * devuelve `true` para que el caller no siga con el camino legacy de matches
+ * directo. Si `extRef` no matchea ningún hold, devuelve `false` — puede ser
+ * un checkout legacy iniciado con el código anterior al deploy de
+ * reservation_holds (ver 20260917120000_reservation_holds.sql), que el
+ * caller sigue sabiendo procesar sobre matches directamente.
+ */
+async function handleReservationHoldPaymentIfPresent(
+  admin: SupabaseClient,
+  params: {
+    requestId: string;
+    paymentId: string;
+    holdId: string;
+    payerUserId: string | null;
+    status: string;
+    mpPayment: { transaction_amount?: number | null };
+  }
+): Promise<boolean> {
+  const { data: holdRow } = await admin
+    .from(DB_TABLES.reservationHolds)
+    .select("id,owner_id,status,scheduled_date,scheduled_time,court_id,location_name")
+    .eq("id", params.holdId)
+    .maybeSingle();
+  const hold = holdRow as {
+    id?: string;
+    owner_id?: string | null;
+    status?: string | null;
+    scheduled_date?: string | null;
+    scheduled_time?: string | null;
+    court_id?: string | null;
+    location_name?: string | null;
+  } | null;
+  if (!hold?.id) return false;
+
+  if (params.status === "approved") {
+    const transactionAmount = Number(params.mpPayment.transaction_amount ?? 0);
+    const { data: rpcRows, error: rpcError } = await admin.rpc("consume_reservation_hold", {
+      p_hold_id: hold.id,
+      p_mp_payment_id: params.paymentId,
+      p_transaction_amount: Number.isFinite(transactionAmount) ? transactionAmount : 0,
+    });
+
+    if (rpcError) {
+      log.error({
+        event: "mp.webhook.hold.consume_rpc_failed",
+        requestId: params.requestId,
+        holdId: hold.id,
+        paymentId: params.paymentId,
+        err: rpcError,
+      });
+      void sendAlert({
+        source: "app",
+        kind: "mp_webhook",
+        title: "Falló consume_reservation_hold",
+        detail: `Hold ${hold.id}, pago ${params.paymentId}: ${rpcError.message}. Requiere revisión manual.`,
+        requestId: params.requestId,
+      });
+      return true;
+    }
+
+    const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+      | { ok?: boolean; reason?: string | null; match_id?: string | null }
+      | null;
+
+    if (result?.ok && result.match_id) {
+      log.info({
+        event: "payment.hold_converted",
+        requestId: params.requestId,
+        holdId: hold.id,
+        matchId: result.match_id,
+        mpPaymentId: params.paymentId,
+        idempotent: result.reason === "already_consumed",
+      });
+      // already_consumed: retry/doble webhook del mismo pago — el match y las
+      // notificaciones ya se dispararon la primera vez, no repetir.
+      if (result.reason !== "already_consumed") {
+        await notifyReservationConfirmed(admin, result.match_id, params.requestId);
+      }
+      return true;
+    }
+
+    // reason === 'hold_lost' (vencido/cancelado/ya consumido por otro flujo)
+    // o 'hold_not_found'. El dinero SÍ se recibió, pero no existe ninguna
+    // fila en `payments` para este hold (esa fila recién se crea dentro de
+    // la conversión exitosa, y payments.match_id es NOT NULL — no hay match
+    // al que atarla). Nunca se recupera la cancha en silencio ni se crea una
+    // reserva. El dinero SÍ queda persistido, auditable, en
+    // orphaned_reservation_payments — nunca solo en logs.
+    const orphanAmount = Number.isFinite(transactionAmount) ? transactionAmount : 0;
+    const { error: orphanInsertErr } = await admin.from(DB_TABLES.orphanedReservationPayments).insert({
+      mp_payment_id: params.paymentId,
+      hold_id: hold.id,
+      owner_id: hold.owner_id ?? null,
+      amount: orphanAmount,
+      reason: "approved_after_hold_lost",
+      status: "approved",
+      metadata: {
+        rpc_reason: result?.reason ?? "unknown",
+        scheduled_date: hold.scheduled_date,
+        scheduled_time: hold.scheduled_time,
+        court_id: hold.court_id,
+        location_name: hold.location_name,
+        requestId: params.requestId,
+      },
+    });
+    // Idempotencia real: UNIQUE(mp_payment_id) en la tabla, no un chequeo de
+    // aplicación. Un webhook duplicado para el mismo pago choca acá (23505)
+    // y no es un error — el dinero ya está registrado desde la primera vez.
+    const alreadyRecorded = orphanInsertErr?.code === "23505";
+    if (orphanInsertErr && !alreadyRecorded) {
+      log.error({
+        event: "mp.webhook.hold.orphaned_payment_insert_failed",
+        requestId: params.requestId,
+        holdId: hold.id,
+        paymentId: params.paymentId,
+        err: orphanInsertErr,
+      });
+    }
+
+    log.error({
+      event: "mp.webhook.hold.approved_after_lost",
+      requestId: params.requestId,
+      holdId: hold.id,
+      paymentId: params.paymentId,
+      reason: result?.reason ?? "unknown",
+      persisted: !orphanInsertErr || alreadyRecorded,
+    });
+    if (!alreadyRecorded) {
+      void sendAlert({
+        source: "app",
+        kind: "mp_webhook",
+        title: "Pago aprobado sobre un hold perdido",
+        detail: `Hold ${hold.id} ya no estaba disponible (${result?.reason ?? "desconocido"}) cuando llegó el pago aprobado ${params.paymentId} por $${orphanAmount}. No se creó ninguna reserva. Dinero registrado en orphaned_reservation_payments para revisión/reintegro manual.`,
+        requestId: params.requestId,
+      });
+    }
+    return true;
+  }
+
+  if (params.status === "rejected" || params.status === "cancelled" || params.status === "expired") {
+    // Liberar el hold ya mismo en vez de esperar a que venza solo — mejor UX,
+    // la cancha vuelve a estar disponible de inmediato para otro usuario.
+    if (hold.status === "pending") {
+      await admin
+        .from(DB_TABLES.reservationHolds)
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", hold.id)
+        .eq("status", "pending");
+    }
+    if (params.payerUserId) {
+      await createNotification(admin, {
+        user_id: params.payerUserId,
+        type: "payment_rejected",
+        title: "Pago rechazado",
+        body: "No se pudo procesar tu pago. Intentá con otro medio.",
+      });
+    }
+    return true;
+  }
+
+  // in_process / authorized / pending: estado intermedio, MP mandará la
+  // notificación final — nada que tocar en el hold todavía.
+  return true;
+}
+
+/**
  * Procesa un pago de MP ya identificado (ya sea porque el webhook trajo el
  * paymentId directamente, o porque se extrajo de un merchant_order). No
  * verifica firma: eso ya lo hizo el caller sobre el dataId de la notificacion
@@ -438,6 +680,21 @@ async function processPaymentId(
     return NextResponse.json({ ok: true });
   }
 
+  const holdHandled = await handleReservationHoldPaymentIfPresent(admin, {
+    requestId,
+    paymentId,
+    holdId: matchId,
+    payerUserId,
+    status,
+    mpPayment: mpPayment as { transaction_amount?: number | null },
+  });
+  if (holdHandled) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // A partir de acá, camino legacy: extRef apuntaba directo a un `matches.id`
+  // (checkout iniciado con el código anterior a reservation_holds, todavía
+  // en vuelo al momento del deploy). Sigue funcionando sin cambios.
   if (status === "approved") {
     log.info({
       event: "payment.approved",

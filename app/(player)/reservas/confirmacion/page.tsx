@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { headers } from "next/headers";
@@ -50,6 +50,110 @@ function normalizePayState(
   return "pending";
 }
 
+/**
+ * Bajo la regla de producto vigente, antes de pagar no existe ningún match
+ * (ver lib/reservation-hold.ts). Mientras el webhook de MP no convirtió el
+ * hold, no hay ninguna fila de reserva que mostrar — esta pantalla se
+ * refresca sola por realtime cuando el hold cambia de estado.
+ */
+function HoldPendingScreen({
+  id,
+  courtLabel,
+  clubLabel,
+  showDevSim,
+}: {
+  id: string;
+  courtLabel: string;
+  clubLabel: string;
+  showDevSim: boolean;
+}) {
+  return (
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+      <MatchesRealtimeRefresh
+        channelName={`reserva-hold:${id}`}
+        filter={`id=eq.${id}`}
+        table={DB_TABLES.reservationHolds}
+      />
+      <div className="flex flex-col items-center gap-3 pt-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-3xl text-amber-700 shadow-inner">
+          …
+        </div>
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950">Pago en proceso…</h1>
+        <p className="text-center text-sm font-medium text-amber-800">
+          Tu pago está siendo procesado por Mercado Pago. La cancha está retenida mientras tanto — te confirmamos
+          apenas se acredite.
+        </p>
+      </div>
+      <section className={`${PLAYER_CARD} w-full space-y-3 overflow-hidden p-5`}>
+        <div className="flex justify-between gap-2 text-sm">
+          <span className="font-medium text-slate-500">Club</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{clubLabel}</span>
+        </div>
+        <div className="flex justify-between gap-2 text-sm">
+          <span className="font-medium text-slate-500">Cancha</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{courtLabel}</span>
+        </div>
+      </section>
+      {showDevSim ? (
+        <section className={`${PLAYER_CARD} space-y-3 p-5`}>
+          <p className="text-sm font-medium text-slate-600">
+            Modo desarrollo: simulá un pago aprobado sin pasar por Mercado Pago.
+          </p>
+          <form action={simulatePaymentApproved}>
+            <input type="hidden" name="match_id" value={id} />
+            <button
+              type="submit"
+              className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+            >
+              Simular pago aprobado
+            </button>
+          </form>
+        </section>
+      ) : null}
+      <div className="flex flex-col gap-3">
+        <Link href="/reservas" className={`inline-flex justify-center ${PLAYER_PRIMARY_BUTTON} py-3.5 text-base`}>
+          Ver mis reservas
+        </Link>
+      </div>
+    </MotionPage>
+  );
+}
+
+function HoldLostScreen({ courtLabel, clubLabel }: { courtLabel: string; clubLabel: string }) {
+  return (
+    <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
+      <div className="flex flex-col items-center gap-3 pt-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-rose-100 text-3xl text-rose-700 shadow-inner">
+          ✕
+        </div>
+        <h1 className="text-center text-xl font-semibold tracking-tight text-slate-950">
+          El tiempo para pagar venció
+        </h1>
+        <p className="text-center text-sm font-medium text-rose-800">
+          La cancha volvió a estar disponible y puede haber sido tomada por otra persona. Si llegaste a completar el
+          pago, contactá a soporte — no se te va a cobrar sin reserva confirmada.
+        </p>
+        <Link
+          href="/crear-partido"
+          className={`mt-2 inline-flex justify-center ${PLAYER_PRIMARY_BUTTON} px-6 py-3 text-base`}
+        >
+          Reintentar reserva
+        </Link>
+      </div>
+      <section className={`${PLAYER_CARD} w-full space-y-3 overflow-hidden p-5`}>
+        <div className="flex justify-between gap-2 text-sm">
+          <span className="font-medium text-slate-500">Club</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{clubLabel}</span>
+        </div>
+        <div className="flex justify-between gap-2 text-sm">
+          <span className="font-medium text-slate-500">Cancha</span>
+          <span className="min-w-0 break-words text-right font-semibold text-slate-900">{courtLabel}</span>
+        </div>
+      </section>
+    </MotionPage>
+  );
+}
+
 export default async function ConfirmacionReservaPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const rawId = (params.id ?? params.external_reference)?.trim();
@@ -66,7 +170,50 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
     redirect("/login");
   }
 
-  const { data: row, error } = await supabase.from(DB_TABLES.matches).select("*").eq("id", id).maybeSingle();
+  const courtLabel = params.court ?? "Cancha";
+  const clubLabel = params.club ?? "Club";
+
+  const h = await headers();
+  const host = (h.get("host") ?? "").toLowerCase();
+  const showDevSim =
+    process.env.NODE_ENV === "development" &&
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1"));
+
+  // El id que vuelve de Mercado Pago puede ser un hold de pago todavía sin
+  // convertir (webhook no llegó aún), ya convertido, o vencido/cancelado.
+  // Solo cuando está 'consumed' existe una reserva real que mostrar.
+  const { data: holdRow } = await supabase
+    .from(DB_TABLES.reservationHolds)
+    .select("id,owner_id,status,consumed_match_id")
+    .eq("id", id)
+    .maybeSingle();
+  const hold = holdRow as {
+    id: string;
+    owner_id: string | null;
+    status: string | null;
+    consumed_match_id: string | null;
+  } | null;
+
+  let matchId = id;
+
+  if (hold) {
+    if (hold.owner_id !== user.id) {
+      notFound();
+    }
+    if (hold.status === "consumed" && hold.consumed_match_id) {
+      matchId = hold.consumed_match_id;
+      // sigue abajo con el lookup normal de `matches` usando matchId.
+    } else if (hold.status === "pending") {
+      return <HoldPendingScreen id={id} courtLabel={courtLabel} clubLabel={clubLabel} showDevSim={showDevSim} />;
+    } else {
+      return <HoldLostScreen courtLabel={courtLabel} clubLabel={clubLabel} />;
+    }
+  }
+  // hold === null: no es un hold — puede ser un checkout legacy iniciado con
+  // el código anterior a reservation_holds (el id ya era un matches.id
+  // directamente). Sigue funcionando sin cambios con el lookup de abajo.
+
+  const { data: row, error } = await supabase.from(DB_TABLES.matches).select("*").eq("id", matchId).maybeSingle();
 
   if (error || !row) {
     notFound();
@@ -98,7 +245,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
         mp_payment_id: paymentIdParam,
         updated_at: new Date().toISOString(),
       })
-      .eq("match_id", id)
+      .eq("match_id", matchId)
       .eq("user_id", user.id);
   }
 
@@ -114,8 +261,6 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
   const amountPaid = Number(match.amount_paid ?? 0);
   const amountPending = Number(match.amount_pending ?? 0);
 
-  const courtLabel = params.court ?? "Cancha";
-  const clubLabel = params.club ?? "Club";
   const dateStr = match.scheduled_date ?? "";
   const timeStr = (match.scheduled_time ?? "").toString().trim().slice(0, 5);
   const duration = match.duration_minutes ?? 90;
@@ -124,12 +269,6 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
     dateStr.length >= 10
       ? format(parseISO(`${dateStr}T12:00:00`), "EEEE d 'de' MMMM yyyy", { locale: es })
       : "—";
-
-  const h = await headers();
-  const host = (h.get("host") ?? "").toLowerCase();
-  const showDevSim =
-    process.env.NODE_ENV === "development" &&
-    (host.startsWith("localhost") || host.startsWith("127.0.0.1"));
 
   let headerBlock: ReactNode;
   if (payState === "approved" && !cameFromMp) {
@@ -216,7 +355,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
     <MotionPage className="mx-auto min-h-screen w-full max-w-md space-y-6 bg-transparent px-4 pb-24 pt-6">
       {/* El webhook de MP puede tardar unos segundos en confirmar el pago:
           si esta fila cambia mientras el jugador esta acá, se refresca solo. */}
-      <MatchesRealtimeRefresh channelName={`reserva-confirmacion:${id}`} filter={`id=eq.${id}`} />
+      <MatchesRealtimeRefresh channelName={`reserva-confirmacion:${matchId}`} filter={`id=eq.${matchId}`} />
       {params.error === "sim" ? (
         <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm text-rose-800">
           No se pudo simular el pago. Probá de nuevo o revisá que seas el titular de la reserva.
@@ -253,7 +392,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
             Modo desarrollo: simulá un pago aprobado sin pasar por Mercado Pago.
           </p>
           <form action={simulatePaymentApproved}>
-            <input type="hidden" name="match_id" value={id} />
+            <input type="hidden" name="match_id" value={matchId} />
             <button
               type="submit"
               className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"

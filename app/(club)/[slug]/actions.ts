@@ -13,7 +13,6 @@ import { loadCourtPricing, resolveCourtSlotPrice, resolvePriceFromPricing } from
 import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { createGroupChat } from "@/lib/group-chats";
-import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
 import { notifyClubOwner } from "@/lib/club-notify";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
@@ -24,6 +23,7 @@ import {
   expireStaleHoldsForCourtSlot,
   expireStaleHoldsForOwner,
   findActivePendingHold,
+  isHoldSlotConflictError,
   isPendingHoldConflictError,
   PENDING_HOLD_ERROR_MESSAGE,
 } from "@/lib/reservation-hold";
@@ -96,7 +96,7 @@ export async function getClubAvailability(
     new Set(Array.from(perCourtSlots.values()).flatMap((s) => Array.from(s)))
   ).sort((a, b) => clockToMinutes(a) - clockToMinutes(b));
 
-  const [{ data: matchRows }, { data: blockRowsModern }, { data: blockRowsLegacy }, pricing] =
+  const [{ data: matchRows }, { data: holdRows }, { data: blockRowsModern }, { data: blockRowsLegacy }, pricing] =
     await Promise.all([
       supabase
         .from(DB_TABLES.matches)
@@ -104,6 +104,15 @@ export async function getClubAvailability(
         .in("court_id", courtIds)
         .eq("scheduled_date", dateStr)
         .neq("match_status", "cancelled"),
+      // Holds de pago (checkout de MP en curso, todavía sin match real — ver
+      // lib/reservation-hold.ts) también ocupan la cancha mientras no venzan.
+      supabase
+        .from(DB_TABLES.reservationHolds)
+        .select("court_id,scheduled_time,expires_at")
+        .in("court_id", courtIds)
+        .eq("scheduled_date", dateStr)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString()),
       supabase
         .from(DB_TABLES.courtBlocks)
         .select("court_id,blocked_time")
@@ -120,6 +129,9 @@ export async function getClubAvailability(
   const occupied = new Set<string>();
   for (const m of (matchRows ?? []) as { court_id: string | null; scheduled_time: string | null }[]) {
     if (m.court_id) occupied.add(`${m.court_id}__${normalizeSlotTime(m.scheduled_time)}`);
+  }
+  for (const h of (holdRows ?? []) as { court_id: string | null; scheduled_time: string | null }[]) {
+    if (h.court_id) occupied.add(`${h.court_id}__${normalizeSlotTime(h.scheduled_time)}`);
   }
   for (const b of (blockRowsModern ?? []) as { court_id: string | null; blocked_time: string | null }[]) {
     if (b.court_id) occupied.add(`${b.court_id}__${normalizeSlotTime(b.blocked_time)}`);
@@ -327,6 +339,11 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   await expireStaleHoldsForCourtSlot(serviceClient, courtId, scheduledDate, slotStart, durationMinutes);
   await expireStaleHoldsForOwner(serviceClient, user.id);
 
+  // Una reserva confirmada (match real) en ese horario también bloquea un
+  // hold nuevo — chequeo de negocio con buen mensaje; la red de seguridad
+  // real contra la carrera es el EXCLUDE constraint de reservation_holds al
+  // insertar más abajo, más sin_partidos_superpuestos en matches cuando el
+  // hold se convierta.
   const { data: duplicatedMatch } = await supabase
     .from(DB_TABLES.matches)
     .select("id")
@@ -345,6 +362,8 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     return { error: PENDING_HOLD_ERROR_MESSAGE };
   }
 
+  // Techo de reservas confirmadas/en curso de pago offline activas — no
+  // cuenta holds de pago (esos ya están limitados a 1 por usuario arriba).
   const { count: activeMatchesCount } = await supabase
     .from(DB_TABLES.matches)
     .select("id", { count: "exact", head: true })
@@ -355,16 +374,29 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
   }
 
-  const { data: conflicts, error: conflictsError } = await supabase
-    .from(DB_TABLES.matches)
-    .select("scheduled_time,duration_minutes")
-    .eq("court_id", courtId)
-    .eq("scheduled_date", scheduledDate)
-    .neq("match_status", "cancelled");
-  if (conflictsError) {
+  const [{ data: matchConflicts, error: matchConflictsError }, { data: holdConflicts }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.matches)
+      .select("scheduled_time,duration_minutes")
+      .eq("court_id", courtId)
+      .eq("scheduled_date", scheduledDate)
+      .neq("match_status", "cancelled"),
+    supabase
+      .from(DB_TABLES.reservationHolds)
+      .select("scheduled_time,duration_minutes")
+      .eq("court_id", courtId)
+      .eq("scheduled_date", scheduledDate)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString()),
+  ]);
+  if (matchConflictsError) {
     return { error: "No se pudo validar disponibilidad." };
   }
-  for (const row of (conflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]) {
+  const allConflicts = [
+    ...((matchConflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]),
+    ...((holdConflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]),
+  ];
+  for (const row of allConflicts) {
     const otherStart = clockToMinutes(String(row.scheduled_time ?? ""));
     const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
     const slotEnd = slotStart + durationMinutes;
@@ -384,65 +416,61 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     return { error: "Límite de partidos creados por hora alcanzado." };
   }
 
-  const { data, error } = await supabase
-    .from(DB_TABLES.matches)
+  // NO se crea ningún match acá. Bajo la regla de producto vigente, una
+  // reserva (match_type='reservation') solo existe una vez que Mercado Pago
+  // confirmó la seña — hasta entonces esto es apenas un hold de pago en una
+  // tabla separada (ver lib/reservation-hold.ts y
+  // supabase/migrations/20260917120000_reservation_holds.sql).
+  // ends_at se calcula acá (no en el índice/constraint de la DB): el
+  // EXCLUDE de solapamiento de reservation_holds exige que sus expresiones
+  // sean IMMUTABLE, y "starts_at + N * interval" no lo es de forma
+  // confiable — por eso ends_at es una columna normal que la aplicación
+  // completa al insertar.
+  const holdStartsAt = new Date(`${scheduledDate}T${timeNorm}:00-03:00`);
+  const { data: hold, error: holdErr } = await supabase
+    .from(DB_TABLES.reservationHolds)
     .insert({
-      court_id: courtId,
       owner_id: user.id,
+      club_id: clubIdStr,
+      court_id: courtId,
       scheduled_date: scheduledDate,
       scheduled_time: timeNorm,
       duration_minutes: durationMinutes,
+      starts_at: holdStartsAt.toISOString(),
+      ends_at: new Date(holdStartsAt.getTime() + durationMinutes * 60_000).toISOString(),
       total_price: totalPrice,
-      payment_status: "pending",
-      amount_paid: 0,
-      amount_pending: totalPrice,
-      financial_status: "unpaid",
-      match_status: "scheduled",
-      match_type: "reservation",
+      deposit_amount: depositAmount,
       location_name: clubName,
-      date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
-      hold_expires_at: computeHoldExpiresAt(),
+      status: "pending",
+      expires_at: computeHoldExpiresAt(),
     })
     .select("id")
     .single();
 
-  if (error || !data) {
+  if (holdErr || !hold) {
     // Red de seguridad para la carrera doble-click / dos tabs / requests
-    // concurrentes: si dos INSERT del mismo usuario pasan la validación de
-    // arriba casi al mismo tiempo, el índice único los desempata acá.
-    if (isPendingHoldConflictError(error)) {
+    // concurrentes: si dos INSERT del mismo usuario, o de dos usuarios
+    // distintos para el mismo horario, pasan la validación de arriba casi al
+    // mismo tiempo, los constraints de reservation_holds los desempatan acá.
+    if (isPendingHoldConflictError(holdErr)) {
       return { error: PENDING_HOLD_ERROR_MESSAGE };
     }
-    if (isMatchSlotConflictError(error)) {
+    if (isMatchSlotConflictError(holdErr) || isHoldSlotConflictError(holdErr)) {
       return { error: "Este horario ya fue reservado. Elegí otro." };
     }
-    return { error: "No se pudo crear la reserva." };
+    return { error: "No se pudo iniciar la reserva." };
   }
 
-  const { error: participantError } = await supabase.from(DB_TABLES.matchParticipants).insert({
-    match_id: data.id,
-    player_id: user.id,
-    team: 1,
-  });
-  if (participantError) {
-    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
-    return { error: "No se pudo crear la reserva." };
-  }
-
-  await notifyClubOwner(supabase, clubIdStr, {
-    title: "🎾 Nueva reserva",
-    body: `${payerName || "Un jugador"} reservó ${courtName} el ${scheduledDate} a las ${timeNorm}.`,
-    match_id: data.id,
-  });
+  const holdId = String((hold as { id: string }).id);
 
   const mp = await createMPPreference({
-    matchId: data.id,
+    matchId: holdId,
     amount: depositAmount,
     clubName,
     courtName,
     date: scheduledDate,
     userId: user.id,
-    externalReference: `${data.id}__${user.id}`,
+    externalReference: `${holdId}__${user.id}`,
     payerEmail: user.email ?? "",
     payerFirstName,
     payerLastName,
@@ -455,28 +483,21 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   });
 
   if ("error" in mp) {
-    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
-    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
+    // Cancelar inmediatamente el hold: no dejar basura ocupando la cancha
+    // por algo que ni siquiera llegó a generar una preferencia de pago.
+    await supabase.from(DB_TABLES.reservationHolds).delete().eq("id", holdId);
     return { error: mp.error };
   }
 
-  const { error: ownerPayErr } = await supabase.from(DB_TABLES.payments).insert({
-    match_id: data.id,
-    user_id: user.id,
-    mp_preference_id: mp.prefId,
-    status: "pending",
-    amount: mp.total,
-    payment_method: "mercadopago",
-  });
-  if (ownerPayErr) {
-    await supabase.from(DB_TABLES.matchParticipants).delete().eq("match_id", data.id);
-    await supabase.from(DB_TABLES.matches).delete().eq("id", data.id);
-    return { error: "No se pudo registrar el pago. Intentá de nuevo." };
-  }
+  await supabase
+    .from(DB_TABLES.reservationHolds)
+    .update({ mp_preference_id: mp.prefId, external_reference: `${holdId}__${user.id}` })
+    .eq("id", holdId);
 
-  await cancelConflictingOpenMatches(supabase, courtId, scheduledDate, timeNorm);
-
-  return { success: true, matchId: data.id, mpUrl: mp.initPoint };
+  // Notificar al club y desalojar partidos abiertos en conflicto recién
+  // cuando el pago se confirme (ver payment-webhook-handler.ts) — no acá:
+  // todavía no existe ninguna reserva real, solo un hold de pago.
+  return { success: true, matchId: holdId, mpUrl: mp.initPoint };
 }
 
 type AbrirPartidoInput = {

@@ -171,9 +171,15 @@ export async function declineFixedSlotAttendance(formData: FormData) {
   redirect("/reservas");
 }
 
+/**
+ * Dev-only: simula un pago aprobado sin pasar por Mercado Pago. El id puede
+ * ser un hold de pago (reservation_holds, flujo vigente) todavía pendiente,
+ * o un match legacy directo (checkouts en vuelo desde antes del deploy de
+ * reservation_holds) — mismo fallback que usa el webhook real.
+ */
 export async function simulatePaymentApproved(formData: FormData) {
-  const matchId = String(formData.get("match_id") ?? "").trim();
-  if (!matchId || !(await isLocalDevHost())) {
+  const entityId = String(formData.get("match_id") ?? "").trim();
+  if (!entityId || !(await isLocalDevHost())) {
     redirect("/reservas/confirmacion?error=sim");
   }
 
@@ -185,6 +191,50 @@ export async function simulatePaymentApproved(formData: FormData) {
     redirect("/login");
   }
 
+  const { data: holdRow } = await supabase
+    .from(DB_TABLES.reservationHolds)
+    .select("id,owner_id,status,total_price")
+    .eq("id", entityId)
+    .maybeSingle();
+  const hold = holdRow as { id: string; owner_id: string | null; status: string | null; total_price: number | null } | null;
+
+  if (hold) {
+    if (hold.owner_id !== user.id) {
+      redirect("/reservas/confirmacion?error=sim");
+    }
+    // Misma función que usa el webhook real — el simulador no duplica la
+    // lógica de conversión, solo se salta la llamada real a Mercado Pago.
+    const service = createServiceClient();
+    const { data: rpcRows, error: rpcError } = await service.rpc("consume_reservation_hold", {
+      p_hold_id: hold.id,
+      p_mp_payment_id: "dev_simulated",
+      p_transaction_amount: Number(hold.total_price ?? 0),
+    });
+    const result = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+      | { ok?: boolean; match_id?: string | null }
+      | null;
+    if (rpcError || !result?.ok || !result.match_id) {
+      redirect("/reservas/confirmacion?error=sim");
+    }
+
+    const tplApproved = NOTIFICATION_TEMPLATES.payment_approved(String(Math.round(Number(hold.total_price ?? 0))));
+    await createNotification(service, {
+      user_id: user.id,
+      type: "payment_approved",
+      title: tplApproved.title,
+      body: tplApproved.body,
+      match_id: result.match_id,
+    });
+
+    revalidatePath("/reservas");
+    revalidatePath("/reservas/confirmacion");
+    redirect(
+      `/reservas/confirmacion?id=${encodeURIComponent(entityId)}&status=approved&collection_status=approved`
+    );
+  }
+
+  // Legacy: entityId ya era un matches.id directo.
+  const matchId = entityId;
   const { data: match, error: mErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id, owner_id, total_price")

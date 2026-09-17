@@ -4,6 +4,7 @@ import {
   HOLD_MINUTES,
   computeHoldExpiresAt,
   isHoldExpired,
+  isHoldSlotConflictError,
   isPendingHoldConflictError,
   slotsOverlap,
 } from "../reservation-hold";
@@ -19,29 +20,18 @@ describe("computeHoldExpiresAt", () => {
 describe("isHoldExpired", () => {
   const now = new Date("2026-09-17T18:00:00.000Z").getTime();
 
-  it("hold con hold_expires_at futuro no está vencido", () => {
-    const holdExpiresAt = new Date(now + 5 * 60_000).toISOString();
-    assert.equal(isHoldExpired({ hold_expires_at: holdExpiresAt }, now), false);
+  it("expires_at futuro no está vencido", () => {
+    const expiresAt = new Date(now + 5 * 60_000).toISOString();
+    assert.equal(isHoldExpired(expiresAt, now), false);
   });
 
-  it("hold con hold_expires_at pasado está vencido", () => {
-    const holdExpiresAt = new Date(now - 1_000).toISOString();
-    assert.equal(isHoldExpired({ hold_expires_at: holdExpiresAt }, now), true);
+  it("expires_at pasado está vencido", () => {
+    const expiresAt = new Date(now - 1_000).toISOString();
+    assert.equal(isHoldExpired(expiresAt, now), true);
   });
 
-  it("hold justo en el límite (hold_expires_at === now) está vencido", () => {
-    assert.equal(isHoldExpired({ hold_expires_at: new Date(now).toISOString() }, now), true);
-  });
-
-  it("fila legacy sin hold_expires_at usa HOLD_MINUTES desde created_at", () => {
-    const justUnder = new Date(now - (HOLD_MINUTES * 60_000 - 1_000)).toISOString();
-    const justOver = new Date(now - (HOLD_MINUTES * 60_000 + 1_000)).toISOString();
-    assert.equal(isHoldExpired({ created_at: justUnder }, now), false);
-    assert.equal(isHoldExpired({ created_at: justOver }, now), true);
-  });
-
-  it("sin hold_expires_at ni created_at no se considera vencido", () => {
-    assert.equal(isHoldExpired({}, now), false);
+  it("justo en el límite (expires_at === now) está vencido", () => {
+    assert.equal(isHoldExpired(new Date(now).toISOString(), now), true);
   });
 });
 
@@ -67,17 +57,13 @@ describe("isPendingHoldConflictError", () => {
   it("reconoce la violación del índice único de hold pendiente", () => {
     const err = {
       code: "23505",
-      message:
-        'duplicate key value violates unique constraint "one_pending_reservation_hold_per_owner"',
+      message: 'duplicate key value violates unique constraint "one_pending_hold_per_owner"',
     };
     assert.equal(isPendingHoldConflictError(err), true);
   });
 
-  it("no confunde otra violación de unicidad (ej. slot de cancha)", () => {
-    const err = {
-      code: "23505",
-      message: 'duplicate key value violates unique constraint "unique_court_slot"',
-    };
+  it("no confunde otra violación de unicidad", () => {
+    const err = { code: "23505", message: 'duplicate key value violates unique constraint "unique_court_slot"' };
     assert.equal(isPendingHoldConflictError(err), false);
   });
 
@@ -89,5 +75,23 @@ describe("isPendingHoldConflictError", () => {
   it("null/undefined no es un conflicto", () => {
     assert.equal(isPendingHoldConflictError(null), false);
     assert.equal(isPendingHoldConflictError(undefined), false);
+  });
+});
+
+describe("isHoldSlotConflictError", () => {
+  it("reconoce la violación del EXCLUDE de solapamiento entre holds", () => {
+    const err = {
+      code: "23P01",
+      message: 'conflicting key value violates exclusion constraint "reservation_holds_no_overlap"',
+    };
+    assert.equal(isHoldSlotConflictError(err), true);
+  });
+
+  it("no confunde la violación del índice único de hold pendiente", () => {
+    const err = {
+      code: "23505",
+      message: 'duplicate key value violates unique constraint "one_pending_hold_per_owner"',
+    };
+    assert.equal(isHoldSlotConflictError(err), false);
   });
 });

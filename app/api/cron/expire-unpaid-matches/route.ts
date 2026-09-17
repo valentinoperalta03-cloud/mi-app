@@ -44,6 +44,10 @@ export async function GET(req: Request) {
   // transferencia (cash_pending/transfer_pending) se cobran en el club, no
   // via MP, asi que no expiran por este cron. Los partidos abiertos (amistoso)
   // tampoco: los jugadores no pagan por la app, el club cobra en persona.
+  // Turnos fijos NUNCA expiran por falta de pago (no se pagan por MP) — doble
+  // filtro (es_turno_fijo Y fixed_slot_id) a propósito: son dos columnas
+  // separadas y un desfase entre ellas no debe poder colar un turno fijo acá
+  // (ver supabase/migrations/20260917130000_fix_reservation_hold_index_exclude_fixed_slots.sql).
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
     .select("id,owner_id,created_at,hold_expires_at,deposit_reminder_sent,courts(name)")
@@ -52,6 +56,7 @@ export async function GET(req: Request) {
     .in("match_status", ["pending", "scheduled", "reserved"])
     .in("match_type", ["reservation", "competitivo"])
     .or("es_turno_fijo.is.null,es_turno_fijo.eq.false")
+    .is("fixed_slot_id", null)
     .lt("created_at", warningThresholdIso);
 
   if (fetchErr) {
