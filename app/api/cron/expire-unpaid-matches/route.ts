@@ -11,6 +11,7 @@ type MatchRow = {
   id: string;
   owner_id: string | null;
   created_at: string;
+  hold_expires_at: string | null;
   deposit_reminder_sent: boolean | null;
   courts: { name: string | null } | { name: string | null }[] | null;
 };
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
   // tampoco: los jugadores no pagan por la app, el club cobra en persona.
   const { data: matches, error: fetchErr } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,owner_id,created_at,deposit_reminder_sent,courts(name)")
+    .select("id,owner_id,created_at,hold_expires_at,deposit_reminder_sent,courts(name)")
     .eq("financial_status", "unpaid")
     .eq("payment_status", "pending")
     .in("match_status", ["pending", "scheduled", "reserved"])
@@ -64,7 +65,16 @@ export async function GET(req: Request) {
     const ageMinutes = (now - new Date(match.created_at).getTime()) / 60_000;
     const name = courtName(match);
 
-    if (ageMinutes >= EXPIRE_MINUTES) {
+    // hold_expires_at es la fuente de verdad para reservas de cancha (ver
+    // lib/reservation-hold.ts): el flujo normal ya la expira antes de un
+    // nuevo INSERT en ese horario. Este cron es solo el respaldo — para filas
+    // sin hold_expires_at (legacy, u otros match_type que entran a esta
+    // query) sigue usando la ventana por created_at.
+    const holdExpired = match.hold_expires_at
+      ? now >= new Date(match.hold_expires_at).getTime()
+      : ageMinutes >= EXPIRE_MINUTES;
+
+    if (holdExpired) {
       const { error: updateMatchErr } = await supabase
         .from(DB_TABLES.matches)
         .update({ match_status: "cancelled", payment_status: "expired" })

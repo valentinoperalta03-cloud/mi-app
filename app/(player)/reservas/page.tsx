@@ -57,7 +57,7 @@ export default async function ReservasPage({
   const { data: rows, error } = await supabase
     .from(DB_TABLES.matches)
     .select(
-      "id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, financial_status, match_type"
+      "id, court_id, scheduled_date, scheduled_time, duration_minutes, total_price, match_status, financial_status, match_type, hold_expires_at"
     )
     .eq("owner_id", user.id)
     .eq("match_type", "reservation")
@@ -245,6 +245,16 @@ export default async function ReservasPage({
     return d >= today && r.match_status === "reserved" && (r.financial_status ?? "unpaid") === "unpaid";
   });
 
+  // Hold de pago: el checkout de Mercado Pago todavía está en curso (o se
+  // abandonó y va a expirar solo). No es una reserva confirmada — no debe
+  // mezclarse con "upcoming" ni con "pending" (que es seña pagada/resto a
+  // deber). Se muestra aparte para que el jugador entienda que todavía no
+  // pagó nada y que, si no completa el pago, la cancha se libera sola.
+  const holdPending = list.filter((r) => {
+    const d = r.scheduled_date ?? "";
+    return d >= today && r.match_status === "scheduled";
+  });
+
   const history = list.filter((r) => {
     const d = r.scheduled_date ?? "";
     return d < today || r.match_status === "cancelled";
@@ -283,6 +293,7 @@ export default async function ReservasPage({
         <ReservasTabs
           defaultTab={defaultTab}
           fixedSlots={fixedSlots}
+          holdPending={holdPending}
           upcoming={upcoming}
           pending={pending}
           history={history}

@@ -21,6 +21,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createClient } from "@/utils/supabase/server";
 import { cancelReservationAdmin, requestReservationRefundAction } from "./actions";
 import { confirmOfflineCobro } from "../cobros/actions";
+import { ConfirmSubmitButton } from "./confirm-submit-button";
 import DateNav from "./date-nav";
 import ReservasAgendaList, { type AgendaItem } from "./reservas-agenda-list";
 import ReservasTabs, { type OpenMatchData } from "./reservas-tabs";
@@ -59,7 +60,7 @@ type MatchRow = {
 };
 
 type PageProps = {
-  searchParams: Promise<{ date?: string; selected?: string; refund_error?: string }>;
+  searchParams: Promise<{ date?: string; selected?: string; refund_error?: string; cancelled?: string }>;
 };
 
 function getTimeFromMatch(m: MatchRow): string {
@@ -282,6 +283,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   ).length;
 
   const refundErr = sp.refund_error ? decodeURIComponent(sp.refund_error.replace(/\+/g, " ")) : "";
+  const cancelledOk = sp.cancelled === "1";
 
   type OpenParticipantRaw = {
     id: string | null;
@@ -354,6 +356,14 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
           </li>
         </ol>
       </AdminGuideBox>
+
+      {cancelledOk ? (
+        <div
+          className={`${adminCard} border-emerald-200/80 bg-emerald-50/90 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200`}
+        >
+          Reserva cancelada. El horario quedó disponible nuevamente.
+        </div>
+      ) : null}
 
       <ReservasTabs
         openMatches={openMatches}
@@ -560,9 +570,12 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                         <form action={cancelReservationAdmin}>
                           <input type="hidden" name="match_id" value={selectedMatch.id} />
                           <input type="hidden" name="date" value={selectedDate} />
-                          <button type="submit" className={adminBadgeDanger}>
+                          <ConfirmSubmitButton
+                            confirmText="¿Cancelar esta reserva? La cancha quedará disponible nuevamente."
+                            className={adminBadgeDanger}
+                          >
                             Cancelar reserva
-                          </button>
+                          </ConfirmSubmitButton>
                         </form>
                       ) : null}
                     </>

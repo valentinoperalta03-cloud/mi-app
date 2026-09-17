@@ -6,7 +6,7 @@ import { log } from "@/lib/logger";
 import { getPaymentClient } from "@/lib/mercadopago";
 import { verifyMpWebhookSignature } from "@/lib/mp-webhook-signature";
 import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
-import { assertMatchTransition } from "@/lib/state-machines/match-states";
+import { assertMatchTransition, canTransitionMatch } from "@/lib/state-machines/match-states";
 import { createGroupChat } from "@/lib/group-chats";
 import { buildMatchShareUrl } from "@/lib/invite-token";
 import { createNotification } from "@/lib/notifications";
@@ -103,6 +103,25 @@ async function handleTournamentPaymentIfPresent(
     total_price?: number | null;
     amount_paid?: number | null;
   } | null;
+  // La reserva de cupo por MP vence sola (tournament_register_entry, 20 min).
+  // Si el pago llega aprobado después de vencida (o de una baja del club), el
+  // cupo puede haber sido reasignado: no reabrir la inscripción ni confirmarla
+  // en silencio — se marca para reconciliación manual (ver decisión de
+  // producto "cupo + pago online").
+  if (params.status === "approved" && regRow?.id && (regRow.payment_status === "expired" || regRow.payment_status === "cancelled")) {
+    await admin
+      .from(DB_TABLES.tournamentRegistrations)
+      .update({ mp_payment_id: params.paymentId, payment_reconciliation_needed: true })
+      .eq("id", registrationId);
+    log.warn({
+      event: "mp.webhook.tournament.approved_after_release",
+      requestId: params.requestId,
+      registrationId,
+      payerUserId,
+      previousStatus: regRow.payment_status,
+    });
+    return true;
+  }
   if (!regRow?.id || regRow.player1_id !== payerUserId) {
     log.warn({
       event: "mp.webhook.tournament_registration_mismatch",
@@ -137,6 +156,7 @@ async function handleTournamentPaymentIfPresent(
       .from(DB_TABLES.tournamentRegistrations)
       .update({
         payment_status: "approved",
+        payment_expires_at: null,
         mp_payment_id: params.paymentId,
         amount: Number.isFinite(paidAmount) ? paidAmount : null,
         amount_paid: amountPaid,
@@ -186,6 +206,7 @@ async function handleTournamentPaymentIfPresent(
       .from(DB_TABLES.tournamentRegistrations)
       .update({
         payment_status: "cancelled",
+        payment_expires_at: null,
         mp_payment_id: params.paymentId,
         amount: null,
       })
@@ -461,6 +482,34 @@ async function processPaymentId(
       location_name?: string | null;
       invited_friend_ids?: string[] | null;
     } | null;
+
+    // El hold puede haber vencido (o haber sido cancelado por el usuario)
+    // ANTES de que llegue este webhook: otro jugador puede ya haber tomado
+    // ese horario. No hay transición legal de 'cancelled' a 'reserved'
+    // (ver lib/state-machines/match-states.ts), así que no hay que re-ocupar
+    // la cancha en silencio. El dinero sí se recibió: se deja registrado y
+    // alertado para revisión/reintegro manual, sin inventar un refund automático.
+    if (!canTransitionMatch(mb?.match_status, "reserved")) {
+      log.error({
+        event: "mp.webhook.approved_after_hold_lost",
+        requestId,
+        matchId,
+        paymentId,
+        matchStatusAtWebhook: mb?.match_status ?? null,
+      });
+      void sendAlert({
+        source: "app",
+        kind: "mp_webhook",
+        title: "Pago aprobado sobre un hold ya vencido/cancelado",
+        detail: `Match ${matchId} estaba en estado "${mb?.match_status ?? "desconocido"}" cuando llegó el pago aprobado ${paymentId}. No se re-confirmó la reserva (el horario puede estar ocupado por otro usuario). Requiere revisión manual: posible reintegro.`,
+        requestId,
+      });
+      await admin
+        .from(DB_TABLES.payments)
+        .update({ status: "approved", mp_payment_id: paymentId, updated_at: now })
+        .eq("match_id", matchId);
+      return NextResponse.json({ ok: true });
+    }
 
     const totalPrice = Number(mb?.total_price ?? 0);
     const transactionAmount = Number(

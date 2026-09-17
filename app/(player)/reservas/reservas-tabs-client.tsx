@@ -17,6 +17,7 @@ export type ReservationRow = {
   total_price: number | null;
   match_status: string | null;
   financial_status: string | null;
+  hold_expires_at?: string | null;
   courts: { name: string | null; clubs: { name: string | null } | null } | null;
 };
 
@@ -58,7 +59,13 @@ function ReservationCard({ row, showCancel }: { row: ReservationRow; showCancel:
   const financialStatus = row.financial_status ?? "unpaid";
   const badgeReserved = status === "reserved" && financialStatus !== "unpaid";
   const badgePending = status === "reserved" && financialStatus === "unpaid";
+  const badgeHold = status === "scheduled";
   const badgeCancelled = status === "cancelled";
+  const holdMinutesLeft = (() => {
+    if (!badgeHold || !row.hold_expires_at) return null;
+    const ms = new Date(row.hold_expires_at).getTime() - Date.now();
+    return ms > 0 ? Math.ceil(ms / 60_000) : 0;
+  })();
 
   return (
     <article className={`${PLAYER_CARD_INTERACTIVE} w-full overflow-hidden rounded-2xl p-5`}>
@@ -74,6 +81,10 @@ function ReservationCard({ row, showCancel }: { row: ReservationRow; showCancel:
         ) : badgePending ? (
           <Badge variant="warning" className="shrink-0">
             Pendiente de pago
+          </Badge>
+        ) : badgeHold ? (
+          <Badge variant="warning" className="shrink-0">
+            Pago en curso
           </Badge>
         ) : badgeCancelled ? (
           <Badge variant="neutral" className="shrink-0">
@@ -117,6 +128,13 @@ function ReservationCard({ row, showCancel }: { row: ReservationRow; showCancel:
           <dd className="shrink-0 font-bold text-[#0085FC]">{precio}</dd>
         </div>
       </dl>
+      {badgeHold ? (
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-center text-sm text-amber-800">
+          {holdMinutesLeft != null && holdMinutesLeft > 0
+            ? `Todavía no pagaste. Si no completás el pago en ${holdMinutesLeft} ${holdMinutesLeft === 1 ? "minuto" : "minutos"}, la cancha se libera automáticamente.`
+            : "Todavía no pagaste. Esta cancha se libera automáticamente si no completás el pago."}
+        </p>
+      ) : null}
       {showCancel && status === "reserved" ? (
         <form action={cancelReservation} className="mt-4">
           <input type="hidden" name="id" value={row.id} />
@@ -235,6 +253,7 @@ function OpenMatchCard({ match }: { match: OpenMatchRow }) {
 type Props = {
   defaultTab: Tab;
   fixedSlots: FixedSlotEntry[];
+  holdPending: ReservationRow[];
   upcoming: ReservationRow[];
   pending: ReservationRow[];
   history: ReservationRow[];
@@ -245,6 +264,7 @@ type Props = {
 export default function ReservasTabs({
   defaultTab,
   fixedSlots,
+  holdPending,
   upcoming,
   pending,
   history,
@@ -300,6 +320,19 @@ export default function ReservasTabs({
               <div className="space-y-3">
                 {fixedSlots.map((slot) => (
                   <FixedSlotCard key={slot.matchId} slot={slot} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {holdPending.length > 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                Pago en curso
+              </h2>
+              <div className="space-y-3">
+                {holdPending.map((r) => (
+                  <ReservationCard key={r.id} row={r} showCancel={false} />
                 ))}
               </div>
             </section>

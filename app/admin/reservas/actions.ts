@@ -92,6 +92,22 @@ export async function requestReservationRefundAction(formData: FormData): Promis
   redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}`);
 }
 
+/**
+ * "Cancelar reserva" desde el panel admin: SOLO libera el horario. No es un
+ * reembolso (eso es el flujo separado "Reembolsar" / requestReservationRefundAction
+ * arriba) y no aplica la política de cancelación tardía del jugador (esa lógica
+ * vive en app/(player)/reservas/actions.ts y es responsabilidad de una
+ * cancelación hecha POR EL JUGADOR, no de un cierre administrativo). Por eso
+ * payment_status, amount_paid, amount_pending, financial_status y las filas de
+ * `payments` quedan intactas: la plata ya cobrada sigue siendo auditable tal
+ * cual estaba antes de cancelar.
+ *
+ * Antes esta función llamaba a refundReservationPayment() antes de cancelar:
+ * si el reembolso real contra Mercado Pago fallaba por cualquier motivo (token
+ * revocado, error de red, lo que sea), el `redirect` de la rama de error
+ * cortaba la ejecución y la reserva JAMÁS se marcaba cancelled — el botón
+ * "no hacía nada" para cualquier reserva con seña pagada.
+ */
 export async function cancelReservationAdmin(formData: FormData): Promise<void> {
   const matchId = getField(formData, "match_id");
   const date = getField(formData, "date");
@@ -103,7 +119,7 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
 
   const { data: row } = await supabase
     .from(DB_TABLES.matches)
-    .select("id,court_id,owner_id,match_type")
+    .select("id,court_id,owner_id,match_type,match_status")
     .eq("id", matchId)
     .maybeSingle();
   const typed = row as {
@@ -111,19 +127,29 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
     court_id: string;
     owner_id: string | null;
     match_type: string | null;
+    match_status: string | null;
   } | null;
   if (!typed || typed.match_type !== "reservation" || !ctx.courtIds.includes(typed.court_id)) {
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
-  const outcome = await refundReservationPayment(supabase, matchId);
-  if (outcome.kind === "failed") {
-    redirect(
-      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent(outcome.message)}`
-    );
+  // Idempotente: ya cancelada (doble click, dos tabs, retry) — no hay nada más
+  // que hacer, tratar como éxito en vez de fallar o duplicar notificaciones.
+  if (typed.match_status === "cancelled") {
+    redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&cancelled=1`);
   }
 
-  await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+  const { error: cancelErr } = await supabase
+    .from(DB_TABLES.matches)
+    .update({ match_status: "cancelled" })
+    .eq("id", matchId)
+    .neq("match_status", "cancelled");
+  if (cancelErr) {
+    console.error("[cancelReservationAdmin]", cancelErr);
+    redirect(
+      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent("No se pudo cancelar la reserva. Intentá de nuevo.")}`
+    );
+  }
   await insertFixedSlotExceptionIfNeeded(matchId);
 
   const { data: cancelledParticipants } = await supabase
@@ -139,18 +165,14 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
       user_id: playerId,
       type: "reservation_cancelled",
       title: "Reserva cancelada por el club",
-      body:
-        outcome.kind === "refunded"
-          ? "Tu reserva fue cancelada por el club. Ya procesamos el reembolso a tu medio de pago."
-          : "Tu reserva fue cancelada por el club.",
+      body: "Tu reserva fue cancelada por el club.",
       match_id: matchId,
     });
   }
 
   revalidatePath("/admin/reservas");
-  revalidatePath("/admin/finanzas/reembolsos");
   revalidatePath("/reservas");
-  redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
+  redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&cancelled=1`);
 }
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,14 @@ import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  computeHoldExpiresAt,
+  expireStaleHoldsForCourtSlot,
+  expireStaleHoldsForOwner,
+  findActivePendingHold,
+  isPendingHoldConflictError,
+  PENDING_HOLD_ERROR_MESSAGE,
+} from "@/lib/reservation-hold";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
@@ -180,11 +188,6 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
 
   const durationMinutes = 90;
 
-  const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
-  if (!allowedByRateLimit) {
-    return { error: "Límite de partidos creados por hora alcanzado." };
-  }
-
   const { data: payerProfile } = await supabase
     .from(DB_TABLES.profiles)
     .select("name")
@@ -214,7 +217,10 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   }
 
   // mp_access_token esta revocada para anon/authenticated: se lee aparte con service client.
-  const { data: clubMpRow } = await createServiceClient()
+  // El mismo client (service role) se reusa más abajo para expirar holds de
+  // pago vencidos de otros usuarios, algo que RLS no permitiría con `supabase`.
+  const serviceClient = createServiceClient();
+  const { data: clubMpRow } = await serviceClient
     .from(DB_TABLES.clubs)
     .select("mp_access_token")
     .eq("id", clubIdStr)
@@ -313,6 +319,14 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     return { error: "Esa cancha está bloqueada en ese horario." };
   }
 
+  // Liberar holds de pago vencidos ANTES de cualquier chequeo de conflicto:
+  // el EXCLUDE constraint sin_partidos_superpuestos bloquea el INSERT mientras
+  // la fila vencida siga con match_status != 'cancelled', sin importar que la
+  // disponibilidad ya la haya ignorado visualmente. Se usa el service client
+  // porque el hold vencido puede ser de OTRO usuario (RLS lo impediría).
+  await expireStaleHoldsForCourtSlot(serviceClient, courtId, scheduledDate, slotStart, durationMinutes);
+  await expireStaleHoldsForOwner(serviceClient, user.id);
+
   const { data: duplicatedMatch } = await supabase
     .from(DB_TABLES.matches)
     .select("id")
@@ -324,6 +338,11 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     .maybeSingle();
   if (duplicatedMatch) {
     return { error: "Ya tenés una reserva en ese horario." };
+  }
+
+  const existingHold = await findActivePendingHold(serviceClient, user.id);
+  if (existingHold) {
+    return { error: PENDING_HOLD_ERROR_MESSAGE };
   }
 
   const { count: activeMatchesCount } = await supabase
@@ -357,6 +376,14 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
 
   const depositAmount = resolveDepositCharge(totalPrice, clubDepositType, clubDepositValue);
 
+  // Rate limit al final: recién acá se sabe que el intento es real (pasó todas
+  // las validaciones de negocio). Un intento que iba a fallar de todas formas
+  // no debe consumir el cupo de intentos por hora del usuario.
+  const allowedByRateLimit = await checkRateLimit(`create_reservation:${user.id}`, 5, 3600);
+  if (!allowedByRateLimit) {
+    return { error: "Límite de partidos creados por hora alcanzado." };
+  }
+
   const { data, error } = await supabase
     .from(DB_TABLES.matches)
     .insert({
@@ -374,11 +401,18 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
       match_type: "reservation",
       location_name: clubName,
       date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
+      hold_expires_at: computeHoldExpiresAt(),
     })
     .select("id")
     .single();
 
   if (error || !data) {
+    // Red de seguridad para la carrera doble-click / dos tabs / requests
+    // concurrentes: si dos INSERT del mismo usuario pasan la validación de
+    // arriba casi al mismo tiempo, el índice único los desempata acá.
+    if (isPendingHoldConflictError(error)) {
+      return { error: PENDING_HOLD_ERROR_MESSAGE };
+    }
     if (isMatchSlotConflictError(error)) {
       return { error: "Este horario ya fue reservado. Elegí otro." };
     }
@@ -484,11 +518,6 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
   }
 
   const durationMinutes = 90;
-
-  const allowedByRateLimit = await checkRateLimit(`create_match:${user.id}`, 5, 3600);
-  if (!allowedByRateLimit) {
-    return { error: "Límite de partidos creados por hora alcanzado." };
-  }
 
   const { canReceiveReservations } = await checkOnboardingStatus(supabase, clubId);
   if (!canReceiveReservations) {
@@ -614,6 +643,14 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
     .eq("user_id", user.id)
     .maybeSingle();
   const payerName = (payerProfile as { name?: string | null } | null)?.name?.trim() ?? "";
+
+  // Rate limit al final y con key propia: abrirPartido no tiene checkout de MP
+  // (el club cobra en persona), así que no comparte presupuesto con
+  // reservarCancha. Recién acá el intento pasó todas las validaciones.
+  const allowedByRateLimit = await checkRateLimit(`create_open_match:${user.id}`, 5, 3600);
+  if (!allowedByRateLimit) {
+    return { error: "Límite de partidos creados por hora alcanzado." };
+  }
 
   const { data, error } = await supabase
     .from(DB_TABLES.matches)
