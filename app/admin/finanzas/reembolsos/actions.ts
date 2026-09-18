@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { refundReservationPayment } from "@/lib/payment-refund";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 function getField(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -30,7 +30,12 @@ export async function processRefundRequestAction(formData: FormData): Promise<vo
   const typed = row as { id: string; court_id: string } | null;
   if (!typed || !ctx.courtIds.includes(typed.court_id)) redirect(backTo);
 
-  const outcome = await refundReservationPayment(supabase, matchId);
+  // Ownership ya validado arriba con el cliente de sesión. Recién acá se
+  // eleva a service role: payments está scoped por RLS a auth.uid() =
+  // user_id (el jugador), y el club nunca podría ver ni reembolsar el pago
+  // con el cliente de sesión.
+  const service = createServiceClient();
+  const outcome = await refundReservationPayment(service, matchId);
   if (outcome.kind === "failed") {
     const sep = backTo.includes("?") ? "&" : "?";
     redirect(`${backTo}${sep}refund_error=${encodeURIComponent(outcome.message)}`);

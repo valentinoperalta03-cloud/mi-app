@@ -55,14 +55,34 @@ export async function requestReservationRefundAction(formData: FormData): Promis
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
-  const outcome = await refundReservationPayment(supabase, matchId);
+  // Ownership ya validado arriba con el cliente de sesión (ctx.courtIds viene
+  // de clubs.owner_id = auth.uid()). Recién acá se eleva a service role,
+  // porque payments está scoped por RLS a auth.uid() = user_id (el jugador
+  // dueño del pago, no el club) y el club nunca podría ver ni el pago ni
+  // reembolsarlo con el cliente de sesión.
+  const service = createServiceClient();
+  const outcome = await refundReservationPayment(service, matchId);
   if (outcome.kind === "failed") {
     redirect(
       `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent(outcome.message)}`
     );
   }
 
-  await supabase.from(DB_TABLES.matches).update({ match_status: "cancelled" }).eq("id", matchId);
+  // Igual que en cancelReservationAdmin: matches.owner_id = auth.uid() del
+  // jugador bloquea este UPDATE con el cliente de sesión (RLS filtra la fila
+  // sin error, quedando en "éxito" silencioso). Confirmar explícitamente que
+  // se actualizó algo antes de seguir.
+  const { data: updatedRows, error: cancelErr } = await service
+    .from(DB_TABLES.matches)
+    .update({ match_status: "cancelled" })
+    .eq("id", matchId)
+    .select("id");
+  if (cancelErr || !updatedRows || updatedRows.length === 0) {
+    console.error("[requestReservationRefundAction] no se pudo cancelar tras el reembolso", cancelErr, { matchId });
+    redirect(
+      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent("El reembolso se procesó pero no se pudo marcar la reserva como cancelada. Contactá a soporte.")}`
+    );
+  }
   await insertFixedSlotExceptionIfNeeded(matchId);
 
   const { data: cancelledParticipants } = await supabase
@@ -139,13 +159,27 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&cancelled=1`);
   }
 
-  const { error: cancelErr } = await supabase
+  // Ownership ya validado arriba (ctx.courtIds viene de clubs.owner_id =
+  // auth.uid() del club logueado). Recién acá se eleva a service role: RLS de
+  // matches solo permite UPDATE cuando auth.uid() = matches.owner_id, y
+  // owner_id acá es el JUGADOR que reservó, no el club — con el cliente de
+  // sesión este UPDATE no matchea ninguna fila, no tira error, y quedaba como
+  // "éxito" silencioso sin cancelar nada.
+  const service = createServiceClient();
+  const { data: updatedRows, error: cancelErr } = await service
     .from(DB_TABLES.matches)
     .update({ match_status: "cancelled" })
     .eq("id", matchId)
-    .neq("match_status", "cancelled");
+    .neq("match_status", "cancelled")
+    .select("id");
   if (cancelErr) {
     console.error("[cancelReservationAdmin]", cancelErr);
+    redirect(
+      `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent("No se pudo cancelar la reserva. Intentá de nuevo.")}`
+    );
+  }
+  if (!updatedRows || updatedRows.length === 0) {
+    console.error("[cancelReservationAdmin] update afectó 0 filas", { matchId });
     redirect(
       `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent("No se pudo cancelar la reserva. Intentá de nuevo.")}`
     );
