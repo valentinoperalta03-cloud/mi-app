@@ -6,6 +6,7 @@ import {
   isHoldExpired,
   isHoldSlotConflictError,
   isPendingHoldConflictError,
+  shouldReleaseHoldOnPaymentNotification,
   slotsOverlap,
 } from "../reservation-hold";
 
@@ -75,6 +76,29 @@ describe("isPendingHoldConflictError", () => {
   it("null/undefined no es un conflicto", () => {
     assert.equal(isPendingHoldConflictError(null), false);
     assert.equal(isPendingHoldConflictError(undefined), false);
+  });
+});
+
+describe("shouldReleaseHoldOnPaymentNotification", () => {
+  // Regresión incidente 2026-09-18: un webhook "cancelled" de un primer
+  // intento de pago no puede liberar el hold — Checkout Pro permite un
+  // segundo intento aprobado segundos después sobre el mismo hold/preferencia.
+  it("no libera el hold por un status rechazado (un intento fallido no es terminal para la preferencia)", () => {
+    assert.equal(shouldReleaseHoldOnPaymentNotification("rejected"), false);
+  });
+
+  it("no libera el hold por un status cancelado", () => {
+    assert.equal(shouldReleaseHoldOnPaymentNotification("cancelled"), false);
+  });
+
+  it("no libera el hold por un status expirado", () => {
+    assert.equal(shouldReleaseHoldOnPaymentNotification("expired"), false);
+  });
+
+  it("no libera el hold sea cual sea el status recibido (única salida: consumo o expires_at)", () => {
+    assert.equal(shouldReleaseHoldOnPaymentNotification("approved"), false);
+    assert.equal(shouldReleaseHoldOnPaymentNotification("in_process"), false);
+    assert.equal(shouldReleaseHoldOnPaymentNotification(""), false);
   });
 });
 

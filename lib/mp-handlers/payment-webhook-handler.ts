@@ -14,6 +14,7 @@ import { createNotification } from "@/lib/notifications";
 import { parsePracticeRegistrationRef } from "@/lib/mp-practice-preference";
 import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
+import { shouldReleaseHoldOnPaymentNotification } from "@/lib/reservation-hold";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseAdmin() {
@@ -597,9 +598,16 @@ async function handleReservationHoldPaymentIfPresent(
   }
 
   if (params.status === "rejected" || params.status === "cancelled" || params.status === "expired") {
-    // Liberar el hold ya mismo en vez de esperar a que venza solo — mejor UX,
-    // la cancha vuelve a estar disponible de inmediato para otro usuario.
-    if (hold.status === "pending") {
+    // NO cancelar el hold acá — ver shouldReleaseHoldOnPaymentNotification en
+    // lib/reservation-hold.ts. Un status rejected/cancelled/expired de UN
+    // intento de pago no es terminal para la preferencia completa: Checkout
+    // Pro permite reintentar con otro medio sin abandonar el checkout, y ese
+    // segundo intento puede llegar aprobado segundos después sobre el MISMO
+    // hold. Cancelar acá liberaba la cancha (y desbloqueaba un segundo hold
+    // del mismo usuario vía findActivePendingHold) mientras ese dinero podía
+    // seguir en vuelo. El hold solo se libera por consumo real (pago
+    // aprobado) o por vencimiento natural de expires_at.
+    if (shouldReleaseHoldOnPaymentNotification(params.status)) {
       await admin
         .from(DB_TABLES.reservationHolds)
         .update({ status: "cancelled", updated_at: new Date().toISOString() })

@@ -132,6 +132,30 @@ export async function expireStaleHoldsForOwner(supabase: SupabaseClient, ownerId
     .eq("status", "pending");
 }
 
+/**
+ * Política de liberación de holds ante notificaciones de pago de Mercado Pago.
+ *
+ * Incidente 2026-09-18 (hold 6b3b672c-...): un webhook con status "cancelled"
+ * de un PRIMER intento de pago canceló el hold ~67s después de creado. 25s
+ * después llegó un SEGUNDO intento (mismo preference/external_reference,
+ * mp_payment_id distinto) con status "approved" — pero el hold ya no estaba
+ * pending, así que el dinero terminó en orphaned_reservation_payments y nunca
+ * se creó la reserva. Checkout Pro permite reintentar con otro medio de pago
+ * SIN abandonar la preferencia: cada intento genera un `payment` propio, y un
+ * status rejected/cancelled/expired en UNO de ellos no es terminal para la
+ * preferencia completa — todavía puede llegar un intento posterior aprobado.
+ *
+ * Por eso ningún status de un webhook individual puede cancelar el hold. El
+ * hold solo termina por: (a) esta RPC consume_reservation_hold cuando llega
+ * un pago approved, o (b) vencimiento natural de expires_at (lazy-expiry en
+ * create_reservation_hold / cron expire-reservation-holds). El cliente/browser
+ * ni un intento de pago individual son autoridad para liberar un hold que
+ * puede tener dinero en vuelo.
+ */
+export function shouldReleaseHoldOnPaymentNotification(_mpStatus: string): boolean {
+  return false;
+}
+
 /** Hold de pago activo (no vencido) del usuario, si existe. Llamar después de expireStaleHoldsForOwner. */
 export async function findActivePendingHold(
   supabase: SupabaseClient,
