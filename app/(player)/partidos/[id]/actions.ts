@@ -701,8 +701,10 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
   const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
   if (myPaymentId) {
     const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
-    if (refundOutcome.kind === "failed") {
-      log.error({ event: "cancelParticipation.refund_failed", matchId, userId: user.id });
+    // "refunded_unsynced": MP ya reembolsó pero la persistencia local falló —
+    // requiere la misma atención que "failed" (ver PaymentRefundOutcome).
+    if (refundOutcome.kind === "failed" || refundOutcome.kind === "refunded_unsynced") {
+      log.error({ event: "cancelParticipation.refund_failed", matchId, userId: user.id, kind: refundOutcome.kind });
       redirect(`/partidos/${matchId}?cancel_error=refund_failed`);
     }
   }
@@ -836,8 +838,11 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
     for (const payment of paidPayments ?? []) {
       const row = payment as { id: string; user_id: string };
       const refundOutcome = await refundApprovedPayment(supabase, row.id);
-      if (refundOutcome.kind === "failed") {
-        log.error({ event: "cancelParticipation.refund_failed", matchId, userId: row.user_id });
+      // "refunded_unsynced": MP ya reembolsó pero la persistencia local falló
+      // — misma atención que "failed" (ver PaymentRefundOutcome).
+      const refundNeedsAttention = refundOutcome.kind === "failed" || refundOutcome.kind === "refunded_unsynced";
+      if (refundNeedsAttention) {
+        log.error({ event: "cancelParticipation.refund_failed", matchId, userId: row.user_id, kind: refundOutcome.kind });
       }
 
       await createNotification(supabase, {
@@ -847,7 +852,7 @@ export async function cancelParticipation(formData: FormData): Promise<void> {
         body:
           refundOutcome.kind === "refunded"
             ? "El partido fue cancelado y ya procesamos tu reembolso."
-            : refundOutcome.kind === "failed"
+            : refundNeedsAttention
               ? "El partido fue cancelado. No pudimos procesar tu reembolso automáticamente, contactá a soporte."
               : "El partido fue cancelado.",
         match_id: matchId,
@@ -1087,8 +1092,8 @@ export async function cancelFixedSlotDay(matchId: string): Promise<{ ok?: true; 
   const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
   if (myPaymentId) {
     const refundOutcome = await refundApprovedPayment(supabase, myPaymentId);
-    if (refundOutcome.kind === "failed") {
-      log.error({ event: "cancelFixedSlotDay.refund_failed", matchId, userId: user.id });
+    if (refundOutcome.kind === "failed" || refundOutcome.kind === "refunded_unsynced") {
+      log.error({ event: "cancelFixedSlotDay.refund_failed", matchId, userId: user.id, kind: refundOutcome.kind });
     }
   }
   await supabase

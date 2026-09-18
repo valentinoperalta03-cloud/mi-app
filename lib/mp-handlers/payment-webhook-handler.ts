@@ -7,6 +7,7 @@ import { getPaymentClient } from "@/lib/mercadopago";
 import { verifyMpWebhookSignature } from "@/lib/mp-webhook-signature";
 import { assertMatchPaymentStatusTransition, assertPaymentRowTransition } from "@/lib/state-machines/payment-states";
 import { assertMatchTransition, canTransitionMatch } from "@/lib/state-machines/match-states";
+import { IllegalTransitionError } from "@/lib/state-machines/errors";
 import { createGroupChat } from "@/lib/group-chats";
 import { buildMatchShareUrl } from "@/lib/invite-token";
 import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
@@ -16,6 +17,26 @@ import { practiceRegistrationHoldsSpot } from "@/lib/practice-registration";
 import { parseTournamentRegistrationRef } from "@/lib/mp-tournament-preference";
 import { shouldReleaseHoldOnPaymentNotification } from "@/lib/reservation-hold";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Corre los asserts de state-machine y, si alguno detecta una transición
+ * ilegal (ej. refunded -> approved por un webhook atrasado/reintentado),
+ * devuelve `false` para que el caller aborte el UPDATE en vez de ejecutarlo
+ * igual. Antes estos asserts vivían en un try/catch que solo logueaba
+ * (`catch { /* logged *\/ }`) y dejaba correr los UPDATE de todas formas —
+ * eso es lo que permitía que un pago ya reembolsado volviera a "approved".
+ * Un error que NO sea IllegalTransitionError (bug real, no una transición
+ * fuera de la máquina de estados) se relanza en vez de esconderse.
+ */
+function attemptTransitions(checks: Array<() => void>): boolean {
+  try {
+    for (const check of checks) check();
+    return true;
+  } catch (err) {
+    if (err instanceof IllegalTransitionError) return false;
+    throw err;
+  }
+}
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -725,6 +746,31 @@ async function processPaymentId(
       return NextResponse.json({ ok: true });
     }
 
+    // Un payment local ya reembolsado (o con reembolso en curso) es terminal:
+    // refunded -> approved / refund_requested -> approved no existen en
+    // ALLOWED (lib/state-machines/payment-states.ts). MP puede seguir
+    // reportando "approved" para el mismo mp_payment_id si el webhook llega
+    // atrasado o se reintenta después de que refundApprovedPayment ya marcó
+    // el pago como reembolsado — eso NUNCA debe resucitar el pago local.
+    const paymentRowTransitionAllowed = attemptTransitions([
+      () =>
+        assertPaymentRowTransition(existingPay?.status, "approved", {
+          requestId,
+          paymentId: existingPay?.id,
+          trigger: "webhook.approved_match",
+        }),
+    ]);
+    if (!paymentRowTransitionAllowed) {
+      log.info({
+        event: "mp.webhook.match.terminal_payment_skip",
+        requestId,
+        matchId,
+        paymentId,
+        existingPaymentStatus: existingPay?.status ?? null,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     const { data: matchBefore } = await admin
       .from(DB_TABLES.matches)
       .select(
@@ -787,19 +833,34 @@ async function processPaymentId(
     const amountPending = Math.max(totalPrice - amountPaid, 0);
     const financialStatus = amountPaid >= totalPrice && totalPrice > 0 ? "fully_paid" : amountPaid > 0 ? "partially_paid" : "unpaid";
 
-    try {
-      assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
+    // Igual que el chequeo de payments de arriba: si el match ya está en un
+    // estado terminal para estas transiciones (ej. payment_status "refunded",
+    // que no tiene salida en MATCH_PAY_ALLOWED), abortar el UPDATE en vez de
+    // solo loguear el intento ilegal y escribir igual.
+    const matchTransitionAllowed = attemptTransitions([
+      () =>
+        assertMatchPaymentStatusTransition(mb?.payment_status, "paid", {
+          requestId,
+          matchId,
+          trigger: "webhook.approved_match",
+        }),
+      () =>
+        assertMatchTransition(mb?.match_status, "reserved", {
+          requestId,
+          matchId,
+          trigger: "webhook.approved_match",
+        }),
+    ]);
+    if (!matchTransitionAllowed) {
+      log.info({
+        event: "mp.webhook.match.terminal_match_skip",
         requestId,
         matchId,
-        trigger: "webhook.approved_match",
+        paymentId,
+        matchPaymentStatus: mb?.payment_status ?? null,
+        matchStatus: mb?.match_status ?? null,
       });
-      assertMatchTransition(mb?.match_status, "reserved", {
-        requestId,
-        matchId,
-        trigger: "webhook.approved_match",
-      });
-    } catch {
-      /* logging ya en asserts */
+      return NextResponse.json({ ok: true });
     }
 
     const { error: payErr } = await admin
@@ -935,17 +996,24 @@ async function processPaymentId(
     const prevPay = (payRow as { status?: string | null } | null)?.status;
     const dbPayStatus =
       status === "cancelled" ? "cancelled" : status === "expired" ? "expired" : "rejected";
-    try {
-      if (payerUserId) {
-        assertPaymentRowTransition(prevPay, dbPayStatus, {
-          requestId,
-          paymentId: (payRow as { id?: string } | null)?.id,
-          userId: payerUserId,
-          trigger: "webhook.rejected",
-        });
-      }
-    } catch {
-      /* logged */
+    // Un payment ya terminal (refunded/rejected/cancelled) no puede volver a
+    // "rejected"/"cancelled"/"expired" por un webhook atrasado — igual
+    // criterio que el bloque "approved" de arriba: el assert ahora bloquea
+    // el UPDATE en vez de solo loguear.
+    const rejectPaymentRowAllowed = payerUserId
+      ? attemptTransitions([
+          () =>
+            assertPaymentRowTransition(prevPay, dbPayStatus, {
+              requestId,
+              paymentId: (payRow as { id?: string } | null)?.id,
+              userId: payerUserId,
+              trigger: "webhook.rejected",
+            }),
+        ])
+      : true;
+    if (!rejectPaymentRowAllowed) {
+      log.info({ event: "mp.webhook.match.terminal_payment_skip", requestId, matchId, paymentId, trigger: "webhook.rejected" });
+      return NextResponse.json({ ok: true });
     }
 
     let payUpd = admin
@@ -980,19 +1048,23 @@ async function processPaymentId(
         .eq("id", matchId)
         .maybeSingle();
       const mb = mBefore as { match_status?: string | null; payment_status?: string | null } | null;
-      try {
-        assertMatchPaymentStatusTransition(mb?.payment_status, status === "cancelled" ? "cancelled" : "rejected", {
-          requestId,
-          matchId,
-          trigger: "webhook.reject_reserva",
-        });
-        assertMatchTransition(mb?.match_status, "cancelled", {
-          requestId,
-          matchId,
-          trigger: "webhook.reject_reserva",
-        });
-      } catch {
-        /* logged */
+      const rejectMatchAllowed = attemptTransitions([
+        () =>
+          assertMatchPaymentStatusTransition(mb?.payment_status, status === "cancelled" ? "cancelled" : "rejected", {
+            requestId,
+            matchId,
+            trigger: "webhook.reject_reserva",
+          }),
+        () =>
+          assertMatchTransition(mb?.match_status, "cancelled", {
+            requestId,
+            matchId,
+            trigger: "webhook.reject_reserva",
+          }),
+      ]);
+      if (!rejectMatchAllowed) {
+        log.info({ event: "mp.webhook.match.terminal_match_skip", requestId, matchId, paymentId, trigger: "webhook.reject_reserva" });
+        return NextResponse.json({ ok: true });
       }
 
       await admin
@@ -1052,6 +1124,13 @@ async function processPaymentId(
         .update({ match_status: "cancelled", payment_status: "refunded" })
         .eq("id", matchId);
     } else {
+      // A diferencia de los bloques "approved"/"reject" de arriba, acá NO se
+      // aborta el UPDATE ante una transición fuera de la máquina de estados
+      // (ej. el match ya estaba "cancelled" sin haber pasado por "refunded"
+      // porque cancelReservationAdmin cancela sin reembolsar). "refunded" es
+      // justamente el estado terminal al que este evento real de MP apunta:
+      // abortarlo escondería un reembolso/contracargo real ya confirmado.
+      // Un error que NO sea de la máquina de estados sí se relanza.
       try {
         assertMatchPaymentStatusTransition(matchRow?.payment_status, "refunded", {
           requestId,
@@ -1063,8 +1142,8 @@ async function processPaymentId(
           matchId,
           trigger: "webhook.refunded_reserva",
         });
-      } catch {
-        /* logged */
+      } catch (err) {
+        if (!(err instanceof IllegalTransitionError)) throw err;
       }
 
       await admin

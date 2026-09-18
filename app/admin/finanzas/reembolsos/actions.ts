@@ -22,7 +22,13 @@ export async function processRefundRequestAction(formData: FormData): Promise<vo
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: row } = await supabase
+  // Se lee con service role: RLS de matches solo expone la fila al cliente de
+  // sesión cuando auth.uid() = matches.owner_id (el JUGADOR), así que con la
+  // sesión del club el SELECT no encontraba la fila. La autorización NO se
+  // relaja: sigue siendo el club autenticado quien decide, vía ctx.courtIds
+  // (derivado de clubs.owner_id = auth.uid()) validado justo abajo.
+  const service = createServiceClient();
+  const { data: row } = await service
     .from(DB_TABLES.matches)
     .select("id,court_id")
     .eq("id", matchId)
@@ -30,13 +36,12 @@ export async function processRefundRequestAction(formData: FormData): Promise<vo
   const typed = row as { id: string; court_id: string } | null;
   if (!typed || !ctx.courtIds.includes(typed.court_id)) redirect(backTo);
 
-  // Ownership ya validado arriba con el cliente de sesión. Recién acá se
-  // eleva a service role: payments está scoped por RLS a auth.uid() =
-  // user_id (el jugador), y el club nunca podría ver ni reembolsar el pago
-  // con el cliente de sesión.
-  const service = createServiceClient();
+  // payments también está scoped por RLS a auth.uid() = user_id (el
+  // jugador) — se reutiliza el mismo service client de la lectura de arriba.
   const outcome = await refundReservationPayment(service, matchId);
-  if (outcome.kind === "failed") {
+  // "refunded_unsynced": MP ya reembolsó pero no se pudo persistir. No seguir
+  // como éxito ni reintentar — mostrar el error y frenar acá.
+  if (outcome.kind === "failed" || outcome.kind === "refunded_unsynced") {
     const sep = backTo.includes("?") ? "&" : "?";
     redirect(`${backTo}${sep}refund_error=${encodeURIComponent(outcome.message)}`);
   }

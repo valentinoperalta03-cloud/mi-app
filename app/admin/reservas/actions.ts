@@ -36,7 +36,15 @@ export async function requestReservationRefundAction(formData: FormData): Promis
     redirect("/login");
   }
 
-  const { data: row } = await supabase
+  // Se lee con service role: RLS de matches solo expone la fila al cliente de
+  // sesión cuando auth.uid() = matches.owner_id (el JUGADOR dueño de la
+  // reserva), así que con la sesión del club el SELECT no encontraba la fila
+  // (maybeSingle devolvía null sin error) y el flujo abortaba en el primer
+  // redirect como si la reserva no existiera. La autorización NO se relaja:
+  // sigue siendo el club autenticado quien decide, vía ctx.courtIds
+  // (derivado de clubs.owner_id = auth.uid()) validado justo abajo.
+  const service = createServiceClient();
+  const { data: row } = await service
     .from(DB_TABLES.matches)
     .select("id,court_id,owner_id,match_type,payment_status")
     .eq("id", matchId)
@@ -55,14 +63,11 @@ export async function requestReservationRefundAction(formData: FormData): Promis
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}`);
   }
 
-  // Ownership ya validado arriba con el cliente de sesión (ctx.courtIds viene
-  // de clubs.owner_id = auth.uid()). Recién acá se eleva a service role,
-  // porque payments está scoped por RLS a auth.uid() = user_id (el jugador
-  // dueño del pago, no el club) y el club nunca podría ver ni el pago ni
-  // reembolsarlo con el cliente de sesión.
-  const service = createServiceClient();
   const outcome = await refundReservationPayment(service, matchId);
-  if (outcome.kind === "failed") {
+  // "refunded_unsynced" también corta acá: MP ya reembolsó pero no se pudo
+  // persistir localmente. No seguir como si fuera éxito (evita re-cancelar
+  // sobre un estado no sincronizado) ni reintentar el refund.
+  if (outcome.kind === "failed" || outcome.kind === "refunded_unsynced") {
     redirect(
       `/admin/reservas?date=${encodeURIComponent(date || "")}&selected=${encodeURIComponent(matchId)}&refund_error=${encodeURIComponent(outcome.message)}`
     );
@@ -137,7 +142,14 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
   const ctx = await getOwnerAdminContext(supabase);
   if (!ctx?.userId) redirect("/login");
 
-  const { data: row } = await supabase
+  // Se lee con service role: RLS de matches solo expone la fila al cliente de
+  // sesión cuando auth.uid() = matches.owner_id (el JUGADOR dueño de la
+  // reserva), así que con la sesión del club el SELECT no encontraba la fila
+  // y el flujo abortaba como si la reserva no existiera. La autorización NO
+  // se relaja: sigue siendo el club autenticado quien decide, vía
+  // ctx.courtIds (derivado de clubs.owner_id = auth.uid()) validado abajo.
+  const service = createServiceClient();
+  const { data: row } = await service
     .from(DB_TABLES.matches)
     .select("id,court_id,owner_id,match_type,match_status")
     .eq("id", matchId)
@@ -159,13 +171,11 @@ export async function cancelReservationAdmin(formData: FormData): Promise<void> 
     redirect(`/admin/reservas?date=${encodeURIComponent(date || "")}&cancelled=1`);
   }
 
-  // Ownership ya validado arriba (ctx.courtIds viene de clubs.owner_id =
-  // auth.uid() del club logueado). Recién acá se eleva a service role: RLS de
-  // matches solo permite UPDATE cuando auth.uid() = matches.owner_id, y
-  // owner_id acá es el JUGADOR que reservó, no el club — con el cliente de
+  // RLS de matches solo permite UPDATE cuando auth.uid() = matches.owner_id,
+  // y owner_id acá es el JUGADOR que reservó, no el club — con el cliente de
   // sesión este UPDATE no matchea ninguna fila, no tira error, y quedaba como
-  // "éxito" silencioso sin cancelar nada.
-  const service = createServiceClient();
+  // "éxito" silencioso sin cancelar nada. Se reutiliza el mismo service client
+  // de la lectura de arriba.
   const { data: updatedRows, error: cancelErr } = await service
     .from(DB_TABLES.matches)
     .update({ match_status: "cancelled" })

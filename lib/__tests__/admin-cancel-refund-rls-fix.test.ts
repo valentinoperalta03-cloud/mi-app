@@ -5,12 +5,22 @@ import { describe, it } from "node:test";
 /**
  * Tripwire estático (mismo criterio que fixed-slot-hold-exclusion.test.ts):
  * no monta un mock de Supabase/RLS real, lee el código fuente y verifica que
- * el patrón "auth con sesión -> validar ownership -> recién ahí service role"
- * siga presente. Cubre la regresión real de producción: "Cancelar reserva" y
- * "Reembolsar" quedaban en éxito silencioso porque el UPDATE de matches y el
- * SELECT de payments corrían con el cliente de sesión del club, bloqueados
- * por RLS (matches.owner_id = auth.uid() del JUGADOR, payments.user_id =
- * auth.uid() del JUGADOR) sin devolver error.
+ * el patrón "auth con sesión -> LEER el match con service role -> recién ahí
+ * validar ownership por ctx.courtIds -> reusar ese service role para
+ * refund/update" siga presente.
+ *
+ * Cubre dos bugs reales de producción encadenados:
+ * 1. El UPDATE de matches y el SELECT de payments con el cliente de sesión
+ *    del club quedaban bloqueados por RLS (matches.owner_id / payments.user_id
+ *    = el JUGADOR, no el club) sin devolver error -> "éxito" silencioso.
+ * 2. Incluso el SELECT inicial de matches (para decidir si la reserva
+ *    pertenece al club) usaba el cliente de sesión y podía no encontrar la
+ *    fila, abortando el flujo como si la reserva no existiera.
+ *
+ * La autorización real NUNCA se relaja: sigue siendo ctx.courtIds (derivado
+ * de clubs.owner_id = auth.uid() del club logueado, con el cliente de
+ * sesión normal) quien decide si el club puede operar sobre ese match. El
+ * service role solo se usa para LEER/ESCRIBIR después de esa validación.
  */
 
 const RESERVAS_ACTIONS_PATH = "app/admin/reservas/actions.ts";
@@ -25,25 +35,51 @@ function extractFunction(source: string, name: string): string {
   const marker = `export async function ${name}(`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `no se encontró la función ${name}`);
-  // corta en el próximo "export async function" o "export function" al mismo nivel
   const rest = source.slice(start + marker.length);
   const nextExportIdx = rest.search(/\n(export async function|export function|export type)/);
   return nextExportIdx === -1 ? rest : rest.slice(0, nextExportIdx);
 }
 
-describe("cancelReservationAdmin usa service role recién después de validar ownership", () => {
+function assertReadWithServiceThenOwnership(fn: string, label: string) {
+  const authIdx = fn.search(/ctx\?\.userId\)/);
+  const serviceIdx = fn.indexOf("createServiceClient()");
+  const serviceSelectIdx = fn.search(/service\s*\n?\s*\.from\(DB_TABLES\.matches\)\s*\n?\s*\.select\(/);
+  const ownershipIdx = fn.indexOf("ctx.courtIds.includes");
+
+  assert.notEqual(authIdx, -1, `${label}: falta el chequeo de auth (ctx?.userId)`);
+  assert.notEqual(serviceIdx, -1, `${label}: falta la elevación a service role`);
+  assert.notEqual(serviceSelectIdx, -1, `${label}: el SELECT inicial de matches debe correr con el service client`);
+  assert.notEqual(ownershipIdx, -1, `${label}: falta el chequeo de ownership (ctx.courtIds)`);
+
+  assert.ok(authIdx < serviceIdx, `${label}: la auth debe validarse antes de crear el service client`);
+  assert.ok(
+    serviceIdx <= serviceSelectIdx,
+    `${label}: el service client debe crearse antes (o junto a) el SELECT de matches`
+  );
+  assert.ok(
+    serviceSelectIdx < ownershipIdx,
+    `${label}: ownership (ctx.courtIds) debe validarse DESPUÉS de leer la fila con service role, no antes`
+  );
+
+  // El SELECT con el cliente de sesión sin privilegios (`supabase`, no
+  // `service`) para leer el match objetivo ya no debe existir: es el patrón
+  // que quedaba en null silencioso por RLS.
+  assert.doesNotMatch(
+    fn,
+    /(?<!ctx = await getOwnerAdminContext\()\bsupabase\s*\n?\s*\.from\(DB_TABLES\.matches\)\s*\n?\s*\.select\("id,court_id/,
+    `${label}: no debe quedar un SELECT de matches con el cliente de sesión sin privilegios`
+  );
+}
+
+describe("cancelReservationAdmin: lee el match con service role y valida ownership después", () => {
   const source = readRepoFile(RESERVAS_ACTIONS_PATH);
   const fn = extractFunction(source, "cancelReservationAdmin");
 
-  it("valida ownership (ctx.courtIds) antes de crear el service client", () => {
-    const ownershipIdx = fn.indexOf("ctx.courtIds.includes");
-    const serviceIdx = fn.indexOf("createServiceClient()");
-    assert.notEqual(ownershipIdx, -1, "falta el chequeo de ownership");
-    assert.notEqual(serviceIdx, -1, "falta la elevación a service role");
-    assert.ok(ownershipIdx < serviceIdx, "el ownership debe validarse ANTES de elevar a service role");
+  it("sigue el patrón auth -> service role -> lectura -> ownership", () => {
+    assertReadWithServiceThenOwnership(fn, "cancelReservationAdmin");
   });
 
-  it("el UPDATE de matches corre con el service client, no con el de sesión", () => {
+  it("el UPDATE de matches corre con el service client (reutilizado)", () => {
     assert.match(
       fn,
       /service\s*\n?\s*\.from\(DB_TABLES\.matches\)\s*\.update\(\{ match_status: "cancelled" \}\)/
@@ -56,16 +92,12 @@ describe("cancelReservationAdmin usa service role recién después de validar ow
   });
 });
 
-describe("requestReservationRefundAction usa service role recién después de validar ownership", () => {
+describe("requestReservationRefundAction: lee el match con service role y valida ownership después", () => {
   const source = readRepoFile(RESERVAS_ACTIONS_PATH);
   const fn = extractFunction(source, "requestReservationRefundAction");
 
-  it("valida ownership (ctx.courtIds) antes de crear el service client", () => {
-    const ownershipIdx = fn.indexOf("ctx.courtIds.includes");
-    const serviceIdx = fn.indexOf("createServiceClient()");
-    assert.notEqual(ownershipIdx, -1, "falta el chequeo de ownership");
-    assert.notEqual(serviceIdx, -1, "falta la elevación a service role");
-    assert.ok(ownershipIdx < serviceIdx, "el ownership debe validarse ANTES de elevar a service role");
+  it("sigue el patrón auth -> service role -> lectura -> ownership", () => {
+    assertReadWithServiceThenOwnership(fn, "requestReservationRefundAction");
   });
 
   it("refundReservationPayment recibe el service client, no el de sesión", () => {
@@ -79,7 +111,7 @@ describe("requestReservationRefundAction usa service role recién después de va
   });
 });
 
-describe("processRefundRequestAction (finanzas/reembolsos) usa el mismo patrón seguro", () => {
+describe("processRefundRequestAction (finanzas/reembolsos): mismo patrón seguro", () => {
   const source = readRepoFile(REEMBOLSOS_ACTIONS_PATH);
   const fn = extractFunction(source, "processRefundRequestAction");
 
@@ -87,12 +119,8 @@ describe("processRefundRequestAction (finanzas/reembolsos) usa el mismo patrón 
     assert.match(source, /import \{ createClient, createServiceClient \} from "@\/utils\/supabase\/server"/);
   });
 
-  it("valida ownership antes de crear el service client", () => {
-    const ownershipIdx = fn.indexOf("ctx.courtIds.includes");
-    const serviceIdx = fn.indexOf("createServiceClient()");
-    assert.notEqual(ownershipIdx, -1, "falta el chequeo de ownership");
-    assert.notEqual(serviceIdx, -1, "falta la elevación a service role");
-    assert.ok(ownershipIdx < serviceIdx, "el ownership debe validarse ANTES de elevar a service role");
+  it("sigue el patrón auth -> service role -> lectura -> ownership", () => {
+    assertReadWithServiceThenOwnership(fn, "processRefundRequestAction");
   });
 
   it("refundReservationPayment recibe el service client, no el de sesión", () => {

@@ -131,8 +131,8 @@ export async function toggleMatchParticipationAction(
     const myPaymentId = (myPaymentRow as { id: string } | null)?.id ?? null;
     if (myPaymentId) {
       const refundOutcome = await refundApprovedPayment(service, myPaymentId);
-      if (refundOutcome.kind === "failed") {
-        console.error("[toggleMatchParticipationAction] refund failed", matchId, playerId);
+      if (refundOutcome.kind === "failed" || refundOutcome.kind === "refunded_unsynced") {
+        console.error("[toggleMatchParticipationAction] refund failed", matchId, playerId, refundOutcome.kind);
       }
     }
 
