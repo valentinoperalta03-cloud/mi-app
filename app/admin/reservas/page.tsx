@@ -18,7 +18,7 @@ import { PaymentStatusPill, PlayerAvatar } from "@/components/admin/admin-status
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import { DB_TABLES } from "@/lib/db-tables";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceClient } from "@/utils/supabase/server";
 import { cancelReservationAdmin, requestReservationRefundAction } from "./actions";
 import { confirmOfflineCobro } from "../cobros/actions";
 import { ConfirmSubmitButton } from "./confirm-submit-button";
@@ -83,6 +83,7 @@ function reservationMethodLabel(paymentStatus: string | null | undefined) {
   if (s === "transfer_pending") return "Transferencia ⏳";
   if (s === "pending") return "Mercado Pago ⏳";
   if (s === "refund_requested") return "Reembolso solicitado ⏳";
+  if (s === "refunded") return "Mercado Pago · reembolsado";
   if (s === "cancelled" || s === "expired") return "Cancelado";
   return s || "—";
 }
@@ -156,8 +157,33 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
   const courtBlocks = (courtBlocksRaw ?? []) as Array<{ court_id: string; blocked_time: string | null; reason: string | null }>;
   const matches = (matchesRaw ?? []) as unknown as MatchRow[];
 
-  const creatorIds = Array.from(new Set(matches.map((m) => m.owner_id).filter(Boolean))) as string[];
-  const selectedMatch = selectedMatchId ? matches.find((m) => m.id === selectedMatchId) ?? null : null;
+  let selectedMatch: MatchRow | null = selectedMatchId
+    ? matches.find((m) => m.id === selectedMatchId) ?? null
+    : null;
+
+  // La agenda solo contiene turnos vigentes. El detalle histórico de una reserva
+  // cancelada/reembolsada se obtiene por separado, limitado a las canchas del club.
+  if (!selectedMatch && selectedMatchId && ctx.courtIds.length > 0) {
+    const { data: cancelledMatch, error: cancelledMatchError } = await createServiceClient()
+      .from(DB_TABLES.matches)
+      .select(
+        "id,date,scheduled_date,scheduled_time,duration_minutes,court_id,owner_id,payment_status,total_price,amount_paid,amount_pending,financial_status,match_status,location_name,match_type,es_turno_fijo,manual_reference,fixed_slot_id,courts(id,name),fixed_slots(title)"
+      )
+      .eq("id", selectedMatchId)
+      .eq("scheduled_date", selectedDate)
+      .eq("match_status", "cancelled")
+      .in("court_id", ctx.courtIds)
+      .maybeSingle();
+
+    if (cancelledMatchError) {
+      console.error("[admin/reservas] Error al cargar reserva cancelada", cancelledMatchError);
+    }
+    selectedMatch = (cancelledMatch as unknown as MatchRow | null) ?? null;
+  }
+
+  const creatorIds = Array.from(
+    new Set([...matches, ...(selectedMatch ? [selectedMatch] : [])].map((m) => m.owner_id).filter(Boolean))
+  ) as string[];
 
   const [{ data: profilesData }, selectedMatchParticipantsRaw, selectedPaymentsRaw, { data: ownerProfileRow }] =
     await Promise.all([
@@ -170,8 +196,10 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
             .select("player_id,profiles(name,avatar_url)")
             .eq("match_id", selectedMatch.id)
         : Promise.resolve({ data: [] }),
+      // El club ya fue autorizado por ctx.courtIds; RLS de payments puede
+      // ocultarle pagos cuyo user_id pertenece al jugador.
       selectedMatch
-        ? supabase
+        ? createServiceClient()
             .from(DB_TABLES.payments)
             .select("user_id,status,payment_method,amount")
             .eq("match_id", selectedMatch.id)
@@ -269,6 +297,17 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
     !selectedIsFixed && String(selectedMatch?.match_type ?? "").toLowerCase() === "amistoso";
   const selectedOpenMatchFull = String(selectedMatch?.match_status ?? "").toLowerCase() === "full";
   const selectedOpenMatchCobrado = selectedPaySt === "paid";
+  const selectedIsCancelled = String(selectedMatch?.match_status ?? "").toLowerCase() === "cancelled";
+  const selectedIsRefunded = selectedIsReservation && selectedPaySt === "refunded";
+  // amount_paid se pone en 0 tras el reembolso: usar el importe histórico
+  // de las filas de payments, nunca el saldo actual del match.
+  const refundedPayments = selectedPayments.filter(
+    (p) => String(p.status ?? "").toLowerCase() === "refunded" &&
+      p.amount != null && Number.isFinite(Number(p.amount))
+  );
+  const refundedAmount = refundedPayments.length
+    ? refundedPayments.reduce((total, p) => total + Number(p.amount), 0)
+    : null;
 
   const reservationMatches = matches.filter((m) => String(m.match_type ?? "").toLowerCase() === "reservation");
   const totalReservas = reservationMatches.length;
@@ -453,10 +492,31 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                       </span>
                     ) : null}
                   </div>
+                ) : selectedIsRefunded ? (
+                  <span className={adminBadgeSuccess}>Reembolsado</span>
+                ) : selectedIsCancelled ? (
+                  <span className={selectedPaySt === "paid" ? adminBadgeWarning : adminBadgeNeutral}>
+                    {selectedPaySt === "paid" ? "Cancelada · pago registrado" : "Cancelada"}
+                  </span>
                 ) : !selectedIsFixed ? (
                   <PaymentStatusPill status={String(selectedMatch.payment_status ?? "—")} />
                 ) : null}
               </div>
+
+              {selectedIsRefunded ? (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                  <p className="font-semibold">
+                    {refundedAmount !== null
+                      ? `Reembolsado · $${refundedAmount.toLocaleString("es-AR")} devueltos`
+                      : "Reembolsado · importe no disponible en el registro de pagos"}
+                  </p>
+                  <p className="mt-1 text-sm">Reserva cancelada. El horario volvió a quedar disponible.</p>
+                </div>
+              ) : selectedIsCancelled ? (
+                <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/50 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  Reserva cancelada. {selectedPaySt === "paid" ? "Hay un pago registrado que no figura como reembolsado." : "El horario volvió a quedar disponible."}
+                </div>
+              ) : null}
 
               <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/50 px-3 py-2">
@@ -494,9 +554,11 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                       </dd>
                     </div>
                     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)]/50 px-3 py-2">
-                      <dt className={adminKicker}>Saldo pendiente en club</dt>
+                      <dt className={adminKicker}>{selectedIsCancelled ? "Saldo del turno cancelado" : "Saldo pendiente en club"}</dt>
                       <dd className="mt-1 font-semibold text-[var(--text-secondary)]">
-                        ${Number(selectedMatch.amount_pending ?? 0).toLocaleString("es-AR")}
+                        {selectedIsCancelled
+                          ? "No exigible · reserva cancelada"
+                          : `$${Number(selectedMatch.amount_pending ?? 0).toLocaleString("es-AR")}`}
                       </dd>
                     </div>
                   </>
@@ -549,7 +611,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     </Link>
                   ) : (
                     <>
-                      {selectedIsReservation && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
+                      {selectedIsReservation && !selectedIsCancelled && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
                         <form action={confirmOfflineCobro}>
                           <input type="hidden" name="match_id" value={selectedMatch.id} />
                           <button type="submit" className={adminButtonSecondary}>
@@ -566,7 +628,7 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                           </button>
                         </form>
                       ) : null}
-                      {selectedIsReservation ? (
+                      {selectedIsReservation && !selectedIsCancelled ? (
                         <form action={cancelReservationAdmin}>
                           <input type="hidden" name="match_id" value={selectedMatch.id} />
                           <input type="hidden" name="date" value={selectedDate} />
