@@ -2,7 +2,7 @@
 
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { adminButtonSecondary } from "@/components/admin/admin-premium";
 import type { AvailabilitySlot } from "../../(club)/[slug]/actions";
@@ -72,6 +72,21 @@ export default function NewReservationModal({
   const [amount, setAmount] = useState("");
   const [isCreating, startCreating] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isCheckingStep, startCheckingStep] = useTransition();
+
+  // Protección contra respuestas fuera de orden: cada fetch de disponibilidad
+  // (efecto de fecha, botón "Actualizar horarios", auto-refresh por foco,
+  // revalidación al continuar) toma un número correlativo. Si al resolver ya
+  // hay un fetch más nuevo en curso, la respuesta vieja se descarta.
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Mismo patrón que RegistrarPagoModal en app/admin/cobros/cobros-client.tsx
   // (commit dd132f9): portal a document.body + bloqueo de scroll del body
@@ -87,16 +102,135 @@ export default function NewReservationModal({
   }, []);
 
   useEffect(() => {
+    const requestId = ++requestIdRef.current;
+    // Limpia la grilla antes de pedir la nueva fecha: sin esto, entre el
+    // cambio de selectedDate y que resuelva el fetch, se alcanzan a mostrar
+    // los horarios de la fecha anterior (el useTransition tarda un tick más
+    // en marcar isLoadingSlots=true que en commitear este effect).
+    setAvailability({ slots: [], prices: {} });
     startLoadingSlots(async () => {
       const result = await getAdminClubAvailability(clubId, selectedDate);
+      if (!isMountedRef.current || requestId !== requestIdRef.current) return;
       setAvailability(result);
     });
   }, [clubId, selectedDate]);
 
+  // Refresca disponibilidad sin cambiar de paso. La usan el botón "Actualizar
+  // horarios" y el auto-refresh por foco/visibilidad de pestaña. Si el
+  // horario u cancha elegidos dejaron de estar libres, limpia esa selección
+  // y avisa — en vez de dejar seleccionada una combinación que ya no existe.
+  function refreshAvailability() {
+    const requestId = ++requestIdRef.current;
+    startLoadingSlots(async () => {
+      const result = await getAdminClubAvailability(clubId, selectedDate);
+      if (!isMountedRef.current || requestId !== requestIdRef.current) return;
+      setAvailability(result);
+      if (selectedTime) {
+        const slot = result.slots.find((s) => s.time === selectedTime);
+        if (!slot) {
+          setSelectedTime(null);
+          setSelectedCourtId(null);
+          setNotice("Ese horario ya no está disponible. Elegí otro.");
+        } else if (selectedCourtId && !slot.courtIds.includes(selectedCourtId)) {
+          setSelectedCourtId(null);
+          setNotice("Esa cancha ya no está disponible para ese horario. Elegí otra.");
+        }
+      }
+    });
+  }
+
+  // Siempre invoca la versión más reciente de refreshAvailability (que cierra
+  // sobre selectedTime/selectedCourtId actuales) sin tener que resuscribir el
+  // listener de foco/visibilidad en cada render.
+  const refreshAvailabilityRef = useRef(refreshAvailability);
+  refreshAvailabilityRef.current = refreshAvailability;
+
+  useEffect(() => {
+    // visibilitychange y focus suelen dispararse juntos al volver a la
+    // pestaña, pero no necesariamente en el mismo tick — el orden y el
+    // spacing entre ambos varían según navegador. Una microtask solo agrupa
+    // eventos síncronos; acá se usa una ventana corta de debounce (setTimeout)
+    // que colapsa cualquier combinación de llamadas dentro de esos 300ms en
+    // un único refetch, sin importar en qué tarea se haya disparado cada una.
+    let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+    function scheduleRefresh() {
+      if (refreshTimeout) return;
+      refreshTimeout = setTimeout(() => {
+        refreshTimeout = null;
+        refreshAvailabilityRef.current();
+      }, 300);
+    }
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") scheduleRefresh();
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", scheduleRefresh);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", scheduleRefresh);
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+    };
+  }, []);
+
   function handleSelectDate(ymd: string) {
     setSelectedTime(null);
     setSelectedCourtId(null);
+    setNotice(null);
+    // Limpia la disponibilidad en el mismo batch que el cambio de fecha para
+    // que no llegue a pintarse ni un frame con la fecha nueva y los horarios
+    // de la fecha anterior (el effect de [clubId, selectedDate] recién corre
+    // después de este commit).
+    setAvailability({ slots: [], prices: {} });
     setSelectedDate(ymd);
+  }
+
+  // Revalidación al avanzar: antes de pasar de la selección de horario a la
+  // de cancha, y de la cancha a los datos finales, se vuelve a consultar
+  // disponibilidad para no avanzar con una combinación que dejó de existir
+  // (p. ej. otro admin reservó, o se liberó/ocupó un turno fijo mientras el
+  // modal seguía abierto).
+  function handleContinueFromTime() {
+    if (!selectedTime) return;
+    const requestId = ++requestIdRef.current;
+    startCheckingStep(async () => {
+      const result = await getAdminClubAvailability(clubId, selectedDate);
+      if (!isMountedRef.current || requestId !== requestIdRef.current) return;
+      setAvailability(result);
+      const slot = result.slots.find((s) => s.time === selectedTime);
+      if (!slot) {
+        setSelectedTime(null);
+        setSelectedCourtId(null);
+        setNotice("Ese horario ya no está disponible. Elegí otro.");
+        return;
+      }
+      setNotice(null);
+      setStep(2);
+    });
+  }
+
+  function handleContinueFromCourt() {
+    if (!selectedTime || !selectedCourtId) return;
+    const requestId = ++requestIdRef.current;
+    startCheckingStep(async () => {
+      const result = await getAdminClubAvailability(clubId, selectedDate);
+      if (!isMountedRef.current || requestId !== requestIdRef.current) return;
+      setAvailability(result);
+      const slot = result.slots.find((s) => s.time === selectedTime);
+      if (!slot) {
+        setSelectedTime(null);
+        setSelectedCourtId(null);
+        setNotice("Ese horario ya no está disponible. Elegí otro.");
+        setStep(1);
+        return;
+      }
+      if (!slot.courtIds.includes(selectedCourtId)) {
+        setSelectedCourtId(null);
+        setNotice("Esa cancha ya no está disponible para ese horario. Elegí otra.");
+        return;
+      }
+      setNotice(null);
+      setStep(3);
+    });
   }
 
   const availableCourtIds = selectedTime
@@ -161,7 +295,22 @@ export default function NewReservationModal({
         <div style={{ padding: 24 }} className="space-y-5">
           {step === 1 ? (
             <>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Cuándo</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Cuándo</p>
+                <button
+                  type="button"
+                  onClick={refreshAvailability}
+                  disabled={isLoadingSlots}
+                  className="text-xs font-semibold text-[#0085FC] hover:underline disabled:opacity-50"
+                >
+                  {isLoadingSlots ? "Actualizando…" : "Actualizar horarios"}
+                </button>
+              </div>
+              {notice ? (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {notice}
+                </p>
+              ) : null}
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {dayChips.map((d) => {
                   const active = d.ymd === selectedDate;
@@ -203,6 +352,7 @@ export default function NewReservationModal({
                         onClick={() => {
                           setSelectedTime(slot.time);
                           setSelectedCourtId(null);
+                          setNotice(null);
                         }}
                         className={`rounded-xl border px-3 py-3 text-center text-sm font-bold transition-colors ${
                           active
@@ -223,12 +373,12 @@ export default function NewReservationModal({
                 </button>
                 <button
                   type="button"
-                  disabled={!selectedTime}
-                  onClick={() => setStep(2)}
+                  disabled={!selectedTime || isCheckingStep}
+                  onClick={handleContinueFromTime}
                   className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-105 disabled:opacity-40"
                   style={{ background: "linear-gradient(135deg, #0085FC, #0461C4)" }}
                 >
-                  Continuar
+                  {isCheckingStep ? "Verificando…" : "Continuar"}
                 </button>
               </div>
             </>
@@ -244,6 +394,11 @@ export default function NewReservationModal({
                 ← Cambiar horario
               </button>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Cancha</p>
+              {notice ? (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {notice}
+                </p>
+              ) : null}
               {availableCourtIds.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">
                   Ninguna cancha libre a esa hora.
@@ -258,7 +413,10 @@ export default function NewReservationModal({
                       <button
                         key={courtId}
                         type="button"
-                        onClick={() => setSelectedCourtId(courtId)}
+                        onClick={() => {
+                          setSelectedCourtId(courtId);
+                          setNotice(null);
+                        }}
                         className={`rounded-xl border p-4 text-left transition-colors ${
                           active
                             ? "border-[#0085FC] bg-[#0085FC]/5"
@@ -278,12 +436,12 @@ export default function NewReservationModal({
                 </button>
                 <button
                   type="button"
-                  disabled={!selectedCourtId}
-                  onClick={() => setStep(3)}
+                  disabled={!selectedCourtId || isCheckingStep}
+                  onClick={handleContinueFromCourt}
                   className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-105 disabled:opacity-40"
                   style={{ background: "linear-gradient(135deg, #0085FC, #0461C4)" }}
                 >
-                  Continuar
+                  {isCheckingStep ? "Verificando…" : "Continuar"}
                 </button>
               </div>
             </>
