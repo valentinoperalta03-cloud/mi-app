@@ -102,7 +102,7 @@ export const MATCH_PAYMENT_STATUSES = [
   // reserva sin seña ya está confirmada, no debe expirar nunca por eso) y
   // distinto de cash_pending/transfer_pending (esos sí representan un medio
   // de pago elegido por el jugador). Ver create_direct_reservation en
-  // supabase/migrations/20260923100100_direct_reservation_rpc.sql.
+  // supabase/migrations/20260920011329_direct_reservation_rpc.sql.
   "club_pending",
 ] as const;
 
