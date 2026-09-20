@@ -23,9 +23,9 @@ export function WinnerPickerButtons({
       const fd = new FormData();
       fd.set("tournament_id", tournamentId);
       fd.set("match_id", matchId);
-      fd.set("sets_json", "[]");
-      fd.set("pair1_score", winner === 1 ? "1" : "0");
-      fd.set("pair2_score", winner === 2 ? "1" : "0");
+      fd.set("kind", "timed");
+      fd.set("games1", winner === 1 ? "1" : "0");
+      fd.set("games2", winner === 2 ? "1" : "0");
       await saveTournamentMatchFormAction(fd);
     });
   }

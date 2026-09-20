@@ -252,20 +252,29 @@ export async function createTrainingBlockAction(
         );
         continue;
       }
-      const { error: blockErr } = await supabase
-        .from(DB_TABLES.courtBlocks)
-        .insert({
-          court_id: courtId,
-          date,
-          start_time: startTime,
-          blocked_date: date,
-          blocked_time: startTime,
-          reason: "entrenamiento_externo",
-          created_by: ctx.userId,
-        });
-      if (blockErr) {
+      // admin_create_court_block toma lock_court_day y revalida (matches/
+      // court_blocks por rango/reservation_holds) en la misma transacción,
+      // así se serializa contra tournament_assign_match_slot y el resto de
+      // los escritores reales de ocupación — un insert directo no lo hacía.
+      const { data: blockRpc, error: blockErr } = await supabase.rpc(
+        "admin_create_court_block",
+        {
+          p_owner_id: ctx.userId,
+          p_club_id: court.club_id,
+          p_court_id: courtId,
+          p_date: date,
+          p_start_time: startTime,
+          p_duration_minutes: parseCloseTimeToMinutes(endTime) - parseClockToMinutes(startTime),
+          p_reason: "entrenamiento_externo",
+          p_note: null,
+        },
+      );
+      const blockRow = (Array.isArray(blockRpc) ? blockRpc[0] : blockRpc) as
+        | { ok: boolean; reason: string; block_id: string | null }
+        | undefined;
+      if (blockErr || !blockRow?.ok) {
         console.error(
-          `[createTrainingBlockAction] training=${trainingBlockId} fecha=${date}: no se pudo bloquear — ${blockErr.message}`,
+          `[createTrainingBlockAction] training=${trainingBlockId} fecha=${date}: no se pudo bloquear — ${blockErr?.message ?? blockRow?.reason}`,
         );
       } else {
         created++;
@@ -280,16 +289,20 @@ export async function createTrainingBlockAction(
   } else {
     const date = String(formData.get("date") ?? "").trim();
     if (!date) return { ok: false, message: "Elegí una fecha." };
-    const { error } = await supabase.from(DB_TABLES.courtBlocks).insert({
-      court_id: courtId,
-      date,
-      start_time: startTime,
-      blocked_date: date,
-      blocked_time: startTime,
-      reason: "entrenamiento_externo",
-      created_by: ctx.userId,
+    const { data: blockRpc, error } = await supabase.rpc("admin_create_court_block", {
+      p_owner_id: ctx.userId,
+      p_club_id: court.club_id,
+      p_court_id: courtId,
+      p_date: date,
+      p_start_time: startTime,
+      p_duration_minutes: parseCloseTimeToMinutes(endTime) - parseClockToMinutes(startTime),
+      p_reason: "entrenamiento_externo",
+      p_note: null,
     });
-    if (error) return { ok: false, message: error.message };
+    const blockRow = (Array.isArray(blockRpc) ? blockRpc[0] : blockRpc) as
+      | { ok: boolean; reason: string; block_id: string | null }
+      | undefined;
+    if (error || !blockRow?.ok) return { ok: false, message: error?.message ?? blockRow?.reason ?? "No se pudo bloquear." };
     console.log(
       `[createTrainingBlockAction] entrenamiento puntual creado: cancha=${courtId} fecha=${date} hora=${startTime}`,
     );

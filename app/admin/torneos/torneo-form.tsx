@@ -15,6 +15,8 @@ import {
   TOURNAMENT_TYPE_OPTIONS,
   type TournamentTypeKey,
 } from "@/lib/tournament-constants";
+import { americanoLoads, computeCapacity, eliminationLoads, formatMinutes, penaStructure } from "@/lib/tournament/v2/capacity";
+import { legacyMatchFormatToV2 } from "@/lib/tournament/v2/match-format";
 import { AvailabilityGrid } from "./availability-grid";
 import { createTournamentAction } from "./actions";
 import { CategoryForm, emptyCategoryInput } from "./category-form";
@@ -32,12 +34,14 @@ type Availability = {
 const TYPE_EMOJI: Record<TournamentTypeKey, string> = {
   americano: "🏆",
   eliminacion: "⚡",
+  zonas: "🎯",
   pena: "🎉",
 };
 
 const TYPE_DESCRIPTION: Record<TournamentTypeKey, string> = {
   americano: "Todos juegan contra todos. Ideal para grupos de amigos.",
   eliminacion: "Eliminación directa. El que pierde queda afuera.",
+  zonas: "Fase de grupos, clasificación y cuadro final. Ideal para torneos grandes.",
   pena: "Formato social con comida y bebida incluida.",
 };
 
@@ -414,7 +418,7 @@ export default function TorneoFormInline({
           <p className="font-bold text-[var(--text-primary)]">
             ¿Qué tipo de torneo querés organizar?
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {TOURNAMENT_TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -710,6 +714,21 @@ export default function TorneoFormInline({
                 </div>
               ) : null}
             </>
+          ) : type === "zonas" ? (
+            <>
+              {renderMatchFormatPicker("Formato de partidos de zona", 10, 60)}
+
+              <div className="rounded-2xl border border-[#0085FC]/20 bg-[#0085FC]/[0.04] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  🎯 Zonas, clasificados y cuadro se configuran por categoría
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--text-tertiary)]">
+                  Después de crear el torneo, cada categoría arma su propia cantidad de
+                  zonas y tamaño de cuadro desde el Centro de Torneo, una vez que se
+                  cierren las inscripciones y sepas cuántas parejas confirmadas hay.
+                </p>
+              </div>
+            </>
           ) : (
             <>
               {renderMatchFormatPicker("Formato de partidos", 10, 60)}
@@ -958,6 +977,42 @@ export default function TorneoFormInline({
             ) : null}
           </div>
 
+          {(() => {
+            if (type !== "americano" && type !== "eliminacion") return null;
+            const fmt = legacyMatchFormatToV2(matchFormat, matchFormat === "tiempo" ? matchDuration : null);
+            const formats = { default: fmt };
+            const allLoads = categories.flatMap((cat) =>
+              type === "americano"
+                ? americanoLoads(cat.maxPairs, cat.guaranteedMatches ?? cat.maxPairs - 1, hasFinals, formats)
+                : eliminationLoads(cat.maxPairs, consolationBracket, formats),
+            );
+            if (allLoads.length === 0) return null;
+            const capacity = computeCapacity(allLoads);
+            const DEFAULT_SLOT_MINUTES = 90;
+            const availableMinutes = totalSelectedSlots * DEFAULT_SLOT_MINUTES;
+            const enough = availableMinutes >= capacity.totalMinutes;
+            return (
+              <div
+                className={`${adminCard} space-y-2 ${enough ? "border-emerald-300 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"}`}
+              >
+                <p className={adminKicker}>Cálculo de demanda horaria (a cupo completo)</p>
+                <p className="text-sm text-[var(--text-primary)]">
+                  {capacity.totalMatches} partidos estimados · ~{formatMinutes(capacity.totalMinutes)} de cancha necesarias
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Seleccionaste {totalSelectedSlots} slot{totalSelectedSlots === 1 ? "" : "s"} (~{formatMinutes(availableMinutes)} disponibles, estimando {DEFAULT_SLOT_MINUTES} min por slot).
+                </p>
+                {enough ? (
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">✓ Alcanza con la disponibilidad seleccionada.</p>
+                ) : (
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    ⚠ Podría no alcanzar si se completa el cupo. Agregá más franjas, canchas o días en el paso 2, o reducí la duración del partido.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
           <div
             className={`${adminCard} space-y-3 border-[#0085FC]/20 bg-[#0085FC]/[0.03]`}
           >
@@ -973,7 +1028,9 @@ export default function TorneoFormInline({
                     ? "🏆 Americano"
                     : type === "eliminacion"
                       ? "⚡ Eliminación"
-                      : "🎉 Peña"}
+                      : type === "zonas"
+                        ? "🎯 Zonas + eliminación"
+                        : "🎉 Peña"}
                 </p>
               </div>
               <div>

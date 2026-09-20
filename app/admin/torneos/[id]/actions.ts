@@ -8,10 +8,7 @@ import { DB_TABLES } from "@/lib/db-tables";
 import { createGroupChat } from "@/lib/group-chats";
 import { createNotification } from "@/lib/notifications";
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
-import {
-  propagateBracket,
-  saveTournamentMatchResult,
-} from "@/lib/tournament-match-result";
+import { propagateBracket } from "@/lib/tournament-match-result";
 import {
   buildAmericanoMatches,
   buildEliminationFixture,
@@ -24,6 +21,9 @@ import {
 } from "@/lib/tournament/ranking";
 import { validatePairsForType } from "@/lib/tournament/validation";
 import type { TournamentTypeKey } from "@/lib/tournament-constants";
+import { pickMatchFormat, resolveTournamentFormats, type MatchPhaseForFormat } from "@/lib/tournament/v2/match-format";
+import { validateMatchResult, type ResultInput, type SetScoreInput } from "@/lib/tournament/v2/results";
+import type { CompetitionPhase } from "@/lib/tournament/v2/types";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 async function assertTournamentOwner(
@@ -89,7 +89,7 @@ export async function startTournamentAction(
     (gate.row as { consolation_bracket?: boolean | null }).consolation_bracket,
   );
 
-  if (!["americano", "pena", "eliminacion"].includes(ttype)) {
+  if (!["americano", "pena", "eliminacion", "zonas"].includes(ttype)) {
     return { ok: false, message: `Tipo de torneo "${ttype}" no soportado.` };
   }
 
@@ -131,6 +131,16 @@ export async function startTournamentAction(
 
     const validation = validatePairsForType(ttype, pairIds.length);
     if (!validation.ok) return validation;
+
+    if (ttype === "zonas") {
+      // El fixture de "zonas" NO se arma acá: cada categoría genera sus
+      // propias zonas y partidos de zona desde el Centro de Torneo
+      // (generateZonesAction / generateZoneMatchesAction en
+      // categories-actions.ts / competitive-actions.ts), recién una vez que
+      // el admin decide cuántas zonas armar con las inscripciones
+      // confirmadas. Acá solo se valida que haya suficientes inscriptos.
+      continue;
+    }
 
     if (ttype === "americano") {
       const rows = buildAmericanoMatches(tournamentId, pairIds).map((row) => ({ ...row, category_id: categoryId, phase: "americano" }));
@@ -260,6 +270,30 @@ export async function finishTournamentAction(
       return {
         ok: false,
         message: `Hay ${count} partido${count === 1 ? "" : "s"} sin resultado. Cargalos antes de cerrar el torneo.`,
+      };
+    }
+  }
+
+  // "Zonas" no arma su fixture al iniciar (ver startTournamentAction): el
+  // chequeo de arriba solo mira partidos ya creados, así que una categoría
+  // cuyas zonas terminaron pero nunca generó clasificados/cuadro pasaría el
+  // chequeo sin tener campeón. Se bloquea explícitamente hasta que cada
+  // categoría con zonas generadas tenga también su cuadro armado.
+  if (tournamentType === "zonas") {
+    const { data: cats } = await service
+      .from(DB_TABLES.tournamentCategories)
+      .select("id, name, zones_generated_at, qualifiers_generated_at")
+      .eq("tournament_id", tournamentId);
+    const incomplete = ((cats ?? []) as Array<{
+      id: string;
+      name: string;
+      zones_generated_at: string | null;
+      qualifiers_generated_at: string | null;
+    }>).filter((c) => c.zones_generated_at && !c.qualifiers_generated_at);
+    if (incomplete.length > 0) {
+      return {
+        ok: false,
+        message: `Faltan clasificados/cuadro en: ${incomplete.map((c) => c.name).join(", ")}.`,
       };
     }
   }
@@ -678,6 +712,20 @@ async function maybeGenerateAmericanoFinals(
   await service.from(DB_TABLES.tournamentMatches).insert(toInsert);
 }
 
+/**
+ * Carga/corrige el resultado de un partido de americano o eliminación
+ * (peñas no cargan resultados; zonas usa saveMatchResultAction en
+ * competitive-actions.ts). Reusa validateMatchResult (reglas reales de
+ * pádel: sets, tie-break, super tie-break) y la misma RPC
+ * tournament_apply_match_result_v2 que ya usa el camino V2 — así ambos
+ * caminos comparten la misma validación deportiva y el mismo bloqueo de
+ * corrección retroactiva (no se puede pisar un resultado si la ronda
+ * siguiente ya arrancó).
+ *
+ * Contrato de formData: `kind` = "sets" | "timed".
+ * - sets: `sets_json` = JSON de [{p1,p2}, ...].
+ * - timed: `games1`, `games2`, `tiebreak_winner` ("1" | "2", opcional).
+ */
 export async function saveTournamentMatchAction(
   tournamentId: string,
   matchId: string,
@@ -687,7 +735,8 @@ export async function saveTournamentMatchAction(
   const gate = await assertTournamentOwner(supabase, tournamentId);
   if (!gate.ok) return gate;
 
-  if ((gate.row as { tournament_type?: string }).tournament_type === "pena") {
+  const ttype = (gate.row as { tournament_type?: string }).tournament_type;
+  if (ttype === "pena") {
     return {
       ok: false,
       message: "Las peñas no cargan resultados.",
@@ -701,39 +750,30 @@ export async function saveTournamentMatchAction(
     };
   }
 
-  const s1 = Number(formData.get("pair1_score"));
-  const s2 = Number(formData.get("pair2_score"));
-  const setsRaw = String(formData.get("sets_json") ?? "").trim();
-  let setsJson: unknown = null;
-  if (setsRaw) {
+  const kind = String(formData.get("kind") ?? "sets");
+  let input: ResultInput;
+  if (kind === "timed") {
+    const games1 = Number(formData.get("games1"));
+    const games2 = Number(formData.get("games2"));
+    const tbRaw = String(formData.get("tiebreak_winner") ?? "").trim();
+    const tiebreakWinner = tbRaw === "1" || tbRaw === "2" ? (Number(tbRaw) as 1 | 2) : null;
+    input = { kind: "timed", games1, games2, tiebreakWinner };
+  } else {
+    const setsRaw = String(formData.get("sets_json") ?? "[]").trim();
+    let sets: SetScoreInput[];
     try {
-      setsJson = JSON.parse(setsRaw) as unknown;
+      sets = JSON.parse(setsRaw) as SetScoreInput[];
     } catch {
       return { ok: false, message: "JSON de sets inválido." };
     }
-  }
-
-  if (!Number.isFinite(s1) || !Number.isFinite(s2) || s1 < 0 || s2 < 0) {
-    return { ok: false, message: "Scores inválidos." };
-  }
-  if (s1 === s2) {
-    return {
-      ok: false,
-      message: "No puede haber empate — uno debe ganar más sets.",
-    };
-  }
-  if (s1 > 3 || s2 > 3) {
-    return { ok: false, message: "El máximo de sets es 3." };
+    input = { kind: "sets", sets };
   }
 
   const service = createServiceClient();
-  const tname = String((gate.row as { name?: string }).name ?? "Torneo");
 
-  // El partido tiene que pertenecer al torneo validado arriba: sin este filtro
-  // un admin podía cargar resultados en partidos de otro club.
   const { data: existing } = await service
     .from(DB_TABLES.tournamentMatches)
-    .select("pair1_id, pair2_id, status, winner_pair_id, category_id")
+    .select("pair1_id, pair2_id, status, winner_pair_id, category_id, phase, round")
     .eq("id", matchId)
     .eq("tournament_id", tournamentId)
     .maybeSingle();
@@ -745,46 +785,73 @@ export async function saveTournamentMatchAction(
     status: string;
     winner_pair_id: string | null;
     category_id: string | null;
+    phase: string | null;
+    round: number;
   } | null;
   if (!em?.pair1_id || !em.pair2_id) {
     return { ok: false, message: "Faltan parejas en el partido." };
   }
 
-  const winnerPairId = s1 > s2 ? em.pair1_id : em.pair2_id;
-  let res: { ok: boolean; message: string };
-
-  if (em.status === "finished") {
-    const { error } = await service
+  const dbPhase = em.phase ?? (ttype === "eliminacion" ? "knockout" : "americano");
+  let isFinal = false;
+  if (dbPhase === "knockout" && em.category_id) {
+    const { data: maxRow } = await service
       .from(DB_TABLES.tournamentMatches)
-      .update({
-        pair1_score: s1,
-        pair2_score: s2,
-        sets: (setsJson ?? []) as never,
-        winner_pair_id: winnerPairId,
-        status: "finished",
-      })
-      .eq("id", matchId)
-      .eq("tournament_id", tournamentId);
-    if (error) {
-      res = { ok: false, message: error.message };
-    } else {
-      // Re-propagar bracket solo si el ganador cambió
-      if (em.winner_pair_id !== winnerPairId) {
-        await propagateBracket(service, matchId, winnerPairId);
-      }
-      res = { ok: true, message: "Resultado actualizado." };
-    }
-  } else {
-    res = await saveTournamentMatchResult({
-      admin: service,
-      tournamentId,
-      matchId,
-      pair1Score: s1,
-      pair2Score: s2,
-      setsJson: setsJson ?? [],
-      tournamentName: tname,
-    });
+      .select("round")
+      .eq("category_id", em.category_id)
+      .eq("phase", "knockout")
+      .order("round", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    isFinal = (maxRow as { round?: number } | null)?.round === em.round;
   }
+
+  const { data: tRow } = await service
+    .from(DB_TABLES.tournaments)
+    .select("match_formats, match_format, match_duration_minutes")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  const tour = tRow as { match_formats: unknown; match_format: string | null; match_duration_minutes: number | null } | null;
+  const formats = resolveTournamentFormats(tour?.match_formats, tour?.match_format, tour?.match_duration_minutes);
+  const format = pickMatchFormat(formats, dbPhase as MatchPhaseForFormat, isFinal);
+  const phaseForValidation: CompetitionPhase = dbPhase === "americano" ? "americano" : "knockout";
+  const validation = validateMatchResult(format, phaseForValidation, input);
+  if (!validation.ok) return { ok: false, message: validation.message };
+  const result = validation.result;
+
+  const RESULT_REASON_MESSAGES: Record<string, string> = {
+    match_not_found: "Partido no encontrado.",
+    forbidden: "No autorizado.",
+    missing_pairs: "Faltan parejas en el partido.",
+    invalid_outcome: "Resultado inválido.",
+    qualifiers_already_generated: "No se puede corregir: ya se generaron los clasificados.",
+    next_round_started: "La pareja que ganó este partido ya jugó la siguiente ronda: no se puede corregir el resultado.",
+    draw_not_allowed: "En esta fase no puede haber empate.",
+  };
+
+  const { data: rpcRows, error: rpcErr } = await supabase.rpc("tournament_apply_match_result_v2", {
+    p_match_id: matchId,
+    p_outcome: result.outcome,
+    p_sets1: result.sets1,
+    p_sets2: result.sets2,
+    p_games1: result.games1,
+    p_games2: result.games2,
+    p_sets_json: result.sets,
+    p_tiebreak_winner: result.tiebreakWinner,
+  });
+  if (rpcErr) return { ok: false, message: "No se pudo guardar el resultado." };
+  const rpcRes = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as
+    | { ok: boolean; reason: string; winner_pair_id: string | null; phase: string | null }
+    | null;
+  if (!rpcRes?.ok) {
+    return { ok: false, message: RESULT_REASON_MESSAGES[rpcRes?.reason ?? ""] ?? "No se pudo guardar el resultado." };
+  }
+
+  if (rpcRes.phase === "knockout" && rpcRes.winner_pair_id && em.winner_pair_id !== rpcRes.winner_pair_id) {
+    await propagateBracket(service, matchId, rpcRes.winner_pair_id);
+  }
+
+  const res: { ok: boolean; message: string } = { ok: true, message: "Resultado guardado." };
 
   if (
     res.ok &&
@@ -830,6 +897,7 @@ const ASSIGN_SLOT_REASON_MESSAGES: Record<string, string> = {
   training_conflict: "Ese horario está ocupado por un entrenamiento.",
   tournament_match_conflict: "Ese horario ya está ocupado por otro partido.",
   reservation_hold_conflict: "Hay una reserva en proceso de pago para ese horario.",
+  pair_conflict: "Una de las parejas ya tiene otro partido asignado a esa hora.",
 };
 
 /**
@@ -874,6 +942,200 @@ export async function assignTournamentMatchSlot(input: {
   revalidatePath(`/admin/torneos/${input.tournamentId}`);
   revalidatePath("/admin/dashboard");
   return { ok: true };
+}
+
+export type TournamentSlot = { date: string; courtId: string; time: string };
+
+/**
+ * Disponibilidad deportiva del torneo (secciones 4.4/11): pool de
+ * canchas+día+franja que el club destinó al torneo. Editable después de
+ * creado — necesario para "zonas", donde el club recién sabe cuánta cancha
+ * hace falta al cerrar inscripciones, mucho después de haber creado el
+ * torneo desde el wizard.
+ */
+export async function updateTournamentAvailabilityAction(
+  tournamentId: string,
+  slots: TournamentSlot[],
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return gate;
+  const status = (gate.row as { status?: string }).status;
+  if (status === "finished" || status === "cancelled") {
+    return { ok: false, message: "El torneo ya no admite cambios de disponibilidad." };
+  }
+  if (
+    !Array.isArray(slots) ||
+    !slots.every(
+      (s) => /^\d{4}-\d{2}-\d{2}$/.test(s.date) && /^[0-9a-f-]{36}$/i.test(s.courtId) && /^\d{2}:\d{2}$/.test(s.time),
+    )
+  ) {
+    return { ok: false, message: "Franjas inválidas." };
+  }
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from(DB_TABLES.tournaments)
+    .update({ tournament_court_blocks: slots })
+    .eq("id", tournamentId);
+  if (error) return { ok: false, message: "No se pudo guardar la disponibilidad." };
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: `Disponibilidad guardada: ${slots.length} franja${slots.length === 1 ? "" : "s"}.` };
+}
+
+type UnscheduledMatch = { label: string; reason: string };
+
+/**
+ * "Generar programación" (sección 11): asigna automáticamente TODOS los
+ * partidos con ambas parejas ya definidas y sin horario todavía, usando el
+ * pool de `tournament_court_blocks` como candidatos. Reutiliza tal cual
+ * `tournament_assign_match_slot` (misma RPC, mismos locks, misma
+ * revalidación server-side) para cada asignación — esta función NO decide
+ * si un horario es válido, eso lo sigue decidiendo la RPC; solo itera
+ * candidatos y evita, del lado de la app, lo único que la RPC no puede ver
+ * por sí sola: que una MISMA pareja no puede jugar dos partidos a la vez en
+ * dos canchas distintas (la RPC valida por cancha, no por pareja).
+ * No reimplementa el motor de fixtures ni de disponibilidad: son datos ya
+ * persistidos (tournament_matches, tournament_court_blocks).
+ */
+export async function autoScheduleTournamentAction(
+  tournamentId: string,
+): Promise<{ ok: boolean; message: string; scheduled: number; unscheduled: UnscheduledMatch[] }> {
+  const supabase = await createClient({ allowCookieWrites: true });
+  const gate = await assertTournamentOwner(supabase, tournamentId);
+  if (!gate.ok) return { ...gate, scheduled: 0, unscheduled: [] };
+
+  const row = gate.row as { status?: string; club_id?: string };
+  if (row.status !== "in_progress") {
+    return { ok: false, message: "Solo se puede programar un torneo en curso.", scheduled: 0, unscheduled: [] };
+  }
+  const clubId = String(row.club_id ?? "");
+
+  const service = createServiceClient();
+  const { data: tRow } = await service.from(DB_TABLES.tournaments).select("tournament_court_blocks").eq("id", tournamentId).maybeSingle();
+  const pool = ((tRow as { tournament_court_blocks: unknown } | null)?.tournament_court_blocks ?? []) as TournamentSlot[];
+  if (!Array.isArray(pool) || pool.length === 0) {
+    return {
+      ok: false,
+      message: "El torneo no tiene disponibilidad configurada. Agregá canchas/franjas desde \"Disponibilidad del torneo\".",
+      scheduled: 0,
+      unscheduled: [],
+    };
+  }
+
+  const { data: allMatches } = await service
+    .from(DB_TABLES.tournamentMatches)
+    .select("id, phase, round, round_name, pair1_id, pair2_id, status, court_id, scheduled_date, scheduled_time")
+    .eq("tournament_id", tournamentId);
+  const matches = (allMatches ?? []) as Array<{
+    id: string;
+    phase: string | null;
+    round: number;
+    round_name: string | null;
+    pair1_id: string | null;
+    pair2_id: string | null;
+    status: string;
+    court_id: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+  }>;
+
+  // Pareja ocupada por horario exacto (fecha|hora), viniendo de partidos que
+  // YA tenían horario antes de correr esto — se actualiza a medida que este
+  // mismo run va asignando, para no proponerle a una pareja dos partidos
+  // simultáneos en canchas distintas (lo único que la RPC, por cancha, no ve).
+  const pairBusy = new Map<string, Set<string>>();
+  const claimedSlots = new Set<string>();
+  function markBusy(pairId: string | null, date: string, time: string) {
+    if (!pairId) return;
+    const key = `${date}|${time}`;
+    const set = pairBusy.get(pairId) ?? new Set<string>();
+    set.add(key);
+    pairBusy.set(pairId, set);
+  }
+  function isPairBusy(pairId: string | null, date: string, time: string): boolean {
+    if (!pairId) return false;
+    return pairBusy.get(pairId)?.has(`${date}|${time}`) ?? false;
+  }
+
+  for (const m of matches) {
+    if (m.scheduled_date && m.scheduled_time) {
+      markBusy(m.pair1_id, m.scheduled_date, m.scheduled_time);
+      markBusy(m.pair2_id, m.scheduled_date, m.scheduled_time);
+      if (m.court_id) claimedSlots.add(`${m.court_id}|${m.scheduled_date}|${m.scheduled_time}`);
+    }
+  }
+
+  const toSchedule = matches
+    .filter((m) => m.status !== "finished" && !m.scheduled_date && m.pair1_id && m.pair2_id)
+    .sort((a, b) => {
+      const rank = (m: (typeof matches)[number]) =>
+        m.phase === "knockout" || m.phase === "americano_final" ? 1000 + m.round : m.round;
+      return rank(a) - rank(b);
+    });
+
+  const { data: regs } = await service.from(DB_TABLES.tournamentRegistrations).select("id, player1_id, player2_id").eq("tournament_id", tournamentId);
+  const regList = (regs ?? []) as Array<{ id: string; player1_id: string; player2_id: string | null }>;
+  const { data: profiles } = await service.from(DB_TABLES.profiles).select("user_id, name");
+  const nameByUser = new Map(((profiles ?? []) as Array<{ user_id: string; name: string | null }>).map((p) => [p.user_id, p.name]));
+  function pairLabel(pairId: string | null): string {
+    const reg = regList.find((r) => r.id === pairId);
+    if (!reg) return "Pareja";
+    const n1 = nameByUser.get(reg.player1_id) ?? "Jugador";
+    const n2 = reg.player2_id ? (nameByUser.get(reg.player2_id) ?? "Jugador") : null;
+    return n2 ? `${n1} / ${n2}` : n1;
+  }
+
+  const sortedPool = [...pool].sort((a, b) => (a.date + a.time + a.courtId).localeCompare(b.date + b.time + b.courtId));
+
+  let scheduled = 0;
+  const unscheduled: UnscheduledMatch[] = [];
+
+  for (const m of toSchedule) {
+    const label = `${m.round_name ?? "Partido"}: ${pairLabel(m.pair1_id)} vs ${pairLabel(m.pair2_id)}`;
+    let placed = false;
+    let lastReason = "No hay franjas disponibles.";
+    for (const slot of sortedPool) {
+      const slotKey = `${slot.courtId}|${slot.date}|${slot.time}`;
+      if (claimedSlots.has(slotKey)) continue;
+      if (isPairBusy(m.pair1_id, slot.date, slot.time) || isPairBusy(m.pair2_id, slot.date, slot.time)) continue;
+
+      const res = await assignTournamentMatchSlot({
+        matchId: m.id,
+        courtId: slot.courtId,
+        matchDate: slot.date,
+        matchTime: slot.time,
+        clubId,
+        tournamentId,
+      });
+      if (res.ok) {
+        claimedSlots.add(slotKey);
+        markBusy(m.pair1_id, slot.date, slot.time);
+        markBusy(m.pair2_id, slot.date, slot.time);
+        scheduled++;
+        placed = true;
+        break;
+      }
+      // Conflicto real que esta app no conocía (reserva/turno fijo/otro
+      // partido ya agendado fuera de este pool): esa franja no sirve para
+      // nadie más tampoco — se descarta del pool para el resto del loop.
+      claimedSlots.add(slotKey);
+      lastReason = res.error ?? lastReason;
+    }
+    if (!placed) unscheduled.push({ label, reason: lastReason });
+  }
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return {
+    ok: true,
+    message:
+      unscheduled.length === 0
+        ? `${scheduled} partido${scheduled === 1 ? "" : "s"} programado${scheduled === 1 ? "" : "s"}.`
+        : `${scheduled} programado${scheduled === 1 ? "" : "s"}, ${unscheduled.length} sin poder programar — agregá más disponibilidad.`,
+    scheduled,
+    unscheduled,
+  };
 }
 
 /** Peña: reasignar qué pareja (registration ya fusionada) enfrenta a cuál en un partido. */

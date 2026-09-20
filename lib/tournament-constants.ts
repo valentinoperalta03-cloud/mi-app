@@ -1,9 +1,25 @@
-export type TournamentTypeKey = "americano" | "eliminacion" | "pena";
+export type TournamentTypeKey = "americano" | "eliminacion" | "zonas" | "pena";
 
-export const TOURNAMENT_TYPE_OPTIONS: { value: TournamentTypeKey; label: string; badge: string }[] = [
-  { value: "americano", label: "Americano", badge: "🏆 Americano" },
-  { value: "eliminacion", label: "Eliminación directa", badge: "⚡ Eliminación" },
-  { value: "pena", label: "Peña", badge: "🎉 Peña" },
+export const TOURNAMENT_TYPE_OPTIONS: {
+  value: TournamentTypeKey;
+  label: string;
+  subtitle: string;
+  badge: string;
+}[] = [
+  { value: "americano", label: "Americano", subtitle: "Todos contra todos, ranking por puntos.", badge: "🏆 Americano" },
+  {
+    value: "eliminacion",
+    label: "Eliminación directa",
+    subtitle: "Los ganadores avanzan hasta la final.",
+    badge: "⚡ Eliminación",
+  },
+  {
+    value: "zonas",
+    label: "Zonas + eliminación",
+    subtitle: "Fase de grupos, clasificación y cuadro final.",
+    badge: "🎯 Zonas",
+  },
+  { value: "pena", label: "Peña", subtitle: "Formato social con comida y bebida incluida.", badge: "🎉 Peña" },
 ];
 
 export const TOURNAMENT_STATUS_LABELS: Record<string, string> = {

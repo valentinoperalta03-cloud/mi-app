@@ -1,5 +1,6 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
@@ -7,7 +8,7 @@ import { propagateBracket } from "@/lib/tournament-match-result";
 import { buildSeededEliminationFixture, type SeededEntry } from "@/lib/tournament/v2/bracket";
 import { pickMatchFormat, resolveTournamentFormats, type MatchPhaseForFormat } from "@/lib/tournament/v2/match-format";
 import { qualificationPlan } from "@/lib/tournament/v2/playoff";
-import { selectQualifiers, type ZoneStandingsInput } from "@/lib/tournament/v2/qualifiers";
+import { selectQualifiers, type ResolvedTiebreak, type ZoneStandingsInput } from "@/lib/tournament/v2/qualifiers";
 import { validateMatchResult, type ResultInput } from "@/lib/tournament/v2/results";
 import { computeZoneStandings } from "@/lib/tournament/v2/standings";
 import type { CompetitionPhase, ScoredMatch } from "@/lib/tournament/v2/types";
@@ -102,8 +103,17 @@ export async function saveMatchResultAction(
   if (!matchRow) return { ok: false, message: "Partido no encontrado." };
   const match = matchRow as { id: string; category_id: string | null; zone_id: string | null; phase: string | null; round: number };
 
-  const { data: tRow } = await service.from(DB_TABLES.tournaments).select("club_id, match_formats").eq("id", tournamentId).maybeSingle();
-  const tour = tRow as { club_id: string; match_formats: unknown } | null;
+  const { data: tRow } = await service
+    .from(DB_TABLES.tournaments)
+    .select("club_id, match_formats, match_format, match_duration_minutes")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  const tour = tRow as {
+    club_id: string;
+    match_formats: unknown;
+    match_format: string | null;
+    match_duration_minutes: number | null;
+  } | null;
   if (!tour || !ctx.clubIds.includes(tour.club_id)) return { ok: false, message: "No autorizado." };
 
   const dbPhase = match.phase ?? "knockout";
@@ -120,7 +130,7 @@ export async function saveMatchResultAction(
     isFinal = (maxRow as { round?: number } | null)?.round === match.round;
   }
 
-  const formats = resolveTournamentFormats(tour.match_formats);
+  const formats = resolveTournamentFormats(tour.match_formats, tour.match_format, tour.match_duration_minutes);
   const format = pickMatchFormat(formats, dbPhase as MatchPhaseForFormat, isFinal);
   const validation = validateMatchResult(format, competitionPhaseFor(dbPhase), input, declaredWinner);
   if (!validation.ok) return { ok: false, message: validation.message };
@@ -147,6 +157,93 @@ export async function saveMatchResultAction(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/torneos/${tournamentId}`);
   return { ok: true, message: "Resultado guardado." };
+}
+
+/**
+ * Junta los desempates absolutos ya resueltos (sección 25.2): partidos de
+ * desempate terminados (fase 'tiebreak', se lee el ganador directo del
+ * partido) + resoluciones administrativas persistidas. selectQualifiers
+ * solo los aplica si el grupo de parejas coincide exactamente con un
+ * PendingTiebreak — nunca inventa un orden.
+ */
+async function loadResolvedTiebreaks(service: SupabaseClient, categoryId: string): Promise<ResolvedTiebreak[]> {
+  const [{ data: matches }, { data: resolutions }] = await Promise.all([
+    service
+      .from(DB_TABLES.tournamentMatches)
+      .select("pair1_id, pair2_id, winner_pair_id")
+      .eq("category_id", categoryId)
+      .eq("phase", "tiebreak")
+      .eq("status", "finished"),
+    service.from(DB_TABLES.tournamentTiebreakResolutions).select("pair_ids, winner_order").eq("category_id", categoryId),
+  ]);
+
+  const out: ResolvedTiebreak[] = [];
+  for (const m of (matches ?? []) as Array<{ pair1_id: string | null; pair2_id: string | null; winner_pair_id: string | null }>) {
+    if (!m.pair1_id || !m.pair2_id || !m.winner_pair_id) continue;
+    const loser = m.winner_pair_id === m.pair1_id ? m.pair2_id : m.pair1_id;
+    out.push({ pairIds: [m.pair1_id, m.pair2_id], order: [m.winner_pair_id, loser] });
+  }
+  for (const r of (resolutions ?? []) as Array<{ pair_ids: string[]; winner_order: string[] }>) {
+    out.push({ pairIds: r.pair_ids, order: r.winner_order });
+  }
+  return out;
+}
+
+const TIEBREAK_REASON_MESSAGES: Record<string, string> = {
+  category_not_found: "Categoría no encontrada.",
+  forbidden: "No autorizado.",
+  bracket_already_exists: "Ya se generó el cuadro: no se puede resolver un desempate después.",
+  invalid_input: "El orden tiene que incluir exactamente a las parejas empatadas.",
+  invalid_registration: "Alguna de las parejas no pertenece a esta categoría.",
+  reason_required: "Indicá el motivo de la resolución.",
+};
+
+/** Vía B (sección 25.2): resolución administrativa registrada, sin partido de por medio. */
+export async function resolveTiebreakAdminAction(
+  tournamentId: string,
+  categoryId: string,
+  pairIds: string[],
+  winnerOrder: string[],
+  reason: string,
+): Promise<ActionResult> {
+  const gate = await assertCategoryOwner(tournamentId, categoryId);
+  if (!gate.ok) return gate;
+  const supabase = await createClient({ allowCookieWrites: true });
+  const { data, error } = await supabase.rpc("tournament_record_tiebreak_resolution", {
+    p_category_id: categoryId,
+    p_pair_ids: pairIds,
+    p_winner_order: winnerOrder,
+    p_reason: reason,
+  });
+  if (error) return { ok: false, message: "No se pudo registrar la resolución." };
+  const res = firstRow(data) as { ok: boolean; reason: string } | null;
+  if (!res?.ok) return { ok: false, message: TIEBREAK_REASON_MESSAGES[res?.reason ?? ""] ?? "No se pudo registrar la resolución." };
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: "Resolución registrada." };
+}
+
+/** Vía A (sección 25.2): crea el partido de desempate entre las parejas empatadas. */
+export async function createTiebreakMatchAction(
+  tournamentId: string,
+  categoryId: string,
+  zoneId: string | null,
+  pair1Id: string,
+  pair2Id: string,
+): Promise<ActionResult & { matchId?: string }> {
+  const gate = await assertCategoryOwner(tournamentId, categoryId);
+  if (!gate.ok) return gate;
+  const supabase = await createClient({ allowCookieWrites: true });
+  const { data, error } = await supabase.rpc("tournament_create_tiebreak_match", {
+    p_category_id: categoryId,
+    p_zone_id: zoneId,
+    p_pair1_id: pair1Id,
+    p_pair2_id: pair2Id,
+  });
+  if (error) return { ok: false, message: "No se pudo crear el partido de desempate." };
+  const res = firstRow(data) as { ok: boolean; reason: string; match_id: string } | null;
+  if (!res?.ok) return { ok: false, message: TIEBREAK_REASON_MESSAGES[res?.reason ?? ""] ?? "No se pudo crear el partido de desempate." };
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  return { ok: true, message: "Partido de desempate creado.", matchId: res.match_id };
 }
 
 export type QualifiersPreview =
@@ -217,7 +314,8 @@ export async function previewQualifiersAction(tournamentId: string, categoryId: 
   );
   if (!plan.ok) return { ok: false, message: plan.message };
 
-  const result = selectQualifiers(zonesInput, bracketSize);
+  const resolvedTies = await loadResolvedTiebreaks(service, categoryId);
+  const result = selectQualifiers(zonesInput, bracketSize, resolvedTies);
   if (!result.ok) {
     return { ok: false, pending: result.pending, message: result.message };
   }

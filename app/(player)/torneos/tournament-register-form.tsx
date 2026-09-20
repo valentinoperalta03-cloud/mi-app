@@ -14,6 +14,8 @@ type Props = {
   acceptsCash: boolean;
   acceptsTransfer: boolean;
   transferAlias: string | null;
+  /** Categorías del torneo — si hay más de una, el jugador tiene que elegir cuál. */
+  categories: Array<{ id: string; name: string }>;
 };
 
 export default function TournamentRegisterForm({
@@ -24,10 +26,12 @@ export default function TournamentRegisterForm({
   acceptsCash,
   acceptsTransfer,
   transferAlias,
+  categories,
 }: Props) {
   const [partnerQuery, setPartnerQuery] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [results, setResults] = useState<Array<{ user_id: string; name: string | null }>>([]);
+  const [categoryId, setCategoryId] = useState(categories.length === 1 ? categories[0].id : "");
   const [paymentMethod, setPaymentMethod] = useState<"mp" | "cash" | "transfer">(
     acceptsMp ? "mp" : acceptsCash ? "cash" : "transfer"
   );
@@ -52,6 +56,7 @@ export default function TournamentRegisterForm({
     const fd = new FormData(e.currentTarget);
     fd.set("tournament_id", tournamentId);
     fd.set("partner_user_id", isIndividual ? "" : partnerId);
+    fd.set("category_id", categoryId);
     start(async () => {
       if (paymentMethod === "mp") {
         const res = await beginTournamentCheckoutAction(fd);
@@ -89,6 +94,24 @@ export default function TournamentRegisterForm({
       <h3 className="text-sm font-semibold text-[var(--text-primary)]">Inscribirse</h3>
       {msg ? <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{msg}</p> : null}
       <form onSubmit={onSubmit} className="mt-3 space-y-3">
+        {categories.length > 1 ? (
+          <div>
+            <label className="text-xs font-medium text-[var(--text-tertiary)]">Categoría</label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)] px-3 py-2 text-sm"
+            >
+              <option value="">Elegí una categoría</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
         {!isIndividual ? (
           <div>
             <label className="text-xs font-medium text-[var(--text-tertiary)]">Compañero/a</label>
@@ -181,7 +204,7 @@ export default function TournamentRegisterForm({
         )}
         <button
           type="submit"
-          disabled={pending || (!isIndividual && !partnerId)}
+          disabled={pending || (!isIndividual && !partnerId) || (categories.length > 1 && !categoryId)}
           className="btn-primary-gradient w-full rounded-2xl py-3 text-sm font-semibold disabled:opacity-50"
         >
           {pending ? "Procesando…" : paymentMethod === "mp" ? "Pagar inscripción" : "Confirmar inscripción"}

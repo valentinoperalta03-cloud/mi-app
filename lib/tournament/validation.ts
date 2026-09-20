@@ -17,5 +17,8 @@ export function validatePairsForType(
     if (count < 4) return { ok: false, message: "Se necesitan al menos 4 jugadores inscriptos." };
     if (count % 2 !== 0) return { ok: false, message: "Se necesita un numero par de jugadores inscriptos." };
   }
+  if (type === "zonas" && count < 4) {
+    return { ok: false, message: "Se necesitan al menos 4 parejas confirmadas para armar zonas." };
+  }
   return { ok: true };
 }

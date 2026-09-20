@@ -510,46 +510,37 @@ export async function createManualBlocksAction(input: {
     );
   }
 
-  // `date` y `start_time` son NOT NULL en el schema actual: se escriben las cuatro columnas.
-  const { data: inserted, error: insertErr } = await supabase
-    .from(DB_TABLES.courtBlocks)
-    .insert(
-      slots.map((s) => ({
-        court_id: s.courtId,
-        date,
-        start_time: s.time,
-        blocked_date: date,
-        blocked_time: s.time,
-        reason: REASON_BLOQUEO_MANUAL,
-        note: note || null,
-        created_by: ctx.userId,
-      }))
-    )
-    .select("id");
-  if (insertErr) return fail(`No se bloqueó ningún horario: ${insertErr.message}`);
-  const insertedIds = ((inserted ?? []) as Array<{ id: string }>).map((r) => r.id);
-
-  // Re-chequeo post-insert contra lo que se haya agendado en paralelo. Se ignoran
-  // los bloqueos manuales: incluyen las filas que acabamos de crear.
-  const after = await getDayActivity(supabase, { clubId, courts: clubCourts, date });
-  const others = { ...after, items: after.items.filter((i) => i.kind !== "manual_block") };
-  const lateConflicts = slots
-    .map((s) => ({ s, occ: findSlotOccupancy(others, s.courtId, s.time, BLOCK_SLOT_MINUTES) }))
-    .filter((x) => x.occ.occupied)
-    .map((x) => conflictOf(x.s.courtId, x.s.time, x.occ.detail));
-  if (lateConflicts.length) {
-    const { error: rollbackErr } = await supabase
-      .from(DB_TABLES.courtBlocks)
-      .delete()
-      .in("id", insertedIds)
-      .eq("reason", REASON_BLOQUEO_MANUAL);
-    revalidatePath("/admin/bloqueos");
-    if (rollbackErr) {
-      return fail(
-        `Algunos horarios se ocuparon mientras bloqueabas y no pudimos deshacer el lote (${rollbackErr.message}). Revisá la lista de horarios bloqueados.`,
-        lateConflicts
-      );
+  // Cada slot se crea vía admin_create_court_block: toma lock_court_day y
+  // revalida (matches/court_blocks por rango/reservation_holds) DENTRO de la
+  // misma transacción, así se serializa contra tournament_assign_match_slot
+  // y el resto de los escritores reales de ocupación de cancha — el chequeo
+  // en JS de arriba es la validación amigable, esta RPC es la garantía real.
+  const insertedIds: string[] = [];
+  const lateConflicts: BlockConflict[] = [];
+  for (const s of slots) {
+    const { data, error: rpcErr } = await supabase.rpc("admin_create_court_block", {
+      p_owner_id: ctx.userId,
+      p_club_id: clubId,
+      p_court_id: s.courtId,
+      p_date: date,
+      p_start_time: s.time,
+      p_duration_minutes: BLOCK_SLOT_MINUTES,
+      p_reason: REASON_BLOQUEO_MANUAL,
+      p_note: note || null,
+    });
+    const row = (Array.isArray(data) ? data[0] : data) as { ok: boolean; reason: string; block_id: string | null } | undefined;
+    if (rpcErr || !row?.ok) {
+      lateConflicts.push(conflictOf(s.courtId, s.time, rpcErr?.message ?? row?.reason ?? "No disponible"));
+      break;
     }
+    if (row.block_id) insertedIds.push(row.block_id);
+  }
+
+  if (lateConflicts.length) {
+    if (insertedIds.length) {
+      await supabase.from(DB_TABLES.courtBlocks).delete().in("id", insertedIds).eq("reason", REASON_BLOQUEO_MANUAL);
+    }
+    revalidatePath("/admin/bloqueos");
     return fail(
       "No pudimos bloquear los horarios porque algunos acaban de dejar de estar disponibles. No se bloqueó ninguno.",
       lateConflicts

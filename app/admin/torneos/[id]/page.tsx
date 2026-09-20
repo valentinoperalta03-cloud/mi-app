@@ -36,10 +36,11 @@ import {
   closeTournamentRegistrationsFormAction,
   finishTournamentFormAction,
   reopenTournamentRegistrationsFormAction,
-  saveTournamentMatchFormAction,
   startTournamentFormAction,
   updatePenaMatchPairsAction,
+  type TournamentSlot,
 } from "./actions";
+import { LegacySetsResultForm } from "./legacy-sets-result-form";
 import { FINAL_ROUND } from "@/lib/tournament/rounds";
 import { AmericanoLeaderboard } from "./AmericanoLeaderboard";
 import { ConfirmActionButton } from "./confirm-action-button";
@@ -48,10 +49,24 @@ import { TournamentScheduler } from "./TournamentScheduler";
 import type { EditableTournament } from "./edit-tournament-form";
 import TournamentConfigSection from "./tournament-config-section";
 import { TournamentCategoriesPanel } from "./categories-panel";
+import { TournamentAvailabilityPanel } from "./availability-panel";
+import { AutoSchedulePanel } from "./auto-schedule-panel";
+import { DemandCalculatorCard } from "./demand-calculator";
+import { VisualScheduler, type SchedulerMatch } from "./visual-scheduler";
+import { tournamentDemand } from "@/lib/tournament/v2/demand";
+import { NextStepsCard } from "./next-steps-card";
 import { WinnerPickerButtons } from "./winner-picker-buttons";
 import { computeZoneStandings } from "@/lib/tournament/v2/standings";
 import { playoffSizeOptions } from "@/lib/tournament/v2/playoff";
-import type { ScoredMatch } from "@/lib/tournament/v2/types";
+import type { ScoredMatch, MatchFormat } from "@/lib/tournament/v2/types";
+import { pickMatchFormat, resolveTournamentFormats } from "@/lib/tournament/v2/match-format";
+import type { UiMatchFormat } from "./competitive-panel";
+
+/** MatchFormat (motor interno) → UiMatchFormat (lo mínimo que necesita el formulario de resultado). */
+function toUiFormat(format: MatchFormat): UiMatchFormat {
+  if (format.kind === "timed") return { kind: "timed", minutes: format.minutes };
+  return { kind: "sets", bestOf: format.bestOf, gamesPerSet: format.gamesPerSet, superTiebreakDecider: format.superTiebreakDecider };
+}
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -152,7 +167,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const { data: t } = await supabase
     .from(DB_TABLES.tournaments)
     .select(
-      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes, guaranteed_matches, clubs(name)",
+      "id, club_id, name, description, tournament_type, status, max_pairs, price_per_pair, requires_deposit, deposit_type, deposit_value, prize, start_date, end_date, start_time, registration_deadline, cancellation_hours, category_min, category_max, group_chat_id, consolation_bracket, what_includes, game_format, is_individual, allowed_categories, has_finals, match_format, match_duration_minutes, multi_day, num_courts, food_included, contact_phone, prizes, guaranteed_matches, tournament_court_blocks, clubs(name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -191,12 +206,17 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     contact_phone: string | null;
     prizes: Array<{ position: number; description: string }> | null;
     guaranteed_matches: number | null;
+    tournament_court_blocks: TournamentSlot[] | null;
     clubs: { name: string | null } | { name: string | null }[] | null;
   };
   if (!ctx.clubIds.includes(tour.club_id)) redirect("/admin/torneos");
 
   const clubNameRow = Array.isArray(tour.clubs) ? (tour.clubs[0] ?? null) : tour.clubs;
   const clubName = clubNameRow?.name ?? null;
+
+  // Sin UI todavía para tournaments.match_formats (jsonb) — se resuelve desde
+  // el formato legacy del wizard (match_format + match_duration_minutes).
+  const resolvedFormats = resolveTournamentFormats(null, tour.match_format, tour.match_duration_minutes);
 
   const service = createServiceClient();
   const [{ data: regs }, { data: matches }, { data: courts }, { data: categoriesRaw }, { data: zonesRaw }] =
@@ -212,7 +232,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       service
         .from(DB_TABLES.tournamentMatches)
         .select(
-          "id, round, round_name, bracket, pair1_id, pair2_id, pair1_score, pair2_score, pair1_games, pair2_games, is_draw, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes, category_id, zone_id, phase, bracket_slot",
+          "id, round, round_name, bracket, pair1_id, pair2_id, pair1_score, pair2_score, pair1_games, pair2_games, is_draw, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes, category_id, zone_id, phase, bracket_slot, feeder_left_match_id, feeder_right_match_id",
         )
         .eq("tournament_id", id)
         .order("round", { ascending: true }),
@@ -289,6 +309,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     court_id: string | null;
     scheduled_date: string | null;
     scheduled_time: string | null;
+    feeder_left_match_id: string | null;
+    feeder_right_match_id: string | null;
   }>;
   const playerIdsForPairs = [
     ...new Set(
@@ -331,6 +353,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     const knockoutMatches = v2MatchList
       .filter((m) => m.category_id === c.id && m.phase === "knockout")
       .sort((a, b) => a.round - b.round || (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0));
+    const tiebreakMatches = v2MatchList.filter((m) => m.category_id === c.id && m.phase === "tiebreak");
     const standingsByZone = catZones.map((z) => {
       const memberIds = catRegs.filter((r) => r.zone_id === z.id).map((r) => r.id);
       const scored: ScoredMatch[] = zoneMatches
@@ -405,8 +428,96 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         eliminationFinal?.status === "finished" && eliminationFinal.winner_pair_id
           ? (pairNameMap.get(eliminationFinal.winner_pair_id) ?? null)
           : null,
+      tiebreakMatches: tiebreakMatches.map((m) => ({
+        id: m.id,
+        zoneId: m.zone_id,
+        pair1Id: m.pair1_id,
+        pair2Id: m.pair2_id,
+        pair1Name: m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "—",
+        pair2Name: m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "—",
+        status: m.status,
+        courtId: m.court_id,
+        scheduledDate: m.scheduled_date,
+        scheduledTime: m.scheduled_time,
+      })),
+      pairNames: Object.fromEntries(pairNameMap),
     };
   });
+
+  // Sección 5 (incluye "zonas + eliminación"): demanda real de partidos/horas-cancha.
+  const demandInputs = categoryPanelData.map((c) => ({
+    name: c.name,
+    maxPairs: c.max_pairs,
+    approvedCount: c.approvedCount,
+    guaranteedMatches: c.guaranteed_matches,
+    zoneSizes: c.zones_generated_at ? c.zones.map((z) => z.memberCount) : [],
+    bracketSize: c.qualifiedCount > 0 ? c.qualifiedCount : null,
+  }));
+  const demand = tournamentDemand(
+    tour.tournament_type as "americano" | "eliminacion" | "zonas" | "pena",
+    demandInputs,
+    resolvedFormats,
+    tour.consolation_bracket,
+    tour.has_finals ?? true,
+  );
+  const availableTournamentSlots = (tour.tournament_court_blocks ?? []).length;
+
+  // Sección 12: datos para el editor visual — TODOS los partidos del torneo
+  // (zona/cuadro/americano/peña/desempate), con lo necesario para
+  // drag-and-drop + validaciones cliente (pareja ocupada, feeder pendiente).
+  const schedulerMatches: SchedulerMatch[] = v2MatchList.map((m) => ({
+    id: m.id,
+    label: m.round_name ?? `Ronda ${m.round}`,
+    categoryLabel: categoryList.find((c) => c.id === m.category_id)?.name ?? "—",
+    pair1Id: m.pair1_id,
+    pair2Id: m.pair2_id,
+    pair1Name: m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "TBD",
+    pair2Name: m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "TBD",
+    status: m.status,
+    courtId: m.court_id,
+    scheduledDate: m.scheduled_date,
+    scheduledTime: m.scheduled_time,
+    feederLeftMatchId: m.feeder_left_match_id,
+    feederRightMatchId: m.feeder_right_match_id,
+  }));
+  const pendingScheduleCount = schedulerMatches.filter((m) => !m.scheduledDate && m.pair1Id && m.pair2Id && m.status !== "finished").length;
+
+  // Punto 4 del cierre: guía contextual según el estado real del torneo.
+  const nextSteps: string[] = [];
+  if (tour.status === "open" || tour.status === "draft") {
+    const approvedCount = regList.filter((r) => r.payment_status === "approved").length;
+    nextSteps.push(
+      approvedCount === 0
+        ? "Todavía no hay inscriptos confirmados."
+        : "Cuando tengas suficientes inscriptos, cerrá inscripciones e iniciá el torneo.",
+    );
+  } else if (tour.status === "registration_closed") {
+    nextSteps.push("Inscripciones cerradas. Iniciá el torneo para generar el fixture.");
+  } else if (tour.status === "in_progress") {
+    if (tour.tournament_type === "zonas") {
+      for (const c of categoryPanelData) {
+        if (!c.zones_generated_at) {
+          nextSteps.push(`"${c.name}": generá las zonas cuando tengas los inscriptos confirmados que necesitás.`);
+        } else if (!c.qualifiers_generated_at && c.hasZoneMatches && c.zoneMatches.every((m) => m.status === "finished")) {
+          nextSteps.push(`"${c.name}": terminaron los partidos de zona — generá los clasificados.`);
+        } else if (!c.qualifiers_generated_at && (!c.hasZoneMatches || c.zoneMatches.some((m) => m.status !== "finished"))) {
+          if (!c.hasZoneMatches) nextSteps.push(`"${c.name}": generá los partidos de zona.`);
+        } else if (c.qualifiers_generated_at && c.knockoutMatches.length === 0) {
+          nextSteps.push(`"${c.name}": ya tiene clasificados — generá el cuadro eliminatorio.`);
+        }
+      }
+    }
+    if (pendingScheduleCount > 0) {
+      nextSteps.push(`Hay ${pendingScheduleCount} partido${pendingScheduleCount === 1 ? "" : "s"} sin programar — usá "Generar programación" o movelos manualmente en el editor visual.`);
+    }
+    if (demand.totalMinutes > availableTournamentSlots * 90) {
+      nextSteps.push("La disponibilidad configurada no alcanza para la demanda calculada — agregá franjas.");
+    }
+    if (nextSteps.length === 0 && schedulerMatches.length > 0 && schedulerMatches.every((m) => m.status === "finished")) {
+      nextSteps.push("Todos los partidos tienen resultado — ya podés finalizar el torneo.");
+    }
+  }
+
   const typeBadge =
     TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)
       ?.badge ?? tour.tournament_type;
@@ -441,8 +552,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     (m) => m.round < FINAL_ROUND,
   );
   const americanoFinalMatches = matchRows.filter((m) => m.round >= FINAL_ROUND);
-  const useWinnerPicker =
-    tour.tournament_type === "americano" && tour.match_format === "tiempo";
+  const legacyFormat = toUiFormat(resolvedFormats.default);
+  const useWinnerPicker = legacyFormat.kind === "timed";
 
   function matchCard(m: MatchRow) {
     return (
@@ -476,41 +587,8 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
             pair1Name={pairNameMap.get(m.pair1_id) ?? "Pareja 1"}
             pair2Name={pairNameMap.get(m.pair2_id) ?? "Pareja 2"}
           />
-        ) : m.pair1_id && m.pair2_id ? (
-          <form
-            action={saveTournamentMatchFormAction}
-            className="mt-2 grid gap-2 sm:grid-cols-4"
-          >
-            <input type="hidden" name="tournament_id" value={id} />
-            <input type="hidden" name="match_id" value={m.id} />
-            <input type="hidden" name="sets_json" value="[]" />
-            <input
-              type="number"
-              name="pair1_score"
-              min={0}
-              max={3}
-              required
-              defaultValue={m.pair1_score ?? ""}
-              placeholder="Sets P1"
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
-            />
-            <input
-              type="number"
-              name="pair2_score"
-              min={0}
-              max={3}
-              required
-              defaultValue={m.pair2_score ?? ""}
-              placeholder="Sets P2"
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2 py-1 text-[var(--text-primary)]"
-            />
-            <button
-              type="submit"
-              className={`${adminCTAPrimary} px-2 py-1 text-xs`}
-            >
-              {m.status === "finished" ? "Editar" : "Guardar"}
-            </button>
-          </form>
+        ) : m.pair1_id && m.pair2_id && legacyFormat.kind === "sets" ? (
+          <LegacySetsResultForm tournamentId={id} matchId={m.id} format={legacyFormat} />
         ) : null}
       </li>
     );
@@ -730,12 +808,48 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         </div>
       </section>
 
+      <NextStepsCard steps={nextSteps} />
+
+      <TournamentAvailabilityPanel
+        tournamentId={id}
+        clubId={tour.club_id}
+        courts={courtList}
+        initialSlots={tour.tournament_court_blocks ?? []}
+        editable={tour.status !== "finished" && tour.status !== "cancelled"}
+      />
+
+      <DemandCalculatorCard demand={demand} availableSlots={availableTournamentSlots} />
+
+      {tour.status === "in_progress" ? (
+        <AutoSchedulePanel tournamentId={id} pendingCount={pendingScheduleCount} />
+      ) : null}
+
+      {tour.status === "in_progress" || tour.status === "finished" ? (
+        <section className={adminCard}>
+          <p className={adminKicker}>Editor de programación</p>
+          <div className="mt-3">
+            <VisualScheduler
+              tournamentId={id}
+              clubId={tour.club_id}
+              courts={courtList}
+              matches={schedulerMatches}
+              poolSlots={tour.tournament_court_blocks ?? []}
+            />
+          </div>
+        </section>
+      ) : null}
+
       <TournamentCategoriesPanel
         tournamentId={id}
         clubId={tour.club_id}
         courts={courtList}
         categories={categoryPanelData}
         editable={tour.status === "open" || tour.status === "draft"}
+        zoneFormat={toUiFormat(pickMatchFormat(resolvedFormats, "zone", false))}
+        knockoutFormat={toUiFormat(pickMatchFormat(resolvedFormats, "knockout", false))}
+        finalFormat={toUiFormat(pickMatchFormat(resolvedFormats, "knockout", true))}
+        formats={resolvedFormats}
+        availableSlots={availableTournamentSlots}
       />
 
       <TournamentConfigSection
@@ -990,6 +1104,11 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
             ? bracketSection("🥈 Llave de Plata", silverMatches)
             : null}
         </>
+      ) : tour.tournament_type === "zonas" ? (
+        // Las categorías de "zonas" ya muestran su propio fixture (partidos
+        // de zona + cuadro) en TournamentCategoriesPanel más arriba — acá no
+        // hay una segunda fuente de verdad que mostrar.
+        null
       ) : tour.tournament_type === "pena" ? (
         <section>
           <h2 className="font-admin-display text-lg font-semibold text-[var(--text-primary)]">

@@ -18,16 +18,53 @@ function isMatchFormat(v: unknown): v is MatchFormat {
   return false;
 }
 
-/** Parsea `tournaments.match_formats` (jsonb, puede ser null/inválido) a un TournamentFormats seguro. */
-export function resolveTournamentFormats(raw: unknown): TournamentFormats {
-  if (!raw || typeof raw !== "object") return DEFAULT_TOURNAMENT_FORMATS;
-  const o = raw as Record<string, unknown>;
-  if (!isMatchFormat(o.default)) return DEFAULT_TOURNAMENT_FORMATS;
-  const result: TournamentFormats = { default: o.default };
-  if (isMatchFormat(o.zone)) result.zone = o.zone;
-  if (isMatchFormat(o.knockout)) result.knockout = o.knockout;
-  if (isMatchFormat(o.final)) result.final = o.final;
-  return result;
+/**
+ * Convierte el formato "legacy" del wizard (`tournaments.match_format`:
+ * 'set' | 'tres_sets' | 'tiempo', + `match_duration_minutes`) al MatchFormat
+ * real que usa `validateMatchResult`. Es el único lugar donde vive esta
+ * conversión — todo el resto del motor de resultados solo conoce MatchFormat.
+ */
+export function legacyMatchFormatToV2(
+  matchFormat: string | null | undefined,
+  matchDurationMinutes: number | null | undefined,
+): MatchFormat {
+  if (matchFormat === "tiempo") {
+    return { kind: "timed", minutes: matchDurationMinutes && matchDurationMinutes > 0 ? matchDurationMinutes : 90 };
+  }
+  if (matchFormat === "tres_sets") {
+    return { kind: "sets", bestOf: 3, gamesPerSet: 6, superTiebreakDecider: true, slotMinutes: 90 };
+  }
+  // 'set' (o cualquier valor legacy desconocido): a un set, sin super tie-break.
+  return { kind: "sets", bestOf: 1, gamesPerSet: 6, superTiebreakDecider: false, slotMinutes: 60 };
+}
+
+/**
+ * Parsea `tournaments.match_formats` (jsonb, puede ser null/inválido) a un
+ * TournamentFormats seguro. Si no hay jsonb configurado (hoy ningún wizard lo
+ * escribe todavía) cae al formato legacy del torneo (`match_format` +
+ * `match_duration_minutes`) en vez de un default de 90 minutos por tiempo
+ * fijo — así un torneo creado "al mejor de 3 sets" valida sets reales, no
+ * games por tiempo.
+ */
+export function resolveTournamentFormats(
+  raw: unknown,
+  legacyMatchFormat?: string | null,
+  legacyMatchDurationMinutes?: number | null,
+): TournamentFormats {
+  if (raw && typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    if (isMatchFormat(o.default)) {
+      const result: TournamentFormats = { default: o.default };
+      if (isMatchFormat(o.zone)) result.zone = o.zone;
+      if (isMatchFormat(o.knockout)) result.knockout = o.knockout;
+      if (isMatchFormat(o.final)) result.final = o.final;
+      return result;
+    }
+  }
+  if (legacyMatchFormat) {
+    return { default: legacyMatchFormatToV2(legacyMatchFormat, legacyMatchDurationMinutes) };
+  }
+  return DEFAULT_TOURNAMENT_FORMATS;
 }
 
 export type MatchPhaseForFormat = "zone" | "knockout" | "americano" | "americano_final" | "pena";

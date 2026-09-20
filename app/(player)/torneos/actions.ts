@@ -85,6 +85,7 @@ async function prepareTournamentRegistration(formData: FormData, method: Payment
 
   const tournamentId = String(formData.get("tournament_id") ?? "").trim();
   const partnerId = String(formData.get("partner_user_id") ?? "").trim();
+  const categoryId = String(formData.get("category_id") ?? "").trim();
   if (!tournamentId) return { ok: false, message: "Torneo inválido." };
 
   const { data: t } = await supabase
@@ -103,6 +104,7 @@ async function prepareTournamentRegistration(formData: FormData, method: Payment
     p_tournament_id: tournamentId,
     p_partner_id: partnerId || null,
     p_payment_method: method,
+    p_category_id: categoryId || null,
   });
   if (rpcErr) return { ok: false, message: "No se pudo crear la inscripción." };
   const res = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as RegisterEntryRow | null;

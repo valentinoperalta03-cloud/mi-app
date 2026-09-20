@@ -122,12 +122,39 @@ export async function createTournamentAction(
   const semifinalsDate =
     String(formData.get("semifinals_date") ?? "").trim() || null;
   const finalsDate = String(formData.get("finals_date") ?? "").trim() || null;
-  // tournament_court_blocks del wizard viejo se ignora: bloqueaba canchas sin
-  // partido asociado (y el insert nunca funcionó). En V2 la ocupación nace de
-  // tournament_matches vía trigger.
+  // tournament_court_blocks: NO bloquea canchas por sí solo (la ocupación
+  // real nace de tournament_matches vía trigger, como documentaba el
+  // comentario viejo) — se persiste como el POOL de franjas candidatas que
+  // el club destinó al torneo (sección 4.4/11), para que la calculadora de
+  // demanda y "Generar programación" (autoScheduleTournamentAction) tengan
+  // de dónde sacar candidatos en vez de adivinar contra el horario general
+  // del club. Se puede seguir editando después desde el detalle del torneo
+  // (updateTournamentAvailabilityAction).
+  const courtBlocksRaw = String(formData.get("tournament_court_blocks") ?? "").trim();
+  let tournamentCourtBlocks: unknown = null;
+  if (courtBlocksRaw) {
+    try {
+      const parsed = JSON.parse(courtBlocksRaw) as unknown;
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(
+          (s) =>
+            s &&
+            typeof s === "object" &&
+            typeof (s as Record<string, unknown>).date === "string" &&
+            typeof (s as Record<string, unknown>).courtId === "string" &&
+            typeof (s as Record<string, unknown>).time === "string",
+        )
+      ) {
+        tournamentCourtBlocks = parsed;
+      }
+    } catch {
+      // Slots inválidos: se ignora en vez de bloquear la creación del torneo.
+    }
+  }
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
-  if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
+  if (!["americano", "eliminacion", "zonas", "pena"].includes(tournamentType)) {
     return { ok: false, message: "Tipo de torneo inválido." };
   }
   if (!startDate || !endDate || !startTime || !registrationDeadline) {
@@ -262,6 +289,7 @@ export async function createTournamentAction(
       quarterfinals_date: quarterfinalsDate,
       semifinals_date: semifinalsDate,
       finals_date: finalsDate,
+      tournament_court_blocks: tournamentCourtBlocks,
       is_individual: isPena,
       prize,
       start_date: startDate,

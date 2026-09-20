@@ -12,12 +12,17 @@ import {
 } from "@/components/admin/admin-premium";
 import { formatLevel } from "@/lib/tournament/v2/categories";
 import { evaluateZones, zoneCountOptions } from "@/lib/tournament/v2/zones";
+import { playoffSizeOptions } from "@/lib/tournament/v2/playoff";
+import { computeCapacity, formatMinutes, zonasLoads } from "@/lib/tournament/v2/capacity";
+import type { TournamentFormats } from "@/lib/tournament/v2/types";
 import type { CategoryInput } from "@/lib/tournament/v2/category-input";
 import { CategoryForm, emptyCategoryInput } from "../category-form";
 import { addCategoryAction, deleteCategoryAction, generateZonesAction, updateCategoryAction } from "./categories-actions";
 import {
   CategoryCompetitivePanel,
   type KnockoutMatchData,
+  type TiebreakMatchData,
+  type UiMatchFormat,
   type ZoneMatchData,
   type ZoneStandingsData,
 } from "./competitive-panel";
@@ -53,6 +58,8 @@ type CategoryData = {
   bracketSizeOptions: number[];
   knockoutMatches: KnockoutMatchData[];
   championName: string | null;
+  tiebreakMatches: TiebreakMatchData[];
+  pairNames: Record<string, string>;
 };
 
 function money(n: number) {
@@ -90,8 +97,60 @@ function toInput(c: CategoryData): CategoryInput {
   };
 }
 
-function ZonesControl({ tournamentId, category }: { tournamentId: string; category: CategoryData }) {
+const DEFAULT_SLOT_MINUTES = 90;
+
+/**
+ * Demanda REAL de la configuración elegida (punto 1 del cierre) — no la
+ * recomendada, la que el club efectivamente seleccionó (zoneCount +
+ * bracketSize). Reusa zonasLoads/computeCapacity tal cual (mismo motor que
+ * el cálculo agregado de la página de detalle).
+ */
+function DemandPreview({
+  sizes,
+  bracketSize,
+  formats,
+  availableSlots,
+}: {
+  sizes: number[];
+  bracketSize: number;
+  formats: TournamentFormats;
+  availableSlots: number;
+}) {
+  const plan = computeCapacity(zonasLoads(sizes, bracketSize, formats));
+  const availableMinutes = availableSlots * DEFAULT_SLOT_MINUTES;
+  const enough = plan.totalMinutes <= availableMinutes;
+  return (
+    <div className={`mt-3 rounded-xl border p-2 text-[11px] ${enough ? "border-emerald-300 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"}`}>
+      <p className="font-semibold text-[var(--text-primary)]">
+        Esta configuración: {plan.totalMatches} partidos · ~{formatMinutes(plan.totalMinutes)} de cancha
+      </p>
+      <p className="mt-0.5 text-[var(--text-tertiary)]">
+        Disponibilidad del torneo: ~{formatMinutes(availableMinutes)} ({availableSlots} franjas).
+      </p>
+      {enough ? (
+        <p className="mt-0.5 font-semibold text-emerald-700 dark:text-emerald-300">✓ Alcanza.</p>
+      ) : (
+        <p className="mt-0.5 font-semibold text-amber-700 dark:text-amber-300">
+          ⚠ Faltan ~{formatMinutes(plan.totalMinutes - availableMinutes)}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ZonesControl({
+  tournamentId,
+  category,
+  formats,
+  availableSlots,
+}: {
+  tournamentId: string;
+  category: CategoryData;
+  formats: TournamentFormats;
+  availableSlots: number;
+}) {
   const [zoneCount, setZoneCount] = useState<number | null>(null);
+  const [bracketSize, setBracketSize] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -101,6 +160,9 @@ function ZonesControl({ tournamentId, category }: { tournamentId: string; catego
   if (category.approvedCount < 4) {
     return <p className="mt-2 text-xs text-[var(--text-tertiary)]">Necesitás al menos 4 inscriptos confirmados para armar zonas.</p>;
   }
+
+  const evForZoneCount = zoneCount ? evaluateZones(category.approvedCount, zoneCount, category.guaranteed_matches ?? 1) : null;
+  const bracketOptions = zoneCount ? playoffSizeOptions(category.approvedCount, zoneCount) : [];
 
   return (
     <div className="mt-3 rounded-2xl border border-dashed border-[var(--border-subtle)] p-3">
@@ -123,7 +185,10 @@ function ZonesControl({ tournamentId, category }: { tournamentId: string; catego
               <button
                 key={zones}
                 type="button"
-                onClick={() => setZoneCount(zones)}
+                onClick={() => {
+                  setZoneCount(zones);
+                  setBracketSize(null);
+                }}
                 title={evaluation.ok ? `${evaluation.sizes.join("/")} — ${evaluation.totalMatches} partidos` : evaluation.message}
                 disabled={!evaluation.ok}
                 className={`rounded-full border px-3 py-1 text-xs disabled:opacity-30 ${zoneCount === zones ? "border-[#0085FC] bg-[#0085FC]/10 text-[#0085FC]" : "border-[var(--border-subtle)]"}`}
@@ -132,16 +197,36 @@ function ZonesControl({ tournamentId, category }: { tournamentId: string; catego
               </button>
             ))}
           </div>
-          {zoneCount ? (
+          {evForZoneCount ? (
             <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
-              {(() => {
-                const ev = evaluateZones(category.approvedCount, zoneCount, category.guaranteed_matches ?? 1);
-                return ev.ok
-                  ? `${ev.sizes.join(" / ")} parejas por zona · ${ev.totalMatches} partidos de zona`
-                  : ev.message;
-              })()}
+              {evForZoneCount.ok
+                ? `${evForZoneCount.sizes.join(" / ")} parejas por zona · ${evForZoneCount.totalMatches} partidos de zona`
+                : evForZoneCount.message}
             </p>
           ) : null}
+
+          {zoneCount && bracketOptions.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-xs font-semibold text-[var(--text-secondary)]">Tamaño del cuadro (clasificados)</p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {bracketOptions.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setBracketSize(size)}
+                    className={`rounded-full border px-3 py-1 text-xs ${bracketSize === size ? "border-[#0085FC] bg-[#0085FC]/10 text-[#0085FC]" : "border-[var(--border-subtle)]"}`}
+                  >
+                    Cuadro de {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {zoneCount && bracketSize && evForZoneCount?.ok ? (
+            <DemandPreview sizes={evForZoneCount.sizes} bracketSize={bracketSize} formats={formats} availableSlots={availableSlots} />
+          ) : null}
+
           {msg ? <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{msg}</p> : null}
           <button
             type="button"
@@ -170,12 +255,23 @@ export function TournamentCategoriesPanel({
   courts,
   categories,
   editable,
+  zoneFormat,
+  knockoutFormat,
+  finalFormat,
+  formats,
+  availableSlots,
 }: {
   tournamentId: string;
   clubId: string;
   courts: Array<{ id: string; name: string }>;
   categories: CategoryData[];
   editable: boolean;
+  zoneFormat: UiMatchFormat;
+  knockoutFormat: UiMatchFormat;
+  finalFormat: UiMatchFormat;
+  /** Formato completo (con slotMinutes) — lo necesita ZonesControl para el cálculo de demanda de la configuración elegida. */
+  formats: TournamentFormats;
+  availableSlots: number;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -247,7 +343,7 @@ export function TournamentCategoriesPanel({
               />
             ) : null}
 
-            <ZonesControl tournamentId={tournamentId} category={c} />
+            <ZonesControl tournamentId={tournamentId} category={c} formats={formats} availableSlots={availableSlots} />
 
             <CategoryCompetitivePanel
               tournamentId={tournamentId}
@@ -263,6 +359,11 @@ export function TournamentCategoriesPanel({
               bracketSizeOptions={c.bracketSizeOptions}
               knockoutMatches={c.knockoutMatches}
               championName={c.championName}
+              zoneFormat={zoneFormat}
+              knockoutFormat={knockoutFormat}
+              finalFormat={finalFormat}
+              tiebreakMatches={c.tiebreakMatches}
+              pairNames={c.pairNames}
             />
           </div>
         ))}

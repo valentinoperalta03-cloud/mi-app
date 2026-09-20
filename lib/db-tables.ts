@@ -62,6 +62,7 @@ export const DB_TABLES = {
   tournamentCategories: "tournament_categories",
   tournamentZones: "tournament_zones",
   tournamentPartnerRequests: "tournament_partner_requests",
+  tournamentTiebreakResolutions: "tournament_tiebreak_resolutions",
   practiceCoaches: "practice_coaches",
   practices: "practices",
   practiceSessions: "practice_sessions",
