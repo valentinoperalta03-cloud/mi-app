@@ -49,7 +49,7 @@ const REPO_MIGRATIONS = [
   "20260917100000_tournaments_v2_model.sql",
   "20260917100100_tournaments_v2_security.sql",
   "20260917100200_tournaments_v2_category_pricing.sql",
-  "20260917130000_tournaments_v2_zones_generation.sql",
+  "20260917130001_tournaments_v2_zones_generation.sql",
   "20260918100000_tournaments_v2_category_quota.sql",
   "20260918100100_tournaments_v2_category_edit_guard.sql",
   "20260918110000_tournaments_v2_category_player_uniqueness.sql",
@@ -59,6 +59,7 @@ const REPO_MIGRATIONS = [
   "20260920011345_reservation_hold_locked_insert.sql",
   "20260920100000_tournament_v2_scheduler.sql",
   "20260921100000_occupancy_lock_hardening.sql",
+  "20260922100000_fix_consume_reservation_hold_timezone.sql",
   "20260923100000_admin_manual_reservation_lock.sql",
   "20260924100000_reservation_hold_court_blocks_range.sql",
 ];
