@@ -94,6 +94,16 @@ export const MATCH_PAYMENT_STATUSES = [
   "cash_pending",
   "transfer_pending",
   "no_show",
+  // Reserva confirmada sin seña (clubs.requires_deposit = false): el turno
+  // completo queda pendiente de cobro EN el club, sin que el jugador haya
+  // elegido un medio de pago. Deliberadamente distinto de "pending" (el
+  // cron app/api/cron/expire-unpaid-matches/route.ts cancela automáticamente
+  // cualquier match con payment_status='pending' a los 15 minutos — una
+  // reserva sin seña ya está confirmada, no debe expirar nunca por eso) y
+  // distinto de cash_pending/transfer_pending (esos sí representan un medio
+  // de pago elegido por el jugador). Ver create_direct_reservation en
+  // supabase/migrations/20260923100100_direct_reservation_rpc.sql.
+  "club_pending",
 ] as const;
 
 const MATCH_PAY_ALLOWED: Record<string, Set<string>> = {
@@ -106,6 +116,10 @@ const MATCH_PAY_ALLOWED: Record<string, Set<string>> = {
   cash_pending: new Set(["paid", "no_show", "cancelled"]),
   transfer_pending: new Set(["paid", "no_show", "cancelled"]),
   no_show: new Set([]),
+  // Mismas transiciones que cash_pending/transfer_pending: el club cobra
+  // presencial (→ paid, vía admin/cobros) o la reserva se cancela sin que
+  // haya nada que reembolsar (→ cancelled) o se marca ausencia (→ no_show).
+  club_pending: new Set(["paid", "no_show", "cancelled"]),
 };
 
 export function assertMatchPaymentStatusTransition(

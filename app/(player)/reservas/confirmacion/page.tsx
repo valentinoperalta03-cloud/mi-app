@@ -252,11 +252,11 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
   const payNorm = String(match.payment_status ?? "").toLowerCase();
   const payDb = payNorm === "paid";
   const offlinePending = payNorm === "cash_pending" || payNorm === "transfer_pending";
+  /** Reserva sin seña (club con requires_deposit=false): ya está confirmada, nunca hubo pago online ni checkout de MP. */
+  const isDirectNoDeposit = payNorm === "club_pending";
   const payState = offlinePending
     ? "offline"
     : normalizePayState(params.collection_status, params.status, payDb);
-  /** Si no volvimos desde Mercado Pago, se confirmó directo (sin seña configurada): nunca hubo pago online. */
-  const cameFromMp = Boolean(paymentIdParam || params.status || params.collection_status);
   const financialStatus = String(match.financial_status ?? "unpaid").toLowerCase();
   const amountPaid = Number(match.amount_paid ?? 0);
   const amountPending = Number(match.amount_pending ?? 0);
@@ -271,7 +271,7 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
       : "—";
 
   let headerBlock: ReactNode;
-  if (payState === "approved" && !cameFromMp) {
+  if (isDirectNoDeposit) {
     headerBlock = (
       <div className="flex flex-col items-center gap-3 pt-4">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl text-emerald-700 shadow-inner dark:bg-emerald-950/50 dark:text-emerald-300">
@@ -281,7 +281,9 @@ export default async function ConfirmacionReservaPage({ searchParams }: PageProp
           Tu reserva en {clubLabel} quedó confirmada
         </h1>
         <p className="text-center text-sm font-medium text-slate-600 dark:text-slate-300">
-          El pago lo coordinás directamente con el club.
+          {amountPending > 0
+            ? `Pagás $${amountPending.toLocaleString("es-AR")} directamente en el club.`
+            : "El pago lo coordinás directamente con el club."}
         </p>
       </div>
     );

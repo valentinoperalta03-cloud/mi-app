@@ -30,6 +30,7 @@ type ClubOnboardingRow = {
   cancellation_policy: string | null;
   deposit_value: number | null;
   deposit_type: string | null;
+  requires_deposit: boolean | null;
   instagram: string | null;
   whatsapp: string | null;
   facebook: string | null;
@@ -52,7 +53,7 @@ export async function checkAdminOnboardingStatus(
     supabase
       .from(DB_TABLES.clubs)
       .select(
-        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, instagram, whatsapp, facebook, tiktok, services, skip_trainings",
+        "name, description, city, business_hours, cover_image_url, logo_url, cancellation_policy, deposit_value, deposit_type, requires_deposit, instagram, whatsapp, facebook, tiktok, services, skip_trainings",
       )
       .eq("id", clubId)
       .maybeSingle(),
@@ -85,7 +86,9 @@ export async function checkAdminOnboardingStatus(
       mpRes.data as { mp_access_token?: string | null } | null
     )?.mp_access_token?.trim(),
   );
-  const hasDeposit = Number(club?.deposit_value ?? 0) > 0;
+  // Completa si el club eligió explícitamente no solicitar seña, o si
+  // solicita seña y ya cargó tipo/monto.
+  const hasDeposit = club?.requires_deposit === false || Number(club?.deposit_value ?? 0) > 0;
   const hasServices = (club?.services ?? []).length > 0;
   const hasSocials = Boolean(
     club?.instagram || club?.whatsapp || club?.facebook || club?.tiktok,
@@ -147,7 +150,7 @@ export async function checkAdminOnboardingStatus(
       id: "sena",
       phase: 7,
       title: "Configurar seña",
-      description: "Definí el monto o porcentaje de seña para reservas",
+      description: "Definí el monto o porcentaje de seña para reservas, o desactivala",
       completed: hasDeposit,
       href: "/admin/config/pagos",
     },

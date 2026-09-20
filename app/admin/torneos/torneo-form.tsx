@@ -12,13 +12,13 @@ import {
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
 import { getCourtAvailabilityForDate } from "@/lib/tournament-availability";
 import {
-  MAX_PAIRS_OPTIONS,
-  PENA_MAX_PLAYERS_OPTIONS,
   TOURNAMENT_TYPE_OPTIONS,
   type TournamentTypeKey,
 } from "@/lib/tournament-constants";
 import { AvailabilityGrid } from "./availability-grid";
 import { createTournamentAction } from "./actions";
+import { CategoryForm, emptyCategoryInput } from "./category-form";
+import type { CategoryInput } from "@/lib/tournament/v2/category-input";
 
 export const CATEGORY_OPTIONS = PROFILE_CATEGORIES.slice().reverse();
 
@@ -126,7 +126,6 @@ export default function TorneoFormInline({
 
   // Paso 2 — fechas + disponibilidad
   const [name, setName] = useState("");
-  const [price, setPrice] = useState(0);
   const [deadline, setDeadline] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [multiDay, setMultiDay] = useState(false);
@@ -141,11 +140,7 @@ export default function TorneoFormInline({
     Record<string, Record<string, boolean>>
   >({});
 
-  // Paso 3 — modalidad
-  const [maxPairs, setMaxPairs] = useState(16);
-  const [maxPlayers, setMaxPlayers] = useState(16);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [guaranteedMatches, setGuaranteedMatches] = useState(0);
+  // Paso 3 — modalidad (cupo/categorías/garantizados ahora viven por categoría, paso 4)
   const [matchFormat, setMatchFormat] = useState<
     "set" | "tres_sets" | "tiempo"
   >("set");
@@ -160,16 +155,11 @@ export default function TorneoFormInline({
   const [numCourts, setNumCourts] = useState(2);
   const [foodIncluded, setFoodIncluded] = useState("");
 
-  // Paso 4 — métodos de pago
-  const [acceptsMp, setAcceptsMp] = useState(true);
-  const [acceptsCash, setAcceptsCash] = useState(false);
-  const [acceptsTransfer, setAcceptsTransfer] = useState(false);
-  const [transferAlias, setTransferAlias] = useState("");
-  // Seña por MP: reusa requires_deposit/deposit_type/deposit_value (ya
-  // implementado en el checkout del jugador vía calculateDepositAmount), no
-  // se agrega una columna nueva para no duplicar esa lógica de cobro.
-  const [requiresDeposit, setRequiresDeposit] = useState(false);
-  const [depositPercentage, setDepositPercentage] = useState(50);
+  // Paso 4 — categorías: cada una con su propio cupo, garantizados, precio,
+  // seña y métodos de pago (createTournamentAction ya soporta este JSON).
+  const [categories, setCategories] = useState<CategoryInput[]>([]);
+  const [editingCatIndex, setEditingCatIndex] = useState<number | null>(null);
+  const [addingCat, setAddingCat] = useState(false);
 
   // Paso 5 — premios + contacto
   const [hasPrizes, setHasPrizes] = useState(false);
@@ -179,8 +169,6 @@ export default function TorneoFormInline({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const priceLabel =
-    type === "pena" ? "Precio por jugador (ARS)" : "Precio por pareja (ARS)";
   const effectiveDeadline = deadline || startDate;
 
   const selectedDates =
@@ -198,21 +186,7 @@ export default function TorneoFormInline({
     Object.values(m).filter(Boolean),
   ).length;
   const canStep2 = Boolean(name.trim() && startDate && totalSelectedSlots > 0);
-  const canStep4 = acceptsMp || acceptsCash || acceptsTransfer;
-
-  function handleRequiresDepositChange(value: boolean) {
-    setRequiresDeposit(value);
-    if (value) {
-      setAcceptsCash(false);
-      setAcceptsTransfer(false);
-    }
-  }
-
-  function toggleCategory(cat: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
-    );
-  }
+  const canStep4 = categories.length > 0;
 
   async function loadAvailability(date: string) {
     if (!date || !courts.length) return;
@@ -353,6 +327,10 @@ export default function TorneoFormInline({
 
   function handleSubmit() {
     setError(null);
+    if (categories.length === 0) {
+      setError("Agregá al menos una categoría.");
+      return;
+    }
     startTransition(async () => {
       const fd = new FormData();
       fd.set("club_id", clubId);
@@ -362,18 +340,17 @@ export default function TorneoFormInline({
       fd.set("start_time", startTime);
       fd.set("end_date", effectiveEndDate);
       fd.set("registration_deadline", `${effectiveDeadline}T00:00`);
-      fd.set("price_per_pair", String(price));
-      fd.set("max_pairs", String(type === "pena" ? maxPlayers : maxPairs));
       fd.set("has_finals", String(hasFinals));
       fd.set("match_format", matchFormat);
       if (matchFormat === "tiempo")
         fd.set("match_duration_minutes", String(matchDuration));
       fd.set("consolation_bracket", String(consolationBracket));
       fd.set("multi_day", String(type === "eliminacion" && multiDay));
-      if (guaranteedMatches > 0)
-        fd.set("guaranteed_matches", String(guaranteedMatches));
 
-      selectedCategories.forEach((c) => fd.append("allowed_categories", c));
+      // Precio/seña/métodos de pago/cupo/garantizados/niveles ya NO se leen de
+      // acá — cada categoría trae los suyos, independientes entre sí.
+      fd.set("categories", JSON.stringify(categories));
+
       if (type === "pena") {
         fd.set("num_courts", String(numCourts));
         if (foodIncluded.trim()) fd.set("food_included", foodIncluded.trim());
@@ -387,17 +364,6 @@ export default function TorneoFormInline({
         if (quarterfinalsDate) fd.set("quarterfinals_date", quarterfinalsDate);
         if (semifinalsDate) fd.set("semifinals_date", semifinalsDate);
         if (finalsDate) fd.set("finals_date", finalsDate);
-      }
-
-      fd.set("accepts_mp", String(acceptsMp));
-      fd.set("accepts_cash", String(acceptsCash));
-      fd.set("accepts_transfer", String(acceptsTransfer));
-      if (acceptsTransfer && transferAlias.trim())
-        fd.set("transfer_alias", transferAlias.trim());
-      if (acceptsMp && requiresDeposit) {
-        fd.set("requires_deposit", "true");
-        fd.set("deposit_type", "percentage");
-        fd.set("deposit_value", String(depositPercentage));
       }
 
       if (contactPhone.trim()) fd.set("contact_phone", `+54${contactPhone}`);
@@ -496,20 +462,6 @@ export default function TorneoFormInline({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className={inputClass}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-[var(--text-secondary)]">
-              {priceLabel}
-            </span>
-            <input
-              type="number"
-              min={0}
-              step="100"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value) || 0)}
               className={inputClass}
             />
           </label>
@@ -642,28 +594,6 @@ export default function TorneoFormInline({
           {type === "pena" ? (
             <>
               <div>
-                <label className={adminKicker}>Cantidad de jugadores</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {PENA_MAX_PLAYERS_OPTIONS.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setMaxPlayers(n)}
-                      className={chip(maxPlayers === n)}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <CategoryChips
-                selectedCategories={selectedCategories}
-                onToggle={toggleCategory}
-                onClear={() => setSelectedCategories([])}
-              />
-
-              <div>
                 <label className={adminKicker}>Cantidad de canchas</label>
                 <div className="mt-2 flex gap-2">
                   {[2, 3, 4, 5, 6].map((n) => (
@@ -680,21 +610,6 @@ export default function TorneoFormInline({
               </div>
 
               {renderMatchFormatPicker("Partidos", 5, 30)}
-
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Partidos garantizados
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={guaranteedMatches}
-                  onChange={(e) =>
-                    setGuaranteedMatches(Number(e.target.value) || 0)
-                  }
-                  className={inputClass}
-                />
-              </label>
 
               <div>
                 <label className={adminKicker}>¿Incluye algo?</label>
@@ -713,42 +628,6 @@ export default function TorneoFormInline({
             </>
           ) : type === "eliminacion" ? (
             <>
-              <div>
-                <label className={adminKicker}>Cantidad de parejas</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {MAX_PAIRS_OPTIONS.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setMaxPairs(n)}
-                      className={chip(maxPairs === n)}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <CategoryChips
-                selectedCategories={selectedCategories}
-                onToggle={toggleCategory}
-                onClear={() => setSelectedCategories([])}
-              />
-
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Partidos garantizados
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={guaranteedMatches}
-                  onChange={(e) =>
-                    setGuaranteedMatches(Number(e.target.value) || 0)
-                  }
-                  className={inputClass}
-                />
-              </label>
 
               {renderMatchFormatPicker("Formato de partidos", 10, 60)}
 
@@ -833,46 +712,6 @@ export default function TorneoFormInline({
             </>
           ) : (
             <>
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Cantidad de parejas
-                </span>
-                <input
-                  type="number"
-                  min={4}
-                  max={64}
-                  value={maxPairs}
-                  onChange={(e) => setMaxPairs(Number(e.target.value) || 0)}
-                  placeholder="Ej: 12"
-                  className={inputClass}
-                />
-                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  Para eliminación directa se recomienda potencia de 2 (8, 16,
-                  32, 64)
-                </p>
-              </label>
-
-              <CategoryChips
-                selectedCategories={selectedCategories}
-                onToggle={toggleCategory}
-                onClear={() => setSelectedCategories([])}
-              />
-
-              <label className="block">
-                <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                  Partidos garantizados
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={guaranteedMatches}
-                  onChange={(e) =>
-                    setGuaranteedMatches(Number(e.target.value) || 0)
-                  }
-                  className={inputClass}
-                />
-              </label>
-
               {renderMatchFormatPicker("Formato de partidos", 10, 60)}
 
               <div>
@@ -929,121 +768,80 @@ export default function TorneoFormInline({
 
       {step === 4 ? (
         <div className="space-y-4 text-sm">
-          <div className="space-y-3">
-            <label className={adminKicker}>Métodos de pago aceptados</label>
+          <div>
+            <label className={adminKicker}>Categorías</label>
             <p className="text-xs text-[var(--text-tertiary)]">
-              El jugador va a ver estas opciones al inscribirse.
+              Cada categoría tiene su propio cupo, precio, seña y métodos de pago — son totalmente independientes entre sí.
             </p>
-
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={acceptsMp}
-                onChange={(e) => setAcceptsMp(e.target.checked)}
-              />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                💳 Mercado Pago (online)
-              </span>
-            </label>
-
-            <label
-              className={`flex items-center gap-3 ${requiresDeposit ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-            >
-              <input
-                type="checkbox"
-                checked={acceptsCash}
-                disabled={requiresDeposit}
-                onChange={(e) => setAcceptsCash(e.target.checked)}
-              />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                💵 Efectivo (en el club)
-              </span>
-            </label>
-
-            <label
-              className={`flex items-center gap-3 ${requiresDeposit ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
-            >
-              <input
-                type="checkbox"
-                checked={acceptsTransfer}
-                disabled={requiresDeposit}
-                onChange={(e) => setAcceptsTransfer(e.target.checked)}
-              />
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
-                🏦 Transferencia bancaria
-              </span>
-            </label>
-
-            {acceptsTransfer ? (
-              <div className="ml-7 space-y-2">
-                <label className={adminKicker}>
-                  Alias o CBU para transferencias
-                </label>
-                <input
-                  type="text"
-                  value={transferAlias}
-                  onChange={(e) => setTransferAlias(e.target.value)}
-                  placeholder="Ej: catedral.padel o 0000003100097753669989"
-                  className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                />
-              </div>
-            ) : null}
           </div>
 
-          {acceptsMp ? (
-            <div className="space-y-2">
-              <label className={adminKicker}>¿Requiere seña por MP?</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleRequiresDepositChange(false)}
-                  className={chip(!requiresDeposit)}
-                >
-                  No — pago completo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRequiresDepositChange(true)}
-                  className={chip(requiresDeposit)}
-                >
-                  Sí — seña parcial
-                </button>
-              </div>
-              {requiresDeposit ? (
-                <div className="rounded-2xl border border-amber-300/30 bg-amber-400/[0.06] p-4">
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    ⚠️ Con seña obligatoria solo se acepta Mercado Pago
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                    Para aceptar efectivo o transferencia, desactivá la seña parcial.
-                  </p>
+          <div className="space-y-3">
+            {categories.map((cat, i) =>
+              editingCatIndex === i ? (
+                <CategoryForm
+                  key={i}
+                  initial={cat}
+                  pending={false}
+                  onCancel={() => setEditingCatIndex(null)}
+                  onSubmit={(input) => {
+                    setCategories((prev) => prev.map((c, j) => (j === i ? input : c)));
+                    setEditingCatIndex(null);
+                  }}
+                />
+              ) : (
+                <div key={i} className="rounded-2xl border border-[var(--border-subtle)] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{cat.name || "Sin nombre"}</p>
+                      <p className="text-xs text-[var(--text-tertiary)]">
+                        Cupo {cat.maxPairs} · ${cat.pricePerPair.toLocaleString("es-AR")} {cat.priceUnit === "player" ? "por jugador" : "por pareja"}
+                        {cat.requiresDeposit ? ` · seña ${cat.depositType === "percentage" ? `${cat.depositValue}%` : `$${cat.depositValue}`}` : " · sin seña"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingCatIndex(i)}
+                        className="rounded-lg border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))}
+                        className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:border-rose-900"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ) : null}
-              {requiresDeposit ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={10}
-                    max={90}
-                    step={5}
-                    value={depositPercentage}
-                    onChange={(e) =>
-                      setDepositPercentage(Number(e.target.value) || 0)
-                    }
-                    className="w-20 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                  />
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    % del total como seña
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+              ),
+            )}
+
+            {addingCat ? (
+              <CategoryForm
+                initial={emptyCategoryInput()}
+                pending={false}
+                onCancel={() => setAddingCat(false)}
+                onSubmit={(input) => {
+                  setCategories((prev) => [...prev, input]);
+                  setAddingCat(false);
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingCat(true)}
+                className="w-full rounded-xl border border-dashed border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-[#0085FC]"
+              >
+                + Agregar categoría
+              </button>
+            )}
+          </div>
 
           {!canStep4 ? (
-            <p className="text-xs text-rose-600 dark:text-rose-400">
-              Elegí al menos un método de pago.
-            </p>
+            <p className="text-xs text-rose-600 dark:text-rose-400">Agregá al menos una categoría para continuar.</p>
           ) : null}
 
           <div className="flex gap-2 pt-2">
@@ -1189,11 +987,8 @@ export default function TorneoFormInline({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[var(--text-tertiary)]">Precio</p>
-                <p className="font-semibold text-[var(--text-primary)]">
-                  ${price.toLocaleString("es-AR")}{" "}
-                  {type === "pena" ? "por jugador" : "por pareja"}
-                </p>
+                <p className="text-xs text-[var(--text-tertiary)]">Categorías</p>
+                <p className="font-semibold text-[var(--text-primary)]">{categories.length}</p>
               </div>
               <div>
                 <p className="text-xs text-[var(--text-tertiary)]">
@@ -1204,22 +999,18 @@ export default function TorneoFormInline({
                 </p>
               </div>
             </div>
-            {selectedCategories.length > 0 ? (
+            {categories.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {selectedCategories.map((cat) => (
+                {categories.map((cat, i) => (
                   <span
-                    key={cat}
+                    key={i}
                     className="rounded-full bg-[#CCFF00] px-2 py-0.5 text-[11px] font-black text-[#0A1628]"
                   >
-                    {cat}
+                    {cat.name || "Sin nombre"}
                   </span>
                 ))}
               </div>
-            ) : (
-              <span className="text-xs text-[var(--text-tertiary)]">
-                Todas las categorías
-              </span>
-            )}
+            ) : null}
           </div>
 
           <div className="flex gap-2 pt-2">

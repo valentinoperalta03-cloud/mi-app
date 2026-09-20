@@ -251,6 +251,16 @@ export type CrearReservaAdminInput = {
   amount?: number;
 };
 
+/** Reason codes de admin_create_manual_reservation (Fase D hardening) -> mismos mensajes que ya usaba crearReservaDesdeAdmin. */
+const MANUAL_RESERVATION_REASON_MESSAGES: Record<string, string> = {
+  forbidden: "No autorizado.",
+  invalid_court: "Cancha no autorizada.",
+  club_closed: "El club está cerrado ese día.",
+  court_blocked: "Ese horario ya no está disponible. Elegí otro.",
+  slot_conflict: "Ese horario ya no está disponible. Elegí otro.",
+  reservation_hold_conflict: "Hay una reserva en proceso de pago para ese horario.",
+};
+
 export async function crearReservaDesdeAdmin(input: CrearReservaAdminInput): Promise<AdminActionResult> {
   const courtId = input.courtId?.trim() ?? "";
   const scheduledDate = input.scheduledDate?.trim() ?? "";
@@ -278,49 +288,6 @@ export async function crearReservaDesdeAdmin(input: CrearReservaAdminInput): Pro
 
   const todayAr = getTodayYmdInArgentina();
   if (scheduledDate < todayAr) return { ok: false, error: "No se pueden crear reservas en fechas pasadas." };
-
-  // Revalidación backend obligatoria: aunque el horario haya aparecido libre
-  // en getAdminClubAvailability al abrir el modal, puede haber cambiado entre
-  // que se abrió y se confirmó (otro admin reservó, se cargó un bloqueo,
-  // etc.) — se vuelve a chequear club cerrado, bloqueo puntual y superposición
-  // real contra la DB, mismo criterio que crearPartidoDesdeAdmin.
-  const { data: closedDayRows } = await supabase
-    .from(DB_TABLES.clubClosedDays)
-    .select("id")
-    .eq("club_id", court.club_id)
-    .eq("closed_date", scheduledDate)
-    .limit(1);
-  if (closedDayRows?.length) return { ok: false, error: "El club está cerrado ese día." };
-
-  const [{ data: blockRowsModern }, { data: blockRowsLegacy }] = await Promise.all([
-    supabase.from(DB_TABLES.courtBlocks).select("blocked_time").eq("court_id", courtId).eq("blocked_date", scheduledDate),
-    supabase.from(DB_TABLES.courtBlocks).select("start_time").eq("court_id", courtId).eq("date", scheduledDate),
-  ]);
-  const blockedStarts = courtBlockStartsFromRows(
-    blockRowsModern as { blocked_time: string | null }[] | null,
-    blockRowsLegacy as { start_time: string | null }[] | null
-  );
-  if (blockedStarts.has(normalizeSlotTime(timeNorm))) {
-    return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
-  }
-
-  const { data: conflicts, error: conflictsError } = await supabase
-    .from(DB_TABLES.matches)
-    .select("scheduled_time,duration_minutes")
-    .eq("court_id", courtId)
-    .eq("scheduled_date", scheduledDate)
-    .neq("match_status", "cancelled");
-  if (conflictsError) return { ok: false, error: "No se pudo validar disponibilidad." };
-  const slotStart = parseClockToMinutes(timeNorm);
-  const slotEnd = slotStart + durationMinutes;
-  for (const row of (conflicts ?? []) as { scheduled_time: string | null; duration_minutes: number | null }[]) {
-    const otherStart = parseClockToMinutes(String(row.scheduled_time ?? ""));
-    const otherDur = row.duration_minutes && row.duration_minutes > 0 ? row.duration_minutes : 90;
-    const otherEnd = otherStart + otherDur;
-    if (slotStart < otherEnd && otherStart < slotEnd) {
-      return { ok: false, error: "Ese horario ya no está disponible. Elegí otro." };
-    }
-  }
 
   // Precio server-side desde la fuente única (lib/court-pricing.ts).
   const totalPrice = await resolveCourtSlotPrice({ supabase, courtId, date: scheduledDate, startTime: timeNorm });
@@ -355,38 +322,37 @@ export async function crearReservaDesdeAdmin(input: CrearReservaAdminInput): Pro
     }
   }
 
-  const { data: inserted, error: insertErr } = await supabase
-    .from(DB_TABLES.matches)
-    .insert({
-      match_type: "reservation",
-      match_status: matchStatus,
-      payment_status: paymentStatus,
-      financial_status: financialStatus,
-      total_price: totalPrice,
-      amount_paid: amountPaid,
-      amount_pending: amountPending,
-      scheduled_date: scheduledDate,
-      scheduled_time: timeNorm,
-      duration_minutes: durationMinutes,
-      court_id: courtId,
-      owner_id: ownerId,
-      manual_reference: reference,
-      es_turno_fijo: false,
-      date: new Date(`${scheduledDate}T${timeNorm}:00-03:00`).toISOString(),
-    })
-    .select("id")
-    .single();
-  if (insertErr || !inserted) {
-    // El constraint sin_partidos_superpuestos de la DB queda como última capa
-    // de protección — si el pre-check de arriba no lo agarró (ej. carrera
-    // entre dos admins reservando el mismo horario a la vez), acá se traduce
-    // a un mensaje legible en vez del error crudo de Postgres.
-    const error = isMatchSlotConflictError(insertErr)
-      ? "Ese horario ya no está disponible. Elegí otro."
-      : (insertErr?.message ?? "No se pudo crear la reserva.");
-    return { ok: false, error };
+  // Todo el tramo crítico (club cerrado, bloqueo puntual, solapamiento contra
+  // matches/torneo/holds de pago, e INSERT) corre en una única RPC
+  // transaccional con el mismo advisory lock que usan torneos, holds de
+  // jugador y turnos fijos (admin_create_manual_reservation, Fase D
+  // hardening — antes eran varios round-trips separados desde acá, sin lock,
+  // y sin revalidar contra reservation_holds/court_blocks por rango).
+  const { data: reservaRpcRows, error: reservaRpcError } = await supabase.rpc("admin_create_manual_reservation", {
+    p_owner_id: ownerId,
+    p_club_id: court.club_id,
+    p_court_id: courtId,
+    p_scheduled_date: scheduledDate,
+    p_scheduled_time: timeNorm,
+    p_duration_minutes: durationMinutes,
+    p_total_price: totalPrice,
+    p_amount_paid: amountPaid,
+    p_amount_pending: amountPending,
+    p_payment_status: paymentStatus,
+    p_financial_status: financialStatus,
+    p_match_status: matchStatus,
+    p_manual_reference: reference,
+  });
+  if (reservaRpcError) {
+    return { ok: false, error: "No se pudo crear la reserva." };
   }
-  const matchId = String((inserted as { id: string }).id);
+  const reservaResult = (Array.isArray(reservaRpcRows) ? reservaRpcRows[0] : reservaRpcRows) as
+    | { ok: boolean; reason: string; match_id: string | null }
+    | null;
+  if (!reservaResult?.ok) {
+    return { ok: false, error: MANUAL_RESERVATION_REASON_MESSAGES[reservaResult?.reason ?? ""] ?? "No se pudo crear la reserva." };
+  }
+  const matchId = String(reservaResult.match_id);
 
   await cancelConflictingOpenMatches(supabase, courtId, scheduledDate, timeNorm);
 

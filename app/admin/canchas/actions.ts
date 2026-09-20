@@ -127,14 +127,43 @@ export async function updateCourt(formData: FormData): Promise<void> {
 
 export async function updateClubDeposit(formData: FormData): Promise<void> {
   const clubId = getField(formData, "club_id");
+  const requiresDepositRaw = getField(formData, "requires_deposit");
+  // Default true (mismo default de negocio que la columna): un valor ausente
+  // o inesperado nunca debe interpretarse como "desactivar la seña".
+  const requiresDeposit = requiresDepositRaw !== "false";
+
+  if (!clubId) {
+    redirectCanchasError("Club inválido.");
+  }
+
+  const supabase = await createClient({ allowCookieWrites: true });
+  const ctx = await getOwnerAdminContext(supabase);
+  if (!ctx?.userId) redirect("/login");
+  if (!ctx.clubIds.includes(clubId)) {
+    redirectCanchasError("Club no autorizado.");
+  }
+
+  // "No solicitar seña": solo se togglea requires_deposit. deposit_type/
+  // deposit_value NO se tocan — el club conserva su configuración anterior
+  // por si vuelve a activarla, no se resetea a 0.
+  if (!requiresDeposit) {
+    const { error } = await createServiceClient()
+      .from(DB_TABLES.clubs)
+      .update({ requires_deposit: false })
+      .eq("id", clubId)
+      .eq("owner_id", ctx.userId);
+    if (error) {
+      redirectCanchasError(error.message);
+    }
+    revalidatePath("/admin/canchas");
+    redirect("/admin/canchas");
+  }
+
   const depositTypeRaw = getField(formData, "deposit_type");
   const depositType = depositTypeRaw === "percentage" || depositTypeRaw === "fixed" ? depositTypeRaw : null;
   const depositValueRaw = getField(formData, "deposit_value");
   const depositValue = depositValueRaw ? Number(depositValueRaw) : 0;
 
-  if (!clubId) {
-    redirectCanchasError("Club inválido.");
-  }
   if (depositType !== "percentage" && depositType !== "fixed") {
     redirectCanchasError("Elegí el tipo de seña.");
   }
@@ -148,19 +177,12 @@ export async function updateClubDeposit(formData: FormData): Promise<void> {
     redirectCanchasError("El monto fijo de seña debe ser mayor a 0.");
   }
 
-  const supabase = await createClient({ allowCookieWrites: true });
-  const ctx = await getOwnerAdminContext(supabase);
-  if (!ctx?.userId) redirect("/login");
-  if (!ctx.clubIds.includes(clubId)) {
-    redirectCanchasError("Club no autorizado.");
-  }
-
   // deposit_type/deposit_value no tienen GRANT UPDATE para authenticated (mismo
   // patron que finance_pin/mp_access_token): se escriben con service client.
   // La pertenencia ya se validó arriba vía getOwnerAdminContext(supabase).
   const { error } = await createServiceClient()
     .from(DB_TABLES.clubs)
-    .update({ deposit_type: depositType, deposit_value: depositValue })
+    .update({ deposit_type: depositType, deposit_value: depositValue, requires_deposit: true })
     .eq("id", clubId)
     .eq("owner_id", ctx.userId);
 

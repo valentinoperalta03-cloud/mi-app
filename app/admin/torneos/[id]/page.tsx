@@ -47,7 +47,11 @@ import { ReorderRegistrations } from "./reorder-registrations";
 import { TournamentScheduler } from "./TournamentScheduler";
 import type { EditableTournament } from "./edit-tournament-form";
 import TournamentConfigSection from "./tournament-config-section";
+import { TournamentCategoriesPanel } from "./categories-panel";
 import { WinnerPickerButtons } from "./winner-picker-buttons";
+import { computeZoneStandings } from "@/lib/tournament/v2/standings";
+import { playoffSizeOptions } from "@/lib/tournament/v2/playoff";
+import type { ScoredMatch } from "@/lib/tournament/v2/types";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -195,12 +199,12 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
   const clubName = clubNameRow?.name ?? null;
 
   const service = createServiceClient();
-  const [{ data: regs }, { data: matches }, { data: courts }] =
+  const [{ data: regs }, { data: matches }, { data: courts }, { data: categoriesRaw }, { data: zonesRaw }] =
     await Promise.all([
       service
         .from(DB_TABLES.tournamentRegistrations)
         .select(
-          "id, player1_id, player2_id, payment_status, waitlist, registered_at, registration_order, financial_status, amount_paid, amount_pending",
+          "id, player1_id, player2_id, payment_status, waitlist, registered_at, registration_order, financial_status, amount_paid, amount_pending, category_id, zone_id, qualified_seed",
         )
         .eq("tournament_id", id)
         .order("registration_order", { ascending: true })
@@ -208,7 +212,7 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
       service
         .from(DB_TABLES.tournamentMatches)
         .select(
-          "id, round, round_name, bracket, pair1_id, pair2_id, pair1_score, pair2_score, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes",
+          "id, round, round_name, bracket, pair1_id, pair2_id, pair1_score, pair2_score, pair1_games, pair2_games, is_draw, status, winner_pair_id, court_id, scheduled_date, scheduled_time, notes, category_id, zone_id, phase, bracket_slot",
         )
         .eq("tournament_id", id)
         .order("round", { ascending: true }),
@@ -217,6 +221,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
         .select("id, name")
         .eq("club_id", tour.club_id)
         .order("name", { ascending: true }),
+      service
+        .from(DB_TABLES.tournamentCategories)
+        .select(
+          "id, name, modality, category_kind, levels, suma_target, max_pairs, guaranteed_matches, zones_count, zones_generated_at, qualifiers_generated_at, price_per_pair, price_unit, requires_deposit, deposit_type, deposit_value, accepts_mp, accepts_cash, accepts_transfer",
+        )
+        .eq("tournament_id", id)
+        .order("sort_order", { ascending: true }),
+      service.from(DB_TABLES.tournamentZones).select("id, category_id, name, sort_order"),
     ]);
 
   const regList = (regs ?? []) as Array<{
@@ -229,30 +241,77 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     financial_status: string | null;
     amount_paid: number | null;
     amount_pending: number | null;
+    category_id: string | null;
+    zone_id: string | null;
+    qualified_seed: number | null;
   }>;
-  const playerIds = [
+  const categoryList = (categoriesRaw ?? []) as Array<{
+    id: string;
+    name: string;
+    modality: "caballeros" | "damas" | "mixto" | null;
+    category_kind: "open" | "traditional" | "suma";
+    levels: number[] | null;
+    suma_target: number | null;
+    max_pairs: number;
+    guaranteed_matches: number | null;
+    zones_count: number | null;
+    zones_generated_at: string | null;
+    qualifiers_generated_at: string | null;
+    price_per_pair: number;
+    price_unit: "pair" | "player";
+    requires_deposit: boolean;
+    deposit_type: "percentage" | "fixed" | null;
+    deposit_value: number;
+    accepts_mp: boolean;
+    accepts_cash: boolean;
+    accepts_transfer: boolean;
+  }>;
+  const zoneList = (zonesRaw ?? []).filter(
+    (z) => categoryList.some((c) => c.id === (z as { category_id: string }).category_id),
+  ) as Array<{ id: string; category_id: string; name: string; sort_order: number }>;
+  const v2MatchList = (matches ?? []) as Array<{
+    id: string;
+    round: number;
+    round_name: string | null;
+    pair1_id: string | null;
+    pair2_id: string | null;
+    pair1_score: number | null;
+    pair2_score: number | null;
+    pair1_games: number | null;
+    pair2_games: number | null;
+    is_draw: boolean | null;
+    status: string;
+    winner_pair_id: string | null;
+    category_id: string | null;
+    zone_id: string | null;
+    phase: string | null;
+    bracket_slot: number | null;
+    court_id: string | null;
+    scheduled_date: string | null;
+    scheduled_time: string | null;
+  }>;
+  const playerIdsForPairs = [
     ...new Set(
       regList.flatMap(
         (r) => [r.player1_id, r.player2_id].filter(Boolean) as string[],
       ),
     ),
   ];
-  const { data: profiles } = playerIds.length
+  const { data: profilesForPairs } = playerIdsForPairs.length
     ? await service
         .from(DB_TABLES.profiles)
         .select("user_id, name, avatar_url")
-        .in("user_id", playerIds)
+        .in("user_id", playerIdsForPairs)
     : { data: [] };
   const profileMap = new Map(
     (
-      (profiles ?? []) as Array<{
+      (profilesForPairs ?? []) as Array<{
         user_id: string;
         name: string | null;
         avatar_url: string | null;
       }>
     ).map((p) => [p.user_id, p]),
   );
-
   const pairNameMap = new Map<string, string>();
   for (const r of regList) {
     const p1 = profileMap.get(r.player1_id)?.name ?? "Jugador";
@@ -262,6 +321,92 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
     pairNameMap.set(r.id, p2 ? `${p1} / ${p2}` : p1);
   }
 
+  const categoryPanelData = categoryList.map((c) => {
+    const catRegs = regList.filter((r) => r.category_id === c.id);
+    const catZones = zoneList
+      .filter((z) => z.category_id === c.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const catApproved = catRegs.filter((r) => r.payment_status === "approved" && !r.waitlist);
+    const zoneMatches = v2MatchList.filter((m) => m.category_id === c.id && m.phase === "zone");
+    const knockoutMatches = v2MatchList
+      .filter((m) => m.category_id === c.id && m.phase === "knockout")
+      .sort((a, b) => a.round - b.round || (a.bracket_slot ?? 0) - (b.bracket_slot ?? 0));
+    const standingsByZone = catZones.map((z) => {
+      const memberIds = catRegs.filter((r) => r.zone_id === z.id).map((r) => r.id);
+      const scored: ScoredMatch[] = zoneMatches
+        .filter((m) => m.zone_id === z.id && m.pair1_id && m.pair2_id && m.status === "finished")
+        .map((m) => ({
+          pair1Id: m.pair1_id!,
+          pair2Id: m.pair2_id!,
+          sets1: m.pair1_score ?? 0,
+          sets2: m.pair2_score ?? 0,
+          games1: m.pair1_games ?? 0,
+          games2: m.pair2_games ?? 0,
+          outcome: m.is_draw ? "draw" : (m.pair1_score ?? 0) > (m.pair2_score ?? 0) ? "pair1" : "pair2",
+        }));
+      return { zoneId: z.id, zoneName: z.name, standings: computeZoneStandings(memberIds, scored) };
+    });
+    const eliminationFinal = knockoutMatches.length
+      ? knockoutMatches.reduce((max, m) => (m.round > max.round ? m : max), knockoutMatches[0])
+      : null;
+    return {
+      ...c,
+      approvedCount: catApproved.length,
+      totalCount: catRegs.length,
+      hasMatches: v2MatchList.some((m) => m.category_id === c.id),
+      zones: catZones.map((z) => ({ name: z.name, memberCount: catRegs.filter((r) => r.zone_id === z.id).length })),
+      hasZoneMatches: zoneMatches.length > 0,
+      zoneMatches: zoneMatches.map((m) => ({
+        id: m.id,
+        zoneName: catZones.find((z) => z.id === m.zone_id)?.name ?? "—",
+        pair1Id: m.pair1_id,
+        pair2Id: m.pair2_id,
+        pair1Name: m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "—",
+        pair2Name: m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "—",
+        status: m.status,
+        games1: m.pair1_games,
+        games2: m.pair2_games,
+        isDraw: Boolean(m.is_draw),
+        courtId: m.court_id,
+        scheduledDate: m.scheduled_date,
+        scheduledTime: m.scheduled_time,
+      })),
+      standingsByZone: standingsByZone.map((s) => ({
+        zoneId: s.zoneId,
+        zoneName: s.zoneName,
+        rows: s.standings.rows.map((r) => ({
+          pairId: r.pairId,
+          pairName: pairNameMap.get(r.pairId) ?? "Pareja",
+          played: r.played,
+          won: r.won,
+          drawn: r.drawn,
+          lost: r.lost,
+          points: r.points,
+          gameDiff: r.gameDiff,
+        })),
+      })),
+      qualifiedCount: catRegs.filter((r) => r.qualified_seed != null).length,
+      bracketSizeOptions: catZones.length > 0 ? playoffSizeOptions(catApproved.length, catZones.length) : [],
+      knockoutMatches: knockoutMatches.map((m) => ({
+        id: m.id,
+        round: m.round,
+        roundName: m.round_name ?? "",
+        pair1Id: m.pair1_id,
+        pair2Id: m.pair2_id,
+        pair1Name: m.pair1_id ? (pairNameMap.get(m.pair1_id) ?? "Pareja 1") : "TBD",
+        pair2Name: m.pair2_id ? (pairNameMap.get(m.pair2_id) ?? "Pareja 2") : "TBD",
+        status: m.status,
+        winnerPairId: m.winner_pair_id,
+        courtId: m.court_id,
+        scheduledDate: m.scheduled_date,
+        scheduledTime: m.scheduled_time,
+      })),
+      championName:
+        eliminationFinal?.status === "finished" && eliminationFinal.winner_pair_id
+          ? (pairNameMap.get(eliminationFinal.winner_pair_id) ?? null)
+          : null,
+    };
+  });
   const typeBadge =
     TOURNAMENT_TYPE_OPTIONS.find((o) => o.value === tour.tournament_type)
       ?.badge ?? tour.tournament_type;
@@ -584,6 +729,14 @@ export default async function AdminTorneoDetailPage({ params }: PageProps) {
           </p>
         </div>
       </section>
+
+      <TournamentCategoriesPanel
+        tournamentId={id}
+        clubId={tour.club_id}
+        courts={courtList}
+        categories={categoryPanelData}
+        editable={tour.status === "open" || tour.status === "draft"}
+      />
 
       <TournamentConfigSection
         tournament={editableTournament}

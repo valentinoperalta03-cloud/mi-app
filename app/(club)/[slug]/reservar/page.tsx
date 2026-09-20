@@ -21,7 +21,7 @@ export default async function ReservarPage({ params }: PageProps) {
   const { data: clubRow } = await supabase
     .from(DB_TABLES.clubs)
     .select(
-      "id,name,slug,logo_url,city,province,business_hours,deposit_type,deposit_value,open_time,close_time,contact_phone,whatsapp,cancellation_hours,is_active"
+      "id,name,slug,logo_url,city,province,business_hours,deposit_type,deposit_value,requires_deposit,open_time,close_time,contact_phone,whatsapp,cancellation_hours,is_active"
     )
     .eq("slug", slug)
     .eq("is_active", true)
@@ -47,7 +47,12 @@ export default async function ReservarPage({ params }: PageProps) {
     .maybeSingle();
   const clubAccessToken = (clubMpRow as { mp_access_token?: string | null } | null)?.mp_access_token ?? null;
 
-  const canReserveOnline = Boolean(clubAccessToken) && Number(club.deposit_value ?? 0) > 0;
+  // MP conectado sigue siendo requisito en ambos modelos (habilitación de
+  // plataforma, no medio de cobro obligatorio por reserva). Con seña además
+  // se exige deposit_value>0; sin seña, el club confirma directo.
+  const requiresDeposit = club.requires_deposit ?? true;
+  const canReserveOnline =
+    Boolean(clubAccessToken) && (requiresDeposit ? Number(club.deposit_value ?? 0) > 0 : true);
 
   return <ReservarClient club={club} courts={courts} canReserveOnline={canReserveOnline} />;
 }

@@ -3,36 +3,36 @@
 import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import {
+  buildSlotsForDay,
   parseClockToMinutes,
   parseCloseTimeToMinutes,
+  type ClubHoursBounds,
+  type CourtTimeRangeInput,
 } from "@/lib/court-slots";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
-/** Slots de 24hs cada 30 min: los torneos no dependen del horario comercial del club. */
-function generateFullDaySlots(): string[] {
-  const slots: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    }
-  }
-  return slots;
-}
-
 /**
- * Disponibilidad de canchas para una fecha puntual: slots de 24hs (cada 30
- * min, sin límite de horario comercial) menos lo ya ocupado por
- * reservas/partidos abiertos (`matches`), turnos fijos (`fixed_slots` menos
- * excepciones), entrenamientos (`training_blocks`) y bloqueos puntuales
- * (`court_blocks`, incluidos los de otros partidos de torneo ya agendados
- * con reason='torneo'). Compartida entre el wizard de creación
- * (`app/admin/torneos/torneo-form.tsx`) y el scheduler de partidos ya
- * creados (`app/admin/torneos/[id]/TournamentScheduler.tsx`).
+ * Disponibilidad de canchas para una fecha puntual: los horarios realmente
+ * programables de CADA cancha (franja propia en `court_time_ranges`, o el
+ * horario del club, o 09:00–22:30 como último recurso — exactamente la misma
+ * cadena de fallback que usa `getClubAvailability` para la reserva de
+ * jugador, vía `buildSlotsForDay`/`isSlotWithinCourtHours` en
+ * `lib/court-slots.ts`; Fase D hardening: antes esto generaba una grilla de
+ * 24hs pareja para todas las canchas, que `tournament_assign_match_slot`
+ * podía rechazar igual por `invalid_time` — la UI y la RPC ahora comparten
+ * la misma regla) menos lo ya ocupado por reservas/partidos abiertos
+ * (`matches`), turnos fijos (`fixed_slots` menos excepciones), entrenamientos
+ * (`training_blocks`) y bloqueos puntuales (`court_blocks`, incluidos los de
+ * otros partidos de torneo ya agendados con reason='torneo'). Compartida
+ * entre el wizard de creación (`app/admin/torneos/torneo-form.tsx`) y el
+ * scheduler de partidos ya creados (`app/admin/torneos/[id]/match-scheduler-card.tsx`).
  */
 export async function getCourtAvailabilityForDate(
   clubId: string,
   courtIds: string[],
   dateStr: string,
+  /** Partido de torneo que se está reasignando: su propio bloqueo no cuenta como ocupado. */
+  excludeTournamentMatchId?: string,
 ): Promise<{
   slots: string[];
   occupiedByCourtAndSlot: Record<string, Record<string, string>>;
@@ -44,6 +44,12 @@ export async function getCourtAvailabilityForDate(
   if (!ctx?.userId || !ctx.clubIds.includes(clubId)) {
     return { slots: [], occupiedByCourtAndSlot: {} };
   }
+  // Solo canchas del club validado: courtIds llega del cliente.
+  const ownCourtIds = new Set(
+    ctx.courts.filter((c) => c.club_id === clubId).map((c) => c.id),
+  );
+  courtIds = courtIds.filter((id) => ownCourtIds.has(id));
+  if (!courtIds.length) return { slots: [], occupiedByCourtAndSlot: {} };
 
   const service = createServiceClient();
 
@@ -67,6 +73,8 @@ export async function getCourtAvailabilityForDate(
     { data: fixedSlotsRaw },
     { data: trainingMetaRaw },
     { data: blocksRaw },
+    { data: clubRow },
+    { data: rangeRows },
   ] = await Promise.all([
     service
       .from(DB_TABLES.matches)
@@ -89,9 +97,14 @@ export async function getCourtAvailabilityForDate(
       .eq("day_of_week", dayOfWeek),
     service
       .from(DB_TABLES.courtBlocks)
-      .select("court_id, blocked_time, reason")
+      .select("court_id, blocked_time, reason, tournament_match_id, duration_minutes")
       .in("court_id", courtIds)
       .eq("blocked_date", dateStr),
+    service.from(DB_TABLES.clubs).select("open_time, close_time").eq("id", clubId).maybeSingle(),
+    service
+      .from(DB_TABLES.courtTimeRanges)
+      .select("court_id, day_of_week, open_time, close_time")
+      .in("court_id", courtIds),
   ]);
 
   const fixedSlotIds = ((fixedSlotsRaw ?? []) as Array<{ id: string }>).map(
@@ -110,7 +123,21 @@ export async function getCourtAvailabilityForDate(
     ),
   );
 
-  const slots = generateFullDaySlots();
+  const clubBounds = (clubRow ?? null) as ClubHoursBounds | null;
+  const timeRanges = (rangeRows ?? []) as CourtTimeRangeInput[];
+
+  // Igual que getClubAvailability: pedir los slots cancha por cancha, nunca
+  // con todos los courtIds juntos (buildSlotsForDay devuelve la UNIÓN de
+  // horarios cuando se le pasan varias canchas a la vez, lo que ancla la
+  // grilla al horario más temprano/tardío del grupo en vez del de cada una).
+  const perCourtSlots = new Map<string, Set<string>>();
+  for (const cid of courtIds) {
+    const slotsForCourt = buildSlotsForDay([cid], dayDate, timeRanges, clubBounds);
+    perCourtSlots.set(cid, new Set(slotsForCourt.map((s) => s.time)));
+  }
+  const slots = Array.from(
+    new Set(Array.from(perCourtSlots.values()).flatMap((s) => Array.from(s))),
+  ).sort((a, b) => parseClockToMinutes(a) - parseClockToMinutes(b));
 
   const occupiedByCourtAndSlot: Record<string, Record<string, string>> = {};
   function mark(
@@ -182,7 +209,10 @@ export async function getCourtAvailabilityForDate(
     court_id: string;
     blocked_time: string | null;
     reason: string | null;
+    tournament_match_id: string | null;
+    duration_minutes: number | null;
   }>) {
+    if (excludeTournamentMatchId && b.tournament_match_id === excludeTournamentMatchId) continue;
     const startMin = parseClockToMinutes(String(b.blocked_time ?? ""));
     const label =
       b.reason === "torneo"
@@ -190,7 +220,19 @@ export async function getCourtAvailabilityForDate(
         : b.reason === "entrenamiento_externo"
           ? "Entrenamiento"
           : "Bloqueado";
-    mark(b.court_id, startMin, 90, label);
+    mark(b.court_id, startMin, b.duration_minutes && b.duration_minutes > 0 ? b.duration_minutes : 90, label);
+  }
+
+  // Un horario que otra cancha del club sí ofrece pero ESTA no (franja propia
+  // distinta) se marca "Cerrado": la unión de slots es para tener un eje de
+  // horas común en la grilla, no significa que todas las canchas abran a esa
+  // hora.
+  for (const cid of courtIds) {
+    const own = perCourtSlots.get(cid) ?? new Set<string>();
+    const map = (occupiedByCourtAndSlot[cid] ??= {});
+    for (const slot of slots) {
+      if (!own.has(slot) && !map[slot]) map[slot] = "Cerrado";
+    }
   }
 
   return { slots, occupiedByCourtAndSlot };

@@ -32,11 +32,19 @@ export default async function AdminCanchasPage({
 
   const mainClubId = ctx.clubIds[0] ?? "";
   const { data: clubDepositRow } = mainClubId
-    ? await supabase.from(DB_TABLES.clubs).select("deposit_type,deposit_value").eq("id", mainClubId).maybeSingle()
+    ? await supabase
+        .from(DB_TABLES.clubs)
+        .select("deposit_type,deposit_value,requires_deposit")
+        .eq("id", mainClubId)
+        .maybeSingle()
     : { data: null };
   const clubDepositType =
     (clubDepositRow as { deposit_type?: "percentage" | "fixed" | null } | null)?.deposit_type ?? null;
   const clubDepositValue = Number((clubDepositRow as { deposit_value?: number | null } | null)?.deposit_value ?? 0);
+  // Default true si la columna todavía no llegó a la fila (no debería pasar
+  // tras la migración, pero el default de negocio es "exige seña").
+  const clubRequiresDeposit =
+    (clubDepositRow as { requires_deposit?: boolean | null } | null)?.requires_deposit ?? true;
 
   const courts = (courtsRaw ?? []) as CourtRow[];
   const today = new Date().toISOString().slice(0, 10);
@@ -117,6 +125,7 @@ export default async function AdminCanchasPage({
       mainClubId={mainClubId}
       clubDepositType={clubDepositType}
       clubDepositValue={clubDepositValue}
+      clubRequiresDeposit={clubRequiresDeposit}
       blockedCourtIds={Array.from(blockedCourtIds)}
       priceSummaryByCourt={Array.from(priceSummaryByCourt.entries())}
       clubOpenTime={clubOpenTime}

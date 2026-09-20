@@ -6,6 +6,8 @@ import { getOwnerAdminContext } from "@/lib/admin/owner-context";
 import { DB_TABLES } from "@/lib/db-tables";
 import { PROFILE_CATEGORIES } from "@/lib/profile-display";
 import type { TournamentTypeKey } from "@/lib/tournament-constants";
+import { validateCategoryInputs, type CategoryInput } from "@/lib/tournament/v2/category-input";
+import { categoryInputToRow } from "@/lib/tournament/v2/category-row";
 import { createClient, createServiceClient } from "@/utils/supabase/server";
 
 export type CreateTournamentState = {
@@ -120,21 +122,9 @@ export async function createTournamentAction(
   const semifinalsDate =
     String(formData.get("semifinals_date") ?? "").trim() || null;
   const finalsDate = String(formData.get("finals_date") ?? "").trim() || null;
-  const courtBlocksRaw = String(
-    formData.get("tournament_court_blocks") ?? "",
-  ).trim();
-  let courtBlocks: Array<{ date: string; courtId: string; time: string }> = [];
-  if (courtBlocksRaw) {
-    try {
-      courtBlocks = JSON.parse(courtBlocksRaw) as Array<{
-        date: string;
-        courtId: string;
-        time: string;
-      }>;
-    } catch {
-      return { ok: false, message: "Horarios bloqueados inválidos." };
-    }
-  }
+  // tournament_court_blocks del wizard viejo se ignora: bloqueaba canchas sin
+  // partido asociado (y el insert nunca funcionó). En V2 la ocupación nace de
+  // tournament_matches vía trigger.
 
   if (!name) return { ok: false, message: "Nombre obligatorio." };
   if (!["americano", "eliminacion", "pena"].includes(tournamentType)) {
@@ -192,7 +182,47 @@ export async function createTournamentAction(
     }
   }
 
-  const { data: inserted, error } = await supabase
+  // Wizard V2 (Fase B, creación rápida con N categorías): si viene "categories"
+  // (JSON de CategoryInput[]) se usa eso — precio/seña/métodos de cada una son
+  // independientes y NO se leen de las columnas legacy de arriba. Si no viene,
+  // se cae al comportamiento legacy: una sola categoría armada con los mismos
+  // campos que siempre escribió este formulario (compatibilidad con
+  // /admin/torneos/nuevo, que no se reescribió en este pase).
+  const categoriesRaw = String(formData.get("categories") ?? "").trim();
+  let categoryInputs: CategoryInput[];
+  if (categoriesRaw) {
+    try {
+      categoryInputs = JSON.parse(categoriesRaw) as CategoryInput[];
+    } catch {
+      return { ok: false, message: "Categorías inválidas." };
+    }
+  } else {
+    categoryInputs = [
+      {
+        name: allowedCategories.length > 0 ? allowedCategories.join(" · ") : "General",
+        modality: null,
+        categoryKind: allowedCategories.length > 0 ? "traditional" : "open",
+        levels: allowedCategories.length > 0 ? allowedCategories.map((c) => Number(c[0])) : null,
+        maxPairs: Math.floor(maxPairs),
+        guaranteedMatches,
+        pricePerPair,
+        priceUnit: "pair",
+        requiresDeposit,
+        depositType: requiresDeposit ? depositType : null,
+        depositValue: requiresDeposit ? depositValue : 0,
+        acceptsMp,
+        acceptsCash,
+        acceptsTransfer,
+      },
+    ];
+  }
+  const categoriesCheck = validateCategoryInputs(categoryInputs);
+  if (!categoriesCheck.ok) return { ok: false, message: categoriesCheck.message };
+
+  // Escritura con service role: los clientes solo tienen SELECT sobre torneos.
+  // El club ya se validó contra ctx.clubIds.
+  const service = createServiceClient();
+  const { data: inserted, error } = await service
     .from(DB_TABLES.tournaments)
     .insert({
       club_id: clubId,
@@ -255,20 +285,15 @@ export async function createTournamentAction(
 
   const tournamentId = (inserted as { id: string }).id;
 
-  if (courtBlocks.length > 0) {
-    // court_blocks se escribe con el service client (no el cliente del
-    // usuario): mismo patrón que assignTournamentMatchSlot en
-    // app/admin/torneos/[id]/actions.ts para evitar depender de grants por
-    // columna/tabla que no están garantizados para authenticated.
-    const service = createServiceClient();
-    await service.from(DB_TABLES.courtBlocks).insert(
-      courtBlocks.map((b) => ({
-        court_id: b.courtId,
-        blocked_date: b.date,
-        blocked_time: b.time,
-        reason: "torneo",
-      })),
-    );
+  const { error: catError } = await service.from(DB_TABLES.tournamentCategories).insert(
+    categoryInputs.map((c, i) => categoryInputToRow(tournamentId, c, i)),
+  );
+  if (catError) {
+    // Sin categoría el torneo queda inservible para el flujo V2 (la RPC de
+    // inscripción no tiene de dónde sacar precio/seña): se borra en vez de
+    // dejar un torneo a medio crear.
+    await service.from(DB_TABLES.tournaments).delete().eq("id", tournamentId);
+    return { ok: false, message: catError.message };
   }
 
   revalidatePath("/admin/torneos");

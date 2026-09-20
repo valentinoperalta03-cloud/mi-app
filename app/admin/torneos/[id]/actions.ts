@@ -18,7 +18,6 @@ import {
   buildPenaFirstRound,
 } from "@/lib/tournament/fixture";
 import { FINAL_ROUND, THIRD_PLACE_ROUND } from "@/lib/tournament/rounds";
-import { getCourtAvailabilityForDate } from "@/lib/tournament-availability";
 import {
   buildAmericanoRanking,
   type MatchForRanking,
@@ -83,16 +82,6 @@ export async function startTournamentAction(
 
   const service = createServiceClient();
 
-  const { data: regs } = await service
-    .from(DB_TABLES.tournamentRegistrations)
-    .select("id, player1_id, player2_id, payment_status, waitlist")
-    .eq("tournament_id", tournamentId)
-    .eq("payment_status", "approved")
-    .eq("waitlist", false)
-    .order("registration_order", { ascending: true })
-    .order("registered_at", { ascending: true });
-
-  const pairIds = ((regs ?? []) as Array<{ id: string }>).map((r) => r.id);
   const ttype = String(
     (gate.row as { tournament_type?: string }).tournament_type ?? "",
   ) as TournamentTypeKey;
@@ -100,79 +89,101 @@ export async function startTournamentAction(
     (gate.row as { consolation_bracket?: boolean | null }).consolation_bracket,
   );
 
-  const validation = validatePairsForType(ttype, pairIds.length);
-  if (!validation.ok) return validation;
+  if (!["americano", "pena", "eliminacion"].includes(ttype)) {
+    return { ok: false, message: `Tipo de torneo "${ttype}" no soportado.` };
+  }
 
+  const { data: categoriesRaw } = await service
+    .from(DB_TABLES.tournamentCategories)
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .order("sort_order", { ascending: true });
+  const categoryIds = ((categoriesRaw ?? []) as Array<{ id: string }>).map((c) => c.id);
+  if (categoryIds.length === 0) {
+    return { ok: false, message: "El torneo no tiene categorías." };
+  }
+
+  // Cada categoría arma su propio fixture con SUS inscriptos únicamente —
+  // categorías del mismo torneo (americano/eliminación/peña) nunca se
+  // mezclan entre sí. Antes de esta fase, el fixture se armaba con TODAS las
+  // inscripciones del torneo sin distinguir categoría (inofensivo mientras
+  // solo existía una por torneo; con Fase B ya no).
   await service
     .from(DB_TABLES.tournamentMatches)
     .delete()
     .eq("tournament_id", tournamentId);
 
-  if (ttype === "americano") {
-    const rows = buildAmericanoMatches(tournamentId, pairIds);
-    if (rows.length) {
-      const { error } = await service
-        .from(DB_TABLES.tournamentMatches)
-        .insert(rows);
-      if (error) return { ok: false, message: error.message };
-    }
-  } else if (ttype === "pena") {
-    const slots = (
-      (regs ?? []) as Array<{ id: string; player1_id: string }>
-    ).map((r) => ({
-      registrationId: r.id,
-      playerId: r.player1_id,
-    }));
-    const { matches, merges } = buildPenaFirstRound(tournamentId, slots);
+  const allRegs: Array<{ id: string; player1_id: string; player2_id: string | null }> = [];
 
-    // La inscripción de peña es individual: cada pareja sorteada se materializa
-    // fusionando dos inscripciones (una absorbe a la otra como player2_id) para
-    // que pair1_id/pair2_id de tournament_matches puedan seguir referenciando
-    // una única fila de tournament_registrations, igual que en americano/eliminación.
-    for (const m of merges) {
-      const { error: mergeErr } = await service
-        .from(DB_TABLES.tournamentRegistrations)
-        .update({ player2_id: m.mergePlayerId })
-        .eq("id", m.keepRegistrationId);
-      if (mergeErr) return { ok: false, message: mergeErr.message };
-      const { error: removeErr } = await service
-        .from(DB_TABLES.tournamentRegistrations)
-        .delete()
-        .eq("id", m.removeRegistrationId);
-      if (removeErr) return { ok: false, message: removeErr.message };
-    }
+  for (const categoryId of categoryIds) {
+    const { data: regs } = await service
+      .from(DB_TABLES.tournamentRegistrations)
+      .select("id, player1_id, player2_id, payment_status, waitlist")
+      .eq("category_id", categoryId)
+      .eq("payment_status", "approved")
+      .eq("waitlist", false)
+      .order("registration_order", { ascending: true })
+      .order("registered_at", { ascending: true });
 
-    if (matches.length) {
-      const { error } = await service
-        .from(DB_TABLES.tournamentMatches)
-        .insert(matches);
-      if (error) return { ok: false, message: error.message };
+    const catRegs = (regs ?? []) as Array<{ id: string; player1_id: string; player2_id: string | null }>;
+    allRegs.push(...catRegs);
+    const pairIds = catRegs.map((r) => r.id);
+
+    const validation = validatePairsForType(ttype, pairIds.length);
+    if (!validation.ok) return validation;
+
+    if (ttype === "americano") {
+      const rows = buildAmericanoMatches(tournamentId, pairIds).map((row) => ({ ...row, category_id: categoryId, phase: "americano" }));
+      if (rows.length) {
+        const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
+        if (error) return { ok: false, message: error.message };
+      }
+    } else if (ttype === "pena") {
+      const slots = catRegs.map((r) => ({ registrationId: r.id, playerId: r.player1_id }));
+      const { matches, merges } = buildPenaFirstRound(tournamentId, slots);
+
+      // La inscripción de peña es individual: cada pareja sorteada se materializa
+      // fusionando dos inscripciones (una absorbe a la otra como player2_id) para
+      // que pair1_id/pair2_id de tournament_matches puedan seguir referenciando
+      // una única fila de tournament_registrations, igual que en americano/eliminación.
+      for (const m of merges) {
+        // Borrar ANTES de actualizar: mergePlayerId todavía ocupa su lugar
+        // como player1 de removeRegistrationId (categoría+jugador es único a
+        // nivel DB desde Fase B). Si se actualizara primero, el UPDATE de abajo
+        // chocaría con esa fila todavía viva.
+        const { error: removeErr } = await service
+          .from(DB_TABLES.tournamentRegistrations)
+          .delete()
+          .eq("id", m.removeRegistrationId);
+        if (removeErr) return { ok: false, message: removeErr.message };
+        const { error: mergeErr } = await service
+          .from(DB_TABLES.tournamentRegistrations)
+          .update({ player2_id: m.mergePlayerId })
+          .eq("id", m.keepRegistrationId);
+        if (mergeErr) return { ok: false, message: mergeErr.message };
+      }
+
+      if (matches.length) {
+        const rows = matches.map((row) => ({ ...row, category_id: categoryId, phase: "pena" }));
+        const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
+        if (error) return { ok: false, message: error.message };
+      }
+    } else {
+      const rows = buildEliminationFixture(tournamentId, pairIds, consolationBracket).map((row) => ({
+        ...row,
+        category_id: categoryId,
+        phase: "knockout",
+      }));
+      if (rows.length) {
+        const { error } = await service.from(DB_TABLES.tournamentMatches).insert(rows);
+        if (error) return { ok: false, message: error.message };
+      }
     }
-  } else if (ttype === "eliminacion") {
-    const rows = buildEliminationFixture(
-      tournamentId,
-      pairIds,
-      consolationBracket,
-    );
-    if (rows.length) {
-      const { error } = await service
-        .from(DB_TABLES.tournamentMatches)
-        .insert(rows);
-      if (error) return { ok: false, message: error.message };
-    }
-  } else {
-    return { ok: false, message: `Tipo de torneo "${ttype}" no soportado.` };
   }
 
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
   const memberIds = [
-    ...new Set(
-      (
-        (regs ?? []) as Array<{ player1_id: string; player2_id: string | null }>
-      ).flatMap(
-        (r) => [r.player1_id, r.player2_id].filter(Boolean) as string[],
-      ),
-    ),
+    ...new Set(allRegs.flatMap((r) => [r.player1_id, r.player2_id].filter(Boolean) as string[])),
   ];
   const chat = await createGroupChat(
     supabase,
@@ -232,6 +243,10 @@ export async function finishTournamentAction(
     (gate.row as { tournament_type?: string }).tournament_type ?? "",
   );
 
+  if ((gate.row as { status?: string }).status !== "in_progress") {
+    return { ok: false, message: "Solo se puede finalizar un torneo en curso." };
+  }
+
   // Las peñas no cargan resultados (saveTournamentMatchAction las rechaza),
   // así que nunca tendrían partidos en status 'finished' — sin esta excepción
   // el torneo queda bloqueado para siempre en "Finalizar".
@@ -249,10 +264,11 @@ export async function finishTournamentAction(
     }
   }
 
-  await service
+  const { error: finishErr } = await service
     .from(DB_TABLES.tournaments)
     .update({ status: "finished" })
     .eq("id", tournamentId);
+  if (finishErr) return { ok: false, message: finishErr.message };
 
   const { data: regs } = await service
     .from(DB_TABLES.tournamentRegistrations)
@@ -408,7 +424,11 @@ export async function reopenTournamentRegistrationsFormAction(
   await reopenTournamentRegistrationsAction(tournamentId);
 }
 
-/** Baja una pareja/jugador inscripto — solo mientras la inscripción está abierta. Notifica a los afectados. */
+/**
+ * Baja una pareja/jugador inscripto — solo mientras la inscripción está abierta.
+ * No borra la fila: la marca cancelada para conservar el historial de pagos
+ * (qué hacer con lo cobrado queda para el flujo de pagos). Notifica a los afectados.
+ */
 export async function cancelRegistrationAction(
   formData: FormData,
 ): Promise<void> {
@@ -434,9 +454,10 @@ export async function cancelRegistrationAction(
 
   const { error } = await service
     .from(DB_TABLES.tournamentRegistrations)
-    .delete()
+    .update({ payment_status: "cancelled", payment_expires_at: null })
     .eq("id", registrationId)
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .in("payment_status", ["pending_payment", "pending", "approved"]);
 
   if (!error && reg) {
     const tname = String((gate.row as { name?: string }).name ?? "Torneo");
@@ -599,14 +620,19 @@ export async function updateTournamentAction(
 async function maybeGenerateAmericanoFinals(
   service: SupabaseClient,
   tournamentId: string,
+  categoryId: string,
   hasFinals: boolean,
 ): Promise<void> {
   if (!hasFinals) return;
 
+  // Escopado por categoría: un torneo con varias categorías americano corre
+  // el todos-contra-todos de cada una por separado, así que la final de una
+  // categoría no puede esperar a que terminen los partidos de otra.
   const { data: allMatches } = await service
     .from(DB_TABLES.tournamentMatches)
     .select("id, round, pair1_id, pair2_id, pair1_score, pair2_score, status")
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .eq("category_id", categoryId);
   const rows = (allMatches ?? []) as Array<{
     id: string;
     round: number;
@@ -628,6 +654,8 @@ async function maybeGenerateAmericanoFinals(
   const toInsert: Array<Record<string, unknown>> = [
     {
       tournament_id: tournamentId,
+      category_id: categoryId,
+      phase: "americano_final",
       round: FINAL_ROUND,
       round_name: "Final",
       pair1_id: ranking[0].pairId,
@@ -638,6 +666,8 @@ async function maybeGenerateAmericanoFinals(
   if (ranking.length >= 4) {
     toInsert.push({
       tournament_id: tournamentId,
+      category_id: categoryId,
+      phase: "americano_final",
       round: THIRD_PLACE_ROUND,
       round_name: "3er puesto",
       pair1_id: ranking[2].pairId,
@@ -660,7 +690,14 @@ export async function saveTournamentMatchAction(
   if ((gate.row as { tournament_type?: string }).tournament_type === "pena") {
     return {
       ok: false,
-      message: "Las peñas no cargan resultados ni afectan el ELO.",
+      message: "Las peñas no cargan resultados.",
+    };
+  }
+
+  if ((gate.row as { status?: string }).status !== "in_progress") {
+    return {
+      ok: false,
+      message: "Solo se pueden cargar resultados con el torneo en curso.",
     };
   }
 
@@ -692,17 +729,22 @@ export async function saveTournamentMatchAction(
   const service = createServiceClient();
   const tname = String((gate.row as { name?: string }).name ?? "Torneo");
 
+  // El partido tiene que pertenecer al torneo validado arriba: sin este filtro
+  // un admin podía cargar resultados en partidos de otro club.
   const { data: existing } = await service
     .from(DB_TABLES.tournamentMatches)
-    .select("pair1_id, pair2_id, status, winner_pair_id")
+    .select("pair1_id, pair2_id, status, winner_pair_id, category_id")
     .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
     .maybeSingle();
+  if (!existing) return { ok: false, message: "Partido no encontrado." };
 
   const em = existing as {
     pair1_id: string | null;
     pair2_id: string | null;
     status: string;
     winner_pair_id: string | null;
+    category_id: string | null;
   } | null;
   if (!em?.pair1_id || !em.pair2_id) {
     return { ok: false, message: "Faltan parejas en el partido." };
@@ -721,7 +763,8 @@ export async function saveTournamentMatchAction(
         winner_pair_id: winnerPairId,
         status: "finished",
       })
-      .eq("id", matchId);
+      .eq("id", matchId)
+      .eq("tournament_id", tournamentId);
     if (error) {
       res = { ok: false, message: error.message };
     } else {
@@ -734,6 +777,7 @@ export async function saveTournamentMatchAction(
   } else {
     res = await saveTournamentMatchResult({
       admin: service,
+      tournamentId,
       matchId,
       pair1Score: s1,
       pair2Score: s2,
@@ -744,11 +788,12 @@ export async function saveTournamentMatchAction(
 
   if (
     res.ok &&
-    (gate.row as { tournament_type?: string }).tournament_type === "americano"
+    (gate.row as { tournament_type?: string }).tournament_type === "americano" &&
+    em?.category_id
   ) {
     const hasFinals =
       (gate.row as { has_finals?: boolean | null }).has_finals ?? true;
-    await maybeGenerateAmericanoFinals(service, tournamentId, hasFinals);
+    await maybeGenerateAmericanoFinals(service, tournamentId, em.category_id, hasFinals);
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
@@ -765,46 +810,38 @@ export async function saveTournamentMatchFormAction(
   await saveTournamentMatchAction(tournamentId, matchId, formData);
 }
 
-export async function saveMatchScheduleAction(
-  formData: FormData,
-): Promise<{ ok: boolean; message: string }> {
-  const tournamentId = String(formData.get("tournament_id") ?? "").trim();
-  const matchId = String(formData.get("match_id") ?? "").trim();
-  if (!tournamentId || !matchId)
-    return { ok: false, message: "Datos incompletos." };
-
-  const supabase = await createClient({ allowCookieWrites: true });
-  const gate = await assertTournamentOwner(supabase, tournamentId);
-  if (!gate.ok) return gate;
-
-  const courtId = String(formData.get("court_id") ?? "").trim() || null;
-  const scheduledDate =
-    String(formData.get("scheduled_date") ?? "").trim() || null;
-  const scheduledTime =
-    String(formData.get("scheduled_time") ?? "").trim() || null;
-  const notes = String(formData.get("notes") ?? "").trim() || null;
-
-  const service = createServiceClient();
-  const { error } = await service
-    .from(DB_TABLES.tournamentMatches)
-    .update({
-      court_id: courtId,
-      scheduled_date: scheduledDate,
-      scheduled_time: scheduledTime,
-      notes,
-    })
-    .eq("id", matchId);
-
-  if (error) return { ok: false, message: error.message };
-  revalidatePath(`/admin/torneos/${tournamentId}`);
-  return { ok: true, message: "Horario guardado." };
-}
+/**
+ * Asigna cancha/fecha/hora a un partido de torneo. Todo se valida en el
+ * server contra el torneo del admin: el partido tiene que ser de ese torneo y
+ * la cancha de su club (no se confía en clubId/courtId del cliente). El
+ * court_block lo escribe el trigger tournament_matches_sync_court_block en la
+ * misma transacción del update, así no pueden quedar desincronizados.
+ */
+const ASSIGN_SLOT_REASON_MESSAGES: Record<string, string> = {
+  match_not_found: "Partido no encontrado.",
+  forbidden: "No autorizado.",
+  tournament_not_editable: "El torneo ya no admite cambios de horario.",
+  match_finished: "No se puede reprogramar un partido finalizado.",
+  invalid_court: "Cancha inválida.",
+  court_closed: "El club está cerrado ese día.",
+  invalid_time: "Ese horario está fuera del horario de apertura de la cancha.",
+  reservation_conflict: "Ese horario ya tiene una reserva.",
+  fixed_booking_conflict: "Ese horario está ocupado por un turno fijo.",
+  training_conflict: "Ese horario está ocupado por un entrenamiento.",
+  tournament_match_conflict: "Ese horario ya está ocupado por otro partido.",
+  reservation_hold_conflict: "Hay una reserva en proceso de pago para ese horario.",
+};
 
 /**
- * Asigna cancha/fecha/hora a un partido de torneo: re-verifica disponibilidad
- * en el server, libera el bloqueo anterior si el partido ya tenía uno propio
- * y crea el nuevo `court_block` (reason='torneo') para que quede reflejado en
- * el dashboard y en la disponibilidad de otros torneos/reservas.
+ * Asigna cancha/fecha/hora a un partido de torneo (legacy de una sola
+ * categoría o cualquier partido V2 de zona/cuadro: la RPC no distingue).
+ * Toda la validación (torneo/partido editable, cancha del club, horario de
+ * apertura, conflicto con reservas/turnos fijos/entrenamientos/otros
+ * partidos) y el UPDATE viven en una sola transacción del lado de la base
+ * (tournament_assign_match_slot, Fase D) para no dejar ventana entre
+ * "leer disponibilidad" y "escribir". El respaldo duro contra otro partido
+ * de torneo concurrente es el índice único de producción
+ * court_blocks_court_date_time_key.
  */
 export async function assignTournamentMatchSlot(input: {
   matchId: string;
@@ -814,63 +851,25 @@ export async function assignTournamentMatchSlot(input: {
   clubId: string;
   tournamentId: string;
 }): Promise<{ ok: boolean; error?: string }> {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.matchDate) ||
+    !/^\d{2}:\d{2}$/.test(input.matchTime)
+  ) {
+    return { ok: false, error: "Fecha u hora inválida." };
+  }
+
   const supabase = await createClient({ allowCookieWrites: true });
-  const gate = await assertTournamentOwner(supabase, input.tournamentId);
-  if (!gate.ok) return { ok: false, error: gate.message };
-
-  const service = createServiceClient();
-
-  const { data: existing } = await service
-    .from(DB_TABLES.tournamentMatches)
-    .select("court_id, scheduled_date, scheduled_time")
-    .eq("id", input.matchId)
-    .maybeSingle();
-  const prev = existing as {
-    court_id: string | null;
-    scheduled_date: string | null;
-    scheduled_time: string | null;
-  } | null;
-
-  // Liberar el bloqueo anterior de este mismo partido ANTES de re-verificar
-  // disponibilidad: si no, reasignar el partido al mismo horario que ya
-  // tenía se marcaría (incorrectamente) como ocupado por su propio bloqueo.
-  if (prev?.court_id && prev.scheduled_date && prev.scheduled_time) {
-    await service
-      .from(DB_TABLES.courtBlocks)
-      .delete()
-      .eq("court_id", prev.court_id)
-      .eq("blocked_date", prev.scheduled_date)
-      .eq("blocked_time", prev.scheduled_time)
-      .eq("reason", "torneo");
-  }
-
-  const avail = await getCourtAvailabilityForDate(
-    input.clubId,
-    [input.courtId],
-    input.matchDate,
-  );
-  const motivo = avail.occupiedByCourtAndSlot[input.courtId]?.[input.matchTime];
-  if (motivo) {
-    return { ok: false, error: "Ese horario ya está ocupado" };
-  }
-
-  const { error: updErr } = await service
-    .from(DB_TABLES.tournamentMatches)
-    .update({
-      court_id: input.courtId,
-      scheduled_date: input.matchDate,
-      scheduled_time: input.matchTime,
-    })
-    .eq("id", input.matchId);
-  if (updErr) return { ok: false, error: updErr.message };
-
-  const { error: blockErr } = await service.from(DB_TABLES.courtBlocks).insert({
-    court_id: input.courtId,
-    blocked_date: input.matchDate,
-    blocked_time: input.matchTime,
-    reason: "torneo",
+  const { data, error } = await supabase.rpc("tournament_assign_match_slot", {
+    p_match_id: input.matchId,
+    p_court_id: input.courtId,
+    p_date: input.matchDate,
+    p_time: input.matchTime,
   });
-  if (blockErr) return { ok: false, error: blockErr.message };
+  if (error) return { ok: false, error: "No se pudo asignar el horario." };
+  const row = (Array.isArray(data) ? data[0] : data) as { ok: boolean; reason: string } | null;
+  if (!row?.ok) {
+    return { ok: false, error: ASSIGN_SLOT_REASON_MESSAGES[row?.reason ?? ""] ?? "No se pudo asignar el horario." };
+  }
 
   revalidatePath(`/admin/torneos/${input.tournamentId}`);
   revalidatePath("/admin/dashboard");
@@ -893,6 +892,18 @@ export async function updatePenaMatchPairsAction(
   }
 
   const service = createServiceClient();
+  const pairIds = [pair1Id, pair2Id].filter((id): id is string => Boolean(id));
+  if (pairIds.length > 0) {
+    const { count } = await service
+      .from(DB_TABLES.tournamentRegistrations)
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId)
+      .in("id", pairIds);
+    if ((count ?? 0) !== new Set(pairIds).size) {
+      return { ok: false, message: "Pareja inválida." };
+    }
+  }
+
   const { error } = await service
     .from(DB_TABLES.tournamentMatches)
     .update({ pair1_id: pair1Id || null, pair2_id: pair2Id || null })

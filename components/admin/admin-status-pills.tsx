@@ -45,7 +45,9 @@ function Pill({
 function normalizePayment(raw: string) {
   const s = raw.trim().toLowerCase();
   if (s === "paid" || s === "pagado" || s === "pago") return "paid" as const;
-  if (s === "pending" || s === "pendiente") return "pending" as const;
+  // club_pending: reserva sin seña, el total queda a cobrar en el club — mismo
+  // tratamiento visual que "pending" (pendiente de cobro), no es un fallo.
+  if (s === "pending" || s === "pendiente" || s === "club_pending") return "pending" as const;
   if (s === "failed" || s === "fallido" || s === "cancelled" || s === "cancelado")
     return "failed" as const;
   if (s === "—" || s === "" || s === "-") return "unknown" as const;

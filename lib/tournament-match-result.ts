@@ -105,13 +105,15 @@ function teamPlayers(reg: RegRow): string[] {
 
 export async function saveTournamentMatchResult(params: {
   admin: SupabaseClient;
+  /** Torneo ya validado contra el admin; el partido tiene que pertenecerle. */
+  tournamentId: string;
   matchId: string;
   pair1Score: number;
   pair2Score: number;
   setsJson: unknown;
   tournamentName: string;
 }): Promise<{ ok: boolean; message: string }> {
-  const { admin, matchId, pair1Score, pair2Score, setsJson, tournamentName } = params;
+  const { admin, tournamentId, matchId, pair1Score, pair2Score, setsJson, tournamentName } = params;
   if (pair1Score === pair2Score) {
     return { ok: false, message: "Debe haber un ganador (marcadores distintos)." };
   }
@@ -120,6 +122,7 @@ export async function saveTournamentMatchResult(params: {
     .from(DB_TABLES.tournamentMatches)
     .select("id, tournament_id, pair1_id, pair2_id, status")
     .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
     .maybeSingle();
   if (mErr || !mrow) return { ok: false, message: mErr?.message ?? "Partido no encontrado." };
   const m = mrow as {
@@ -146,7 +149,8 @@ export async function saveTournamentMatchResult(params: {
   const winnerPairId = pair1Score > pair2Score ? m.pair1_id : m.pair2_id;
   const playerIds = [...new Set([...teamPlayers(regA), ...teamPlayers(regB)])];
 
-  await admin
+  // Solo pasa a finished si seguía sin resultado: dos cargas simultáneas no se pisan.
+  const { data: updated, error: updErr } = await admin
     .from(DB_TABLES.tournamentMatches)
     .update({
       pair1_score: pair1Score,
@@ -155,7 +159,12 @@ export async function saveTournamentMatchResult(params: {
       winner_pair_id: winnerPairId,
       status: "finished",
     })
-    .eq("id", matchId);
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .neq("status", "finished")
+    .select("id");
+  if (updErr) return { ok: false, message: updErr.message };
+  if (!updated?.length) return { ok: false, message: "Este partido ya tiene resultado cargado." };
 
   await propagateBracket(admin, matchId, winnerPairId);
 

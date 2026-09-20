@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:tournaments": "node --import ./scripts/ts-test-hooks.mjs --test \"lib/tournament/v2/__tests__/*.test.ts\"",
+    "test:reservation-hold": "node --import ./scripts/ts-test-hooks.mjs --test \"lib/__tests__/reservation-hold.test.ts\" \"lib/__tests__/fixed-slot-hold-exclusion.test.ts\"",
     "capacitor:prepare": "node scripts/prepare-capacitor-dist.mjs",
     "android:icons": "node scripts/generate-android-icons.mjs"
   },
@@ -49,6 +51,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0",
     "postcss": "^8.5.8",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",

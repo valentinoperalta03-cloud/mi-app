@@ -81,6 +81,7 @@ function reservationMethodLabel(paymentStatus: string | null | undefined) {
   if (s === "paid") return "Mercado Pago ✅";
   if (s === "cash_pending") return "Efectivo ⏳";
   if (s === "transfer_pending") return "Transferencia ⏳";
+  if (s === "club_pending") return "Sin seña · a cobrar en el club ⏳";
   if (s === "pending") return "Mercado Pago ⏳";
   if (s === "refund_requested") return "Reembolso solicitado ⏳";
   if (s === "refunded") return "Mercado Pago · reembolsado";
@@ -611,11 +612,19 @@ export default async function AdminReservasPage({ searchParams }: PageProps) {
                     </Link>
                   ) : (
                     <>
-                      {selectedIsReservation && !selectedIsCancelled && (selectedPaySt === "cash_pending" || selectedPaySt === "transfer_pending") ? (
+                      {selectedIsReservation &&
+                      !selectedIsCancelled &&
+                      (selectedPaySt === "cash_pending" ||
+                        selectedPaySt === "transfer_pending" ||
+                        selectedPaySt === "club_pending") ? (
                         <form action={confirmOfflineCobro}>
                           <input type="hidden" name="match_id" value={selectedMatch.id} />
                           <button type="submit" className={adminButtonSecondary}>
-                            {selectedPaySt === "cash_pending" ? "Confirmar cobro en efectivo" : "Confirmar transferencia recibida"}
+                            {selectedPaySt === "cash_pending"
+                              ? "Confirmar cobro en efectivo"
+                              : selectedPaySt === "transfer_pending"
+                                ? "Confirmar transferencia recibida"
+                                : "Confirmar cobro en el club"}
                           </button>
                         </form>
                       ) : null}

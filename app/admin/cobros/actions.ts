@@ -192,7 +192,9 @@ export async function confirmOfflineCobro(formData: FormData) {
   const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
   // "pending" se agrega porque el jugador puede haber elegido Mercado Pago y no
   // haber terminado el pago online: el club igual puede cobrarle en persona.
-  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending") {
+  // "club_pending" es la reserva sin seña (requires_deposit=false): el total
+  // del turno queda a cobrar en el club desde el momento en que se confirma.
+  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending" && pay !== "club_pending") {
     redirect("/admin/cobros?error=" + encodeURIComponent("Este cobro ya no está pendiente."));
   }
 
@@ -261,7 +263,7 @@ export async function registrarPagoParcial(input: {
   }
 
   const pay = String(row.payment_status ?? "").toLowerCase();
-  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending") {
+  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending" && pay !== "club_pending") {
     return { ok: false, error: "Este cobro ya no está pendiente." };
   }
 
@@ -337,7 +339,7 @@ export async function markOfflineNoShow(formData: FormData) {
   }
 
   const pay = String((match as { payment_status: string | null }).payment_status ?? "").toLowerCase();
-  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending") {
+  if (pay !== "cash_pending" && pay !== "transfer_pending" && pay !== "pending" && pay !== "club_pending") {
     redirect("/admin/cobros?error=" + encodeURIComponent("Este turno ya no está pendiente de cobro."));
   }
 
