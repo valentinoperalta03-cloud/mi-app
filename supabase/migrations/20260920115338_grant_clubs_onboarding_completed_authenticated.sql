@@ -1,0 +1,15 @@
+-- Corrección mínima de regresión introducida por el hotfix de seguridad
+-- 20260920004311_security_hotfix_clubs_billing_columns.sql: ese hotfix
+-- reemplazó el GRANT SELECT de tabla completa en public.clubs por una
+-- whitelist explícita de columnas, pero onboarding_completed quedó afuera
+-- de esa whitelist. checkOnboardingStatus() (lib/admin/onboarding-check.ts)
+-- selecciona onboarding_completed junto a otras columnas usando el cliente
+-- de sesión (authenticated) — PostgREST rechaza el SELECT completo de la
+-- fila si falta el grant de una sola columna pedida, por lo que
+-- canReceiveReservations quedaba false para CUALQUIER club (con o sin
+-- seña), no solo para reservas sin seña.
+--
+-- Solo 'authenticated': checkOnboardingStatus únicamente se invoca desde
+-- flujos que ya requieren sesión (reservarCancha, crear-partido/actions.ts).
+-- No hace falta para 'anon'.
+grant select (onboarding_completed) on public.clubs to authenticated;
