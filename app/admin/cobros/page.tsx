@@ -72,7 +72,7 @@ export default async function AdminCobrosPage({ searchParams }: PageProps) {
       )
       .in("court_id", ctx.courtIds)
       .eq("scheduled_date", todayAr)
-      .in("payment_status", ["cash_pending", "transfer_pending", "pending"])
+      .in("payment_status", ["cash_pending", "transfer_pending", "pending", "club_pending"])
       .neq("match_status", "cancelled")
       .order("scheduled_time", { ascending: true }),
     supabase

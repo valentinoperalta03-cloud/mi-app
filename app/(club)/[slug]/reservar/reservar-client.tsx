@@ -6,10 +6,12 @@ import { es } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { Space_Grotesk } from "next/font/google";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getTodayYmdInArgentina } from "@/lib/datetime-ar";
 import {
   CANCELLATION_NOTICE_TITLE,
+  cancellationNoticeText,
   depositNoticeText,
   resolveCancellationHours,
 } from "@/lib/cancellation-policy";
@@ -29,6 +31,7 @@ export type ReservarClub = {
   business_hours: string | null;
   deposit_type: "percentage" | "fixed" | null;
   deposit_value: number | null;
+  requires_deposit: boolean | null;
   open_time: string | null;
   close_time: string | null;
   contact_phone: string | null;
@@ -50,23 +53,31 @@ type Props = {
   canReserveOnline: boolean;
 };
 
-const GUIDE_STEPS = [
-  {
-    label: "Paso 1",
-    title: "Elegí el día",
-    description: "Seleccioná entre los próximos 7 días disponibles para tu reserva",
-  },
-  {
-    label: "Paso 2",
-    title: "Elegí el horario",
-    description: "Tocá el horario que más te convenga. Solo aparecen los turnos libres",
-  },
-  {
-    label: "Paso 3",
-    title: "Reservá y pagá la seña",
-    description: "Elegí la cancha y pagá la seña online por Mercado Pago. La cancha es tuya",
-  },
-];
+function getGuideSteps(requiresDeposit: boolean) {
+  return [
+    {
+      label: "Paso 1",
+      title: "Elegí el día",
+      description: "Seleccioná entre los próximos 7 días disponibles para tu reserva",
+    },
+    {
+      label: "Paso 2",
+      title: "Elegí el horario",
+      description: "Tocá el horario que más te convenga. Solo aparecen los turnos libres",
+    },
+    requiresDeposit
+      ? {
+          label: "Paso 3",
+          title: "Reservá y pagá la seña",
+          description: "Elegí la cancha y pagá la seña online por Mercado Pago. La cancha es tuya",
+        }
+      : {
+          label: "Paso 3",
+          title: "Confirmá tu reserva",
+          description: "Elegí la cancha y confirmá. La cancha queda tuya y pagás el total en el club",
+        },
+  ];
+}
 
 function formatSurface(raw: string | null | undefined): string {
   if (!raw?.trim()) return "Superficie no definida";
@@ -214,6 +225,9 @@ function CannotReserveOnline({ club }: { club: ReservarClub }) {
 }
 
 export default function ReservarClient({ club, courts, canReserveOnline }: Props) {
+  const router = useRouter();
+  const requiresDeposit = club.requires_deposit ?? true;
+  const guideSteps = useMemo(() => getGuideSteps(requiresDeposit), [requiresDeposit]);
   const dayChips = useMemo(() => buildDayChips(), []);
   const [selectedDate, setSelectedDate] = useState(dayChips[0].ymd);
   const [availability, setAvailability] = useState<{ slots: AvailabilitySlot[]; prices: Record<string, number> }>({
@@ -271,7 +285,9 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
   const confirmCourt = confirmTarget ? courtsById.get(confirmTarget.courtId) : null;
   const confirmPrice = confirmTarget ? priceForCourt(confirmTarget.courtId, confirmTarget.time) : null;
   const confirmDeposit =
-    confirmPrice != null ? resolveDepositCharge(confirmPrice, club.deposit_type, club.deposit_value ?? 0) : null;
+    requiresDeposit && confirmPrice != null
+      ? resolveDepositCharge(confirmPrice, club.deposit_type, club.deposit_value ?? 0)
+      : null;
   const confirmRemaining =
     confirmPrice != null && confirmDeposit != null ? Math.max(confirmPrice - confirmDeposit, 0) : null;
 
@@ -289,8 +305,13 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
         });
         if ("error" in result) {
           setBookingError(result.error);
-        } else {
+        } else if (result.mpUrl) {
           await nativeOpenUrl(result.mpUrl);
+        } else {
+          // Club sin seña: ya quedó confirmada server-side, no hay checkout
+          // que abrir. Va directo a la misma pantalla de confirmación que
+          // usa el flujo con seña.
+          router.push(`/reservas/confirmacion?id=${encodeURIComponent(result.matchId)}`);
         }
       } catch (err) {
         if (isRedirectError(err)) throw err;
@@ -309,7 +330,7 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
 
       <div className="mx-auto flex w-full max-w-[480px] flex-col px-4 pb-24 pt-2">
         <div className="flex flex-col gap-2 mb-5">
-          {GUIDE_STEPS.map((step) => (
+          {guideSteps.map((step) => (
             <div key={step.label} className="rounded-2xl border border-[#1A3050] bg-white/[0.04] px-4 py-4">
               <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-[#CCFF00]/60">
                 {step.label}
@@ -419,7 +440,7 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
                       if (!court) return null;
                       const price = priceForCourt(courtId, expandedTime);
                       const deposit =
-                        price != null
+                        requiresDeposit && price != null
                           ? resolveDepositCharge(price, club.deposit_type, club.deposit_value ?? 0)
                           : null;
                       const remaining = price != null && deposit != null ? Math.max(price - deposit, 0) : null;
@@ -460,6 +481,8 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
                             <p className="mt-2 text-xs text-white/40">
                               Saldo restante en el club: {formatPrice(remaining)}
                             </p>
+                          ) : !requiresDeposit && price != null ? (
+                            <p className="mt-2 text-xs text-white/40">Confirmás ahora y pagás en el club</p>
                           ) : null}
 
                           <button
@@ -499,7 +522,9 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
               >
                 🎾
               </div>
-              <h3 className="mt-3 text-lg font-bold text-white">¿Confirmás la reserva?</h3>
+              <h3 className="mt-3 text-lg font-bold text-white">
+                {requiresDeposit ? "¿Confirmás la reserva?" : "Confirmás ahora y pagás en el club"}
+              </h3>
             </div>
             <div className="mt-4 flex flex-col text-sm">
               <div className="flex justify-between border-t border-white/[0.08] py-2.5">
@@ -539,6 +564,11 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
                   </div>
                   <span className="text-[10px] text-white/35">(lo pagás en el club el día del turno)</span>
                 </div>
+              ) : !requiresDeposit && confirmPrice != null ? (
+                <div className="flex justify-between border-t border-white/[0.08] py-2.5">
+                  <span className="text-white/55">Pagás</span>
+                  <span className="text-white/55">En el club</span>
+                </div>
               ) : null}
             </div>
 
@@ -551,7 +581,9 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
                 {CANCELLATION_NOTICE_TITLE}
               </p>
               <p className="mt-1.5 text-[12px] leading-relaxed text-red-50/90">
-                {depositNoticeText(resolveCancellationHours(club.cancellation_hours))}
+                {requiresDeposit
+                  ? depositNoticeText(resolveCancellationHours(club.cancellation_hours))
+                  : cancellationNoticeText(resolveCancellationHours(club.cancellation_hours))}
               </p>
             </div>
 
@@ -566,9 +598,11 @@ export default function ReservarClient({ club, courts, canReserveOnline }: Props
               >
                 {isBooking
                   ? "Procesando..."
-                  : confirmDeposit != null
-                    ? `Pagar seña · ${formatPrice(confirmDeposit)}`
-                    : "Confirmar y pagar seña"}
+                  : !requiresDeposit
+                    ? "Confirmar reserva"
+                    : confirmDeposit != null
+                      ? `Pagar seña · ${formatPrice(confirmDeposit)}`
+                      : "Confirmar y pagar seña"}
               </button>
               <button
                 type="button"

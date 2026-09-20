@@ -326,7 +326,7 @@ export async function crearPartido(
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id)
       .in("match_status", ["scheduled", "reserved", "full"])
-      .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
+      .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending", "club_pending"]);
     if ((activeMatchesCount ?? 0) >= 3) {
       return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
     }

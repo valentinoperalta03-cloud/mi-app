@@ -88,6 +88,7 @@ export type CanchasHubClientProps = {
   mainClubId: string;
   clubDepositType: "percentage" | "fixed" | null;
   clubDepositValue: number;
+  clubRequiresDeposit: boolean;
   blockedCourtIds: string[];
   priceSummaryByCourt: Array<[string, CourtPriceSummary]>;
   clubOpenTime: string;
@@ -481,6 +482,7 @@ function PreciosView({
   mainClubId,
   clubDepositType,
   clubDepositValue,
+  clubRequiresDeposit,
   clubOpenTime,
   clubCloseTime,
   timeRangesByCourt,
@@ -488,6 +490,7 @@ function PreciosView({
   onBack,
 }: CanchasHubClientProps & { onBack: () => void }) {
   const [expandedPriceCourt, setExpandedPriceCourt] = useState<string | null>(null);
+  const [requiresDeposit, setRequiresDeposit] = useState(clubRequiresDeposit);
   const rangesMap = new Map(timeRangesByCourt);
   const pricesMap = new Map(priceSchedulesByCourt);
   const allSlots = generateSlots(clubOpenTime);
@@ -538,11 +541,46 @@ function PreciosView({
         <p className={adminKicker}>Seña para reservas</p>
         <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">Configuración de seña</p>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          La seña es el monto que el jugador paga online al reservar. El resto lo abona en el club.
+          Elegí si tus jugadores pagan una seña online para confirmar la reserva, o si confirman directo y pagan el
+          total en el club.
         </p>
         <form action={updateClubDeposit} className="mt-4 space-y-3">
           <input type="hidden" name="club_id" value={mainClubId} />
-          <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
+          <input type="hidden" name="requires_deposit" value={requiresDeposit ? "true" : "false"} />
+
+          <div className="flex flex-wrap gap-4 text-sm font-medium text-[var(--text-secondary)]">
+            <label className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="requires_deposit_choice"
+                checked={requiresDeposit}
+                onChange={() => setRequiresDeposit(true)}
+              />
+              Solicitar seña
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                name="requires_deposit_choice"
+                checked={!requiresDeposit}
+                onChange={() => setRequiresDeposit(false)}
+              />
+              No solicitar seña
+            </label>
+          </div>
+
+          {requiresDeposit ? (
+            <ClubDepositFields defaultDepositType={clubDepositType} defaultDepositValue={clubDepositValue} />
+          ) : (
+            <p className="rounded-xl bg-[#0085FC]/5 px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
+              Los jugadores confirman la reserva sin pagar online. El precio completo del turno queda a cobrar en el
+              club. Mercado Pago sigue siendo obligatorio para habilitar reservas online.
+              {clubDepositValue > 0
+                ? " Tu configuración de seña anterior queda guardada por si volvés a activarla."
+                : null}
+            </p>
+          )}
+
           <button type="submit" className={adminCTAPrimary}>
             Guardar
           </button>

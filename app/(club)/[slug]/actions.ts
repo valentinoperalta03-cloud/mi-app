@@ -14,8 +14,10 @@ import { getCurrentClockInArgentina, getTodayYmdInArgentina } from "@/lib/dateti
 import { resolveDepositCharge } from "@/lib/deposit-utils";
 import { createGroupChat } from "@/lib/group-chats";
 import { notifyClubOwner } from "@/lib/club-notify";
+import { cancelConflictingOpenMatches } from "@/lib/match-conflict";
 import { isMatchSlotConflictError } from "@/lib/match-slot-errors";
 import { createMPPreference, getPublicBaseUrl } from "@/lib/mp-preference";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 import { checkOnboardingStatus } from "@/lib/admin/onboarding-check";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -23,8 +25,6 @@ import {
   expireStaleHoldsForCourtSlot,
   expireStaleHoldsForOwner,
   findActivePendingHold,
-  isHoldSlotConflictError,
-  isPendingHoldConflictError,
   PENDING_HOLD_ERROR_MESSAGE,
 } from "@/lib/reservation-hold";
 import { isClubSubscriptionBlocked } from "@/lib/subscription-check";
@@ -179,7 +179,34 @@ type ReservarCanchaInput = {
   scheduledTime: string;
 };
 
-type ReservarCanchaResult = { error: string } | { success: true; matchId: string; mpUrl: string };
+type ReservarCanchaResult =
+  | { error: string }
+  // Club con seña: redirige a Mercado Pago.
+  | { success: true; matchId: string; mpUrl: string }
+  // Club sin seña (requires_deposit=false): ya quedó confirmada, sin checkout.
+  | { success: true; matchId: string; mpUrl?: undefined };
+
+/** Reason codes de create_direct_reservation (reserva sin seña) -> mensajes de negocio. */
+const DIRECT_RPC_REASON_MESSAGES: Record<string, string> = {
+  forbidden: "No autorizado.",
+  bad_input: "Datos incompletos.",
+  court_not_found: "No se pudo obtener la información de la cancha.",
+  deposit_required: "Este club solicita seña para reservar. Recargá la página e intentá de nuevo.",
+  mp_not_connected: "Este club no acepta reservas online todavía. Contactalos directamente.",
+  court_blocked: "Esa cancha está bloqueada en ese horario.",
+  already_reserved: "Ya tenés una reserva en ese horario.",
+  pending_hold_exists: PENDING_HOLD_ERROR_MESSAGE,
+  too_many_active: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro.",
+  slot_conflict: "Ese horario ya no está disponible.",
+};
+
+/** Reason codes de insert_reservation_hold_locked -> mismos mensajes que reservarCancha ya usaba para el INSERT directo. */
+const HOLD_LOCKED_RPC_REASON_MESSAGES: Record<string, string> = {
+  forbidden: "No autorizado.",
+  bad_input: "Datos incompletos.",
+  pending_hold_exists: PENDING_HOLD_ERROR_MESSAGE,
+  slot_conflict: "Este horario ya fue reservado. Elegí otro.",
+};
 
 /**
  * Reserva directa desde la página pública del club (no un partido abierto):
@@ -221,7 +248,7 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   const { data: courtData, error: courtError } = await supabase
     .from(DB_TABLES.courts)
     .select(
-      "club_id, price, name, clubs!inner(name, deposit_type, deposit_value, open_time, close_time)"
+      "club_id, price, name, clubs!inner(name, deposit_type, deposit_value, requires_deposit, open_time, close_time)"
     )
     .eq("id", courtId)
     .maybeSingle();
@@ -266,8 +293,12 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   );
   const clubName = String((courtData as { clubs?: { name?: string | null } | null }).clubs?.name ?? "Club");
   const courtName = String((courtData as { name?: string | null }).name ?? "Cancha");
+  // Default true: un club sin la columna todavía migrada exige seña (mismo
+  // default de negocio que clubs.requires_deposit).
+  const clubRequiresDeposit =
+    (courtData as { clubs?: { requires_deposit?: boolean | null } | null }).clubs?.requires_deposit ?? true;
 
-  if (!(clubDepositValue > 0)) {
+  if (clubRequiresDeposit && !(clubDepositValue > 0)) {
     return { error: "Este club no tiene seña configurada." };
   }
 
@@ -371,12 +402,14 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
 
   // Techo de reservas confirmadas/en curso de pago offline activas — no
   // cuenta holds de pago (esos ya están limitados a 1 por usuario arriba).
+  // club_pending: reserva sin seña ya confirmada, cuenta como activa igual
+  // que cualquier otra.
   const { count: activeMatchesCount } = await supabase
     .from(DB_TABLES.matches)
     .select("id", { count: "exact", head: true })
     .eq("owner_id", user.id)
     .in("match_status", ["scheduled", "reserved", "full"])
-    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
+    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending", "club_pending"]);
   if ((activeMatchesCount ?? 0) >= 3) {
     return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
   }
@@ -423,6 +456,60 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
     return { error: "Límite de partidos creados por hora alcanzado." };
   }
 
+  // Club sin seña: confirma directo server-side (create_direct_reservation),
+  // sin reservation_holds, sin preferencia de Mercado Pago y sin webhook. La
+  // RPC revalida por su cuenta requires_deposit, MP conectado, la relación
+  // club/cancha y todos los conflictos de ocupación bajo el mismo advisory
+  // lock que insert_reservation_hold_locked más abajo — no confía en que
+  // clubRequiresDeposit (calculado arriba) sea correcto, solo lo usa para
+  // decidir qué RPC llamar. EXECUTE de esta función está otorgado
+  // ÚNICAMENTE a service_role: se invoca con serviceClient, nunca alcanzable
+  // desde el cliente/browser.
+  if (!clubRequiresDeposit) {
+    const { data: directRpcRows, error: directRpcError } = await serviceClient.rpc("create_direct_reservation", {
+      p_owner_id: user.id,
+      p_club_id: clubIdStr,
+      p_court_id: courtId,
+      p_scheduled_date: scheduledDate,
+      p_scheduled_time: timeNorm,
+      p_duration_minutes: durationMinutes,
+      p_total_price: totalPrice,
+      p_location_name: clubName,
+    });
+    if (directRpcError) {
+      console.error("[reservarCancha] directRpcError", directRpcError);
+      return { error: "No se pudo confirmar la reserva." };
+    }
+    const directResult = (Array.isArray(directRpcRows) ? directRpcRows[0] : directRpcRows) as
+      | { ok: boolean; reason: string; match_id: string | null }
+      | null;
+    if (!directResult?.ok || !directResult.match_id) {
+      return { error: DIRECT_RPC_REASON_MESSAGES[directResult?.reason ?? ""] ?? "No se pudo confirmar la reserva." };
+    }
+
+    const matchId = String(directResult.match_id);
+    const tpl = NOTIFICATION_TEMPLATES.reservation_confirmed(courtName, scheduledDate, timeNorm);
+    await createNotification(supabase, {
+      user_id: user.id,
+      type: "reservation_confirmed",
+      title: tpl.title,
+      body: `${tpl.body} Pagás el total ($${totalPrice.toLocaleString("es-AR")}) en el club.`,
+      match_id: matchId,
+    });
+    await notifyClubOwner(supabase, clubIdStr, {
+      title: "Nueva reserva confirmada",
+      body: `Reserva sin seña por $${totalPrice.toLocaleString("es-AR")} a cobrar en el club. Cancha ${courtName} el ${scheduledDate} a las ${timeNorm}.`,
+      match_id: matchId,
+    });
+    // Mismo desalojo de partidos abiertos en conflicto que el webhook aplica
+    // para reservas con seña (ver notifyReservationConfirmed en
+    // payment-webhook-handler.ts) — acá la confirmación es inmediata, no hay
+    // webhook que lo dispare después.
+    await cancelConflictingOpenMatches(supabase, courtId, scheduledDate, timeNorm);
+
+    return { success: true, matchId };
+  }
+
   // NO se crea ningún match acá. Bajo la regla de producto vigente, una
   // reserva (match_type='reservation') solo existe una vez que Mercado Pago
   // confirmó la seña — hasta entonces esto es apenas un hold de pago en una
@@ -434,46 +521,46 @@ export async function reservarCancha(input: ReservarCanchaInput): Promise<Reserv
   // confiable — por eso ends_at es una columna normal que la aplicación
   // completa al insertar.
   const holdStartsAt = new Date(`${scheduledDate}T${timeNorm}:00-03:00`);
-  // reservation_holds tiene RLS: authenticated solo puede SELECT su propio
-  // hold, no INSERT/UPDATE/DELETE — todas las escrituras van por service role.
-  const { data: hold, error: holdErr } = await serviceClient
-    .from(DB_TABLES.reservationHolds)
-    .insert({
-      owner_id: user.id,
-      club_id: clubIdStr,
-      court_id: courtId,
-      scheduled_date: scheduledDate,
-      scheduled_time: timeNorm,
-      duration_minutes: durationMinutes,
-      starts_at: holdStartsAt.toISOString(),
-      ends_at: new Date(holdStartsAt.getTime() + durationMinutes * 60_000).toISOString(),
-      total_price: totalPrice,
-      deposit_amount: depositAmount,
-      location_name: clubName,
-      status: "pending",
-      expires_at: computeHoldExpiresAt(),
-    })
-    .select("id")
-    .single();
+  // El INSERT final ya no es directo: pasa por insert_reservation_hold_locked
+  // (RPC, EXECUTE solo service_role), que toma el mismo advisory lock que
+  // create_direct_reservation antes de revalidar contra `matches` e insertar
+  // — cierra la carrera cruzada matches-vs-reservation_holds entre el camino
+  // con seña y el camino sin seña. Todo lo demás de este flujo (expirar holds
+  // vencidos, duplicado propio, hold pendiente propio, tope de activos,
+  // solapamiento previo) sigue igual, sin cambios: no interactúa con esa
+  // carrera, ya está protegido por los constraints propios de
+  // reservation_holds.
+  const { data: lockedRpcRows, error: holdErr } = await serviceClient.rpc("insert_reservation_hold_locked", {
+    p_owner_id: user.id,
+    p_club_id: clubIdStr,
+    p_court_id: courtId,
+    p_scheduled_date: scheduledDate,
+    p_scheduled_time: timeNorm,
+    p_duration_minutes: durationMinutes,
+    p_starts_at: holdStartsAt.toISOString(),
+    p_ends_at: new Date(holdStartsAt.getTime() + durationMinutes * 60_000).toISOString(),
+    p_total_price: totalPrice,
+    p_deposit_amount: depositAmount,
+    p_location_name: clubName,
+    p_expires_at: computeHoldExpiresAt(),
+  });
 
-  if (holdErr || !hold) {
-    // TEMPORAL: log crudo para que errores reales de INSERT aparezcan en los
+  if (holdErr) {
+    // TEMPORAL: log crudo para que errores reales de la RPC aparezcan en los
     // logs de Vercel en vez de perderse detrás del mensaje genérico de abajo.
     console.error("[reservarCancha] holdErr", holdErr);
-    // Red de seguridad para la carrera doble-click / dos tabs / requests
-    // concurrentes: si dos INSERT del mismo usuario, o de dos usuarios
-    // distintos para el mismo horario, pasan la validación de arriba casi al
-    // mismo tiempo, los constraints de reservation_holds los desempatan acá.
-    if (isPendingHoldConflictError(holdErr)) {
-      return { error: PENDING_HOLD_ERROR_MESSAGE };
-    }
-    if (isMatchSlotConflictError(holdErr) || isHoldSlotConflictError(holdErr)) {
-      return { error: "Este horario ya fue reservado. Elegí otro." };
-    }
     return { error: "No se pudo iniciar la reserva." };
   }
+  const lockedResult = (Array.isArray(lockedRpcRows) ? lockedRpcRows[0] : lockedRpcRows) as
+    | { ok: boolean; reason: string; hold_id: string | null }
+    | null;
+  if (!lockedResult?.ok || !lockedResult.hold_id) {
+    return {
+      error: HOLD_LOCKED_RPC_REASON_MESSAGES[lockedResult?.reason ?? ""] ?? "No se pudo iniciar la reserva.",
+    };
+  }
 
-  const holdId = String((hold as { id: string }).id);
+  const holdId = String(lockedResult.hold_id);
 
   const mp = await createMPPreference({
     matchId: holdId,
@@ -648,7 +735,7 @@ export async function abrirPartido(input: AbrirPartidoInput): Promise<AbrirParti
     .select("id", { count: "exact", head: true })
     .eq("owner_id", user.id)
     .in("match_status", ["scheduled", "reserved", "full"])
-    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending"]);
+    .in("payment_status", ["paid", "pending", "cash_pending", "transfer_pending", "club_pending"]);
   if ((activeMatchesCount ?? 0) >= 3) {
     return { error: "Tenés demasiados partidos activos. Completá o cancelá uno antes de crear otro." };
   }

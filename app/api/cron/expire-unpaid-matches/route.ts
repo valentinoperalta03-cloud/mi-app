@@ -40,9 +40,13 @@ export async function GET(req: Request) {
   const now = Date.now();
   const warningThresholdIso = new Date(now - WARNING_MINUTES * 60 * 1000).toISOString();
 
-  // Solo senas/pagos de organizador todavia sin acreditar. Pagos en efectivo/
-  // transferencia (cash_pending/transfer_pending) se cobran en el club, no
-  // via MP, asi que no expiran por este cron. Los partidos abiertos (amistoso)
+  // Solo senas/pagos de organizador todavia sin acreditar (.eq payment_status
+  // "pending" mas abajo). Pagos en efectivo/transferencia (cash_pending/
+  // transfer_pending) se cobran en el club, no via MP, asi que no expiran por
+  // este cron. Reservas sin sena (club_pending, requires_deposit=false en el
+  // club) tampoco: ya nacen confirmadas (match_status='reserved'), nunca
+  // matchean el filtro match_status IN (pending, scheduled, reserved) +
+  // payment_status='pending' de abajo. Los partidos abiertos (amistoso)
   // tampoco: los jugadores no pagan por la app, el club cobra en persona.
   // Turnos fijos NUNCA expiran por falta de pago (no se pagan por MP) — doble
   // filtro (es_turno_fijo Y fixed_slot_id) a propósito: son dos columnas
