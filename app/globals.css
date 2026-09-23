@@ -210,6 +210,33 @@
   --text-warning: #fef3c7;
 }
 
+/* ── LANDINGS PÚBLICAS (jugador y clubes) ──────────────────────
+   Estas rutas son marketing puro y nunca deben oscurecerse. Los overrides
+   globales de abajo (.bg-white, .shadow-sm/md/lg/xl, etc.) leen estas
+   variables con var(...) — si el visitante tiene el sistema en modo oscuro,
+   next-themes agrega .dark a <html> y esas variables se vuelven oscuras
+   (--bg-card: #1c1c1e, body a #000000), aunque el código de la landing
+   solo use clases "claras". Fijamos acá los valores claros para que ninguna
+   landing herede el tema oscuro de la app autenticada, sin tocar ese tema. */
+.landing-light {
+  --bg-app: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-subtle: #f1f5f9;
+  --bg-input: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --border-default: rgba(0,0,0,0.06);
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.18);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  --glass-bg: rgba(255,255,255,0.85);
+  background-color: #ffffff;
+  color: #0f172a;
+  color-scheme: light;
+}
+
 /* Base */
 *, *::before, *::after { box-sizing: border-box; }
 

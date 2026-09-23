@@ -3,252 +3,246 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  CalendarCheck,
-  Users,
-  CreditCard,
-  BarChart2,
-  MessageCircle,
-  Search,
-} from "lucide-react";
+import { CalendarCheck, Users, Trophy, Dumbbell, Sparkles } from "lucide-react";
+import LandingNav from "@/components/landing/landing-nav";
+import LandingFooter from "@/components/landing/landing-footer";
+import Reveal from "@/components/landing/reveal";
+import { heroGradient, bandGradient, softSectionBg, limaSoftBg } from "@/components/landing/tokens";
+import CourtLines from "@/components/landing/illustrations/court-lines";
+import ReservationIllustration from "@/components/landing/illustrations/reservation-illustration";
+import OpenMatchIllustration from "@/components/landing/illustrations/open-match-illustration";
+import TournamentIllustration from "@/components/landing/illustrations/tournament-illustration";
+import TrainingIllustration from "@/components/landing/illustrations/training-illustration";
+import CommunityIllustration from "@/components/landing/illustrations/community-illustration";
 
-const features = [
+const APP_STORE_URL = "https://apps.apple.com/us/app/padelibre/id6769852990";
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.padelibre.app";
+
+function DownloadBadges({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex flex-col items-center gap-3 sm:flex-row ${className}`}>
+      <a
+        href={APP_STORE_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-3 rounded-2xl bg-[#031733] px-5 py-3 shadow-lg transition hover:-translate-y-0.5 hover:brightness-125 active:scale-[0.98]"
+      >
+        <Image src="/app-store.png" alt="App Store" width={28} height={28} className="shrink-0" />
+        <div className="text-left">
+          <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
+          <p className="text-base font-bold leading-tight text-white">App Store</p>
+        </div>
+      </a>
+      <a
+        href={PLAY_STORE_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-3 rounded-2xl bg-[#031733] px-5 py-3 shadow-lg transition hover:-translate-y-0.5 hover:brightness-125 active:scale-[0.98]"
+      >
+        <Image src="/google-play.png" alt="Google Play" width={28} height={28} className="shrink-0" />
+        <div className="text-left">
+          <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
+          <p className="text-base font-bold leading-tight text-white">Google Play</p>
+        </div>
+      </a>
+    </div>
+  );
+}
+
+const sections = [
   {
+    key: "reservas",
     icon: CalendarCheck,
-    title: "Reservá canchas al instante",
-    description: "Ves disponibilidad en tiempo real, el precio y la cancha. Reservás en segundos sin llamar a nadie.",
+    eyebrow: "01 · Encontrá una cancha",
+    title: "Reservá tu cancha en segundos.",
+    text: "Ves disponibilidad en tiempo real, el precio y la cancha del club. Elegís horario y confirmás desde la app, sin llamar a nadie.",
+    Illustration: ReservationIllustration,
   },
   {
+    key: "partidos",
     icon: Users,
-    title: "Armá o unite a partidos",
-    description: "Creá un partido y abrilo para que otros jugadores se sumen, o unite a uno ya armado cerca tuyo.",
+    eyebrow: "02 · Completá un partido",
+    title: "¿Te falta uno para jugar?",
+    highlight: "Encontralo en PadeLibre.",
+    text: "Armá un partido abierto o unite a uno que ya está armado cerca tuyo. Cuando se completan los 4 jugadores, cada uno paga su parte con Mercado Pago.",
+    Illustration: OpenMatchIllustration,
   },
   {
-    icon: CreditCard,
-    title: "Cada uno paga su parte",
-    description: "Cada jugador paga su cuarto vía Mercado Pago. Sin transferencias, sin 'te debo'.",
+    key: "torneos",
+    icon: Trophy,
+    eyebrow: "03 · Descubrí torneos",
+    title: "Dejá de perderte cómo va el torneo.",
+    highlight: "Seguilo desde la app, hasta la final.",
+    text: "Inscribite por categoría y mirá zonas, clasificación y cuadro en tiempo real, sin preguntarle a nadie cómo vas.",
+    Illustration: TournamentIllustration,
   },
   {
-    icon: BarChart2,
-    title: "Jugá con tu categoría",
-    description: "Elegí tu categoría (8va a 1ra) y encontrá partidos con jugadores de tu nivel.",
+    key: "entrenamientos",
+    icon: Dumbbell,
+    eyebrow: "04 · Entrená",
+    title: "Mirá los entrenamientos de tu club y anotate en un toque.",
+    text: "Consultá días, horarios y cupos de las actividades que organiza tu club, y anotate directamente desde PadeLibre.",
+    Illustration: TrainingIllustration,
   },
   {
-    icon: MessageCircle,
-    title: "Chat del partido",
-    description: "Coordiná con tu equipo desde la misma app antes y después de cada partido.",
-  },
-  {
-    icon: Search,
-    title: "Encontrá jugadores de tu nivel",
-    description: "Filtrá partidos por nivel, género y ciudad. Jugá con gente que va en serio.",
+    key: "comunidad",
+    icon: Sparkles,
+    eyebrow: "05 · Conectate",
+    title: "Enterate de todo lo que pasa en tu club.",
+    text: "Novedades, torneos, partidos abiertos y jugadores de tu categoría, todo en un mismo lugar.",
+    Illustration: CommunityIllustration,
   },
 ];
 
-function AppleBadge() {
-  return (
-    <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg" className="h-10 w-auto">
-      <rect width="135" height="40" rx="8" fill="#000" />
-      <text x="40" y="14" fill="white" fontSize="8" fontFamily="system-ui, sans-serif">Disponible en el</text>
-      <text x="40" y="27" fill="white" fontSize="14" fontWeight="bold" fontFamily="system-ui, sans-serif">App Store</text>
-      <text x="12" y="27" fill="white" fontSize="22" fontFamily="system-ui, sans-serif"></text>
-    </svg>
-  );
-}
-
-function GooglePlayBadge() {
-  return (
-    <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg" className="h-10 w-auto">
-      <rect width="135" height="40" rx="8" fill="#000" />
-      <text x="40" y="14" fill="white" fontSize="8" fontFamily="system-ui, sans-serif">Disponible en</text>
-      <text x="40" y="27" fill="white" fontSize="14" fontWeight="bold" fontFamily="system-ui, sans-serif">Google Play</text>
-      <text x="12" y="28" fill="#4FC3F7" fontSize="22" fontFamily="system-ui, sans-serif">▶</text>
-    </svg>
-  );
-}
-
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[var(--bg-app)] text-[var(--text-primary)]">
-      {/* Nav */}
-      <nav
-        className="sticky top-0 z-30 border-b border-white/10"
-        style={{ background: "linear-gradient(135deg, #031733 0%, #0461C4 100%)" }}
-      >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="PadeLibre" width={32} height={32} className="rounded-xl" />
-            <span className="text-base font-bold text-white">PadeLibre</span>
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-xl border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20"
-          >
-            Entrar
-          </Link>
-        </div>
-      </nav>
+    <main className="landing-light min-h-screen bg-white text-[#0F172A]">
+      <LandingNav active="home" />
 
-      {/* Hero */}
-      <section
-        className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24"
-        style={{ background: "linear-gradient(180deg, #031733 0%, #0461C4 60%, #0085FC 100%)" }}
-      >
-        {/* Glow */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-[500px] w-[500px] rounded-full bg-white/5 blur-3xl" />
-        </div>
-
-        <div className="relative mx-auto flex max-w-lg flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.45 }}
+      {/* Hero — sin gráfico protagonista: vende con tipografía, color y CTA */}
+      <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24" style={{ background: heroGradient }}>
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-[#CCFF00]/20 px-3 py-1 text-xs font-bold text-[#CCFF00]"
           >
-            <Image
-              src="/logo.png"
-              alt="PadeLibre"
-              width={100}
-              height={100}
-              className="mx-auto mb-7 rounded-[28px] shadow-2xl"
-              priority
-            />
-          </motion.div>
+            La app de pádel argentina
+          </motion.span>
 
           <motion.h1
-            className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl"
-            initial={{ opacity: 0, y: 16 }}
+            className="text-5xl font-extrabold leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-7xl"
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.1 }}
+            transition={{ duration: 0.45, delay: 0.05 }}
           >
-            PadeLibre
+            Tu próximo partido{" "}
+            <br className="hidden sm:block" />
+            empieza acá.
           </motion.h1>
 
           <motion.p
-            className="mt-3 text-lg font-medium text-white/80 sm:text-xl"
+            className="mt-5 max-w-xl text-lg font-medium text-white/85 sm:text-xl"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.18 }}
+            transition={{ duration: 0.45, delay: 0.12 }}
           >
-            Reservá canchas, armá partidos y pagá tu parte. Todo desde el celular.
+            Reservá canchas, encontrá jugadores y descubrí torneos cerca tuyo. Todo desde PadeLibre.
           </motion.p>
 
-          {/* Download buttons */}
           <motion.div
-            className="mt-10 flex flex-col items-center gap-3 sm:flex-row"
+            className="mt-10"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.28 }}
+            transition={{ duration: 0.45, delay: 0.2 }}
           >
-            <a
-              href="https://apps.apple.com/us/app/padelibre/id6769852990"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
-            >
-              <Image src="/app-store.png" alt="App Store" width={28} height={28} className="shrink-0" />
-              <div className="text-left">
-                <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
-                <p className="text-base font-bold leading-tight text-white">App Store</p>
-              </div>
-            </a>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.padelibre.app"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl bg-black px-5 py-3 transition hover:opacity-85 active:scale-[0.98]"
-            >
-              <Image src="/google-play.png" alt="Google Play" width={28} height={28} className="shrink-0" />
-              <div className="text-left">
-                <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Disponible en</p>
-                <p className="text-base font-bold leading-tight text-white">Google Play</p>
-              </div>
-            </a>
+            <DownloadBadges />
           </motion.div>
 
           <motion.p
-            className="mt-5 text-xs text-white/50"
+            className="mt-6 text-sm text-white/70"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
+            transition={{ duration: 0.4, delay: 0.35 }}
           >
-            También disponible en{" "}
-            <Link href="/login" className="underline underline-offset-2 hover:text-white/80">
-              padelibre.online
+            ¿Ya tenés cuenta?{" "}
+            <Link href="/login" className="font-bold text-white underline underline-offset-2 hover:text-[#CCFF00]">
+              Iniciá sesión
             </Link>{" "}
-            desde el navegador · Gratis para jugadores
+            · Gratis para jugadores
           </motion.p>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto w-full max-w-5xl">
-          <motion.div
-            className="mb-10 text-center"
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.4 }}
-          >
-            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-              ¿Qué puedo hacer en PadeLibre?
-            </h2>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              Todo lo que necesitás para organizar tu pádel en un solo lugar.
-            </p>
-          </motion.div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f, idx) => {
-              const Icon = f.icon;
-              return (
-                <motion.div
-                  key={f.title}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.35, delay: idx * 0.06 }}
-                  className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5 shadow-sm"
-                >
+      {/* Narrativa de producto */}
+      <section className="px-4 py-16 sm:px-6 sm:py-24" style={{ background: softSectionBg }}>
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-16 sm:gap-24">
+          {sections.map((s, idx) => {
+            const Icon = s.icon;
+            const reversed = idx % 2 === 1;
+            const Illustration = s.Illustration;
+            return (
+              <div
+                key={s.key}
+                className={`flex flex-col items-center gap-8 lg:flex-row lg:gap-16 ${
+                  reversed ? "lg:flex-row-reverse" : ""
+                }`}
+              >
+                <Reveal className="max-w-md text-center lg:text-left" y={24}>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0461C4]">{s.eyebrow}</p>
                   <div className="mb-3 inline-flex rounded-xl bg-[#0085FC]/10 p-2.5">
                     <Icon className="h-5 w-5 text-[#0085FC]" strokeWidth={1.75} />
                   </div>
-                  <h3 className="text-base font-bold">{f.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">{f.description}</p>
-                </motion.div>
-              );
-            })}
-          </div>
+                  <h2 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-[#031733] sm:text-3xl">
+                    {s.title}
+                    {s.highlight && (
+                      <>
+                        <br />
+                        <span className="text-[#0461C4]">{s.highlight}</span>
+                      </>
+                    )}
+                  </h2>
+                  <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">{s.text}</p>
+                </Reveal>
+                <Reveal delay={0.1} y={24} className="w-full max-w-sm">
+                  <Illustration />
+                </Reveal>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--border-default)] px-4 py-7 sm:px-6">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="PadeLibre" width={24} height={24} className="rounded-lg" />
-            <span className="text-sm font-semibold">PadeLibre</span>
+      {/* Bloque clubes */}
+      <section className="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-20" style={{ background: bandGradient }}>
+        <CourtLines className="pointer-events-none absolute -right-16 -top-10 hidden w-[360px] lg:block" opacity={0.14} />
+        <Reveal className="relative mx-auto flex w-full max-w-3xl flex-col items-center gap-5 text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#CCFF00]/20 px-3 py-1 text-xs font-bold text-[#CCFF00]">
+            Para dueños de club
+          </span>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+            ¿Tenés un club de pádel?
+          </h2>
+          <p className="max-w-xl text-sm text-white/80 sm:text-base">
+            Reservas, torneos, entrenamientos, jugadores y finanzas, desde un solo panel conectado con esta
+            misma app.
+          </p>
+          <Link
+            href="/para-clubes"
+            className="mt-2 rounded-xl bg-[#CCFF00] px-6 py-3 text-sm font-bold text-[#031733] shadow-lg transition hover:-translate-y-0.5 hover:brightness-95 active:scale-[0.98]"
+          >
+            Conocé PadeLibre para clubes
+          </Link>
+        </Reveal>
+      </section>
+
+      {/* CTA final descarga — cierre luminoso, no un bloque oscuro vacío */}
+      <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28" style={{ background: limaSoftBg }}>
+        <CourtLines className="pointer-events-none absolute -left-20 bottom-[-60px] hidden w-[380px] lg:block" color="#0085FC" opacity={0.08} />
+        <Reveal className="relative mx-auto flex w-full max-w-2xl flex-col items-center gap-6 text-center">
+          <h2 className="text-3xl font-extrabold tracking-tight text-[#031733] sm:text-4xl">
+            El próximo partido empieza con vos.
+          </h2>
+          <p className="text-sm text-[#475569] sm:text-base">
+            Descargala gratis y empezá a jugar en minutos.
+          </p>
+          <div className="rounded-2xl bg-white px-6 py-8 shadow-[0_20px_60px_-30px_rgba(4,97,196,0.35)] sm:px-10">
+            <DownloadBadges />
           </div>
-          <p className="text-xs text-[var(--text-secondary)]">© 2026 PadeLibre · Hecho en Argentina 🇦🇷</p>
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.instagram.com/padelibre_" target="_blank" rel="noreferrer">Instagram</a>
-            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.tiktok.com/@padelibre" target="_blank" rel="noreferrer">TikTok</a>
-            <a className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" href="https://www.padelibre.online/legal/privacidad" target="_blank" rel="noreferrer">Privacidad</a>
-            <a
-              href="https://api.whatsapp.com/send/?phone=5493413741000&text&type=phone_number&app_absent=0"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-full border border-[var(--border-default)] px-3 py-1 text-[var(--text-secondary)] transition hover:border-[#25D366] hover:text-[#25D366]"
-            >
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-              </svg>
-              Soporte
-            </a>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+            <Link href="/login" className="font-bold text-[#0461C4] hover:text-[#0085FC]">
+              Iniciar sesión
+            </Link>
+            <span className="text-[#94A3B8]">·</span>
+            <Link href="/para-clubes" className="font-bold text-[#0461C4] hover:text-[#0085FC]">
+              PadeLibre para clubes
+            </Link>
           </div>
-        </div>
-      </footer>
+        </Reveal>
+      </section>
+
+      <LandingFooter />
     </main>
   );
 }
