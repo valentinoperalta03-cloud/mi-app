@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { DB_TABLES } from "@/lib/db-tables";
+import { arMobileProblem, normalizeArMobile } from "@/lib/phone-ar";
 import { sanitizeText } from "@/lib/sanitize";
 import { createClient } from "@/utils/supabase/server";
 
@@ -49,11 +50,6 @@ export async function updateMyProfile(
     return { ok: false, message: "Seleccioná sexo masculino o femenino." };
   }
 
-  const phone = String(formData.get("phone") ?? "").replace(/[^\d+]/g, "").trim();
-  if (phone.replace(/\D/g, "").length < 8) {
-    return { ok: false, message: "Verificá tu número de teléfono." };
-  }
-
   const avatarUrlRaw = String(formData.get("avatar_url") ?? "").trim();
   if (avatarUrlRaw.startsWith("data:")) {
     return {
@@ -77,7 +73,6 @@ export async function updateMyProfile(
     age,
     bio: bio === "" ? null : bio,
     gender: genderRaw,
-    phone,
     preferred_hand: preferredHandRaw || null,
     court_position: courtPositionRaw || null,
     preferred_schedule: preferredScheduleRaw || null,
@@ -99,6 +94,33 @@ export async function updateMyProfile(
   revalidatePath("/", "layout");
 
   return { ok: true, message: "Perfil actualizado." };
+}
+
+export type UpdatePhoneResult = { ok: true; phone: string } | { ok: false; message: string };
+
+// phone no es escribible desde la sesión: update_my_phone() revalida el formato
+// y solo cambia el teléfono de la fila propia. No toca Supabase Auth (sin OTP).
+export async function updateMyPhone(rawPhone: string, confirmed: boolean): Promise<UpdatePhoneResult> {
+  const phone = normalizeArMobile(rawPhone ?? "");
+  if (!phone) return { ok: false, message: arMobileProblem(rawPhone ?? "") ?? "Revisá el número que ingresaste." };
+  if (confirmed !== true) return { ok: false, message: "Confirmá que tu número es correcto." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "No hay sesión." };
+
+  const { error } = await supabase.rpc("update_my_phone", { p_phone: phone });
+  if (error) {
+    if (error.message.includes("invalid_phone")) return { ok: false, message: "Revisá el número que ingresaste." };
+    console.error("[perfil] update_my_phone", { userId: user.id, code: error.code });
+    return { ok: false, message: "No se pudo guardar el número." };
+  }
+
+  revalidatePath("/perfil");
+  revalidatePath("/perfil/editar");
+  return { ok: true, phone };
 }
 
 export async function deleteMyAccount(): Promise<EditProfileState> {

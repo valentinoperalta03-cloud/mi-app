@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -13,6 +14,7 @@ import {
   MessageSquareText,
   ChevronDown,
   MessageCircle,
+  Presentation,
 } from "lucide-react";
 import ClubContactForm from "@/components/landing/club-contact-form";
 import LandingNav from "@/components/landing/landing-nav";
@@ -30,6 +32,8 @@ import ClubTrainingIllustration from "@/components/landing/illustrations/club-tr
 import FinanceIllustration from "@/components/landing/illustrations/finance-illustration";
 
 const REGISTRO_HREF = "/registro-club";
+const PRESENTACION_HREF = "https://claude.ai/artifact/WCDeZ3fd6hCUGPD4aTpYZb";
+const PRESENTACION_PORTADA_SRC = "/presentacion-clubes-portada.webp";
 
 function CtaButton({ className = "", children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -39,6 +43,20 @@ function CtaButton({ className = "", children }: { className?: string; children:
     >
       {children}
     </Link>
+  );
+}
+
+function PresentacionCta({ className = "" }: { className?: string }) {
+  return (
+    <a
+      href={PRESENTACION_HREF}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`items-center justify-center gap-2 rounded-xl bg-[#CCFF00] px-6 py-3 text-sm font-bold text-[#031733] shadow-lg transition hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0085FC] focus-visible:ring-offset-2 active:scale-[0.98] ${className}`}
+    >
+      <Presentation className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+      Ver presentación completa
+    </a>
   );
 }
 
@@ -443,6 +461,60 @@ export default function ParaClubesClient() {
           {faqs.map((f) => (
             <FaqItem key={f.q} q={f.q} a={f.a} />
           ))}
+        </div>
+      </section>
+
+      {/* Presentación comercial descargable — después de conocer el producto, antes del cierre */}
+      <section className="overflow-x-clip px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-[4fr_7fr] lg:gap-14">
+          <Reveal className="mx-auto max-w-md text-center lg:mx-0 lg:text-left">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0461C4]">
+              Presentación comercial para clubes
+            </p>
+            <h2 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-[#031733] sm:text-3xl lg:text-4xl">
+              Conocé PadeLibre en profundidad.
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
+              Descubrí cómo funciona la plataforma, qué podés gestionar desde tu club y cómo la utilizan tus
+              jugadores.
+            </p>
+            <PresentacionCta className="mt-7 hidden lg:inline-flex" />
+          </Reveal>
+
+          <Reveal delay={0.1} className="w-full">
+            <a
+              href={PRESENTACION_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Ver la presentación comercial de PadeLibre (se abre en una pestaña nueva)"
+              className="group relative block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0085FC] focus-visible:ring-offset-4"
+            >
+              {/* Hoja trasera: sugiere un mazo de diapositivas sin simular un mockup */}
+              <div
+                aria-hidden
+                className="absolute inset-0 translate-x-2.5 translate-y-2.5 rounded-2xl bg-[#EAF3FF] ring-1 ring-[#DCEBFF] transition duration-300 group-hover:translate-x-3.5 group-hover:translate-y-3.5 sm:translate-x-4 sm:translate-y-4"
+              />
+              <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-30px_rgba(4,97,196,0.45)] ring-1 ring-[#DCEBFF] transition duration-300 group-hover:-translate-y-1 group-hover:ring-[#0085FC]/50">
+                <div className="relative aspect-video w-full">
+                  <Image
+                    src={PRESENTACION_PORTADA_SRC}
+                    alt="Portada de la presentación comercial de PadeLibre para clubes de pádel"
+                    fill
+                    sizes="(min-width: 1152px) 690px, (min-width: 1024px) 60vw, 100vw"
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            </a>
+            <div className="mt-6 flex items-center justify-between gap-3 px-1 text-xs font-semibold text-[#64748B] sm:mt-7">
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden className="h-2 w-2 rounded-full bg-[#CCFF00] ring-2 ring-[#CCFF00]/30" />
+                Presentación para clubes
+              </span>
+              <span className="text-[#0461C4]">18 diapositivas</span>
+            </div>
+            <PresentacionCta className="mt-6 flex w-full sm:mx-auto sm:w-auto lg:hidden" />
+          </Reveal>
         </div>
       </section>
 

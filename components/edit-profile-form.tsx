@@ -7,9 +7,11 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import {
   type EditProfileState,
   deleteMyAccount,
+  updateMyPhone,
   updateMyProfile,
 } from "@/app/(player)/perfil/edit/actions";
 import { logoutOneSignal } from "@/lib/onesignal-native";
+import { arMobileInputValue, arMobileProblem, formatArMobile, normalizeArMobile } from "@/lib/phone-ar";
 import { createClient } from "@/utils/supabase/client";
 
 const initial: EditProfileState = { ok: false, message: "" };
@@ -207,19 +209,7 @@ export function EditProfileForm({
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Teléfono</span>
-          <input
-            name="phone"
-            type="tel"
-            required
-            autoComplete="tel"
-            defaultValue={defaultPhone ?? ""}
-            maxLength={20}
-            placeholder="Ej. 1122334455"
-            className="w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20"
-          />
-        </label>
+        <PhoneEditor defaultPhone={defaultPhone} />
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">
@@ -424,6 +414,163 @@ export function EditProfileForm({
           {deletePending ? "Eliminando…" : "Eliminar cuenta"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// El número lo declara el jugador: se normaliza, se confirma y se guarda con
+// update_my_phone(). No se verifica propiedad, así que nunca se muestra como
+// "verificado" (ni siquiera si Auth tiene otro número confirmado por OTP).
+function PhoneEditor({ defaultPhone }: { defaultPhone: string | null }) {
+  const [saved, setSaved] = useState(defaultPhone);
+  const [mode, setMode] = useState<"view" | "edit" | "review">("view");
+  const [input, setInput] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, startSaving] = useTransition();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const normalized = normalizeArMobile(input);
+  const problem = touched && !normalized ? arMobileProblem(input) : null;
+  const savedNormalized = normalizeArMobile(saved ?? "");
+  const savedLabel = savedNormalized ? formatArMobile(savedNormalized) : saved || "Sin número";
+
+  function startEdit() {
+    setInput(arMobileInputValue(savedNormalized));
+    setTouched(false);
+    setMessage(null);
+    setMode("edit");
+    window.setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  function review() {
+    setTouched(true);
+    if (normalized) setMode("review");
+  }
+
+  function save() {
+    if (!normalized) return;
+    startSaving(async () => {
+      const res = await updateMyPhone(normalized, true);
+      if (!res.ok) {
+        setMessage({ ok: false, text: res.message });
+        setMode("edit");
+        return;
+      }
+      setSaved(res.phone);
+      setMode("view");
+      setMessage({ ok: true, text: "Número actualizado y confirmado por vos." });
+    });
+  }
+
+  const fieldClass =
+    "w-full rounded-xl border px-4 py-3 text-sm transition-colors bg-[var(--bg-input)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[#0085FC] focus:outline-none focus:ring-2 focus:ring-[#0085FC]/20";
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]">Teléfono</span>
+
+      {mode === "view" ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-4 py-2 text-sm text-[var(--text-primary)]">
+          <span className="font-mono tracking-wide">{savedLabel}</span>
+          <button
+            type="button"
+            onClick={startEdit}
+            className="min-h-[44px] shrink-0 rounded-lg px-2 text-sm font-semibold text-[#0461C4] hover:underline dark:text-sky-400"
+          >
+            {saved ? "Cambiar" : "Agregar"}
+          </button>
+        </div>
+      ) : mode === "review" && normalized ? (
+        <div className="rounded-2xl border-2 border-[#0085FC]/40 bg-[var(--bg-subtle)] p-4">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">¿Este es tu número correcto?</p>
+          <p className="mt-2 font-mono text-xl tracking-wide text-[var(--text-primary)]">{formatArMobile(normalized)}</p>
+          <p className="mt-2 text-xs leading-snug text-[var(--text-tertiary)]">
+            Si lo ingresás mal, el club podría no poder avisarte ante cualquier inconveniente con tu turno.
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0461C4] text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : null}
+              Sí, es mi número
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("edit")}
+              disabled={saving}
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-2xl border border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)] disabled:opacity-50"
+            >
+              Corregir número
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <span className="flex shrink-0 items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 font-mono text-sm text-[var(--text-secondary)]">
+              +54
+            </span>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value.replace(/[^\d\s()+-]/g, ""))}
+              onBlur={() => setTouched(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  review();
+                }
+              }}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              placeholder="11 2233 4455"
+              aria-label="Número de celular"
+              aria-invalid={Boolean(problem) || undefined}
+              className={`${fieldClass} min-w-0 flex-1 font-mono`}
+            />
+          </div>
+          <p className={`text-xs leading-snug ${problem ? "text-rose-600" : "text-[var(--text-tertiary)]"}`}>
+            {normalized
+              ? `Se va a guardar como ${formatArMobile(normalized)}`
+              : problem ?? "Con código de área, sin el 0 ni el 15."}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={review}
+              disabled={!normalized}
+              className="min-h-[44px] flex-1 rounded-2xl bg-[#0461C4] text-sm font-semibold text-white disabled:opacity-40"
+            >
+              Confirmar número
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("view");
+                setMessage(null);
+              }}
+              className="min-h-[44px] rounded-2xl border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {message ? (
+        <p role={message.ok ? "status" : "alert"} className={`mt-1.5 text-xs ${message.ok ? "text-emerald-600" : "text-rose-600"}`}>
+          {message.text}
+        </p>
+      ) : (
+        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+          Es el número por el que el club puede avisarte si surge algún inconveniente con tu reserva.
+        </p>
+      )}
     </div>
   );
 }

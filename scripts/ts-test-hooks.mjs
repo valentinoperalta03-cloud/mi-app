@@ -12,6 +12,10 @@ const PROJECT_ROOT = new URL("../", import.meta.url);
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    // next/* no declara "exports": en ESM hace falta la extensión.
+    if (specifier === "next/cache" || specifier === "next/navigation") {
+      return nextResolve(`${specifier}.js`, context);
+    }
     const isRelative = specifier.startsWith("./") || specifier.startsWith("../");
     const isAlias = specifier.startsWith("@/");
     if ((isRelative || isAlias) && !/\.[cm]?[jt]sx?$/.test(specifier)) {

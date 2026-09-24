@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DB_TABLES } from "@/lib/db-tables";
+import { normalizeArMobile } from "@/lib/phone-ar";
 import { createClient } from "@/utils/supabase/server";
 import CompletarPerfilClient from "./completar-perfil-client";
 
@@ -18,7 +19,7 @@ export default async function CompletarPerfilPage({
 
   const { data: profile } = await supabase
     .from(DB_TABLES.profiles)
-    .select("onboarding_completed")
+    .select("onboarding_completed, phone")
     .eq("user_id", user.id)
     .maybeSingle();
   const onboardingCompleted = Boolean(
@@ -28,7 +29,15 @@ export default async function CompletarPerfilPage({
   const next = sp.next ?? "";
   if (onboardingCompleted) redirect(next && next.startsWith("/") ? next : "/home");
 
+  // Prellena el número si el perfil ya tenía uno válido. El jugador igual tiene
+  // que confirmarlo en el paso 4.
+  const initialPhone = normalizeArMobile((profile as { phone?: string | null } | null)?.phone ?? "");
+
   return (
-    <CompletarPerfilClient next={next} googleAvatarUrl={user.user_metadata?.avatar_url ?? null} />
+    <CompletarPerfilClient
+      next={next}
+      googleAvatarUrl={user.user_metadata?.avatar_url ?? null}
+      initialPhone={initialPhone}
+    />
   );
 }
