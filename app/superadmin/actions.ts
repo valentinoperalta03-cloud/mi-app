@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { isClubLeadStatus } from "@/lib/club-leads";
 import { DB_TABLES } from "@/lib/db-tables";
 import { log } from "@/lib/logger";
 import { createNotification } from "@/lib/notifications";
@@ -296,6 +297,32 @@ export async function toggleUserGlobalBlockAction(formData: FormData) {
   await s.from(DB_TABLES.profiles).update({ is_globally_blocked: blocked }).eq("user_id", userId);
   revalidatePath("/superadmin/usuarios");
   redirect("/superadmin/usuarios");
+}
+
+export async function updateClubLeadStatusAction(formData: FormData) {
+  const leadId = String(formData.get("lead_id") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+  const filter = String(formData.get("return_filter") ?? "").trim();
+  const back = /^[a-z]+$/.test(filter) ? `/superadmin/consultas?f=${filter}` : "/superadmin/consultas";
+  if (!/^[0-9a-f-]{36}$/i.test(leadId) || !isClubLeadStatus(status)) redirect(back);
+
+  const { user, svc: s } = await requireSuperadminAction();
+  const now = new Date().toISOString();
+  const { error } = await s
+    .from(DB_TABLES.clubLeads)
+    .update({
+      status,
+      updated_by: user.email ?? null,
+      updated_at: now,
+      ...(status === "contacted" ? { contacted_at: now } : {}),
+    })
+    .eq("id", leadId);
+  revalidatePath("/superadmin/consultas");
+  if (error) {
+    log.error({ event: "superadmin.club_lead_status.failed", leadId, err: error });
+    redirect(`${back}${back.includes("?") ? "&" : "?"}error=1`);
+  }
+  redirect(back);
 }
 
 const AVAILABILITY_WEEKDAYS = [1, 2, 3, 4, 5] as const;

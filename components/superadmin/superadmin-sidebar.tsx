@@ -10,6 +10,7 @@ const links = [
   { href: "/superadmin/usuarios", label: "Usuarios", icon: "👥" },
   { href: "/superadmin/estadisticas", label: "Estadísticas", icon: "📊" },
   { href: "/superadmin/reuniones", label: "Reuniones", icon: "📅" },
+  { href: "/superadmin/consultas", label: "Consultas", icon: "📨" },
 ] as const;
 
 export default function SuperadminSidebar() {

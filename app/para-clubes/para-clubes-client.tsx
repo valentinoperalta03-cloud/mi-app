@@ -12,12 +12,16 @@ import {
   Coffee,
   MessageSquareText,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
+import ClubContactForm from "@/components/landing/club-contact-form";
 import LandingNav from "@/components/landing/landing-nav";
 import LandingFooter from "@/components/landing/landing-footer";
 import Reveal from "@/components/landing/reveal";
-import PriceReveal from "@/components/landing/price-reveal";
-import { heroGradient, softSectionBg, limaSoftBg } from "@/components/landing/tokens";
+import { heroGradient, limaSoftBg, softSectionBg } from "@/components/landing/tokens";
+import ClubLinkIllustration from "@/components/landing/illustrations/club-link-illustration";
+import OnlinePaymentFlowIllustration from "@/components/landing/illustrations/online-payment-flow-illustration";
+import ClubSupportIllustration from "@/components/landing/illustrations/club-support-illustration";
 import CourtLines from "@/components/landing/illustrations/court-lines";
 import ClubHubIllustration from "@/components/landing/illustrations/club-hub-illustration";
 import ClubReservationIllustration from "@/components/landing/illustrations/club-reservation-illustration";
@@ -88,7 +92,11 @@ const faqs = [
   },
   {
     q: "¿Cuánto cuesta PadeLibre?",
-    a: "$50.000 ARS por mes por club. PadeLibre no cobra comisión sobre lo que tus jugadores pagan por reservas: ese dinero va 100% a tu cuenta de Mercado Pago.",
+    a: "Un pago simple y fijo por mes, por club. PadeLibre no cobra comisión sobre lo que tus jugadores pagan por reservas: ese dinero va 100% a tu cuenta de Mercado Pago. Empezá con los 15 días de prueba gratis y te contamos el detalle al registrar tu club.",
+  },
+  {
+    q: "¿Quién me ayuda a empezar?",
+    a: "Contamos con representantes comerciales por ciudad que acompañan a los clubes durante su incorporación. Si todavía no hay uno en tu zona, te acompaña directamente el equipo de PadeLibre.",
   },
   {
     q: "¿Puedo administrar desde el celular?",
@@ -158,20 +166,28 @@ export default function ParaClubesClient() {
           >
             <CtaButton>Quiero PadeLibre en mi club</CtaButton>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white">
-              $50.000 ARS/mes · 15 días de prueba gratis
+              15 días de prueba gratis · Sin tarjeta hasta que lo actives
             </span>
           </motion.div>
 
           <motion.p
-            className="mt-6 text-sm text-white/70"
+            className="mt-6 flex flex-col items-center gap-2 text-sm text-white/75 sm:flex-row sm:gap-5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.35 }}
           >
-            ¿Ya tenés cuenta?{" "}
-            <Link href="/login" className="font-bold text-white underline underline-offset-2 hover:text-[#CCFF00]">
-              Iniciá sesión
-            </Link>
+            <span>
+              ¿Preferís hablar antes?{" "}
+              <a href="#contacto" className="font-bold text-white underline underline-offset-2 hover:text-[#CCFF00]">
+                Quiero que me contacten
+              </a>
+            </span>
+            <span>
+              ¿Ya tenés cuenta?{" "}
+              <Link href="/login" className="font-bold text-white underline underline-offset-2 hover:text-[#CCFF00]">
+                Iniciá sesión
+              </Link>
+            </span>
           </motion.p>
         </div>
       </section>
@@ -229,13 +245,53 @@ export default function ParaClubesClient() {
               <br /> <span className="text-[#0461C4]">Que tus jugadores reserven solos.</span>
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
-              Ven disponibilidad en tiempo real y reservan desde la app, sin llamarte. Configurá seña por
-              monto fijo o porcentaje, o dejá que reserven sin seña: si no la configurás, se cobra el total
-              del turno al confirmar.
+              Ven disponibilidad en tiempo real y reservan desde la app o desde el link de tu club, sin
+              llamarte. Vos ves la ocupación de todas tus canchas de un vistazo.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="w-full max-w-sm">
             <ClubReservationIllustration />
+          </Reveal>
+        </div>
+
+        {/* Link propio del club */}
+        <div className="mx-auto mt-20 flex w-full max-w-5xl flex-col items-center gap-10 lg:mt-28 lg:flex-row-reverse lg:gap-16">
+          <Reveal className="max-w-md text-center lg:text-left">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0461C4]">Tu link de reservas</p>
+            <h3 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-[#031733] sm:text-3xl">
+              Tu club tiene su propio link.
+              <br /> <span className="text-[#0461C4]">Tus jugadores saben dónde reservar.</span>
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
+              Compartilo por WhatsApp, en la bio de Instagram o donde ya hablás con tus jugadores. Entran
+              directo a la página de tu club, ven tus canchas y horarios disponibles, y reservan.
+            </p>
+          </Reveal>
+          <Reveal delay={0.1} className="w-full max-w-sm">
+            <ClubLinkIllustration />
+          </Reveal>
+        </div>
+
+        {/* Cobro online integrado a la reserva */}
+        <div className="mx-auto mt-20 w-full max-w-5xl rounded-[36px] px-5 py-10 sm:px-10 sm:py-12 lg:mt-28" style={{ background: limaSoftBg }}>
+          <Reveal className="mx-auto mb-8 max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0461C4]">Cobro online</p>
+            <h3 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-[#031733] sm:text-3xl">
+              Dejá de perseguir transferencias para confirmar una reserva.
+            </h3>
+            <p className="mx-auto mt-4 inline-block rounded-2xl bg-[#CCFF00] px-4 py-2 text-base font-extrabold text-[#1F2900] sm:text-lg">
+              El jugador paga online. Vos ves la reserva confirmada.
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-[#475569] sm:text-base">
+              La seña se paga con Mercado Pago dentro del mismo proceso de reserva y se acredita en la cuenta
+              de Mercado Pago de tu club. Cuando el pago se aprueba, la reserva queda confirmada y registrada
+              en tu panel, sin pedir comprobantes.
+            </p>
+          </Reveal>
+          <OnlinePaymentFlowIllustration />
+          <Reveal delay={0.2} className="mx-auto mt-6 max-w-2xl text-center text-xs leading-relaxed text-[#64748B]">
+            Vos elegís la seña: monto fijo o porcentaje. Si no configurás una, se cobra el total del turno
+            online. El saldo restante se abona en el club.
           </Reveal>
         </div>
       </section>
@@ -342,7 +398,9 @@ export default function ParaClubesClient() {
               Sabé cuánto cobraste sin abrir una planilla.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
-              Cobros, pagos pendientes y ocupación de tu club, en un mismo panel y siempre actualizados.
+              Las señas cobradas online quedan registradas solas en tu panel. Los saldos y cobros en
+              efectivo o transferencia los cargás desde el mismo lugar, y ves cobrado, pendiente y ocupación
+              juntos.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="w-full max-w-sm">
@@ -351,18 +409,8 @@ export default function ParaClubesClient() {
         </div>
       </section>
 
-      {/* Precio — genera curiosidad primero, convence después */}
-      <section className="px-4 py-16 sm:px-6 sm:py-24" style={{ background: limaSoftBg }}>
-        <Reveal className="mx-auto mb-6 w-full max-w-md text-center">
-          <p className="text-sm font-bold text-[#0461C4]">¿Cuánto cuesta dejar de perder horas con planillas y WhatsApp?</p>
-        </Reveal>
-        <Reveal>
-          <PriceReveal />
-        </Reveal>
-      </section>
-
       {/* Próximamente */}
-      <section className="px-4 py-16 sm:px-6 sm:py-24" style={{ background: softSectionBg }}>
+      <section className="px-4 py-16 sm:px-6 sm:py-24">
         <Reveal className="mx-auto mb-10 w-full max-w-2xl text-center">
           <h2 className="text-2xl font-extrabold tracking-tight text-[#031733] sm:text-3xl">Y esto recién empieza.</h2>
           <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
@@ -387,7 +435,7 @@ export default function ParaClubesClient() {
       </section>
 
       {/* FAQ */}
-      <section className="px-4 py-16 sm:px-6 sm:py-24">
+      <section className="px-4 py-16 sm:px-6 sm:py-24" style={{ background: softSectionBg }}>
         <Reveal className="mx-auto mb-8 w-full max-w-2xl text-center">
           <h2 className="text-2xl font-extrabold tracking-tight text-[#031733] sm:text-3xl">Preguntas frecuentes</h2>
         </Reveal>
@@ -398,24 +446,92 @@ export default function ParaClubesClient() {
         </div>
       </section>
 
-      {/* CTA final — cierre luminoso y comercial, no un bloque oscuro */}
-      <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28">
+      {/* Acompañamiento comercial — responde "¿quién me ayuda a empezar?" justo antes del cierre */}
+      <section className="px-4 py-16 sm:px-6 sm:py-24" style={{ background: limaSoftBg }}>
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:gap-16">
+          <Reveal className="max-w-md text-center lg:text-left">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#0461C4]">
+              Una plataforma tecnológica, con personas detrás
+            </p>
+            <h2 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-[#031733] sm:text-3xl">
+              No tenés que incorporar PadeLibre solo.
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#475569] sm:text-base">
+              Contamos con representantes comerciales por ciudad para acompañar a los clubes que se suman.
+              Tenés una persona de referencia mientras ponés en marcha tu club y, si todavía no hay un
+              representante en tu zona, te acompaña directamente nuestro equipo.
+            </p>
+            <a
+              href="#contacto"
+              className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-[#0461C4] underline underline-offset-4 hover:text-[#0085FC]"
+            >
+              Quiero que me contacten
+            </a>
+          </Reveal>
+          <Reveal delay={0.1} className="w-full max-w-sm">
+            <ClubSupportIllustration />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Cierre — dos caminos de conversión conviviendo, no un CTA único */}
+      <section id="contacto" className="relative scroll-mt-20 overflow-x-clip px-4 py-20 sm:px-6 sm:py-28">
         <CourtLines className="pointer-events-none absolute -right-20 bottom-[-60px] hidden w-[380px] lg:block" color="#0085FC" opacity={0.08} />
-        <Reveal className="relative mx-auto flex w-full max-w-2xl flex-col items-center gap-6 text-center">
+        <Reveal className="relative mx-auto mb-10 w-full max-w-2xl text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-[#031733] sm:text-4xl">
-            Registrá tu club y empezá hoy.
+            ¿Listo para probar PadeLibre en tu club?
           </h2>
-          <p className="text-sm text-[#475569] sm:text-base">15 días de prueba gratis, sin tarjeta hasta que lo actives.</p>
-          <CtaButton className="px-8 py-3.5 text-base">Quiero PadeLibre en mi club</CtaButton>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-            <Link href="/login" className="font-bold text-[#0461C4] hover:text-[#0085FC]">
-              Iniciar sesión
+          <p className="mt-3 text-sm text-[#475569] sm:text-base">
+            Si ya querés empezar, registrá tu club. Si todavía tenés dudas, dejanos tus datos y te contactamos.
+          </p>
+        </Reveal>
+
+        <div className="relative mx-auto grid w-full max-w-5xl grid-cols-1 items-start gap-6 lg:grid-cols-[5fr_7fr]">
+          <Reveal className="flex flex-col items-center gap-5 rounded-3xl bg-white p-8 text-center shadow-[0_24px_70px_-30px_rgba(4,97,196,0.35)] ring-2 ring-[#CCFF00] lg:sticky lg:top-24">
+            <div>
+              <h3 className="text-xl font-extrabold text-[#031733]">Ya sé que lo quiero</h3>
+              <p className="mt-2 text-sm text-[#475569]">
+                Registrá tu club y empezá con 15 días de prueba gratis, sin tarjeta hasta que lo actives.
+              </p>
+            </div>
+            <CtaButton className="w-full px-8 py-3.5 text-base">Quiero PadeLibre en mi club</CtaButton>
+            <Link href="/login" className="text-xs font-bold text-[#0461C4] hover:text-[#0085FC]">
+              ¿Ya tenés cuenta? Iniciar sesión
             </Link>
-            <span className="text-[#94A3B8]">·</span>
-            <Link href="/" className="font-bold text-[#0461C4] hover:text-[#0085FC]">
-              Ver la app para jugadores
-            </Link>
-          </div>
+          </Reveal>
+
+          <Reveal
+            delay={0.1}
+            className="relative rounded-3xl bg-white p-6 shadow-[0_24px_70px_-30px_rgba(4,97,196,0.35)] ring-1 ring-[#DCEBFF] sm:p-8"
+          >
+            <div aria-hidden className="absolute inset-x-8 top-0 h-1 rounded-b-full bg-gradient-to-r from-[#0085FC] via-[#7DD3FC] to-[#CCFF00]" />
+            <div className="mb-6 flex items-start gap-4">
+              <div className="hidden shrink-0 rounded-2xl bg-[#EAF3FF] p-3 sm:inline-flex">
+                <MessageCircle className="h-6 w-6 text-[#0085FC]" strokeWidth={1.75} />
+              </div>
+              <div>
+                <h3 className="text-xl font-extrabold leading-snug tracking-tight text-[#031733] sm:text-2xl">
+                  ¿Querés saber cómo funcionaría PadeLibre en tu club?
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#475569] sm:text-base">
+                  Contanos qué necesitás mejorar y nuestro equipo se pone en contacto con vos.
+                </p>
+              </div>
+            </div>
+            <ClubContactForm />
+            <p className="mt-5 border-t border-[#EEF4FF] pt-4 text-xs text-[#64748B]">
+              ¿Preferís una videollamada?{" "}
+              <Link href="/agenda" className="font-bold text-[#0461C4] hover:text-[#0085FC]">
+                Elegí día y horario
+              </Link>
+            </p>
+          </Reveal>
+        </div>
+
+        <Reveal delay={0.15} className="relative mx-auto mt-8 flex w-full max-w-2xl justify-center">
+          <Link href="/" className="text-xs font-bold text-[#0461C4] hover:text-[#0085FC]">
+            Ver la app para jugadores
+          </Link>
         </Reveal>
       </section>
 

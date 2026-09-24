@@ -11,7 +11,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "PadeLibre para clubes — Gestioná tu club de pádel",
   description:
-    "Reservas, torneos, entrenamientos, jugadores y finanzas desde una sola plataforma. $50.000 ARS/mes, 15 días de prueba gratis.",
+    "Reservas, torneos, entrenamientos, jugadores y finanzas desde una sola plataforma. Empezá con 15 días de prueba gratis.",
   alternates: {
     canonical: "https://www.padelibre.online/para-clubes",
   },

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Building2, DollarSign, House, Users } from "lucide-react";
+import { BarChart2, Building2, DollarSign, House, Inbox, Users } from "lucide-react";
 
 const items = [
   { href: "/superadmin", label: "Inicio", icon: House },
   { href: "/superadmin/clubes", label: "Clubes", icon: Building2 },
+  { href: "/superadmin/consultas", label: "Consultas", icon: Inbox },
   { href: "/superadmin/finanzas", label: "Finanzas", icon: DollarSign },
   { href: "/superadmin/usuarios", label: "Usuarios", icon: Users },
   { href: "/superadmin/estadisticas", label: "Stats", icon: BarChart2 },
